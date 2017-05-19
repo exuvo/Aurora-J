@@ -22,6 +22,7 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 
 	var day: Int = 0
 	var speed: Long = 1 * NanoTimeUnits.SECOND
+	var paused = false
 
 	fun init() {
 		GameServices.put(this)
@@ -43,80 +44,95 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 		try {
 			var accumulator = 0L
 			var oldSpeed = speed
+			var oldPaused = paused
 			var lastSleep = System.nanoTime()
 
 			while (true) {
 				var now = System.nanoTime()
 
-				if (oldSpeed != speed) {
+				if (paused != oldPaused) {
 					accumulator = 0
-				} else {
-					accumulator += now - lastSleep;
+					lastSleep = System.nanoTime()
+					oldPaused = paused
 				}
 
-				if (accumulator >= speed) {
+				if (!paused) {
 
-					accumulator -= speed;
-
-					var tickSize: Int = if (speed > 1 * NanoTimeUnits.MILLI) 1 else (NanoTimeUnits.MILLI / speed).toInt()
-
-					// max sensible tick size is 1 hour or 3600s
-					if (tickSize > 3600) {
-						tickSize = 3600
+					if (oldSpeed != speed) {
+						accumulator = 0
+						oldSpeed = speed
+					} else {
+						accumulator += now - lastSleep;
 					}
 
-//					println("tickSize $tickSize, speed $speed, accumulator $accumulator, diff ${now - lastSleep}")
+					if (accumulator >= speed) {
 
-					time += tickSize;
-					updateDay()
+						accumulator -= speed;
 
-					if (queue.isNotEmpty()) {
-						throw RuntimeException("Queue should be empty here!")
-					}
+						var tickSize: Int = if (speed > 1 * NanoTimeUnits.MILLI) 1 else (NanoTimeUnits.MILLI / speed).toInt()
 
-					systems.forEach { queue.add(UpdateSystemTask(it, tickSize)) }
+						// max sensible tick size is 1 hour or 3600s
+						if (tickSize > 3600) {
+							tickSize = 3600
+						}
 
-					val taskGroup = SimpleTaskGroup(queue)
+//						println("tickSize $tickSize, speed $speed, accumulator $accumulator, diff ${now - lastSleep}")
 
-					val executionController = threadPool.execute(taskGroup)
+						time += tickSize;
+						updateDay()
 
-					val systemUpdateStart = System.nanoTime()
+						if (queue.isNotEmpty()) {
+							throw RuntimeException("Queue should be empty here!")
+						}
+
+						systems.forEach { queue.add(UpdateSystemTask(it, tickSize)) }
+
+						val taskGroup = SimpleTaskGroup(queue)
+
+						val executionController = threadPool.execute(taskGroup)
+
+						val systemUpdateStart = System.nanoTime()
 
 //					println("start")
-					executionController.start()
+						executionController.start()
 //					println("awaitExecution")
-					executionController.awaitExecution()
+						executionController.awaitExecution()
 //					println("end")
 
-					val systemUpdateDuration = (System.nanoTime() - systemUpdateStart)
+						val systemUpdateDuration = (System.nanoTime() - systemUpdateStart)
 //					log.debug("Galaxy update took " + NanoTimeUnits.nanoToString(systemUpdateDuration))
 
-					//TODO handle tick abortion and tickSize lowering
+						//TODO handle tick abortion and tickSize lowering
 
 //				val systemCommitStart = System.currentTimeMillis()
 //				systems.forEach { it.commitChanges() }
 //				val systemCommitDuration = System.currentTimeMillis() - systemCommitStart
 
 //				log.debug("Galaxy commit took " + TimeUtils.millisecondsToString(systemCommitDuration))
-				}
-
-				// If we are more than 10 ticks behind stop counting
-				if (accumulator >= speed * 10) {
-					accumulator = speed * 10L
-				}
-
-				lastSleep = now;
-				oldSpeed = speed
-
-				if (accumulator < speed) {
-
-					var sleepTime = (speed - accumulator) / NanoTimeUnits.MILLI
-
-					if (sleepTime > 0) {
-						sleeping = true
-						ThreadUtils.sleep(sleepTime)
-						sleeping = false
 					}
+
+					// If we are more than 10 ticks behind stop counting
+					if (accumulator >= speed * 10) {
+						accumulator = speed * 10L
+					}
+
+					lastSleep = now;
+
+					if (accumulator < speed) {
+
+						var sleepTime = (speed - accumulator) / NanoTimeUnits.MILLI
+
+						if (sleepTime > 0) {
+							sleeping = true
+							ThreadUtils.sleep(sleepTime)
+							sleeping = false
+						}
+					}
+
+				} else {
+					sleeping = true
+					ThreadUtils.sleep(1000)
+					sleeping = false
 				}
 			}
 		} catch (t: Throwable) {

@@ -123,6 +123,16 @@ class SystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProcessor {
 			}
 
 			return true
+
+		} else if (keycode == Input.Keys.SPACE) {
+
+			galaxy.paused = !galaxy.paused
+
+			if (galaxy.sleeping) {
+				galaxy.thread!!.interrupt()
+			}
+
+			return true
 		}
 
 		return false;
