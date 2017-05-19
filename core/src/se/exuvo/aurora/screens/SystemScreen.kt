@@ -15,7 +15,6 @@ import se.exuvo.aurora.Galaxy
 import se.exuvo.aurora.SolarSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.settings.Settings
-import se.unlogic.standardutils.time.TimeUtils
 import kotlin.properties.Delegates
 
 class SystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProcessor {
