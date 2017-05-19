@@ -96,6 +96,7 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 //					println("start")
 						executionController.start()
 //					println("awaitExecution")
+						//TODO sometimes hangs here
 						executionController.awaitExecution()
 //					println("end")
 

@@ -2,6 +2,8 @@ package se.exuvo.aurora
 
 import com.badlogic.ashley.core.PooledEngine
 import com.thedeadpixelsociety.ld34.components.BoundsComponent
+import com.thedeadpixelsociety.ld34.components.MassComponent
+import com.thedeadpixelsociety.ld34.components.OrbitComponent
 import com.thedeadpixelsociety.ld34.components.PositionComponent
 import com.thedeadpixelsociety.ld34.components.RenderComponent
 import com.thedeadpixelsociety.ld34.components.RenderType
@@ -14,7 +16,7 @@ import se.exuvo.aurora.systems.OrbitSystem
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 class SolarSystem {
-	
+
 	val log = Logger.getLogger(this.javaClass)
 
 	val lock = ReentrantReadWriteLock()
@@ -27,29 +29,39 @@ class SolarSystem {
 		engine.addSystem(RenderSystem())
 
 		val entity1 = engine.createEntity()
-		entity1.add(engine.createComponent(PositionComponent::class.java).apply { position.set(1f, 1f) })
+		entity1.add(engine.createComponent(PositionComponent::class.java).apply { position.set(0f, 0f) })
 		entity1.add(engine.createComponent(RenderComponent::class.java).apply { type = RenderType.CIRCLE })
 		entity1.add(engine.createComponent(BoundsComponent::class.java))
+		entity1.add(engine.createComponent(MassComponent::class.java))
 		entity1.add(engine.createComponent(TextComponent::class.java).apply { text = "TESt" })
-		
+
 		engine.addEntity(entity1)
+
+		val entity2 = engine.createEntity()
+		entity2.add(engine.createComponent(PositionComponent::class.java).apply { position.set(100f, 100f) })
+		entity2.add(engine.createComponent(RenderComponent::class.java).apply { type = RenderType.CIRCLE })
+		entity2.add(engine.createComponent(BoundsComponent::class.java))
+		entity2.add(engine.createComponent(TextComponent::class.java).apply { text = "sat" })
+		entity2.add(engine.createComponent(OrbitComponent::class.java).apply { parent = entity1; a_semiMajorAxis = 1f })
+
+		engine.addEntity(entity2)
 	}
-	
+
 	fun update(deltaGameTime: Int) {
-		
+
 		//TODO use readlock during update
-		
+
 		lock.writeLock().lock()
 		engine.update(deltaGameTime.toFloat())
 		lock.writeLock().unlock()
-		
+
 	}
-	
+
 	fun commitChanges() {
 		lock.writeLock().lock()
 		//TODO commit changes
 		lock.writeLock().unlock()
-		
+
 		//TODO send changes over network
 	}
 }

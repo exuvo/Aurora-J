@@ -10,7 +10,7 @@ import se.exuvo.aurora.utils.GameServices
 abstract class DailyIteratingSystem(family: Family) : IteratingSystem(family) {
 
 	val galaxy = GameServices[Galaxy::class.java]
-	var lastDay: Int = 0
+	var lastDay: Int = -1
 
 	override fun checkProcessing(): Boolean {
 		return galaxy.day > lastDay
@@ -33,7 +33,7 @@ abstract class DailyIteratingSystem(family: Family) : IteratingSystem(family) {
 abstract class DailySystem() : EntitySystem() {
 
 	val galaxy = GameServices[Galaxy::class.java]
-	var lastDay: Int = 0
+	var lastDay: Int = -1
 
 	override fun checkProcessing(): Boolean {
 		return galaxy.day > lastDay
