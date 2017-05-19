@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<AuroraJ>
+<settings>
+<G.VSync type="b">false</G.VSync>
+<G.Height type="i">768</G.Height>
+<Audio.MusicVolume type="f">0.8</Audio.MusicVolume>
+<G.Fullscreen type="b">false</G.Fullscreen>
+<loglvl type="s">DEBUG</loglvl>
+<G.Width type="i">1024</G.Width>
+<UI.zoomSensitivity type="f">1.25</UI.zoomSensitivity>
+<G.ShowFPS type="b">true</G.ShowFPS>
+<Audio.SoundVolume type="f">1.0</Audio.SoundVolume>
+<G.FrameLimit type="i">60</G.FrameLimit>
+<G.Resizable type="b">true</G.Resizable>
+<G.BackgroundFrameLimit type="i">10</G.BackgroundFrameLimit>
+</settings>
+</AuroraJ>
