@@ -47,8 +47,8 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 
 			while (true) {
 				var now = System.nanoTime()
-				
-				if(oldSpeed != speed){
+
+				if (oldSpeed != speed) {
 					accumulator = 0
 				} else {
 					accumulator += now - lastSleep;
@@ -58,11 +58,14 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 
 					accumulator -= speed;
 
-					var tickSize: Int = 1 //if (accumulator > 2 * loopSleepTime) (accumulator / Math.max(1, loopSleepTime)).toInt() else 1
+					var tickSize: Int = if (speed > 1 * NanoTimeUnits.MILLI) 1 else (NanoTimeUnits.MILLI / speed).toInt()
+
 					// max sensible tick size is 1 hour or 3600s
-					// only 
-//					var tickSize = if (speed > 10 * 1000) 1 else 20000 / speed
-					println("tickSize $tickSize, speed $speed, accumulator $accumulator, diff ${now - lastSleep}")
+					if (tickSize > 3600) {
+						tickSize = 3600
+					}
+
+//					println("tickSize $tickSize, speed $speed, accumulator $accumulator, diff ${now - lastSleep}")
 
 					time += tickSize;
 					updateDay()
@@ -86,8 +89,7 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 //					println("end")
 
 					val systemUpdateDuration = (System.nanoTime() - systemUpdateStart)
-
-					log.debug("Galaxy update took " + NanoTimeUnits.nanoToString(systemUpdateDuration))
+//					log.debug("Galaxy update took " + NanoTimeUnits.nanoToString(systemUpdateDuration))
 
 					//TODO handle tick abortion and tickSize lowering
 
@@ -105,7 +107,7 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 
 				lastSleep = now;
 				oldSpeed = speed
-				
+
 				if (accumulator < speed) {
 
 					var sleepTime = (speed - accumulator) / NanoTimeUnits.MILLI
