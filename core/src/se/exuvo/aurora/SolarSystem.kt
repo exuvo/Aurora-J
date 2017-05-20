@@ -1,12 +1,11 @@
 package se.exuvo.aurora
 
 import com.badlogic.ashley.core.PooledEngine
-import com.thedeadpixelsociety.ld34.components.BoundsComponent
-import com.thedeadpixelsociety.ld34.components.MassComponent
 import com.thedeadpixelsociety.ld34.components.OrbitComponent
 import com.thedeadpixelsociety.ld34.components.PositionComponent
 import com.thedeadpixelsociety.ld34.components.RenderComponent
-import com.thedeadpixelsociety.ld34.components.RenderType
+import com.thedeadpixelsociety.ld34.components.LineComponent
+import com.thedeadpixelsociety.ld34.components.CircleComponent
 import com.thedeadpixelsociety.ld34.components.TextComponent
 import com.thedeadpixelsociety.ld34.systems.GroupSystem
 import com.thedeadpixelsociety.ld34.systems.RenderSystem
@@ -30,21 +29,38 @@ class SolarSystem {
 
 		val entity1 = engine.createEntity()
 		entity1.add(engine.createComponent(PositionComponent::class.java).apply { position.set(0f, 0f) })
-		entity1.add(engine.createComponent(RenderComponent::class.java).apply { type = RenderType.CIRCLE })
-		entity1.add(engine.createComponent(BoundsComponent::class.java))
-		entity1.add(engine.createComponent(MassComponent::class.java))
+		entity1.add(engine.createComponent(RenderComponent::class.java))
+		entity1.add(engine.createComponent(CircleComponent::class.java).apply { radius = 5f })
+//		entity1.add(engine.createComponent(LineComponent::class.java).apply { x = 100f; y = 100f })
 		entity1.add(engine.createComponent(TextComponent::class.java).apply { text = "TESt" })
 
 		engine.addEntity(entity1)
 
 		val entity2 = engine.createEntity()
-		entity2.add(engine.createComponent(PositionComponent::class.java).apply { position.set(100f, 100f) })
-		entity2.add(engine.createComponent(RenderComponent::class.java).apply { type = RenderType.CIRCLE })
-		entity2.add(engine.createComponent(BoundsComponent::class.java))
-		entity2.add(engine.createComponent(TextComponent::class.java).apply { text = "sat" })
-		entity2.add(engine.createComponent(OrbitComponent::class.java).apply { parent = entity1; a_semiMajorAxis = 1f })
+		entity2.add(engine.createComponent(PositionComponent::class.java))
+		entity2.add(engine.createComponent(RenderComponent::class.java))
+		entity2.add(engine.createComponent(CircleComponent::class.java).apply { radius = 2f })
+		entity2.add(engine.createComponent(TextComponent::class.java).apply { text = "1" })
+		entity2.add(engine.createComponent(OrbitComponent::class.java).apply { parent = entity1; a_semiMajorAxis = 2f })
 
 		engine.addEntity(entity2)
+		
+		val entity3 = engine.createEntity()
+		entity3.add(engine.createComponent(PositionComponent::class.java))
+		entity3.add(engine.createComponent(RenderComponent::class.java))
+		entity3.add(engine.createComponent(CircleComponent::class.java))
+		entity3.add(engine.createComponent(TextComponent::class.java).apply { text = "2" })
+		entity3.add(engine.createComponent(OrbitComponent::class.java).apply { parent = entity2; a_semiMajorAxis = 0.5f })
+
+		engine.addEntity(entity3)
+		
+		val entity4 = engine.createEntity()
+		entity4.add(engine.createComponent(PositionComponent::class.java))
+		entity4.add(engine.createComponent(RenderComponent::class.java))
+		entity4.add(engine.createComponent(CircleComponent::class.java))
+		entity4.add(engine.createComponent(OrbitComponent::class.java).apply { parent = entity3; a_semiMajorAxis = 0.2f })
+
+		engine.addEntity(entity4)
 	}
 
 	fun update(deltaGameTime: Int) {

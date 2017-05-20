@@ -32,7 +32,7 @@ class MainMenuScreen() : GameScreenImpl() {
 //		if (Gdx.input.isKeyPressed(Input.Keys.ENTER)) {
 			
 			val system = SolarSystem()
-			val galaxy = Galaxy(Collections.singletonList(system))
+			val galaxy = Galaxy(Collections.singletonList(system), 0) //Int.MAX_VALUE.toLong()
 			galaxy.init()
 		
 			GameServices[GameScreenService::class.java].push(SystemScreen(system))

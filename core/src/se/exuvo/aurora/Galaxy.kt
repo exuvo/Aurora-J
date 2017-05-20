@@ -42,7 +42,7 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 	override fun run() {
 
 		try {
-			var accumulator = 0L
+			var accumulator = speed
 			var oldSpeed = speed
 			var oldPaused = paused
 			var lastSleep = System.nanoTime()
@@ -96,8 +96,8 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 //					println("start")
 						executionController.start()
 //					println("awaitExecution")
-						//TODO sometimes hangs here
-						executionController.awaitExecution()
+						//TODO sometimes hangs here, remove timeout when fixed
+						executionController.awaitExecution(500)
 //					println("end")
 
 						val systemUpdateDuration = (System.nanoTime() - systemUpdateStart)
