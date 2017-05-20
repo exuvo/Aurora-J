@@ -44,6 +44,11 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 	override fun entityAdded(entity: Entity) {
 
 		val orbit = orbitMapper.get(entity)
+
+		if (orbit.e_eccentricity > 1) {
+			log.warn("Orbital eccentricity over 1 won't work: ${orbit.e_eccentricity}")
+		}
+
 		val periapsis = orbit.a_semiMajorAxis * (1f - orbit.e_eccentricity)
 		val apoapsis = orbit.a_semiMajorAxis * (1f + orbit.e_eccentricity)
 		val orbitalPeriod = (2 * Math.PI * Math.sqrt(Math.pow(orbit.a_semiMajorAxis.toDouble(), 3.0) / gravitationalConstant)).toFloat()

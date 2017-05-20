@@ -32,7 +32,7 @@ class SolarSystem {
 		entity1.add(engine.createComponent(RenderComponent::class.java))
 		entity1.add(engine.createComponent(CircleComponent::class.java).apply { radius = 5f })
 //		entity1.add(engine.createComponent(LineComponent::class.java).apply { x = 100f; y = 100f })
-		entity1.add(engine.createComponent(TextComponent::class.java).apply { text = "TESt" })
+		entity1.add(engine.createComponent(TextComponent::class.java).apply { text = "Sun" })
 
 		engine.addEntity(entity1)
 
