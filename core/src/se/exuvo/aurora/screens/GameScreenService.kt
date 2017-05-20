@@ -3,14 +3,18 @@ package com.thedeadpixelsociety.ld34.screens
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.InputProcessor
+import com.badlogic.gdx.graphics.OrthographicCamera
+import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.utils.Disposable
-import se.exuvo.aurora.Galaxy
+import se.exuvo.aurora.Assets
 import se.exuvo.aurora.utils.GameServices
 import java.util.Stack
 
-class GameScreenService() : Disposable, InputProcessor {
+class GameScreenService : Disposable, InputProcessor {
 	private val screens = Stack<GameScreen>()
 	private val inputMultiplexer = InputMultiplexer()
+	private val spriteBatch by lazy { GameServices[SpriteBatch::class.java] }
+	val uiCamera = OrthographicCamera()
 
 	fun <T : GameScreen> push(screen: T) {
 		screens.push(screen)
@@ -55,6 +59,11 @@ class GameScreenService() : Disposable, InputProcessor {
 
 	private fun draw() {
 		screens.forEach { it.draw() }
+		
+		spriteBatch.projectionMatrix = uiCamera.combined
+		spriteBatch.begin()
+		Assets.fontUI.draw(spriteBatch, "" + Gdx.graphics.framesPerSecond, 2f, uiCamera.viewportHeight - 3f)
+		spriteBatch.end()
 	}
 
 	fun pause() {
@@ -62,6 +71,7 @@ class GameScreenService() : Disposable, InputProcessor {
 	}
 
 	fun resize(width: Int, height: Int) {
+		uiCamera.setToOrtho(false, width.toFloat(), height.toFloat())
 		screens.forEach { it.resize(width, height) }
 	}
 

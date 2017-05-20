@@ -8,15 +8,14 @@ import se.unlogic.standardutils.threads.SimpleTaskGroup
 import se.unlogic.standardutils.threads.ThreadPoolTaskGroupHandler
 import se.unlogic.standardutils.threads.ThreadUtils
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.locks.ReentrantReadWriteLock
+import java.util.concurrent.atomic.AtomicInteger
 
 class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 
 	val log = Logger.getLogger(this.javaClass)
 	val preferences = GameServices[Preferences::class.java]
 
-	private val threadPool = ThreadPoolTaskGroupHandler<SimpleTaskGroup>(preferences.getInteger("Galaxy.threads", Runtime.getRuntime().availableProcessors()), true)
-	private val queue = LinkedBlockingQueue<UpdateSystemTask>()
+	private val threadPool = ThreadPoolTaskGroupHandler<SimpleTaskGroup>("Galaxy", preferences.getInteger("Galaxy.threads", 3), true) //Runtime.getRuntime().availableProcessors()
 	var thread: Thread? = null
 	var sleeping = false
 
@@ -36,7 +35,7 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 	}
 
 	private fun updateDay() {
-		day = (time / (60L * 60L * 24L)).toInt()
+		day = (time / (24L * 60L * 60L)).toInt()
 	}
 
 	override fun run() {
@@ -80,25 +79,17 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 
 						time += tickSize;
 						updateDay()
-
-						if (queue.isNotEmpty()) {
-							throw RuntimeException("Queue should be empty here!")
-						}
+						
+						val queue = LinkedBlockingQueue<UpdateSystemTask>(systems.size)
 
 						systems.forEach { queue.add(UpdateSystemTask(it, tickSize)) }
 
-						val taskGroup = SimpleTaskGroup(queue)
-
-						val executionController = threadPool.execute(taskGroup)
+						val executionController = threadPool.execute(SimpleTaskGroup(queue))
 
 						val systemUpdateStart = System.nanoTime()
 
-//					println("start")
 						executionController.start()
-//					println("awaitExecution")
-						//TODO sometimes hangs here, remove timeout when fixed
-						executionController.awaitExecution(500)
-//					println("end")
+						executionController.awaitExecution()
 
 						val systemUpdateDuration = (System.nanoTime() - systemUpdateStart)
 //					log.debug("Galaxy update took " + NanoTimeUnits.nanoToString(systemUpdateDuration))

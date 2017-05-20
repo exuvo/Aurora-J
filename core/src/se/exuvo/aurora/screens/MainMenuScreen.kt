@@ -35,7 +35,7 @@ class MainMenuScreen() : GameScreenImpl() {
 			val galaxy = Galaxy(Collections.singletonList(system), 0) //Int.MAX_VALUE.toLong()
 			galaxy.init()
 		
-			GameServices[GameScreenService::class.java].push(SystemScreen(system))
+			GameServices[GameScreenService::class.java].push(SolarSystemScreen(system))
 //    }
 	}
 

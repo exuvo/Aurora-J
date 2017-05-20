@@ -8,13 +8,13 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
-import com.badlogic.gdx.math.MathUtils
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.viewport.Viewport
 import com.thedeadpixelsociety.ld34.components.CircleComponent
-import com.thedeadpixelsociety.ld34.components.RenderComponent
 import com.thedeadpixelsociety.ld34.components.GroupComponent
 import com.thedeadpixelsociety.ld34.components.LineComponent
 import com.thedeadpixelsociety.ld34.components.PositionComponent
+import com.thedeadpixelsociety.ld34.components.RenderComponent
 import com.thedeadpixelsociety.ld34.components.TagComponent
 import com.thedeadpixelsociety.ld34.components.TextComponent
 import com.thedeadpixelsociety.ld34.components.TintComponent
@@ -34,7 +34,7 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 	private val tagMapper = ComponentMapper.getFor(TagComponent::class.java)
 	private val groupMapper = ComponentMapper.getFor(GroupComponent::class.java)
 	private val textMapper = ComponentMapper.getFor(TextComponent::class.java)
-	private val renderer by lazy { GameServices[ShapeRenderer::class.java] }
+	private val shapeRenderer by lazy { GameServices[ShapeRenderer::class.java] }
 	private val batch by lazy { GameServices[SpriteBatch::class.java] }
 
 	override fun checkProcessing() = false
@@ -46,20 +46,18 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 
 		val color = Color(tint?.color ?: Color.WHITE)
 		color.a = .5f
-		renderer.color = color
+		shapeRenderer.color = color
 
 		if (circleMapper.has(entity)) {
 
 			val circle = circleMapper.get(entity)
-			renderer.circle(position.position.x, position.position.y, circle.radius * 1f, 64)
+			shapeRenderer.circle(position.position.x, position.position.y, circle.radius * 1f, 64)
 
 		} else if (lineMapper.has(entity)) {
 
 			val line = lineMapper.get(entity)
-			renderer.line(position.position.x, position.position.y, position.position.x + line.x, position.position.y + line.y)
+			shapeRenderer.line(position.position.x, position.position.y, position.position.x + line.x, position.position.y + line.y)
 		}
-
-		renderer.color = Color.WHITE
 	}
 
 	fun render(viewport: Viewport) {
@@ -72,8 +70,9 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 		val scale = font.getData().scaleX;
 		font.getData().setScale((viewport.camera as OrthographicCamera).zoom * scale)
 
+		shapeRenderer.color = Color.WHITE
 		entities.filter { textMapper.has(it) }.forEach {
-			val transform = positionMapper.get(it)
+			val position = positionMapper.get(it)
 			val text = textMapper.get(it)
 
 			var x = 0f
@@ -93,22 +92,37 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 			}
 
 			font.draw(batch, text.text,
-							transform.position.x - x * .5f,
-							transform.position.y - y * .5f + font.lineHeight)
+							position.position.x - x * .5f,
+							position.position.y - y * .5f + font.lineHeight)
 		}
 
 		font.getData().setScale(scale)
 		endBatch()
 	}
+	
+//	private fun drawDottedLine(dotDist: Float, x1: Float, y1: Float, x2: Float, y2: Float) {
+//		
+//		val vec2 = Vector2(x2, y2).sub(Vector2(x1, y1))
+//		val length = vec2.len();
+//		shapeRenderer.begin(ShapeRenderer.ShapeType.Point);
+//
+//		var i = 0f
+//		while (i < length) {
+//			vec2.clamp(length - i, length - i);
+//			shapeRenderer.point(x1 + vec2.x, y1 + vec2.y, 0f);
+//			i += dotDist
+//		}
+//		shapeRenderer.end();
+//	}
 
 	private fun begin(viewport: Viewport) {
 		viewport.apply()
-		renderer.projectionMatrix = viewport.camera.combined
-		renderer.begin(ShapeRenderer.ShapeType.Filled)
+		shapeRenderer.projectionMatrix = viewport.camera.combined
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
 	}
 
 	private fun end() {
-		renderer.end()
+		shapeRenderer.end()
 	}
 
 	private fun beginBatch(viewport: Viewport) {

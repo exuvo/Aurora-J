@@ -12,6 +12,6 @@
 <Audio.SoundVolume type="f">1.0</Audio.SoundVolume>
 <G.FrameLimit type="i">60</G.FrameLimit>
 <G.Resizable type="b">true</G.Resizable>
-<G.BackgroundFrameLimit type="i">10</G.BackgroundFrameLimit>
+<G.BackgroundFrameLimit type="i">20</G.BackgroundFrameLimit>
 </settings>
 </AuroraJ>

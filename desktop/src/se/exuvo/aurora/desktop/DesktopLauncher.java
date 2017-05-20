@@ -84,7 +84,7 @@ public class DesktopLauncher {
 	private static final void loadSettings(JSAPResult conf) {
 		Settings.add("loglvl", "INFO");
 		Settings.add("G.FrameLimit", 60);
-		Settings.add("G.BackgroundFrameLimit", 10);
+		Settings.add("G.BackgroundFrameLimit", 20);
 		Settings.add("G.Width", 1024);
 		Settings.add("G.Height", 768);
 		Settings.add("G.Fullscreen", false);

@@ -41,10 +41,10 @@ class SolarSystem {
 		entity2.add(engine.createComponent(RenderComponent::class.java))
 		entity2.add(engine.createComponent(CircleComponent::class.java).apply { radius = 2f })
 		entity2.add(engine.createComponent(TextComponent::class.java).apply { text = "1" })
-		entity2.add(engine.createComponent(OrbitComponent::class.java).apply { parent = entity1; a_semiMajorAxis = 2f })
+		entity2.add(engine.createComponent(OrbitComponent::class.java).apply { parent = entity1; a_semiMajorAxis = 2f; e_eccentricity = 0.5f })
 
 		engine.addEntity(entity2)
-		
+
 		val entity3 = engine.createEntity()
 		entity3.add(engine.createComponent(PositionComponent::class.java))
 		entity3.add(engine.createComponent(RenderComponent::class.java))
@@ -53,7 +53,7 @@ class SolarSystem {
 		entity3.add(engine.createComponent(OrbitComponent::class.java).apply { parent = entity2; a_semiMajorAxis = 0.5f })
 
 		engine.addEntity(entity3)
-		
+
 		val entity4 = engine.createEntity()
 		entity4.add(engine.createComponent(PositionComponent::class.java))
 		entity4.add(engine.createComponent(RenderComponent::class.java))
@@ -68,9 +68,11 @@ class SolarSystem {
 		//TODO use readlock during update
 
 		lock.writeLock().lock()
-		engine.update(deltaGameTime.toFloat())
-		lock.writeLock().unlock()
-
+		try {
+			engine.update(deltaGameTime.toFloat())
+		} finally {
+			lock.writeLock().unlock()
+		}
 	}
 
 	fun commitChanges() {
