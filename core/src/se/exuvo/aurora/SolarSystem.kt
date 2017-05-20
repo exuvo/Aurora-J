@@ -41,7 +41,7 @@ class SolarSystem {
 		entity2.add(engine.createComponent(RenderComponent::class.java))
 		entity2.add(engine.createComponent(CircleComponent::class.java).apply { radius = 2f })
 		entity2.add(engine.createComponent(TextComponent::class.java).apply { text = "1" })
-		entity2.add(engine.createComponent(OrbitComponent::class.java).apply { parent = entity1; a_semiMajorAxis = 2f; e_eccentricity = 0.5f })
+		entity2.add(engine.createComponent(OrbitComponent::class.java).apply { parent = entity1; a_semiMajorAxis = 2f; e_eccentricity = 0.5f; w_argumentOfPeriapsis = -45f })
 
 		engine.addEntity(entity2)
 
@@ -50,7 +50,7 @@ class SolarSystem {
 		entity3.add(engine.createComponent(RenderComponent::class.java))
 		entity3.add(engine.createComponent(CircleComponent::class.java))
 		entity3.add(engine.createComponent(TextComponent::class.java).apply { text = "2" })
-		entity3.add(engine.createComponent(OrbitComponent::class.java).apply { parent = entity2; a_semiMajorAxis = 0.5f })
+		entity3.add(engine.createComponent(OrbitComponent::class.java).apply { parent = entity2; a_semiMajorAxis = 0.5f; e_eccentricity = 0.2f })
 
 		engine.addEntity(entity3)
 

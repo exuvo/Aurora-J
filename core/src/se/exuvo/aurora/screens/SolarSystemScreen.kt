@@ -106,11 +106,13 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 		if (keycode == Input.Keys.PLUS) {
 
-			galaxy.speed /= 4
+			var speed = galaxy.speed / 4
 
-			if (galaxy.speed == 0L) {
-				galaxy.speed = 1
+			if (speed == 0L) {
+				speed = 1
 			}
+
+			galaxy.speed = speed
 
 			if (galaxy.sleeping) {
 				galaxy.thread!!.interrupt()
@@ -120,11 +122,13 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 		} else if (keycode == Input.Keys.MINUS) {
 
-			galaxy.speed *= 4
+			var speed = galaxy.speed * 4
 
-			if (galaxy.speed > 1 * NanoTimeUnits.SECOND) {
-				galaxy.speed = 1 * NanoTimeUnits.SECOND
+			if (speed > 1 * NanoTimeUnits.SECOND) {
+				speed = 1 * NanoTimeUnits.SECOND
 			}
+
+			galaxy.speed = speed
 
 			if (galaxy.sleeping) {
 				galaxy.thread!!.interrupt()
