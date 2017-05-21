@@ -17,12 +17,12 @@ class AuroraGame : ApplicationAdapter() {
 	
 	val log = Logger.getLogger(this.javaClass)
 	val screenService = GameScreenService()
+//	private var preferences: Preferences? = null
 
 	override fun create() {
 		
-		val preferences = Gdx.app.getPreferences("Aurora J");
-		
-		GameServices.put(preferences, Preferences::class.java)
+//		preferences = Gdx.app.getPreferences("AuroraJ.xml");
+//		GameServices.put(preferences!!, Preferences::class.java)
 		GameServices.put(AssetManager())
 		GameServices.put(ShapeRenderer())
 		GameServices.put(SpriteBatch())
@@ -50,9 +50,10 @@ class AuroraGame : ApplicationAdapter() {
 	}
 
 	override fun dispose() {
+//		preferences!!.flush()
 		screenService.dispose()
 		GameServices.dispose()
-		Assets.dispose();
+		Assets.dispose()
 		Settings.save()
 	}
 	

@@ -5,6 +5,7 @@ import com.badlogic.ashley.core.Engine
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.EntityListener
 import com.badlogic.ashley.core.Family
+import com.badlogic.gdx.Preferences
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.MathUtils
@@ -14,6 +15,7 @@ import com.thedeadpixelsociety.ld34.components.OrbitComponent
 import com.thedeadpixelsociety.ld34.components.PositionComponent
 import org.apache.log4j.Logger
 import se.exuvo.aurora.utils.GameServices
+import se.exuvo.settings.Settings
 
 //TODO sorted system by no parents first outwards
 class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60), EntityListener {
@@ -60,11 +62,14 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 
 		log.info("Calculating orbit for new entity $entity using $points points, orbitalPeriod ${orbitalPeriod / (24 * 60 * 60)} days")
 
+		// If set more dots represent higher speed, else the time between dots is constant
+		val invert = if (Settings.getBol("Orbits.DotsRepresentSpeed")) MathUtils.PI else 0f 
+
 		for (i in 0..points - 1) {
 			val M_meanAnomaly = orbit.M_meanAnomaly + (360f * i) / points
-			val E_eccentricAnomaly = MathUtils.PI + calculateEccentricAnomalyFromMeanAnomaly(orbit, M_meanAnomaly)
-			calculateOrbitalPositionFromEccentricAnomaly(orbit, E_eccentricAnomaly,  orbitPoints[i])
-			
+			val E_eccentricAnomaly = calculateEccentricAnomalyFromMeanAnomaly(orbit, M_meanAnomaly) + invert
+			calculateOrbitalPositionFromEccentricAnomaly(orbit, E_eccentricAnomaly, orbitPoints[i])
+
 //			println("Calculated $i with M_meanAnomaly $M_meanAnomaly")
 		}
 

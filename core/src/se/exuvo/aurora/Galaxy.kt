@@ -1,21 +1,19 @@
 package se.exuvo.aurora
 
-import com.badlogic.gdx.Preferences
 import org.apache.log4j.Logger
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.NanoTimeUnits
+import se.exuvo.settings.Settings
 import se.unlogic.standardutils.threads.SimpleTaskGroup
 import se.unlogic.standardutils.threads.ThreadPoolTaskGroupHandler
 import se.unlogic.standardutils.threads.ThreadUtils
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.atomic.AtomicInteger
 
 class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 
 	val log = Logger.getLogger(this.javaClass)
-	val preferences = GameServices[Preferences::class.java]
 
-	private val threadPool = ThreadPoolTaskGroupHandler<SimpleTaskGroup>("Galaxy", preferences.getInteger("Galaxy.threads", 3), true) //Runtime.getRuntime().availableProcessors()
+	private val threadPool = ThreadPoolTaskGroupHandler<SimpleTaskGroup>("Galaxy", Settings.getInt("Galaxy.Threads"), true) //
 	var thread: Thread? = null
 	var sleeping = false
 
