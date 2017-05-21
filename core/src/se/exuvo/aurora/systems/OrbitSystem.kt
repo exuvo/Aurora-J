@@ -58,11 +58,13 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 //		val points = Math.max(((Math.PI * orbitalPeriod) / (24 * 60 * 60)).toInt(), 9)
 		val orbitPoints = Array<Vector2>(points, { Vector2() })
 
-		println("Calculating orbit for new entity $entity using $points points, orbitalPeriod ${orbitalPeriod / (24 * 60 * 60)} days")
+		log.info("Calculating orbit for new entity $entity using $points points, orbitalPeriod ${orbitalPeriod / (24 * 60 * 60)} days")
 
 		for (i in 0..points - 1) {
 			val M_meanAnomaly = orbit.M_meanAnomaly + (360f * i) / points
-			calculateOrbitalPosition(orbit, M_meanAnomaly, orbitPoints[i])
+			val E_eccentricAnomaly = MathUtils.PI + calculateEccentricAnomalyFromMeanAnomaly(orbit, M_meanAnomaly)
+			calculateOrbitalPositionFromEccentricAnomaly(orbit, E_eccentricAnomaly,  orbitPoints[i])
+			
 //			println("Calculated $i with M_meanAnomaly $M_meanAnomaly")
 		}
 
@@ -73,25 +75,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 		orbitsCache.remove(entity)
 	}
 
-	override fun processEntity(entity: Entity) {
-
-		val orbit = orbitMapper.get(entity)
-		val orbitCache: OrbitCache = orbitsCache.get(entity)!!
-		val orbitalPeriod = orbitCache.orbitalPeriod
-
-		val M_meanAnomaly = orbit.M_meanAnomaly + 360 * ((galaxy.time % orbitalPeriod.toLong()) / orbitalPeriod)
-
-//		println("M_meanAnomaly $M_meanAnomaly")
-
-		val positionComponent = positionMapper.get(entity)
-		calculateOrbitalPosition(orbit, M_meanAnomaly, positionComponent.position)
-
-		val parentEntity = orbit.parent
-		val parentPosition: Vector2 = positionMapper.get(parentEntity).position
-		positionComponent.position.add(parentPosition)
-	}
-
-	private fun calculateOrbitalPosition(orbit: OrbitComponent, M_meanAnomaly: Float, position: Vector2) {
+	private fun calculateEccentricAnomalyFromMeanAnomaly(orbit: OrbitComponent, M_meanAnomaly: Float): Float {
 
 		// Calculating orbits https://space.stackexchange.com/questions/8911/determining-orbital-position-at-a-future-point-in-time
 		var M_meanAnomalyRad = M_meanAnomaly * MathUtils.degreesToRadians
@@ -115,6 +99,11 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 			}
 		}
 
+		return E_eccentricAnomaly
+	}
+
+	private fun calculateOrbitalPositionFromEccentricAnomaly(orbit: OrbitComponent, E_eccentricAnomaly: Float, position: Vector2) {
+
 		// Coordinates with P+ towards periapsis
 		val P: Float = AU * orbit.a_semiMajorAxis * (MathUtils.cos(E_eccentricAnomaly) - orbit.e_eccentricity)
 		val Q: Float = AU * orbit.a_semiMajorAxis * MathUtils.sin(E_eccentricAnomaly) * Math.sqrt(1 - Math.pow(orbit.e_eccentricity.toDouble(), 2.0)).toFloat()
@@ -123,6 +112,25 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 
 		position.set(P, Q)
 		position.rotate(orbit.w_argumentOfPeriapsis)
+	}
+
+	override fun processEntity(entity: Entity) {
+
+		val orbit = orbitMapper.get(entity)
+		val orbitCache: OrbitCache = orbitsCache.get(entity)!!
+		val orbitalPeriod = orbitCache.orbitalPeriod
+
+		val M_meanAnomaly = orbit.M_meanAnomaly + 360 * ((galaxy.time % orbitalPeriod.toLong()) / orbitalPeriod)
+
+//		println("M_meanAnomaly $M_meanAnomaly")
+
+		val positionComponent = positionMapper.get(entity)
+		val E_eccentricAnomaly = calculateEccentricAnomalyFromMeanAnomaly(orbit, M_meanAnomaly)
+		calculateOrbitalPositionFromEccentricAnomaly(orbit, E_eccentricAnomaly, positionComponent.position)
+
+		val parentEntity = orbit.parent
+		val parentPosition: Vector2 = positionMapper.get(parentEntity).position
+		positionComponent.position.add(parentPosition)
 	}
 
 	private val shapeRenderer by lazy { GameServices[ShapeRenderer::class.java] }
