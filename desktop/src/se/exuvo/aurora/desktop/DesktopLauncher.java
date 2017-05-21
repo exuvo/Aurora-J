@@ -1,5 +1,6 @@
 package se.exuvo.aurora.desktop;
 
+import java.io.File;
 import java.nio.file.Paths;
 import java.util.Iterator;
 
@@ -7,6 +8,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
 
+import com.badlogic.gdx.Files.FileType;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
 import com.martiansoftware.jsap.JSAP;
@@ -66,6 +68,7 @@ public class DesktopLauncher {
 		windowConfig.vSyncEnabled = Settings.getBol("G.VSync");
 		windowConfig.resizable = Settings.getBol("G.Resizable");
 		windowConfig.preferencesDirectory = Paths.get("").toAbsolutePath().toString();
+		windowConfig.preferencesFileType = FileType.Absolute;
 
 		new LwjglApplication(new AuroraGame(), windowConfig);
 	}
@@ -83,6 +86,7 @@ public class DesktopLauncher {
 
 	private static final void loadSettings(JSAPResult conf) {
 		Settings.add("loglvl", "INFO");
+		
 		Settings.add("G.FrameLimit", 60);
 		Settings.add("G.BackgroundFrameLimit", 20);
 		Settings.add("G.Width", 1024);
@@ -91,6 +95,9 @@ public class DesktopLauncher {
 		Settings.add("G.VSync", false);
 		Settings.add("G.Resizable", true);
 		Settings.add("G.ShowFPS", true);
+		
+		Settings.add("Orbits.DotsRepresentSpeed", true);
+		Settings.add("Galaxy.Threads", Runtime.getRuntime().availableProcessors());
 
 		if (!Settings.start(conf, "AuroraJ")) {
 			System.out.println("Failed to read settings from file, please fix. Exiting.");
