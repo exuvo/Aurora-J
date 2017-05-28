@@ -16,6 +16,7 @@ import se.exuvo.aurora.systems.OrbitSystem
 import se.exuvo.aurora.systems.RenderSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.NanoTimeUnits
+import se.exuvo.aurora.utils.Vector2Long
 import se.exuvo.settings.Settings
 import kotlin.properties.Delegates
 
@@ -27,10 +28,11 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 	private val uiCamera by lazy { GameServices[GameScreenService::class.java].uiCamera }
 	private var viewport by Delegates.notNull<Viewport>()
 	private var camera by Delegates.notNull<OrthographicCamera>()
+	private val cameraOffset = Vector2Long()
 
 	var zoomLevel = 0
 	var zoomSensitivity = Settings.getFloat("UI.zoomSensitivity").toDouble()
-	val maxZoom = 1E59f
+	val maxZoom = 1E8f
 
 	override fun show() {
 
@@ -38,6 +40,8 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 		camera = viewport.camera as OrthographicCamera
 
 		viewport.update(Gdx.graphics.width, Gdx.graphics.height)
+		camera.zoom = 1E6f;
+		zoomLevel = (Math.log(camera.zoom.toDouble()) / Math.log(zoomSensitivity)).toInt();
 	}
 
 	override fun resize(width: Int, height: Int) {
@@ -70,7 +74,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 		}
 
 		if (hDirection != 0f || vDirection != 0f) {
-			camera.translate(hDirection, vDirection)
+			cameraOffset.add((camera.zoom * hDirection).toLong(), (camera.zoom * vDirection).toLong())
 		}
 	}
 
@@ -79,8 +83,8 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 		system.lock.readLock().lock()
 		try {
-			system.engine.getSystem(OrbitSystem::class.java).render(viewport)
-			system.engine.getSystem(RenderSystem::class.java).render(viewport)
+			system.engine.getSystem(OrbitSystem::class.java).render(viewport, cameraOffset)
+			system.engine.getSystem(RenderSystem::class.java).render(viewport, cameraOffset)
 		} finally {
 			system.lock.readLock().unlock()
 		}
@@ -194,9 +198,8 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 			var diff = mouseWorldNow.cpy().sub(mouseWorldBefore)
 
-			camera.position.sub(diff);
-			camera.update();
-
+			cameraOffset.sub(diff.x.toLong(), diff.y.toLong())
+			
 			//TODO ensure camera position is always inside the solar system
 
 			dragX = screenX;
@@ -246,9 +249,10 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 //			http://stackoverflow.com/questions/932141/zooming-an-object-based-on-mouse-position
 
 			var diff = camera.position.cpy().sub(getMouseInWorldCordinates());
-			camera.position.sub(diff.sub(diff.cpy().scl(1 / oldZoom).scl(camera.zoom)));
+			diff = diff.sub(diff.cpy().scl(1 / oldZoom).scl(camera.zoom))
+			cameraOffset.sub(diff.x.toLong(), diff.y.toLong())
 
-			//TODO ensure camera position is always inside the solar system
+			//TODO ensure cameraOffset is always inside the solar system
 		}
 
 		camera.update();

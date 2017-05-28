@@ -1,14 +1,9 @@
 package se.exuvo.aurora.components
 
 import com.badlogic.ashley.core.Component
-import com.badlogic.gdx.math.Vector2
+import se.exuvo.aurora.utils.Vector2Long
 
 // In km
-data class PositionComponent(var x: Long = 0, var y: Long = 0) : Component {
+data class PositionComponent(val position: Vector2Long = Vector2Long()) : Component {
 	
-	
-	fun getVector2(): Vector2 {
-		
-		return Vector2(x.toFloat(), y.toFloat())
-	}
 }
