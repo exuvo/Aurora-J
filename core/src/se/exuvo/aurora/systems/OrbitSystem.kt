@@ -51,8 +51,8 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 		val orbit = orbitMapper.get(entity)
 		val parentMass = massMapper.get(orbit.parent).mass
 
-		if (orbit.e_eccentricity > 1) {
-			log.warn("Orbital eccentricity over 1 won't work: ${orbit.e_eccentricity}")
+		if (orbit.e_eccentricity > 0.95) {
+			log.warn("Orbital eccentricity over 0.95 won't work: ${orbit.e_eccentricity}")
 		}
 
 		// In km
@@ -106,9 +106,9 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 //			println("dE $dE")
 
 			attempts++;
-			if (Math.abs(dE) < 1e-4) {
+			if (Math.abs(dE) < 1e-5) {
 				break
-			} else if (attempts >= 5) {
+			} else if (attempts >= 10) {
 				log.warn("Calculating orbital position took more than $attempts attempts")
 				break
 			}
