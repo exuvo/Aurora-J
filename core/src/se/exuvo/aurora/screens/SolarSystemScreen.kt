@@ -1,4 +1,4 @@
-package com.thedeadpixelsociety.ld34.screens
+package se.exuvo.aurora.screens
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
@@ -9,11 +9,11 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.badlogic.gdx.utils.viewport.Viewport
-import com.thedeadpixelsociety.ld34.systems.RenderSystem
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.Galaxy
 import se.exuvo.aurora.SolarSystem
 import se.exuvo.aurora.systems.OrbitSystem
+import se.exuvo.aurora.systems.RenderSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.NanoTimeUnits
 import se.exuvo.settings.Settings
@@ -30,7 +30,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 	var zoomLevel = 0
 	var zoomSensitivity = Settings.getFloat("UI.zoomSensitivity").toDouble()
-	val maxZoom = 1E5f
+	val maxZoom = 1E59f
 
 	override fun show() {
 

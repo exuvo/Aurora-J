@@ -5,17 +5,17 @@ import com.badlogic.ashley.core.Engine
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.EntityListener
 import com.badlogic.ashley.core.Family
-import com.badlogic.gdx.Preferences
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.viewport.Viewport
-import com.thedeadpixelsociety.ld34.components.OrbitComponent
-import com.thedeadpixelsociety.ld34.components.PositionComponent
 import org.apache.log4j.Logger
+import se.exuvo.aurora.components.OrbitComponent
+import se.exuvo.aurora.components.PositionComponent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.settings.Settings
+import java.lang.RuntimeException
 
 //TODO sorted system by no parents first outwards
 class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60), EntityListener {
@@ -25,7 +25,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 
 	val log = Logger.getLogger(this.javaClass)
 	private val gravitationalConstant = 6.67408e-11
-	private val AU = 100f //149597870700.0 / 1000.0
+	private val AU = 1000f //149597870700f
 
 	private val orbitMapper = ComponentMapper.getFor(OrbitComponent::class.java)
 	private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
@@ -55,15 +55,18 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 		val apoapsis = orbit.a_semiMajorAxis * (1f + orbit.e_eccentricity)
 		val orbitalPeriod = (2 * Math.PI * Math.sqrt(Math.pow(orbit.a_semiMajorAxis.toDouble(), 3.0) / gravitationalConstant)).toFloat()
 
+		if (Float.NaN.equals(orbitalPeriod) || orbitalPeriod < 1 * 60 * 60) {
+			throw RuntimeException("orbitalPeriod $orbitalPeriod is invalid for entity $entity");
+		}
+
 		// 1 point each day
-		val points = Math.max((orbit.a_semiMajorAxis * AU).toInt(), 3)
-//		val points = Math.max(((Math.PI * orbitalPeriod) / (24 * 60 * 60)).toInt(), 9)
+		val points = Math.max((orbitalPeriod / (60 * 60)).toInt(), 3)
 		val orbitPoints = Array<Vector2>(points, { Vector2() })
 
-		log.info("Calculating orbit for new entity $entity using $points points, orbitalPeriod ${orbitalPeriod / (24 * 60 * 60)} days")
+		log.debug("Calculating orbit for new entity $entity using $points points, orbitalPeriod ${orbitalPeriod / (24 * 60 * 60)} days")
 
 		// If set more dots represent higher speed, else the time between dots is constant
-		val invert = if (Settings.getBol("Orbits.DotsRepresentSpeed")) MathUtils.PI else 0f 
+		val invert = if (Settings.getBol("Orbits.DotsRepresentSpeed")) MathUtils.PI else 0f
 
 		for (i in 0..points - 1) {
 			val M_meanAnomaly = orbit.M_meanAnomaly + (360f * i) / points
@@ -99,7 +102,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 			if (Math.abs(dE) < 1e-3) {
 				break
 			} else if (attempts >= 5) {
-				log.warn("Calculating orbital position took more than $attempts")
+				log.warn("Calculating orbital position took more than $attempts attempts")
 				break
 			}
 		}
@@ -119,6 +122,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 		position.rotate(orbit.w_argumentOfPeriapsis)
 	}
 
+	var tempPosition = Vector2()
 	override fun processEntity(entity: Entity) {
 
 		val orbit = orbitMapper.get(entity)
@@ -129,13 +133,14 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 
 //		println("M_meanAnomaly $M_meanAnomaly")
 
-		val positionComponent = positionMapper.get(entity)
 		val E_eccentricAnomaly = calculateEccentricAnomalyFromMeanAnomaly(orbit, M_meanAnomaly)
-		calculateOrbitalPositionFromEccentricAnomaly(orbit, E_eccentricAnomaly, positionComponent.position)
+		calculateOrbitalPositionFromEccentricAnomaly(orbit, E_eccentricAnomaly, tempPosition)
 
 		val parentEntity = orbit.parent
-		val parentPosition: Vector2 = positionMapper.get(parentEntity).position
-		positionComponent.position.add(parentPosition)
+		val parentPositionComponent = positionMapper.get(parentEntity)
+		val positionComponent = positionMapper.get(entity)
+		positionComponent.x = parentPositionComponent.x + tempPosition.x.toLong()
+		positionComponent.y = parentPositionComponent.y + tempPosition.y.toLong()
 	}
 
 	private val shapeRenderer by lazy { GameServices[ShapeRenderer::class.java] }
@@ -150,10 +155,12 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 			val orbit = orbitMapper.get(it)
 			val orbitCache: OrbitCache = orbitsCache.get(it)!!
 			val parentEntity = orbit.parent
-			val parentPosition: Vector2 = positionMapper.get(parentEntity).position
+			val parentPositionComponent = positionMapper.get(parentEntity)
+			val x = parentPositionComponent.x.toFloat()
+			val y = parentPositionComponent.y.toFloat()
 
 			for (point in orbitCache.orbitPoints) {
-				shapeRenderer.point(parentPosition.x + point.x, parentPosition.y + point.y, 0f);
+				shapeRenderer.point(x + point.x, y + point.y, 0f);
 			}
 		}
 		shapeRenderer.end();

@@ -20,6 +20,7 @@ object Assets : Disposable {
 	private val manager by lazy { GameServices[AssetManager::class.java] }
 
 	var fontMap by Delegates.notNull<BitmapFont>()
+	var fontMapSmall by Delegates.notNull<BitmapFont>()
 	var fontUI by Delegates.notNull<BitmapFont>()
 
 	fun startLoad() {
@@ -28,8 +29,8 @@ object Assets : Disposable {
 		manager.setLoader(BitmapFont::class.java, ".ttf", FreetypeFontLoader(resolver))
 		manager.setLoader(BitmapFont::class.java, ".otf", FreetypeFontLoader(resolver))
 
-		val font32LoadParams = FreeTypeFontLoaderParameter().apply {
-			fontFileName = "PrintClearly.otf"
+		val fontUILoadParams = FreeTypeFontLoaderParameter().apply {
+			fontFileName = "fonts/PrintClearly.otf"
 			fontParameters.apply {
 				size = 64
 				color = Color.WHITE
@@ -38,31 +39,42 @@ object Assets : Disposable {
 			}
 		}
 
-		manager.load("fontUI.otf", BitmapFont::class.java, font32LoadParams);
+		manager.load("fontUI.otf", BitmapFont::class.java, fontUILoadParams);
 		
 		// Load font now as it is used on the loading screen
 		manager.finishLoading()
 		fontUI = manager.get("fontUI.otf", BitmapFont::class.java)
 		fontUI.data.setScale(0.5f)
 		
-		val font16LoadParams = FreeTypeFontLoaderParameter().apply {
-			fontFileName = "PrintClearly.otf"
+		val fontMapLoadParams = FreeTypeFontLoaderParameter().apply {
+			fontFileName = "fonts/13PXBUS.TTF"
 			fontParameters.apply {
-				size = 64
+				size = 13
+				color = Color.WHITE
+				minFilter = TextureFilter.Linear
+				magFilter = TextureFilter.Linear
+			}
+		}
+		
+		val fontMapSmallLoadParams = FreeTypeFontLoaderParameter().apply {
+			fontFileName = "fonts/11PX2BUS.TTF"
+			fontParameters.apply {
+				size = 11
 				color = Color.WHITE
 				minFilter = TextureFilter.Linear
 				magFilter = TextureFilter.Linear
 			}
 		}
 
-		manager.load("fontMap.otf", BitmapFont::class.java, font16LoadParams);
+		manager.load("fontMap.ttf", BitmapFont::class.java, fontMapLoadParams);
+		manager.load("fontMapSmall.ttf", BitmapFont::class.java, fontMapSmallLoadParams);
 		
 		log.info("Queued ${manager.queuedAssets} assets for loading")
 	}
 	
 	fun finishLoad() {
-		fontMap = manager.get("fontMap.otf", BitmapFont::class.java)
-		fontMap.data.setScale(0.3f)
+		fontMap = manager.get("fontMap.ttf", BitmapFont::class.java)
+		fontMapSmall = manager.get("fontMapSmall.ttf", BitmapFont::class.java)
 	}
 
 	override fun dispose() {

@@ -1,4 +1,4 @@
-package com.thedeadpixelsociety.ld34.components
+package se.exuvo.aurora.components
 
 import com.badlogic.ashley.core.Component
 

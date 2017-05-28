@@ -1,4 +1,4 @@
-package com.thedeadpixelsociety.ld34.screens
+package se.exuvo.aurora.screens
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.InputMultiplexer

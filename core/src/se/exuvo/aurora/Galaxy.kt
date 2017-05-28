@@ -77,28 +77,26 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 
 						time += tickSize;
 						updateDay()
-						
+
 						val queue = LinkedBlockingQueue<UpdateSystemTask>(systems.size)
 
-						systems.forEach { queue.add(UpdateSystemTask(it, tickSize)) }
+						systems.forEach { queue.add(UpdateSystemTask(it, tickSize, this)) }
 
 						val executionController = threadPool.execute(SimpleTaskGroup(queue))
 
 						val systemUpdateStart = System.nanoTime()
-
 						executionController.start()
-						executionController.awaitExecution()
+
+						while (!executionController.isFinished() && !executionController.isAborted) {
+							try {
+								executionController.awaitExecution()
+							} catch (ignore: InterruptedException) {}
+						}
 
 						val systemUpdateDuration = (System.nanoTime() - systemUpdateStart)
 //					log.debug("Galaxy update took " + NanoTimeUnits.nanoToString(systemUpdateDuration))
 
 						//TODO handle tick abortion and tickSize lowering
-
-//				val systemCommitStart = System.currentTimeMillis()
-//				systems.forEach { it.commitChanges() }
-//				val systemCommitDuration = System.currentTimeMillis() - systemCommitStart
-
-//				log.debug("Galaxy commit took " + TimeUtils.millisecondsToString(systemCommitDuration))
 					}
 
 					// If we are more than 10 ticks behind stop counting
@@ -130,7 +128,7 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 		}
 	}
 
-	class UpdateSystemTask(val system: SolarSystem, val deltaGameTime: Int) : Runnable {
+	class UpdateSystemTask(val system: SolarSystem, val deltaGameTime: Int, val galaxy: Galaxy) : Runnable {
 
 		val log by lazy { Logger.getLogger(this.javaClass) }
 
@@ -139,6 +137,7 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 				system.update(deltaGameTime)
 			} catch (t: Throwable) {
 				log.error("Exception in system update", t)
+				galaxy.paused = true
 			}
 		}
 	}

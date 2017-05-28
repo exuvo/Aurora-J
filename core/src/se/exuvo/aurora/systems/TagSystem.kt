@@ -1,8 +1,13 @@
-package com.thedeadpixelsociety.ld34.systems
+package se.exuvo.aurora.systems
 
-import com.badlogic.ashley.core.*
-import com.thedeadpixelsociety.ld34.components.TagComponent
-import java.util.*
+import com.badlogic.ashley.core.ComponentMapper
+import com.badlogic.ashley.core.Engine
+import com.badlogic.ashley.core.Entity
+import com.badlogic.ashley.core.EntityListener
+import com.badlogic.ashley.core.EntitySystem
+import com.badlogic.ashley.core.Family
+import se.exuvo.aurora.components.TagComponent
+import java.util.HashMap
 
 class TagSystem() : EntitySystem() {
     private val tm = ComponentMapper.getFor(TagComponent::class.java)
