@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.ComponentMapper
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.Family
 import com.badlogic.ashley.systems.SortedIteratingSystem
+import com.badlogic.ashley.utils.ImmutableArray
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
@@ -12,7 +13,6 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.viewport.Viewport
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.components.CircleComponent
-import se.exuvo.aurora.components.GroupComponent
 import se.exuvo.aurora.components.LineComponent
 import se.exuvo.aurora.components.NameComponent
 import se.exuvo.aurora.components.PositionComponent
@@ -22,8 +22,12 @@ import se.exuvo.aurora.components.TextComponent
 import se.exuvo.aurora.components.TintComponent
 import se.exuvo.aurora.screens.GameScreenService
 import se.exuvo.aurora.utils.GameServices
-import se.exuvo.aurora.utils.Vector2Long
+import se.exuvo.aurora.utils.Vector2L
 import java.util.Comparator
+
+fun getCircleSegments(radius: Float, zoom: Float): Int {
+	return Math.max(3, (10 * Math.cbrt((radius / zoom).toDouble())).toInt())
+}
 
 class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator()) {
 	companion object {
@@ -35,53 +39,92 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 	private val tintMapper = ComponentMapper.getFor(TintComponent::class.java)
 	private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
 	private val tagMapper = ComponentMapper.getFor(TagComponent::class.java)
-	private val groupMapper = ComponentMapper.getFor(GroupComponent::class.java)
 	private val textMapper = ComponentMapper.getFor(TextComponent::class.java)
 	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java)
-	private val shapeRenderer by lazy { GameServices[ShapeRenderer::class.java] }
-	private val batch by lazy { GameServices[SpriteBatch::class.java] }
-	private val uiCamera by lazy { GameServices[GameScreenService::class.java].uiCamera }
-	private var cameraOffset: Vector2Long? = null
+	private val shapeRenderer = GameServices[ShapeRenderer::class.java]
+	private val batch = GameServices[SpriteBatch::class.java]
+	private val uiCamera = GameServices[GameScreenService::class.java].uiCamera
+	private val groupSystem by lazy { engine.getSystem(GroupSystem::class.java) }
 
 	override fun checkProcessing() = false
 
-	override fun processEntity(entity: Entity, deltaTime: Float) {
+	override fun processEntity(entity: Entity, renderDelta: Float) {}
 
-		val cameraOffset = cameraOffset!!
-		val position = positionMapper.get(entity).position
-		val tintComponent = tintMapper.get(entity)
-		val x = (position.x - cameraOffset.x).toFloat()
-		val y = (position.y - cameraOffset.y).toFloat()
 
-		val color = Color(tintComponent?.color ?: Color.WHITE)
-		shapeRenderer.color = color
+	fun drawEntities(entities: ImmutableArray<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
-		if (circleMapper.has(entity)) {
+		val zoom = (viewport.camera as OrthographicCamera).zoom
 
-			val circle = circleMapper.get(entity)
-			shapeRenderer.circle(x, y, circle.radius)
+		for (entity in entities) {
+			val position = positionMapper.get(entity).position
+			val tintComponent = tintMapper.get(entity)
+			val x = (position.x - cameraOffset.x).toFloat()
+			val y = (position.y - cameraOffset.y).toFloat()
 
-		} else if (lineMapper.has(entity)) {
+			val color = Color(tintComponent?.color ?: Color.WHITE)
+			shapeRenderer.color = color
 
-			val line = lineMapper.get(entity)
-			shapeRenderer.line(x, y, x + line.x, y + line.y)
+			if (circleMapper.has(entity)) {
+
+				val circle = circleMapper.get(entity)
+				shapeRenderer.circle(x, y, circle.radius, getCircleSegments(circle.radius, zoom))
+
+			} else if (lineMapper.has(entity)) {
+
+				val line = lineMapper.get(entity)
+				shapeRenderer.line(x, y, x + line.x, y + line.y)
+			}
 		}
 	}
 
-	fun render(viewport: Viewport, cameraOffset: Vector2Long) {
-		this.cameraOffset = cameraOffset
-		begin(viewport)
-		super.update(0f)
+	fun drawSelections(entities: ImmutableArray<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
+
+		val selectedEntities = groupSystem.get(GroupSystem.SELECTED)
+		val zoom = (viewport.camera as OrthographicCamera).zoom
+
+		for (entity in entities) {
+			if (selectedEntities.contains(entity)) {
+				val position = positionMapper.get(entity).position
+				val x = (position.x - cameraOffset.x).toFloat()
+				val y = (position.y - cameraOffset.y).toFloat()
+
+				shapeRenderer.color = Color.RED
+
+				if (circleMapper.has(entity)) {
+
+					val circle = circleMapper.get(entity)
+					val radius = circle.radius * 1.1f + 2 * zoom
+					val segments = getCircleSegments(radius, zoom)
+					println("radius $radius, segments $segments")
+					shapeRenderer.circle(x, y, radius, segments)
+				}
+			}
+		}
+	}
+
+	fun render(viewport: Viewport, cameraOffset: Vector2L) {
+
+		val sortedEntities = getEntities()
+
+		viewport.apply()
+		shapeRenderer.projectionMatrix = viewport.camera.combined
+
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+		drawEntities(sortedEntities, viewport, cameraOffset)
+		shapeRenderer.end()
+
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+		drawSelections(sortedEntities, viewport, cameraOffset)
 		shapeRenderer.end()
 
 		batch.projectionMatrix = uiCamera.combined
 		batch.begin()
-		
+
 		val font = Assets.fontMap
 		font.color = Color.GREEN
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 		val screenPosition = Vector3()
-		
+
 		entities.filter { nameMapper.has(it) }.forEach {
 			val position = positionMapper.get(it).position
 			val name = nameMapper.get(it).name!!
@@ -98,19 +141,19 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 				val lineComponent = lineMapper.get(it)
 				height = lineComponent.y
 			}
-			
+
 			val x = (position.x - cameraOffset.x).toFloat()
 			val y = (position.y - cameraOffset.y).toFloat()
 
 			screenPosition.set(x, y - height * .5f, 0f)
 			viewport.camera.project(screenPosition)
 
-			font.draw(batch, name, screenPosition.x  - name.length * font.spaceWidth * .5f, screenPosition.y - font.lineHeight / zoom)
+			font.draw(batch, name, screenPosition.x - name.length * font.spaceWidth * .5f, screenPosition.y - font.lineHeight / zoom)
 		}
 
 		batch.end()
 	}
-	
+
 //	private fun drawDottedLine(dotDist: Float, x1: Float, y1: Float, x2: Float, y2: Float) {
 //		
 //		val vec2 = Vector2(x2, y2).sub(Vector2(x1, y1))
@@ -125,12 +168,6 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 //		}
 //		shapeRenderer.end();
 //	}
-
-	private fun begin(viewport: Viewport) {
-		viewport.apply()
-		shapeRenderer.projectionMatrix = viewport.camera.combined
-		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-	}
 
 	private fun beginBatch(viewport: Viewport) {
 		batch.projectionMatrix = viewport.camera.combined

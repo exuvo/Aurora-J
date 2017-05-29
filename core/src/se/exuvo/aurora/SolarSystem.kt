@@ -54,6 +54,14 @@ class SolarSystem {
 		entity3.add(engine.createComponent(OrbitComponent::class.java).apply { parent = entity2; a_semiMajorAxis = (384400.0 / OrbitSystem.AU).toFloat(); e_eccentricity = 0.2f; M_meanAnomaly = 30f })
 
 		engine.addEntity(entity3)
+		
+		val entity4 = engine.createEntity()
+		entity4.add(engine.createComponent(PositionComponent::class.java))
+		entity4.add(engine.createComponent(RenderComponent::class.java))
+		entity4.add(engine.createComponent(CircleComponent::class.java).apply{ radius = 10f})
+		entity4.add(engine.createComponent(NameComponent::class.java).apply { name = "Ship" })
+
+		engine.addEntity(entity4)
 	}
 
 	fun update(deltaGameTime: Int) {

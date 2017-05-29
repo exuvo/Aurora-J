@@ -1,12 +1,12 @@
 package se.exuvo.aurora.utils;
 
-public class Vector2Long {
+public class Vector2L {
 
 	public long x;
 	public long y;
 
 	/** Constructs a new 2D grid polong. */
-	public Vector2Long() {}
+	public Vector2L() {}
 
 	/**
 	 * Constructs a new 2D grid polong.
@@ -14,7 +14,7 @@ public class Vector2Long {
 	 * @param x X coordinate
 	 * @param y Y coordinate
 	 */
-	public Vector2Long(long x, long y) {
+	public Vector2L(long x, long y) {
 		this.x = x;
 		this.y = y;
 	}
@@ -24,7 +24,7 @@ public class Vector2Long {
 	 * 
 	 * @param polong The 2D grid polong to make a copy of.
 	 */
-	public Vector2Long(Vector2Long polong) {
+	public Vector2L(Vector2L polong) {
 		this.x = polong.x;
 		this.y = polong.y;
 	}
@@ -35,7 +35,7 @@ public class Vector2Long {
 	 * @param polong The 2D grid polong to copy the coordinates of.
 	 * @return this 2D grid polong for chaining.
 	 */
-	public Vector2Long set(Vector2Long polong) {
+	public Vector2L set(Vector2L polong) {
 		this.x = polong.x;
 		this.y = polong.y;
 		return this;
@@ -48,7 +48,7 @@ public class Vector2Long {
 	 * @param y Y coordinate
 	 * @return this 2D grid polong for chaining.
 	 */
-	public Vector2Long set(long x, long y) {
+	public Vector2L set(long x, long y) {
 		this.x = x;
 		this.y = y;
 		return this;
@@ -58,7 +58,7 @@ public class Vector2Long {
 	 * @param other The other polong
 	 * @return the squared distance between this polong and the other polong.
 	 */
-	public float dst2(Vector2Long other) {
+	public float dst2(Vector2L other) {
 		long xd = other.x - x;
 		long yd = other.y - y;
 
@@ -81,7 +81,7 @@ public class Vector2Long {
 	 * @param other The other polong
 	 * @return the distance between this polong and the other vector.
 	 */
-	public float dst(Vector2Long other) {
+	public float dst(Vector2L other) {
 		long xd = other.x - x;
 		long yd = other.y - y;
 
@@ -106,7 +106,7 @@ public class Vector2Long {
 	 * @param other The other polong
 	 * @return this 2d grid polong for chaining.
 	 */
-	public Vector2Long add(Vector2Long other) {
+	public Vector2L add(Vector2L other) {
 		x += other.x;
 		y += other.y;
 		return this;
@@ -119,7 +119,7 @@ public class Vector2Long {
 	 * @param y The y-coordinate of the other polong
 	 * @return this 2d grid polong for chaining.
 	 */
-	public Vector2Long add(long x, long y) {
+	public Vector2L add(long x, long y) {
 		this.x += x;
 		this.y += y;
 		return this;
@@ -131,7 +131,7 @@ public class Vector2Long {
 	 * @param other The other polong
 	 * @return this 2d grid polong for chaining.
 	 */
-	public Vector2Long sub(Vector2Long other) {
+	public Vector2L sub(Vector2L other) {
 		x -= other.x;
 		y -= other.y;
 		return this;
@@ -144,7 +144,7 @@ public class Vector2Long {
 	 * @param y The y-coordinate of the other polong
 	 * @return this 2d grid polong for chaining.
 	 */
-	public Vector2Long sub(long x, long y) {
+	public Vector2L sub(long x, long y) {
 		this.x -= x;
 		this.y -= y;
 		return this;
@@ -153,15 +153,15 @@ public class Vector2Long {
 	/**
 	 * @return a copy of this grid polong
 	 */
-	public Vector2Long cpy() {
-		return new Vector2Long(this);
+	public Vector2L cpy() {
+		return new Vector2L(this);
 	}
 
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (o == null || o.getClass() != this.getClass()) return false;
-		Vector2Long g = (Vector2Long) o;
+		Vector2L g = (Vector2L) o;
 		return this.x == g.x && this.y == g.y;
 	}
 
@@ -171,7 +171,7 @@ public class Vector2Long {
 		long result = 1;
 		result = prime * result + this.x;
 		result = prime * result + this.y;
-		return (int) result;
+		return Long.hashCode(result);
 	}
 
 	@Override

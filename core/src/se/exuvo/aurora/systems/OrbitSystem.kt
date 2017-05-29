@@ -16,7 +16,7 @@ import se.exuvo.aurora.components.OrbitComponent
 import se.exuvo.aurora.components.PositionComponent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2D
-import se.exuvo.aurora.utils.Vector2Long
+import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.settings.Settings
 
 //TODO sorted system by no parents first outwards
@@ -151,7 +151,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 
 	private val shapeRenderer by lazy { GameServices[ShapeRenderer::class.java] }
 
-	fun render(viewport: Viewport, cameraOffset: Vector2Long) {
+	fun render(viewport: Viewport, cameraOffset: Vector2L) {
 		viewport.apply()
 		shapeRenderer.projectionMatrix = viewport.camera.combined
 

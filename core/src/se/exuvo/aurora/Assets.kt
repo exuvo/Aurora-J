@@ -24,7 +24,7 @@ object Assets : Disposable {
 	var fontUI by Delegates.notNull<BitmapFont>()
 
 	fun startLoad() {
-		val resolver = InternalFileHandleResolver()
+		val resolver = manager.getFileHandleResolver()
 		manager.setLoader(FreeTypeFontGenerator::class.java, FreeTypeFontGeneratorLoader(resolver))
 		manager.setLoader(BitmapFont::class.java, ".ttf", FreetypeFontLoader(resolver))
 		manager.setLoader(BitmapFont::class.java, ".otf", FreetypeFontLoader(resolver))

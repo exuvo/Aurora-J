@@ -1,49 +1,152 @@
 package se.exuvo.aurora.systems
 
-import com.badlogic.ashley.core.ComponentMapper
 import com.badlogic.ashley.core.Engine
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.EntityListener
 import com.badlogic.ashley.core.EntitySystem
-import com.badlogic.ashley.core.Family
-import se.exuvo.aurora.components.GroupComponent
+import java.util.Collections
 import java.util.HashMap
 
-class GroupSystem() : EntitySystem() {
-    private val gm = ComponentMapper.getFor(GroupComponent::class.java)
-    private val groupMap = HashMap<String, MutableList<Entity>>()
-    private val listener = object : EntityListener {
-        override fun entityAdded(entity: Entity?) {
-            val group = gm.get(entity)
-            if (group != null && entity != null) entities(group.group).add(entity)
-        }
+class GroupSystem() : EntitySystem(), EntityListener {
+	companion object {
+		val SELECTED = "selected"
+	}
 
-        override fun entityRemoved(entity: Entity?) {
-            val group = gm.get(entity)
-            if (group != null && entity != null) entities(group.group).remove(entity)
-        }
-    }
+	private val groupToEntityMap = HashMap<String, MutableSet<Entity>?>()
+	private val entityToGroupMap = HashMap<Entity, MutableSet<String>?>()
 
-    operator fun get(group: String): List<Entity> {
-        return entities(group)
-    }
+	override fun checkProcessing() = false
 
-    override fun addedToEngine(engine: Engine?) {
-        engine?.addEntityListener(Family.one(GroupComponent::class.java).get(), listener)
-    }
+	override fun addedToEngine(engine: Engine?) {
+		engine?.addEntityListener(this)
+	}
 
-    override fun removedFromEngine(engine: Engine?) {
-        groupMap.clear()
-        engine?.removeEntityListener(listener)
-    }
+	override fun removedFromEngine(engine: Engine) {
+		groupToEntityMap.clear()
+		entityToGroupMap.clear()
+		engine.removeEntityListener(this)
+	}
 
-    private fun entities(group: String): MutableList<Entity> {
-        var list = groupMap[group]
-        if (list == null) {
-            list = arrayListOf()
-            groupMap[group] = list
-        }
+	operator fun get(group: String): Set<Entity> {
+		return groupToEntityMap[group] ?: Collections.emptySet()
+	}
 
-        return list
-    }
+	operator fun get(entity: Entity): Set<String> {
+		return entityToGroupMap[entity] ?: Collections.emptySet()
+	}
+
+	fun isMemberOf(entity: Entity, group: String): Boolean {
+		return get(group).contains(entity)
+	}
+
+	fun add(entity: Entity, group: String) {
+
+		var entitiesSet = groupToEntityMap[group]
+
+		if (entitiesSet == null) {
+			entitiesSet = HashSet<Entity>()
+			groupToEntityMap[group] = entitiesSet
+		}
+
+		entitiesSet.add(entity)
+
+		var groupSet = entityToGroupMap[entity]
+
+		if (groupSet == null) {
+			groupSet = HashSet<String>()
+			entityToGroupMap[entity] = groupSet
+		}
+
+		groupSet.add(group)
+	}
+
+	fun add(entities: List<Entity>, group: String) {
+
+		var entitiesSet = groupToEntityMap[group]
+
+		if (entitiesSet == null) {
+			entitiesSet = HashSet<Entity>()
+			groupToEntityMap[group] = entitiesSet
+		}
+
+		entitiesSet.addAll(entities)
+
+		for (entity in entities) {
+			var groupSet = entityToGroupMap[entity]
+
+			if (groupSet == null) {
+				groupSet = HashSet<String>()
+				entityToGroupMap[entity] = groupSet
+			}
+
+			groupSet.add(group)
+		}
+	}
+
+	fun remove(entity: Entity, group: String) {
+
+		val entitiesSet = groupToEntityMap[group]
+
+		if (entitiesSet != null) {
+			entitiesSet.remove(entity)
+		}
+
+		var groupSet = entityToGroupMap[entity]
+
+		if (groupSet != null) {
+			groupSet.remove(group)
+		}
+	}
+
+	fun remove(entities: List<Entity>, group: String) {
+
+		val entitiesSet = groupToEntityMap[group]
+
+		if (entitiesSet != null) {
+			entitiesSet.removeAll(entities)
+		}
+
+		for (entity in entities) {
+			var groupSet = entityToGroupMap[entity]
+
+			if (groupSet != null) {
+				groupSet.remove(group)
+			}
+		}
+	}
+
+	fun clear(group: String) {
+
+		val entitiesSet = groupToEntityMap[group]
+
+		if (entitiesSet != null) {
+
+			for (entity in entitiesSet) {
+				var groupSet = entityToGroupMap[entity]
+
+				if (groupSet != null) {
+					groupSet.remove(group)
+				}
+			}
+
+			entitiesSet.clear()
+		}
+	}
+
+	override fun entityAdded(entity: Entity) {
+	}
+
+	override fun entityRemoved(entity: Entity) {
+
+		var groupSet = entityToGroupMap[entity]
+
+		if (groupSet != null) {
+
+			for (group in groupSet) {
+				remove(entity, group)
+			}
+
+			entityToGroupMap[entity] = null
+		}
+	}
 }

@@ -1,5 +1,8 @@
 package se.exuvo.aurora.screens
 
+import com.badlogic.ashley.core.ComponentMapper
+import com.badlogic.ashley.core.Entity
+import com.badlogic.ashley.core.Family
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputProcessor
@@ -12,23 +15,32 @@ import com.badlogic.gdx.utils.viewport.Viewport
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.Galaxy
 import se.exuvo.aurora.SolarSystem
+import se.exuvo.aurora.components.CircleComponent
+import se.exuvo.aurora.components.PositionComponent
+import se.exuvo.aurora.components.RenderComponent
+import se.exuvo.aurora.systems.GroupSystem
 import se.exuvo.aurora.systems.OrbitSystem
 import se.exuvo.aurora.systems.RenderSystem
+import se.exuvo.aurora.utils.CircleL
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.NanoTimeUnits
-import se.exuvo.aurora.utils.Vector2Long
+import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.settings.Settings
 import kotlin.properties.Delegates
 
 class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProcessor {
 
-	private val spriteBatch by lazy { GameServices[SpriteBatch::class.java] }
-	private val renderer by lazy { GameServices[ShapeRenderer::class.java] }
+	private val spriteBatch = GameServices[SpriteBatch::class.java]
+	private val renderer = GameServices[ShapeRenderer::class.java]
 	private val galaxy by lazy { GameServices[Galaxy::class.java] }
-	private val uiCamera by lazy { GameServices[GameScreenService::class.java].uiCamera }
+	private val uiCamera = GameServices[GameScreenService::class.java].uiCamera
 	private var viewport by Delegates.notNull<Viewport>()
 	private var camera by Delegates.notNull<OrthographicCamera>()
-	private val cameraOffset = Vector2Long()
+	private val cameraOffset = Vector2L()
+
+	private val circleMapper = ComponentMapper.getFor(CircleComponent::class.java)
+	private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
+	private val groupSystem by lazy { system.engine.getSystem(GroupSystem::class.java) }
 
 	var zoomLevel = 0
 	var zoomSensitivity = Settings.getFloat("UI.zoomSensitivity").toDouble()
@@ -163,17 +175,88 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 	}
 
 	var moveWindow = false
+
+	var dragSelectPotentialStart = false
+	var dragSelect = false
+	val selectionFamily = Family.all(PositionComponent::class.java, RenderComponent::class.java).one(CircleComponent::class.java).get()
+
 	var dragX = 0
 	var dragY = 0
 
 	override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
 
-		if (button == Input.Buttons.MIDDLE || (button == Input.Buttons.LEFT /* && nothingUnderMouse */)) {
-			moveWindow = true;
+		if (!moveWindow && !dragSelect) {
 
-			dragX = screenX;
-			dragY = screenY;
-			return true;
+			if (button == Input.Buttons.LEFT) {
+
+				system.lock.readLock().lock()
+				try {
+
+					if (groupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+						groupSystem.clear(GroupSystem.SELECTED)
+						println("cleared selection")
+					}
+
+					val mouseInGameCoordinates = getMouseInWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
+					val entitiesUnderMouse = ArrayList<Entity>()
+					val entities = system.engine.getEntitiesFor(selectionFamily)
+					val testCircle = CircleL()
+
+					// Exact check first
+					for (entity in entities) {
+						val position = positionMapper.get(entity).position
+						val radius = circleMapper.get(entity).radius
+						testCircle.set(position, radius)
+
+						if (testCircle.contains(mouseInGameCoordinates)) {
+							entitiesUnderMouse.add(entity)
+						}
+					}
+
+					// Lenient check if empty
+					if (entitiesUnderMouse.isEmpty()) {
+						for (entity in entities) {
+							val position = positionMapper.get(entity).position
+							val radius = circleMapper.get(entity).radius * 1.1f + 2 * camera.zoom
+							testCircle.set(position, radius)
+
+							if (testCircle.contains(mouseInGameCoordinates)) {
+								entitiesUnderMouse.add(entity)
+							}
+						}
+
+						if (entitiesUnderMouse.isNotEmpty()) {
+							println("lenient selected ${entitiesUnderMouse.size} entities")
+						}
+
+					} else {
+						println("strict selected ${entitiesUnderMouse.size} entities")
+					}
+
+					if (entitiesUnderMouse.isNotEmpty()) {
+
+						groupSystem.add(entitiesUnderMouse, GroupSystem.SELECTED)
+
+					} else {
+
+						dragSelectPotentialStart = true;
+						dragX = screenX;
+						dragY = screenY;
+					}
+
+					return true;
+
+				} finally {
+					system.lock.readLock().unlock()
+				}
+			}
+
+			if (button == Input.Buttons.MIDDLE) {
+				moveWindow = true;
+				dragX = screenX;
+				dragY = screenY;
+				return true;
+			}
 		}
 
 		return false;
@@ -181,8 +264,19 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 	override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
 
-		if (moveWindow) {
+		if (moveWindow && button == Input.Buttons.MIDDLE) {
 			moveWindow = false;
+			return true
+		}
+
+		if (dragSelect) {
+
+			if (button == Input.Buttons.LEFT) {
+
+				//TODO select things
+			}
+
+			dragSelect = false;
 			return true
 		}
 
@@ -199,13 +293,18 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 			var diff = mouseWorldNow.cpy().sub(mouseWorldBefore)
 
 			cameraOffset.sub(diff.x.toLong(), diff.y.toLong())
-			
+
 			//TODO ensure camera position is always inside the solar system
 
 			dragX = screenX;
 			dragY = screenY;
 
 			return true;
+		}
+
+		if (dragSelectPotentialStart && Math.abs(dragX - screenX) * Math.abs(dragY - screenY) > 50) {
+			dragSelectPotentialStart = false
+			dragSelect = true
 		}
 
 		return false;
@@ -216,12 +315,18 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 	}
 
 	fun getMouseInScreenCordinates(): Vector3 {
-		return Vector3(Gdx.input.getX(0).toFloat(), Gdx.input.getY(0).toFloat(), 0f)
+		return getMouseInScreenCordinates(Gdx.input.getX(0), Gdx.input.getY(0))
 	}
 
-	fun getMouseInWorldCordinates(): Vector3 {
+	fun getMouseInScreenCordinates(screenX: Int, screenY: Int): Vector3 {
+		return Vector3(screenX.toFloat(), screenY.toFloat(), 0f)
+	}
+
+	fun getMouseInWorldCordinates(screenCoordinates: Vector3): Vector2L {
 		// unproject screen coordinates to corresponding world position
-		return camera.unproject(getMouseInScreenCordinates());
+		val cameraRelativeWorldPosition = camera.unproject(screenCoordinates);
+		val worldPosition = Vector2L(cameraRelativeWorldPosition.x.toLong(), cameraRelativeWorldPosition.y.toLong()).add(cameraOffset)
+		return worldPosition
 	}
 
 	// -1 for zoom-in. 1 for zoom out
@@ -248,7 +353,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 //			Det som var under musen innan scroll ska fortsätta vara där efter zoom
 //			http://stackoverflow.com/questions/932141/zooming-an-object-based-on-mouse-position
 
-			var diff = camera.position.cpy().sub(getMouseInWorldCordinates());
+			var diff = camera.position.cpy().sub(camera.unproject(getMouseInScreenCordinates()));
 			diff = diff.sub(diff.cpy().scl(1 / oldZoom).scl(camera.zoom))
 			cameraOffset.sub(diff.x.toLong(), diff.y.toLong())
 

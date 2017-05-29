@@ -8,6 +8,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
 
+import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Files.FileType;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
@@ -18,6 +19,7 @@ import com.martiansoftware.jsap.Switch;
 
 import se.exuvo.aurora.AuroraGame;
 import se.exuvo.settings.Settings;
+import se.unlogic.standardutils.io.FileUtils;
 
 public class DesktopLauncher {
 
@@ -70,7 +72,9 @@ public class DesktopLauncher {
 		windowConfig.preferencesDirectory = Paths.get("").toAbsolutePath().toString();
 		windowConfig.preferencesFileType = FileType.Absolute;
 
-		new LwjglApplication(new AuroraGame(), windowConfig);
+		String assetsURI = FileUtils.fileExists("assets") ? "assets/" : "../core/assets/";
+
+		new LwjglApplication(new AuroraGame(assetsURI), windowConfig);
 	}
 
 	private static final void arguments(JSAP jsap) {
@@ -86,7 +90,7 @@ public class DesktopLauncher {
 
 	private static final void loadSettings(JSAPResult conf) {
 		Settings.add("loglvl", "INFO");
-		
+
 		Settings.add("G.FrameLimit", 60);
 		Settings.add("G.BackgroundFrameLimit", 20);
 		Settings.add("G.Width", 1024);
@@ -95,7 +99,7 @@ public class DesktopLauncher {
 		Settings.add("G.VSync", false);
 		Settings.add("G.Resizable", true);
 		Settings.add("G.ShowFPS", true);
-		
+
 		Settings.add("Orbits.DotsRepresentSpeed", true);
 		Settings.add("Galaxy.Threads", Runtime.getRuntime().availableProcessors());
 
