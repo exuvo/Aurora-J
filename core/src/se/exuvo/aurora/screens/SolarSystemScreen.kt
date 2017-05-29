@@ -194,7 +194,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 					if (groupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
 						groupSystem.clear(GroupSystem.SELECTED)
-						println("cleared selection")
+//						println("cleared selection")
 					}
 
 					val mouseInGameCoordinates = getMouseInWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
@@ -226,11 +226,11 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 						}
 
 						if (entitiesUnderMouse.isNotEmpty()) {
-							println("lenient selected ${entitiesUnderMouse.size} entities")
+//							println("lenient selected ${entitiesUnderMouse.size} entities")
 						}
 
 					} else {
-						println("strict selected ${entitiesUnderMouse.size} entities")
+//						println("strict selected ${entitiesUnderMouse.size} entities")
 					}
 
 					if (entitiesUnderMouse.isNotEmpty()) {

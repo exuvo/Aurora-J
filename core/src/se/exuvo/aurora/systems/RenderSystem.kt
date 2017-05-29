@@ -95,7 +95,6 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 					val circle = circleMapper.get(entity)
 					val radius = circle.radius * 1.1f + 2 * zoom
 					val segments = getCircleSegments(radius, zoom)
-					println("radius $radius, segments $segments")
 					shapeRenderer.circle(x, y, radius, segments)
 				}
 			}
