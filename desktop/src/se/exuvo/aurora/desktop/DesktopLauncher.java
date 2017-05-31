@@ -99,6 +99,8 @@ public class DesktopLauncher {
 		Settings.add("G.VSync", false);
 		Settings.add("G.Resizable", true);
 		Settings.add("G.ShowFPS", true);
+		
+		Settings.add("UI.zoomSensitivity", 1.25f);
 
 		Settings.add("Orbits.DotsRepresentSpeed", true);
 		Settings.add("Galaxy.Threads", Runtime.getRuntime().availableProcessors());
