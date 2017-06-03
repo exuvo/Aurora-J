@@ -62,6 +62,8 @@ class SolarSystem {
 		entity4.add(engine.createComponent(NameComponent::class.java).apply { name = "Ship" })
 
 		engine.addEntity(entity4)
+		
+		print("moons ${engine.getSystem(OrbitSystem::class.java).getMoons(entity1).size}")
 	}
 
 	fun update(deltaGameTime: Int) {

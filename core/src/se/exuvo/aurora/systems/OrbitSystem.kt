@@ -8,7 +8,6 @@ import com.badlogic.ashley.core.Family
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.MathUtils
-import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.viewport.Viewport
 import org.apache.log4j.Logger
 import se.exuvo.aurora.components.MassComponent
@@ -18,6 +17,7 @@ import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2D
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.settings.Settings
+import java.util.Collections
 
 //TODO sorted system by no parents first outwards
 class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60), EntityListener {
@@ -33,6 +33,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 	private val massMapper = ComponentMapper.getFor(MassComponent::class.java)
 	private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
 	private val orbitsCache = HashMap<Entity, OrbitCache>()
+	private val moonsCache = HashMap<Entity, MutableSet<Entity>?>()
 
 	override fun addedToEngine(engine: Engine) {
 		super.addedToEngine(engine)
@@ -64,7 +65,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 		val orbitalPeriod = 2 * Math.PI * Math.sqrt(Math.pow(1000.0 * a_semiMajorAxis, 3.0) / (parentMass * gravitationalConstant))
 
 		if (Double.NaN.equals(orbitalPeriod) || orbitalPeriod < 1 * 60 * 60) {
-			throw RuntimeException("orbitalPeriod $orbitalPeriod is invalid for entity $entity")
+			throw RuntimeException("orbitalPeriod ${orbitalPeriod}s is invalid for entity $entity")
 		}
 
 		// 1 point each day
@@ -84,10 +85,31 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60
 		}
 
 		orbitsCache.put(entity, OrbitCache(orbitalPeriod, apoapsis, periapsis, orbitPoints))
+		
+		var moonsSet = moonsCache[orbit.parent!!]
+
+		if (moonsSet == null) {
+			moonsSet = HashSet<Entity>()
+			moonsCache[orbit.parent!!] = moonsSet
+		}
+
+		moonsSet.add(entity)
 	}
 
 	override fun entityRemoved(entity: Entity) {
 		orbitsCache.remove(entity)
+		
+		val orbit = orbitMapper.get(entity)
+		
+		var moonsSet = moonsCache[orbit.parent!!]
+
+		if (moonsSet != null) {
+			moonsSet.remove(entity)
+		}
+	}
+	
+	fun getMoons(entity: Entity): Set<Entity> {
+		return moonsCache[entity] ?: Collections.emptySet()
 	}
 
 	private fun calculateEccentricAnomalyFromMeanAnomaly(orbit: OrbitComponent, M_meanAnomaly: Double): Double {
