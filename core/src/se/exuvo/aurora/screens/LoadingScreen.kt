@@ -26,8 +26,8 @@ class LoadingScreen() : GameScreenImpl() {
 	override fun update(deltaRealTime: Float) {
 		if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
 			Gdx.app.exit()
-    }
-		
+		}
+
 		if (assetManager.update()) {
 			Assets.finishLoad()
 			GameServices[GameScreenService::class.java].add(MainMenuScreen())
@@ -37,11 +37,11 @@ class LoadingScreen() : GameScreenImpl() {
 	override fun draw() {
 		super.draw()
 
-		val progress = String.format("%.0f%%", assetManager.progress * 100) 
-		
+		val progress = String.format("%.0f%%", assetManager.progress * 100)
+
 		batch.projectionMatrix = uiCamera.combined
 		batch.begin()
-		Assets.fontUI.draw(batch, "Loading: $progress", 8f, 32f)
+		Assets.fontUI.draw(batch, "Loading: $progress", Gdx.graphics.width / 2f - 8 * Assets.fontUI.spaceWidth, Gdx.graphics.height / 2f + Assets.fontUI.lineHeight / 2)
 		batch.end()
 	}
 }

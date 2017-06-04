@@ -55,13 +55,12 @@ class UIScreen: GameScreenImpl, InputProcessor {
 	}
 
 	override fun draw() {
-		spriteBatch.projectionMatrix = uiCamera.combined
-		spriteBatch.begin()
-		Assets.fontUI.draw(spriteBatch, "UI", 2f, uiCamera.viewportHeight - 3f - Assets.fontUI.lineHeight)
-		spriteBatch.end()
-		
-		
 		stage.draw()
+		
+//		spriteBatch.projectionMatrix = uiCamera.combined
+//		spriteBatch.begin()
+//		Assets.fontUI.draw(spriteBatch, "UI", 2f, uiCamera.viewportHeight - 3f - Assets.fontUI.lineHeight)
+//		spriteBatch.end()
 	}
 	
 	override fun keyDown(keycode: Int): Boolean {
