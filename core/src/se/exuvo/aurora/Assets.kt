@@ -1,7 +1,7 @@
 package se.exuvo.aurora
 
 import com.badlogic.gdx.assets.AssetManager
-import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver
+import com.badlogic.gdx.assets.loaders.SkinLoader
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture.TextureFilter
 import com.badlogic.gdx.graphics.g2d.BitmapFont
@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGeneratorLoader
 import com.badlogic.gdx.graphics.g2d.freetype.FreetypeFontLoader
 import com.badlogic.gdx.graphics.g2d.freetype.FreetypeFontLoader.FreeTypeFontLoaderParameter
+import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.utils.Disposable
 import org.apache.log4j.Logger
 import se.exuvo.aurora.utils.GameServices
@@ -22,6 +23,7 @@ object Assets : Disposable {
 	var fontMap by Delegates.notNull<BitmapFont>()
 	var fontMapSmall by Delegates.notNull<BitmapFont>()
 	var fontUI by Delegates.notNull<BitmapFont>()
+	var skinUI by Delegates.notNull<Skin>()
 
 	fun startLoad() {
 		val resolver = manager.getFileHandleResolver()
@@ -69,12 +71,16 @@ object Assets : Disposable {
 		manager.load("fontMap.ttf", BitmapFont::class.java, fontMapLoadParams);
 		manager.load("fontMapSmall.ttf", BitmapFont::class.java, fontMapSmallLoadParams);
 		
+		val uiSkinLoaderParams = SkinLoader.SkinParameter("ui/uiskin.atlas")
+		manager.load("ui/uiskin.json", Skin::class.java, uiSkinLoaderParams);
+		
 		log.info("Queued ${manager.queuedAssets} assets for loading")
 	}
 	
 	fun finishLoad() {
 		fontMap = manager.get("fontMap.ttf", BitmapFont::class.java)
 		fontMapSmall = manager.get("fontMapSmall.ttf", BitmapFont::class.java)
+		skinUI = manager.get("ui/uiskin.json", Skin::class.java)
 	}
 
 	override fun dispose() {

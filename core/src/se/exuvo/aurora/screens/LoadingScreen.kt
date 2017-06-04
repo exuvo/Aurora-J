@@ -23,14 +23,14 @@ class LoadingScreen() : GameScreenImpl() {
 		uiCamera.setToOrtho(false, width.toFloat(), height.toFloat())
 	}
 
-	override fun update(delta: Float) {
+	override fun update(deltaRealTime: Float) {
 		if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
 			Gdx.app.exit()
     }
 		
 		if (assetManager.update()) {
 			Assets.finishLoad()
-			GameServices[GameScreenService::class.java].push(MainMenuScreen())
+			GameServices[GameScreenService::class.java].add(MainMenuScreen())
 		}
 	}
 

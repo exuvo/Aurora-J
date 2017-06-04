@@ -24,7 +24,7 @@ class MainMenuScreen() : GameScreenImpl() {
 		uiCamera.setToOrtho(false, width.toFloat(), height.toFloat())
 	}
 
-	override fun update(delta: Float) {
+	override fun update(deltaRealTime: Float) {
 		if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
 			Gdx.app.exit()
     }
@@ -35,7 +35,8 @@ class MainMenuScreen() : GameScreenImpl() {
 			val galaxy = Galaxy(Collections.singletonList(system), 0) //Int.MAX_VALUE.toLong()
 			galaxy.init()
 		
-			GameServices[GameScreenService::class.java].push(SolarSystemScreen(system))
+			GameServices[GameScreenService::class.java].add(UIScreen())
+			GameServices[GameScreenService::class.java].add(SolarSystemScreen(system))
 //    }
 	}
 

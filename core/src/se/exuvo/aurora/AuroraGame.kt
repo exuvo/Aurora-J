@@ -27,7 +27,7 @@ class AuroraGame(val assetsRoot: String) : ApplicationAdapter() {
 
 		Gdx.input.setInputProcessor(screenService)
 
-		screenService.push(LoadingScreen())
+		screenService.add(LoadingScreen())
 	}
 
 	override fun resize(width: Int, height: Int) {

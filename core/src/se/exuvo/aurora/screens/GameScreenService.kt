@@ -8,58 +8,65 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.utils.Disposable
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.utils.GameServices
-import java.util.Stack
+import java.util.LinkedList
 
 class GameScreenService : Disposable, InputProcessor {
-	private val screens = Stack<GameScreen>()
 	private val inputMultiplexer = InputMultiplexer()
 	private val spriteBatch by lazy { GameServices[SpriteBatch::class.java] }
 	val uiCamera = OrthographicCamera()
+	private val screens = LinkedList<GameScreen>()
+	private val addQueue = LinkedList<GameScreen>()
 
-	fun <T : GameScreen> push(screen: T) {
-		screens.push(screen)
-		screen.show()
-		screen.resize(Gdx.graphics.width, Gdx.graphics.height)
-
-		if (screen is InputProcessor) {
-			inputMultiplexer.addProcessor(screen)
-		}
-	}
-
-	private fun <T : GameScreen> remove(screen: T) {
-		screens.remove(screen)
-		screen.hide()
-		screen.dispose()
-
-		if (screen is InputProcessor) {
-			inputMultiplexer.removeProcessor(screen)
-		}
+	fun <T : GameScreen> add(screen: T) {
+		addQueue.add(screen)
 	}
 
 	private fun update(deltaRealTime: Float) {
 
-		if (screens.size == 0) return
+		if (addQueue.isNotEmpty()) {
+			
+			for (screen in addQueue) {
+				screens.addFirst(screen)
+				screen.show()
+				screen.resize(Gdx.graphics.width, Gdx.graphics.height)
 
-		var top = true
-		for (i in 0..screens.size - 1) {
-			val screen = screens[screens.size - 1 - i]
-
-			if (top) {
-				screen.update(deltaRealTime)
-
-			} else {
-				remove(screen)
+				if (screen is InputProcessor) {
+					inputMultiplexer.addProcessor(screen)
+				}
 			}
+			
+			addQueue.clear()
+		}
+
+		val it = screens.iterator()
+		var firstRealScreenFound = false
+
+		while (it.hasNext()) {
+			val screen = it.next()
 
 			if (!screen.overlay) {
-				top = false
+				if (firstRealScreenFound) {
+
+					it.remove()
+					screen.hide()
+					screen.dispose()
+
+					if (screen is InputProcessor) {
+						inputMultiplexer.removeProcessor(screen)
+					}
+
+				} else {
+					firstRealScreenFound = true
+				}
 			}
 		}
+
+		screens.forEach { it.update(deltaRealTime) }
 	}
 
 	private fun draw() {
 		screens.forEach { it.draw() }
-		
+
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
 		Assets.fontUI.draw(spriteBatch, "" + Gdx.graphics.framesPerSecond, 2f, uiCamera.viewportHeight - 3f)

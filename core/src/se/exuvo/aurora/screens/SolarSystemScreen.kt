@@ -62,7 +62,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 		viewport.update(width, height)
 	}
 
-	override fun update(delta: Float) {
+	override fun update(deltaRealTime: Float) {
 
 		if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
 			Gdx.app.exit()
