@@ -6,6 +6,7 @@ import com.badlogic.ashley.core.Family
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputProcessor
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
@@ -24,6 +25,7 @@ import se.exuvo.aurora.systems.RenderSystem
 import se.exuvo.aurora.utils.CircleL
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.NanoTimeUnits
+import se.exuvo.aurora.utils.RectangleL
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.settings.Settings
 import kotlin.properties.Delegates
@@ -31,7 +33,7 @@ import kotlin.properties.Delegates
 class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProcessor {
 
 	private val spriteBatch = GameServices[SpriteBatch::class.java]
-	private val renderer = GameServices[ShapeRenderer::class.java]
+	private val shapeRenderer = GameServices[ShapeRenderer::class.java]
 	private val galaxy by lazy { GameServices[Galaxy::class.java] }
 	private val uiCamera = GameServices[GameScreenService::class.java].uiCamera
 	private var viewport by Delegates.notNull<Viewport>()
@@ -99,6 +101,17 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 			system.engine.getSystem(RenderSystem::class.java).render(viewport, cameraOffset)
 		} finally {
 			system.lock.readLock().unlock()
+		}
+
+		if (dragSelect) {
+			shapeRenderer.projectionMatrix = uiCamera.combined
+			shapeRenderer.color = Color.WHITE
+			shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+
+			val dragSelection = getDragSelection(false)
+			shapeRenderer.rect(dragSelection.x.toFloat(), (dragSelection.y).toFloat(), dragSelection.width.toFloat(), dragSelection.height.toFloat())
+
+			shapeRenderer.end()
 		}
 
 		drawUI()
@@ -192,12 +205,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 				system.lock.readLock().lock()
 				try {
 
-					if (groupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-						groupSystem.clear(GroupSystem.SELECTED)
-//						println("cleared selection")
-					}
-
-					val mouseInGameCoordinates = getMouseInWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
+					val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
 					val entitiesUnderMouse = ArrayList<Entity>()
 					val entities = system.engine.getEntitiesFor(selectionFamily)
 					val testCircle = CircleL()
@@ -235,6 +243,11 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 					if (entitiesUnderMouse.isNotEmpty()) {
 
+						if (groupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+							groupSystem.clear(GroupSystem.SELECTED)
+//							println("cleared selection")
+						}
+
 						groupSystem.add(entitiesUnderMouse, GroupSystem.SELECTED)
 
 					} else {
@@ -242,6 +255,8 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 						dragSelectPotentialStart = true;
 						dragX = screenX;
 						dragY = screenY;
+
+//						println("drag select potential dragX $dragX, dragY $dragY")
 					}
 
 					return true;
@@ -257,6 +272,18 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 				dragY = screenY;
 				return true;
 			}
+
+		} else {
+
+			if (dragSelect && button != Input.Buttons.LEFT) {
+				dragSelect = false;
+				return true
+			}
+
+			if (moveWindow && button != Input.Buttons.MIDDLE) {
+				moveWindow = false;
+				return true
+			}
 		}
 
 		return false;
@@ -269,15 +296,48 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 			return true
 		}
 
-		if (dragSelect) {
+		if (dragSelect && button == Input.Buttons.LEFT) {
 
-			if (button == Input.Buttons.LEFT) {
+			if (groupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+				groupSystem.clear(GroupSystem.SELECTED)
+//				println("cleared selection")
+			}
 
-				//TODO select things
+			val dragSelection = getDragSelection()
+//			println("dragSelection $dragSelection")
+
+			val p1GameCoordinates = toWorldCordinates(Vector3(dragSelection.x.toFloat(), (viewport.screenHeight - dragSelection.y).toFloat(), 0f))
+			val p2GameCoordinates = toWorldCordinates(Vector3((dragSelection.x + dragSelection.width).toFloat(), (viewport.screenHeight - (dragSelection.y + dragSelection.height)).toFloat(), 0f))
+//			println("p1GameCoordinates $p1GameCoordinates, p2GameCoordinates $p2GameCoordinates")
+
+			val entitiesInSelection = ArrayList<Entity>()
+			val entities = system.engine.getEntitiesFor(selectionFamily)
+			val testRectangle = RectangleL(p1GameCoordinates.x, p1GameCoordinates.y, p2GameCoordinates.x - p1GameCoordinates.x, p2GameCoordinates.y - p1GameCoordinates.y)
+//			println("testRectangle $testRectangle")
+
+			// Exact check first
+			for (entity in entities) {
+				val position = positionMapper.get(entity).position
+
+				if (testRectangle.contains(position)) {
+					entitiesInSelection.add(entity)
+				}
+			}
+
+			if (entitiesInSelection.isNotEmpty()) {
+				groupSystem.add(entitiesInSelection, GroupSystem.SELECTED)
+//				println("drag selected ${entitiesInSelection.size} entities")
 			}
 
 			dragSelect = false;
 			return true
+		}
+
+		if (dragSelectPotentialStart && button == Input.Buttons.LEFT) {
+			if (groupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+				groupSystem.clear(GroupSystem.SELECTED)
+//				println("cleared selection")
+			}
 		}
 
 		return false;
@@ -302,9 +362,17 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 			return true;
 		}
 
-		if (dragSelectPotentialStart && Math.abs(dragX - screenX) * Math.abs(dragY - screenY) > 50) {
-			dragSelectPotentialStart = false
-			dragSelect = true
+		if (dragSelectPotentialStart) {
+
+			val dx = dragX - screenX
+			val dy = dragY - screenY
+
+			if (Math.sqrt((dx * dx + dy * dy).toDouble()) > 10) {
+
+				dragSelectPotentialStart = false
+				dragSelect = true
+//				println("drag select start")
+			}
 		}
 
 		return false;
@@ -312,6 +380,29 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 	override fun mouseMoved(screenX: Int, screenY: Int): Boolean {
 		return false;
+	}
+
+	// Converts from input coordinates to screen coordinates
+	private fun getDragSelection(alwaysPositive: Boolean = true): RectangleL {
+
+		var x = dragX
+		var y = viewport.screenHeight - dragY
+		var width = Gdx.input.getX(0) - dragX
+		var height = dragY - Gdx.input.getY(0)
+
+		if (alwaysPositive) {
+			if (width < 0) {
+				x += width
+				width = -width
+			}
+
+			if (height < 0) {
+				y += height
+				height = -height
+			}
+		}
+
+		return RectangleL(x.toLong(), y.toLong(), width.toLong(), height.toLong())
 	}
 
 	fun getMouseInScreenCordinates(): Vector3 {
@@ -322,7 +413,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 		return Vector3(screenX.toFloat(), screenY.toFloat(), 0f)
 	}
 
-	fun getMouseInWorldCordinates(screenCoordinates: Vector3): Vector2L {
+	fun toWorldCordinates(screenCoordinates: Vector3): Vector2L {
 		// unproject screen coordinates to corresponding world position
 		val cameraRelativeWorldPosition = camera.unproject(screenCoordinates);
 		val worldPosition = Vector2L(cameraRelativeWorldPosition.x.toLong(), cameraRelativeWorldPosition.y.toLong()).add(cameraOffset)

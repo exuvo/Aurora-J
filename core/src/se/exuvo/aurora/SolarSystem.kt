@@ -56,14 +56,14 @@ class SolarSystem {
 		engine.addEntity(entity3)
 		
 		val entity4 = engine.createEntity()
-		entity4.add(engine.createComponent(PositionComponent::class.java))
+		entity4.add(engine.createComponent(PositionComponent::class.java).apply { position.set(10000000, 10000000) })
 		entity4.add(engine.createComponent(RenderComponent::class.java))
 		entity4.add(engine.createComponent(CircleComponent::class.java).apply{ radius = 10f})
 		entity4.add(engine.createComponent(NameComponent::class.java).apply { name = "Ship" })
 
 		engine.addEntity(entity4)
 		
-		print("moons ${engine.getSystem(OrbitSystem::class.java).getMoons(entity1).size}")
+//		println("moons ${engine.getSystem(OrbitSystem::class.java).getMoons(entity1).size}")
 	}
 
 	fun update(deltaGameTime: Int) {
