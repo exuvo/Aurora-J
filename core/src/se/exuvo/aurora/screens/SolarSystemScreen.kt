@@ -120,6 +120,15 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 	override fun keyDown(keycode: Int): Boolean {
 
+		if (keycode == Input.Keys.G) {
+			system.lock.readLock().lock()
+				try {
+						system.generateRandomSystem()
+					} finally {
+					system.lock.readLock().unlock()
+				}
+		}
+		
 		if (keycode == Input.Keys.PLUS) {
 
 			var speed = galaxy.speed / 4
