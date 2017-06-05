@@ -73,6 +73,8 @@ class SolarSystem {
 	
 	fun  generateRandomSystem() {
 		
+		engine.removeAllEntities()
+		
 		// Mass range of stellar objects in kg
 		// Star: 		10^29 - 10^39 
 		// Planet:		10^22 - 10^28
