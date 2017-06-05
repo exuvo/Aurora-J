@@ -96,10 +96,9 @@ class SolarSystem {
 
 		addPlanet(Star,1e24,10000f,"biggest",150f,0f,0f,0f)
 
-		addRandomPlanet (randomNumbersClass, planet!!)
 		var i = 0
 		while (planet !=null){
-			if (i==10){
+			if (i==100){
 				break
 			}
 			planet = addRandomPlanet (randomNumbersClass, Star)
@@ -209,56 +208,30 @@ class SolarSystem {
 			val periapsis = semiMajorAxis*(1-eccentricity)
 			val apoapsis = semiMajorAxis*(1+eccentricity)
 			val minimumDistance = 0.50
-			//new try
-			val c1 = (otherPlanetSemiMajorAxis) * (1-Math.pow(otherPlanetEccentricity.toDouble(),2e0)) - semiMajorAxis * (1-Math.pow(eccentricity.toDouble(),2e0))
-			val c2 = (otherPlanetSemiMajorAxis) * (1-Math.pow(otherPlanetEccentricity.toDouble(),2e0))*eccentricity*Math.cos(-argumentOfPeriapsis) - semiMajorAxis * (1-Math.pow(eccentricity.toDouble(),2e0))*otherPlanetEccentricity * Math.cos(-otherPlanetArgumentOfPeriapsis.toDouble())
-			val c3 = (otherPlanetSemiMajorAxis) * (1-Math.pow(otherPlanetEccentricity.toDouble(),2e0))*eccentricity*Math.sin(-argumentOfPeriapsis) - semiMajorAxis * (1-Math.pow(eccentricity.toDouble(),2e0))*otherPlanetEccentricity * Math.sin(-otherPlanetArgumentOfPeriapsis.toDouble())
-			// c1 + c2*cos(x) + c3*sin(x) = 0
-			val R = Math.sqrt(Math.pow(c2,2e0) + Math.pow(c3,2e0))
-			val a = Math.atan(c3/c2)
-			val test = Math.abs(-c1/R)
-			if (1<test){
-				i++
-				continue
-			}
-			/*
+
 			if (otherPlanetApoapsis > apoapsis + minimumDistance && otherPlanetPeriapsis > periapsis + minimumDistance) { //Inside case
-				var inside = false
-				for (j in 1..30) {
-					if (otherPlanetSemiMajorAxis*(1-Math.pow(otherPlanetEccentricity.toDouble(),2e0))/(1+otherPlanetEccentricity*Math.cos(Math.toRadians(j*12+otherPlanetArgumentOfPeriapsis.toDouble())))>
-						minimumDistance + semiMajorAxis*(1-Math.pow(eccentricity.toDouble(),2e0))/(1+eccentricity*Math.cos(Math.toRadians(j*12+argumentOfPeriapsis)))){
-						if (j==30){
-							i++
-							inside = true
-						}
-					}
-					else{
-						break
-					}
-				}
-				if (inside){
+				val c1 = (otherPlanetSemiMajorAxis - minimumDistance) * (1-Math.pow(otherPlanetEccentricity.toDouble(),2e0)) - semiMajorAxis * (1-Math.pow(eccentricity.toDouble(),2e0))
+				val c2 = (otherPlanetSemiMajorAxis - minimumDistance) * (1-Math.pow(otherPlanetEccentricity.toDouble(),2e0))*eccentricity*Math.cos(Math.toRadians(-argumentOfPeriapsis)) - semiMajorAxis * (1-Math.pow(eccentricity.toDouble(),2e0))*otherPlanetEccentricity * Math.cos(Math.toRadians(-otherPlanetArgumentOfPeriapsis.toDouble()))
+				val c3 = (otherPlanetSemiMajorAxis - minimumDistance) * (1-Math.pow(otherPlanetEccentricity.toDouble(),2e0))*eccentricity*Math.sin(Math.toRadians(-argumentOfPeriapsis)) - semiMajorAxis * (1-Math.pow(eccentricity.toDouble(),2e0))*otherPlanetEccentricity * Math.sin(Math.toRadians(-otherPlanetArgumentOfPeriapsis.toDouble()))
+				// c1 + c2*cos(x) + c3*sin(x) = 0
+				val R = Math.sqrt(Math.pow(c2,2e0) + Math.pow(c3,2e0))
+				if (1<Math.abs(-c1/R)){
+					i++
 					continue
 				}
 			}
 			else if(apoapsis > otherPlanetApoapsis + minimumDistance && periapsis > otherPlanetPeriapsis + minimumDistance){ //Outside case
-				var outside = false
-				for (j in 1..30) {
-					if (semiMajorAxis*(1-Math.pow(eccentricity.toDouble(),2e0))/(1+eccentricity*Math.cos(Math.toRadians(j*12+argumentOfPeriapsis)))>
-						minimumDistance + otherPlanetSemiMajorAxis*(1-Math.pow(otherPlanetEccentricity.toDouble(),2e0))/(1+otherPlanetEccentricity*Math.cos(Math.toRadians(j*12+otherPlanetArgumentOfPeriapsis.toDouble())))){
-						if (j==30){
-							i++
-							outside = true
-						}
-					}
-					else{
-						break
-					}
-				}
-				if (outside){
+				val c1 = (otherPlanetSemiMajorAxis + minimumDistance) * (1-Math.pow(otherPlanetEccentricity.toDouble(),2e0)) - semiMajorAxis * (1-Math.pow(eccentricity.toDouble(),2e0))
+				val c2 = (otherPlanetSemiMajorAxis + minimumDistance) * (1-Math.pow(otherPlanetEccentricity.toDouble(),2e0))*eccentricity*Math.cos(Math.toRadians(-argumentOfPeriapsis)) - semiMajorAxis * (1-Math.pow(eccentricity.toDouble(),2e0))*otherPlanetEccentricity * Math.cos(Math.toRadians(-otherPlanetArgumentOfPeriapsis.toDouble()))
+				val c3 = (otherPlanetSemiMajorAxis + minimumDistance) * (1-Math.pow(otherPlanetEccentricity.toDouble(),2e0))*eccentricity*Math.sin(Math.toRadians(-argumentOfPeriapsis)) - semiMajorAxis * (1-Math.pow(eccentricity.toDouble(),2e0))*otherPlanetEccentricity * Math.sin(Math.toRadians(-otherPlanetArgumentOfPeriapsis.toDouble()))
+				// c1 + c2*cos(x) + c3*sin(x) = 0
+				val R = Math.sqrt(Math.pow(c2,2e0) + Math.pow(c3,2e0))
+				if (1<Math.abs(-c1/R)){
+					i++
 					continue
 				}
 			}
-			*/
+			
 			semiMajorAxis = Math.sqrt(parentMass) * (0.8 + 29.2 * randomNumbersClass.nextDouble()) * 1/(1e16)
 			eccentricity = 0 + (0.85 - (0.85/(1 + semiMajorAxis/30))) * randomNumbersClass.nextDouble()
 			argumentOfPeriapsis = 360 * randomNumbersClass.nextDouble()
