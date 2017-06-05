@@ -132,9 +132,13 @@ class SolarSystem {
 		kStar = kStar + mStar
 		gStar = gStar + kStar
  		fStar = fStar + gStar
-		aStar = aStar + gStar
+		aStar = aStar + fStar
 		bStar = bStar + aStar
 		oStar = oStar + bStar
+		
+		if (sumStar != oStar) {
+			throw RuntimeException("sumStar != oStar")
+		}
 		
 		// need to be in the same order as the convertion order 
 		when {
