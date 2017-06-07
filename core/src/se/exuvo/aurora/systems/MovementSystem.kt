@@ -79,8 +79,6 @@ class MovementSystem : IteratingSystem(MovementSystem.FAMILY) {
 		val moveToComponent = moveToMapper.get(entity)
 		val targetEntity = moveToComponent.target!!
 		val targetPosition = positionMapper.get(targetEntity).position
-		val targetVelocity = velocityMapper.get(targetEntity)?.velocity ?: Vector2.Zero
-		val targetVelocityMagnitude = targetVelocity.len()
 
 		tempPosition.set(targetPosition).sub(position)
 		val distance = tempPosition.len()
@@ -100,17 +98,19 @@ class MovementSystem : IteratingSystem(MovementSystem.FAMILY) {
 			return
 		}
 
+		val targetVelocity = velocityMapper.get(targetEntity)?.velocity ?: Vector2.Zero
+		val targetVelocityMagnitude = targetVelocity.len()
+		val angleToTarget = position.angleTo(targetPosition).toFloat()
+		val velocityAngle = velocity.angle();
+		val targetVelocityAngle = targetVelocity.angle()
+		val velocityAngleScale = (targetVelocityAngle - velocityAngle) / 180
+		val velocityMagnitute = velocity.len()
+		val timeToTargetWithCurrentSpeed = distance / (velocityMagnitute + trueAcceleration)
+//		println("angleToTarget, $angleToTarget , velocityAngle $velocityAngle")
+
 		when (moveToComponent.approach) {
 			ApproachType.BRACHISTOCHRONE -> {
 
-				val angleToTarget = position.angleTo(targetPosition).toFloat()
-				val velocityAngle = velocity.angle();
-				val targetVelocityAngle = targetVelocity.angle()
-				val velocityAngleScale = (targetVelocityAngle - velocityAngle) / 180
-//				println("angleToTarget, $angleToTarget , velocityAngle $velocityAngle")
-
-				val velocityMagnitute = velocity.len()
-				val timeToTargetWithCurrentSpeed = distance / (velocityMagnitute + trueAcceleration)
 				val timeToStop = (velocityMagnitute - velocityAngleScale * targetVelocityMagnitude) / trueAcceleration
 
 //			println("timeToTargetWithCurrentSpeed ${timeToTargetWithCurrentSpeed}, timeToStop ${timeToStop}")
@@ -152,9 +152,6 @@ class MovementSystem : IteratingSystem(MovementSystem.FAMILY) {
 			}
 			ApproachType.BALLISTIC -> {
 
-				val velocityMagnitute = velocity.len()
-				val timeToTargetWithCurrentSpeed = distance / velocityMagnitute
-
 				if (timeToTargetWithCurrentSpeed <= 1) {
 
 					position.set(targetPosition)
@@ -162,9 +159,15 @@ class MovementSystem : IteratingSystem(MovementSystem.FAMILY) {
 					println("Ballistic target reached time")
 					return
 				}
+				
+				nameMapper.get(entity).name = "a " + velocityMagnitute
 
 				tempVelocity.set(tempPosition.x.toFloat(), tempPosition.y.toFloat()).nor()
 				tempVelocity.scl(acceleration.toFloat())
+
+				if (velocityMagnitute > 0 && Math.abs(angleToTarget - velocityAngle) < 90) {
+					tempVelocity.rotate(2f * (angleToTarget - velocityAngle))
+				}
 
 				velocity.add(tempVelocity)
 				tempVelocity.set(velocity).scl(deltaGameTime)

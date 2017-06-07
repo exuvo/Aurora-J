@@ -256,7 +256,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 						}
 
 						if (entitiesUnderMouse.isNotEmpty()) {
-							
+
 							dragSelectPotentialStart = false;
 
 							if (groupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
@@ -337,7 +337,13 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 										entity.add(moveToComponent)
 									}
 
-									moveToComponent.apply { target = targetEntity; approach = ApproachType.BRACHISTOCHRONE }
+									var approachType = ApproachType.BRACHISTOCHRONE
+
+									if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+										approachType = ApproachType.BALLISTIC
+									}
+									
+									moveToComponent.apply { target = targetEntity; approach = approachType }
 								}
 							}
 
