@@ -132,16 +132,24 @@ public class CircleL implements Serializable {
 		this.radius = radius;
 	}
 
-	/** Checks whether or not this circle contains a given point.
+	/**
+	 * Checks whether or not this circle contains a given point.
 	 * 
 	 * @param x X coordinate
 	 * @param y Y coordinate
-	 * 
-	 * @return true if this circle contains the given point. */
-	public boolean contains (long x, long y) {
-		x = this.x - x;
-		y = this.y - y;
-		return x * x + y * y <= radius * radius;
+	 * @return true if this circle contains the given point.
+	 */
+	public boolean contains(long x, long y) {
+		double xd = this.x - x;
+		double yd = this.y - y;
+		return xd * xd + yd * yd <= radius * radius;
+		
+//		BigInt X = new BigInt(x);
+//		X.mul(x);
+//		BigInt Y = new BigInt(y);
+//		Y.mul(y);
+//		X.add(Y);
+//		return X.compareTo(new BigInt((long) (radius * radius))) <= 0;
 	}
 
 	/** Checks whether or not this circle contains a given point.
@@ -150,19 +158,19 @@ public class CircleL implements Serializable {
 	 * 
 	 * @return true if this circle contains this point; false otherwise. */
 	public boolean contains (Vector2L point) {
-		float dx = x - point.x;
-		float dy = y - point.y;
-		return dx * dx + dy * dy <= radius * radius;
+		return contains(point.x, point.y);
 	}
-	
-	/** @param c the other {@link CircleL}
-	 * @return whether this circle contains the other circle. */
-	public boolean contains (CircleL c) {
+
+	/**
+	 * @param c the other {@link CircleL}
+	 * @return whether this circle contains the other circle.
+	 */
+	public boolean contains(CircleL c) {
 		final float radiusDiff = radius - c.radius;
 		if (radiusDiff < 0f) return false; // Can't contain bigger circle
-		final long dx = x - c.x;
-		final long dy = y - c.y;
-		final long dst = dx * dx + dy * dy;
+		final double dx = x - c.x;
+		final double dy = y - c.y;
+		final double dst = dx * dx + dy * dy;
 		final float radiusSum = radius + c.radius;
 		return (!(radiusDiff * radiusDiff < dst) && (dst < radiusSum * radiusSum));
 	}
@@ -170,9 +178,9 @@ public class CircleL implements Serializable {
 	/** @param c the other {@link CircleL}
 	 * @return whether this circle overlaps the other circle. */
 	public boolean overlaps (CircleL c) {
-		float dx = x - c.x;
-		float dy = y - c.y;
-		float distance = dx * dx + dy * dy;
+		double dx = x - c.x;
+		double dy = y - c.y;
+		double distance = dx * dx + dy * dy;
 		float radiusSum = radius + c.radius;
 		return distance < radiusSum * radiusSum;
 	}

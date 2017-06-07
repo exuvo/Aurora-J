@@ -53,13 +53,15 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 
 	fun drawEntities(entities: ImmutableArray<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+		
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
 		for (entity in entities) {
-			val position = positionMapper.get(entity).position
+			val position = positionMapper.get(entity)
 			val tintComponent = tintMapper.get(entity)
-			val x = (position.x - cameraOffset.x).toFloat()
-			val y = (position.y - cameraOffset.y).toFloat()
+			val x = (position.getXinKM() - cameraOffset.x).toFloat()
+			val y = (position.getYinKM() - cameraOffset.y).toFloat()
 
 			val color = Color(tintComponent?.color ?: Color.WHITE)
 			shapeRenderer.color = color
@@ -68,25 +70,52 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 
 				val circle = circleMapper.get(entity)
 				shapeRenderer.circle(x, y, circle.radius, getCircleSegments(circle.radius, zoom))
-
+				
 			} else if (lineMapper.has(entity)) {
 
 				val line = lineMapper.get(entity)
 				shapeRenderer.line(x, y, x + line.x, y + line.y)
 			}
 		}
+		
+		shapeRenderer.end()
 	}
+	
+	fun drawEntities2(entities: ImmutableArray<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
+
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+		shapeRenderer.color = Color.PINK
+		
+		val zoom = (viewport.camera as OrthographicCamera).zoom
+
+		for (entity in entities) {
+			val position = positionMapper.get(entity)
+			val x = (position.getXinKM() - cameraOffset.x).toFloat()
+			val y = (position.getYinKM() - cameraOffset.y).toFloat()
+
+			if (circleMapper.has(entity)) {
+				val circle = circleMapper.get(entity)
+				shapeRenderer.circle(x, y, circle.radius * 0.01f, getCircleSegments(circle.radius * 0.01f, zoom))
+			}
+		}
+		
+		shapeRenderer.end()
+	}
+	
+	
 
 	fun drawSelections(entities: ImmutableArray<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+		
 		val selectedEntities = groupSystem.get(GroupSystem.SELECTED)
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
 		for (entity in entities) {
 			if (selectedEntities.contains(entity)) {
-				val position = positionMapper.get(entity).position
-				val x = (position.x - cameraOffset.x).toFloat()
-				val y = (position.y - cameraOffset.y).toFloat()
+				val position = positionMapper.get(entity)
+				val x = (position.getXinKM() - cameraOffset.x).toFloat()
+				val y = (position.getYinKM() - cameraOffset.y).toFloat()
 
 				shapeRenderer.color = Color.RED
 
@@ -99,6 +128,8 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 				}
 			}
 		}
+		
+		shapeRenderer.end()
 	}
 
 	fun render(viewport: Viewport, cameraOffset: Vector2L) {
@@ -108,13 +139,9 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 		viewport.apply()
 		shapeRenderer.projectionMatrix = viewport.camera.combined
 
-		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
 		drawEntities(sortedEntities, viewport, cameraOffset)
-		shapeRenderer.end()
-
-		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+		drawEntities2(sortedEntities, viewport, cameraOffset)
 		drawSelections(sortedEntities, viewport, cameraOffset)
-		shapeRenderer.end()
 
 		batch.projectionMatrix = uiCamera.combined
 		batch.begin()
@@ -125,7 +152,7 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 		val screenPosition = Vector3()
 
 		entities.filter { nameMapper.has(it) }.forEach {
-			val position = positionMapper.get(it).position
+			val position = positionMapper.get(it)
 			val name = nameMapper.get(it).name!!
 
 			var height = 0f
@@ -141,10 +168,10 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 				height = lineComponent.y
 			}
 
-			val x = (position.x - cameraOffset.x).toFloat()
-			val y = (position.y - cameraOffset.y).toFloat()
+			val x = (position.getXinKM() - cameraOffset.x).toFloat()
+			val y = (position.getYinKM() - cameraOffset.y).toFloat()
 
-			screenPosition.set(x, y - height * .5f, 0f)
+			screenPosition.set(x, y - height * 1.1f, 0f)
 			viewport.camera.project(screenPosition)
 
 			font.draw(batch, name, screenPosition.x - name.length * font.spaceWidth * .5f, screenPosition.y - font.lineHeight / zoom)

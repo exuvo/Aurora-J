@@ -16,7 +16,9 @@ import com.badlogic.gdx.utils.viewport.Viewport
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.Galaxy
 import se.exuvo.aurora.SolarSystem
+import se.exuvo.aurora.components.ApproachType
 import se.exuvo.aurora.components.CircleComponent
+import se.exuvo.aurora.components.MoveToComponent
 import se.exuvo.aurora.components.PositionComponent
 import se.exuvo.aurora.components.RenderComponent
 import se.exuvo.aurora.systems.GroupSystem
@@ -24,8 +26,8 @@ import se.exuvo.aurora.systems.OrbitSystem
 import se.exuvo.aurora.systems.RenderSystem
 import se.exuvo.aurora.utils.CircleL
 import se.exuvo.aurora.utils.GameServices
-import se.exuvo.aurora.utils.NanoTimeUnits
 import se.exuvo.aurora.utils.RectangleL
+import se.exuvo.aurora.utils.TimeUnits
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.settings.Settings
 import kotlin.properties.Delegates
@@ -42,6 +44,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 	private val circleMapper = ComponentMapper.getFor(CircleComponent::class.java)
 	private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
+	private val moveToMapper = ComponentMapper.getFor(MoveToComponent::class.java)
 	private val groupSystem by lazy { system.engine.getSystem(GroupSystem::class.java) }
 
 	var zoomLevel = 0
@@ -120,7 +123,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 	private fun drawUI() {
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
-		Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, day ${galaxy.day}, time ${secondsToString(galaxy.time)}, speed ${NanoTimeUnits.SECOND / galaxy.speed}", 8f, 32f)
+		Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, day ${galaxy.day}, time ${secondsToString(galaxy.time)}, speed ${TimeUnits.NANO_SECOND / galaxy.speed}", 8f, 32f)
 		spriteBatch.end()
 	}
 
@@ -141,13 +144,14 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 				system.lock.readLock().unlock()
 			}
 		}
-		
+
 		if (keycode == Input.Keys.PLUS) {
 
+			//TODO something smarter here
 			var speed = galaxy.speed / 4
 
-			if (speed == 0L) {
-				speed = 1
+			if (speed < TimeUnits.NANO_MILLI / 60) {
+				speed = TimeUnits.NANO_MILLI / 60
 			}
 
 			galaxy.speed = speed
@@ -162,8 +166,8 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 			var speed = galaxy.speed * 4
 
-			if (speed > 1 * NanoTimeUnits.SECOND) {
-				speed = 1 * NanoTimeUnits.SECOND
+			if (speed > 1 * TimeUnits.NANO_SECOND) {
+				speed = 1 * TimeUnits.NANO_SECOND
 			}
 
 			galaxy.speed = speed
@@ -209,77 +213,141 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 		if (!moveWindow && !dragSelect) {
 
-			if (button == Input.Buttons.LEFT) {
+			when (button) {
+				Input.Buttons.LEFT -> {
 
-				system.lock.readLock().lock()
-				try {
+					system.lock.readLock().lock()
+					try {
 
-					val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
-					val entitiesUnderMouse = ArrayList<Entity>()
-					val entities = system.engine.getEntitiesFor(selectionFamily)
-					val testCircle = CircleL()
+						val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
+						val entitiesUnderMouse = ArrayList<Entity>()
+						val entities = system.engine.getEntitiesFor(selectionFamily)
+						val testCircle = CircleL()
 
-					// Exact check first
-					for (entity in entities) {
-						val position = positionMapper.get(entity).position
-						val radius = circleMapper.get(entity).radius
-						testCircle.set(position, radius)
-
-						if (testCircle.contains(mouseInGameCoordinates)) {
-							entitiesUnderMouse.add(entity)
-						}
-					}
-
-					// Lenient check if empty
-					if (entitiesUnderMouse.isEmpty()) {
+						// Exact check first
 						for (entity in entities) {
 							val position = positionMapper.get(entity).position
-							val radius = circleMapper.get(entity).radius * 1.1f + 2 * camera.zoom
-							testCircle.set(position, radius)
+							val radius = circleMapper.get(entity).radius
+							testCircle.set(position, radius * 1000)
 
 							if (testCircle.contains(mouseInGameCoordinates)) {
 								entitiesUnderMouse.add(entity)
 							}
 						}
 
+						// Lenient check if empty
+						if (entitiesUnderMouse.isEmpty()) {
+							for (entity in entities) {
+								val position = positionMapper.get(entity).position
+								val radius = circleMapper.get(entity).radius * 1.1f + 2 * camera.zoom
+								testCircle.set(position, radius * 1000)
+
+								if (testCircle.contains(mouseInGameCoordinates)) {
+									entitiesUnderMouse.add(entity)
+								}
+							}
+
+							if (entitiesUnderMouse.isNotEmpty()) {
+//								println("lenient selected ${entitiesUnderMouse.size} entities")
+							}
+
+						} else {
+//							println("strict selected ${entitiesUnderMouse.size} entities")
+						}
+
 						if (entitiesUnderMouse.isNotEmpty()) {
-//							println("lenient selected ${entitiesUnderMouse.size} entities")
-						}
+							
+							dragSelectPotentialStart = false;
 
-					} else {
-//						println("strict selected ${entitiesUnderMouse.size} entities")
-					}
+							if (groupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+								groupSystem.clear(GroupSystem.SELECTED)
+//								println("cleared selection")
+							}
 
-					if (entitiesUnderMouse.isNotEmpty()) {
+							groupSystem.add(entitiesUnderMouse, GroupSystem.SELECTED)
 
-						if (groupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-							groupSystem.clear(GroupSystem.SELECTED)
-//							println("cleared selection")
-						}
+						} else {
 
-						groupSystem.add(entitiesUnderMouse, GroupSystem.SELECTED)
-
-					} else {
-
-						dragSelectPotentialStart = true;
-						dragX = screenX;
-						dragY = screenY;
+							dragSelectPotentialStart = true;
+							dragX = screenX;
+							dragY = screenY;
 
 //						println("drag select potential dragX $dragX, dragY $dragY")
+						}
+
+						return true;
+
+					} finally {
+						system.lock.readLock().unlock()
 					}
-
-					return true;
-
-				} finally {
-					system.lock.readLock().unlock()
 				}
-			}
+				Input.Buttons.MIDDLE -> {
+					moveWindow = true;
+					dragX = screenX;
+					dragY = screenY;
+					return true;
+				}
+				Input.Buttons.RIGHT -> {
 
-			if (button == Input.Buttons.MIDDLE) {
-				moveWindow = true;
-				dragX = screenX;
-				dragY = screenY;
-				return true;
+					if (groupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
+
+						system.lock.readLock().lock()
+						try {
+
+							val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
+							val entitiesUnderMouse = ArrayList<Entity>()
+							val entities = system.engine.getEntitiesFor(selectionFamily)
+							val testCircle = CircleL()
+
+							// Exact check first
+							for (entity in entities) {
+								val position = positionMapper.get(entity).position
+								val radius = circleMapper.get(entity).radius
+								testCircle.set(position, radius * 1000)
+
+								if (testCircle.contains(mouseInGameCoordinates)) {
+									entitiesUnderMouse.add(entity)
+								}
+							}
+
+							// Lenient check if empty
+							if (entitiesUnderMouse.isEmpty()) {
+								for (entity in entities) {
+									val position = positionMapper.get(entity).position
+									val radius = circleMapper.get(entity).radius * 1.1f + 2 * camera.zoom
+									testCircle.set(position, radius * 1000)
+
+									if (testCircle.contains(mouseInGameCoordinates)) {
+										entitiesUnderMouse.add(entity)
+									}
+								}
+							}
+
+							if (entitiesUnderMouse.isNotEmpty()) {
+
+								println("Issuing move order")
+
+								val targetEntity = entitiesUnderMouse.get(0)
+
+								for (entity in groupSystem.get(GroupSystem.SELECTED)) {
+									var moveToComponent = moveToMapper.get(entity)
+
+									if (moveToComponent == null) {
+										moveToComponent = system.engine.createComponent(MoveToComponent::class.java)
+										entity.add(moveToComponent)
+									}
+
+									moveToComponent.apply { target = targetEntity; approach = ApproachType.BRACHISTOCHRONE }
+								}
+							}
+
+							return true;
+
+						} finally {
+							system.lock.readLock().unlock()
+						}
+					}
+				}
 			}
 
 		} else {
@@ -426,6 +494,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 		// unproject screen coordinates to corresponding world position
 		val cameraRelativeWorldPosition = camera.unproject(screenCoordinates);
 		val worldPosition = Vector2L(cameraRelativeWorldPosition.x.toLong(), cameraRelativeWorldPosition.y.toLong()).add(cameraOffset)
+		worldPosition.scl(1000) // km to m
 		return worldPosition
 	}
 

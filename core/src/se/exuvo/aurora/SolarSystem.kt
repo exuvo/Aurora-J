@@ -2,15 +2,21 @@ package se.exuvo.aurora
 
 import com.badlogic.ashley.core.ComponentMapper
 import com.badlogic.ashley.core.Entity
+import com.badlogic.ashley.core.Family
 import com.badlogic.ashley.core.PooledEngine
 import org.apache.log4j.Logger
+import se.exuvo.aurora.components.ApproachType
 import se.exuvo.aurora.components.CircleComponent
 import se.exuvo.aurora.components.MassComponent
+import se.exuvo.aurora.components.MoveToComponent
 import se.exuvo.aurora.components.NameComponent
 import se.exuvo.aurora.components.OrbitComponent
 import se.exuvo.aurora.components.PositionComponent
 import se.exuvo.aurora.components.RenderComponent
+import se.exuvo.aurora.components.ThrustComponent
+import se.exuvo.aurora.components.VelocityComponent
 import se.exuvo.aurora.systems.GroupSystem
+import se.exuvo.aurora.systems.MovementSystem
 import se.exuvo.aurora.systems.OrbitSystem
 import se.exuvo.aurora.systems.RenderSystem
 import se.exuvo.aurora.systems.TagSystem
@@ -18,6 +24,9 @@ import java.util.Random
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 class SolarSystem {
+	companion object {
+		val FAMILY = Family.exclude(ThrustComponent::class.java).get()
+	}
 
 	val log = Logger.getLogger(this.javaClass)
 
@@ -28,11 +37,12 @@ class SolarSystem {
 		engine.addSystem(TagSystem())
 		engine.addSystem(GroupSystem())
 		engine.addSystem(OrbitSystem())
+		engine.addSystem(MovementSystem())
 		engine.addSystem(RenderSystem())
 
-		generateRandomSystem()
+//		generateRandomSystem()
 		
-		/*val entity1 = engine.createEntity()
+		val entity1 = engine.createEntity()
 		entity1.add(engine.createComponent(PositionComponent::class.java).apply { position.set(0, 0) })
 		entity1.add(engine.createComponent(RenderComponent::class.java))
 		entity1.add(engine.createComponent(CircleComponent::class.java).apply { radius = 695700f })
@@ -47,7 +57,7 @@ class SolarSystem {
 		entity2.add(engine.createComponent(CircleComponent::class.java).apply { radius = 6371f })
 		entity2.add(engine.createComponent(NameComponent::class.java).apply { name = "Earth" })
 		entity2.add(engine.createComponent(MassComponent::class.java).apply { mass = 5.972e24 })
-		entity2.add(engine.createComponent(OrbitComponent::class.java).apply { parent = entity1; a_semiMajorAxis = 1f; e_eccentricity = 0.5f; w_argumentOfPeriapsis = -45f })
+		entity2.add(engine.createComponent(OrbitComponent::class.java).apply { parent = entity1; a_semiMajorAxis = 1f; e_eccentricity = 0f; w_argumentOfPeriapsis = -45f })
 
 		engine.addEntity(entity2)
 
@@ -61,20 +71,24 @@ class SolarSystem {
 		engine.addEntity(entity3)
 		
 		val entity4 = engine.createEntity()
-		entity4.add(engine.createComponent(PositionComponent::class.java).apply { position.set(10000000, 10000000) })
+		entity4.add(engine.createComponent(PositionComponent::class.java).apply { position.set((OrbitSystem.AU * 1000L * 1L).toLong(), 0).setAngle(45f) })
 		entity4.add(engine.createComponent(RenderComponent::class.java))
 		entity4.add(engine.createComponent(CircleComponent::class.java).apply{ radius = 10f})
 		entity4.add(engine.createComponent(NameComponent::class.java).apply { name = "Ship" })
+		entity4.add(engine.createComponent(MassComponent::class.java).apply { mass = 1000.0 })
+		entity4.add(engine.createComponent(ThrustComponent::class.java).apply { thrust = 10f * 9.82f * 1000f})
+		entity4.add(engine.createComponent(VelocityComponent::class.java).apply { velocity.set(-1000000f, 0f) })
+		entity4.add(engine.createComponent(MoveToComponent::class.java).apply { target = entity1; approach = ApproachType.BRACHISTOCHRONE})
 
 		engine.addEntity(entity4)
 		
-//		println("moons ${engine.getSystem(OrbitSystem::class.java).getMoons(entity1).size}")
-		print("moons ${engine.getSystem(OrbitSystem::class.java).getMoons(entity1).size}")*/
 	}
 	
 	fun  generateRandomSystem() {
 		
-		engine.removeAllEntities()
+		for (entity in engine.getEntitiesFor(FAMILY)) {
+			engine.removeEntity(entity)
+		}
 		
 		// Mass range of stellar objects in kg
 		// Star: 		10^29 - 10^39 

@@ -98,7 +98,9 @@ class UIScreen: GameScreenImpl, InputProcessor {
 	override val overlay = true
 	
 	override fun dispose() {
-		stage.dispose()
+		try {
+			stage.dispose()
+		} catch (ignore: IllegalArgumentException){}
 		super.dispose()
 	}
 }

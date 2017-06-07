@@ -2,7 +2,7 @@ package se.exuvo.aurora
 
 import org.apache.log4j.Logger
 import se.exuvo.aurora.utils.GameServices
-import se.exuvo.aurora.utils.NanoTimeUnits
+import se.exuvo.aurora.utils.TimeUnits
 import se.exuvo.settings.Settings
 import se.unlogic.standardutils.threads.SimpleTaskGroup
 import se.unlogic.standardutils.threads.ThreadPoolTaskGroupHandler
@@ -18,7 +18,7 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 	var sleeping = false
 
 	var day: Int = 0
-	var speed: Long = 1 * NanoTimeUnits.SECOND
+	var speed: Long = 1 * TimeUnits.NANO_SECOND
 	var paused = false
 
 	fun init() {
@@ -66,11 +66,11 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 
 						accumulator -= speed;
 
-						var tickSize: Int = if (speed > 1 * NanoTimeUnits.MILLI) 1 else (NanoTimeUnits.MILLI / speed).toInt()
+						var tickSize: Int = if (speed >= 1 * TimeUnits.NANO_MILLI) 1 else (TimeUnits.NANO_MILLI / speed).toInt()
 
-						// max sensible tick size is 1 hour or 3600s
-						if (tickSize > 3600) {
-							tickSize = 3600
+						// max sensible tick size is 1 minute
+						if (tickSize > 60) {
+							tickSize = 60
 						}
 
 //						println("tickSize $tickSize, speed $speed, accumulator $accumulator, diff ${now - lastSleep}")
@@ -108,7 +108,7 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 
 					if (accumulator < speed) {
 
-						var sleepTime = (speed - accumulator) / NanoTimeUnits.MILLI
+						var sleepTime = (speed - accumulator) / TimeUnits.NANO_MILLI
 
 						if (sleepTime > 0) {
 							sleeping = true

@@ -1,18 +1,32 @@
 package se.exuvo.aurora.utils;
 
-public class Vector2L {
+import java.io.Serializable;
 
+import com.badlogic.gdx.math.Interpolation;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.utils.GdxRuntimeException;
+
+public class Vector2L implements Serializable {
+
+	private static final long serialVersionUID = 913902788239530931L;
+
+	public final static Vector2L X = new Vector2L(1, 0);
+	public final static Vector2L Y = new Vector2L(0, 1);
+	public final static Vector2L Zero = new Vector2L(0, 0);
+
+	/** the x-component of this vector **/
 	public long x;
+	/** the y-component of this vector **/
 	public long y;
 
-	/** Constructs a new 2D grid polong. */
+	/** Constructs a new vector at (0,0) */
 	public Vector2L() {}
 
 	/**
-	 * Constructs a new 2D grid polong.
+	 * Constructs a vector with the given components
 	 * 
-	 * @param x X coordinate
-	 * @param y Y coordinate
+	 * @param x The x-component
+	 * @param y The y-component
 	 */
 	public Vector2L(long x, long y) {
 		this.x = x;
@@ -20,33 +34,38 @@ public class Vector2L {
 	}
 
 	/**
-	 * Copy constructor
+	 * Constructs a vector from the given vector
 	 * 
-	 * @param polong The 2D grid polong to make a copy of.
+	 * @param v The vector
 	 */
-	public Vector2L(Vector2L polong) {
-		this.x = polong.x;
-		this.y = polong.y;
+	public Vector2L(Vector2L v) {
+		set(v);
 	}
 
-	/**
-	 * Sets the coordinates of this 2D grid polong to that of another.
-	 * 
-	 * @param polong The 2D grid polong to copy the coordinates of.
-	 * @return this 2D grid polong for chaining.
-	 */
-	public Vector2L set(Vector2L polong) {
-		this.x = polong.x;
-		this.y = polong.y;
+	public Vector2L cpy() {
+		return new Vector2L(this);
+	}
+
+	public static double len(long x, long y) {
+		return Math.hypot(x, y);
+	}
+
+	public double len() {
+		return Math.hypot(x, y);
+	}
+
+	public Vector2L set(Vector2L v) {
+		x = v.x;
+		y = v.y;
 		return this;
 	}
 
 	/**
-	 * Sets the coordinates of this 2D grid polong.
+	 * Sets the components of this vector
 	 * 
-	 * @param x X coordinate
-	 * @param y Y coordinate
-	 * @return this 2D grid polong for chaining.
+	 * @param x The x-component
+	 * @param y The y-component
+	 * @return This vector for chaining
 	 */
 	public Vector2L set(long x, long y) {
 		this.x = x;
@@ -54,95 +73,18 @@ public class Vector2L {
 		return this;
 	}
 
-	/**
-	 * @param other The other polong
-	 * @return the squared distance between this polong and the other polong.
-	 */
-	public float dst2(Vector2L other) {
-		long xd = other.x - x;
-		long yd = other.y - y;
-
-		return xd * xd + yd * yd;
-	}
-
-	/**
-	 * @param x The x-coordinate of the other polong
-	 * @param y The y-coordinate of the other polong
-	 * @return the squared distance between this polong and the other polong.
-	 */
-	public float dst2(long x, long y) {
-		long xd = x - this.x;
-		long yd = y - this.y;
-
-		return xd * xd + yd * yd;
-	}
-
-	/**
-	 * @param other The other polong
-	 * @return the distance between this polong and the other vector.
-	 */
-	public float dst(Vector2L other) {
-		long xd = other.x - x;
-		long yd = other.y - y;
-
-		return (float) Math.sqrt(xd * xd + yd * yd);
-	}
-
-	/**
-	 * @param x The x-coordinate of the other polong
-	 * @param y The y-coordinate of the other polong
-	 * @return the distance between this polong and the other polong.
-	 */
-	public float dst(long x, long y) {
-		long xd = x - this.x;
-		long yd = y - this.y;
-
-		return (float) Math.sqrt(xd * xd + yd * yd);
-	}
-
-	/**
-	 * Adds another 2D grid polong to this polong.
-	 *
-	 * @param other The other polong
-	 * @return this 2d grid polong for chaining.
-	 */
-	public Vector2L add(Vector2L other) {
-		x += other.x;
-		y += other.y;
+	public Vector2L sub(Vector2L v) {
+		x -= v.x;
+		y -= v.y;
 		return this;
 	}
 
 	/**
-	 * Adds another 2D grid polong to this polong.
-	 *
-	 * @param x The x-coordinate of the other polong
-	 * @param y The y-coordinate of the other polong
-	 * @return this 2d grid polong for chaining.
-	 */
-	public Vector2L add(long x, long y) {
-		this.x += x;
-		this.y += y;
-		return this;
-	}
-
-	/**
-	 * Subtracts another 2D grid polong from this polong.
-	 *
-	 * @param other The other polong
-	 * @return this 2d grid polong for chaining.
-	 */
-	public Vector2L sub(Vector2L other) {
-		x -= other.x;
-		y -= other.y;
-		return this;
-	}
-
-	/**
-	 * Subtracts another 2D grid polong from this polong.
-	 *
-	 * @param x The x-coordinate of the other polong
-	 * @param y The y-coordinate of the other polong
-	 * @return this 2d grid polong for chaining.
+	 * Substracts the other vector from this vector.
+	 * 
+	 * @param x The x-component of the other vector
+	 * @param y The y-component of the other vector
+	 * @return This vector for chaining
 	 */
 	public Vector2L sub(long x, long y) {
 		this.x -= x;
@@ -150,33 +92,373 @@ public class Vector2L {
 		return this;
 	}
 
-	/**
-	 * @return a copy of this grid polong
-	 */
-	public Vector2L cpy() {
-		return new Vector2L(this);
+	public Vector2L add(Vector2L v) {
+		x += v.x;
+		y += v.y;
+		return this;
 	}
 
+	/**
+	 * Adds the given components to this vector
+	 * 
+	 * @param x The x-component
+	 * @param y The y-component
+	 * @return This vector for chaining
+	 */
+	public Vector2L add(long x, long y) {
+		this.x += x;
+		this.y += y;
+		return this;
+	}
+
+	public static BigInt dot(long x1, long y1, long x2, long y2) {
+	// return x1 * x2 + y1 * y2;
+			BigInt X = new BigInt(x1);
+			BigInt Y = new BigInt(y1);
+			X.mul(x2);
+			Y.mul(y2);
+			X.add(Y);
+			return X;
+	}
+
+	public BigInt dot(Vector2L v) {
+		return dot(v.x, v.y);
+	}
+
+	public BigInt dot(long ox, long oy) {
+		return dot(x, y, ox, oy);
+	}
+
+	public Vector2L scl(long scalar) {
+		x *= scalar;
+		y *= scalar;
+		return this;
+	}
+	
+	public Vector2L scl(double scalar) {
+		x = (long) (x * scalar);
+		y = (long) (y * scalar);
+		return this;
+	}
+	
+	public Vector2L div(long divider) {
+		x = (divider / 2 + x) / divider;
+		y = (divider / 2 + y) / divider;
+		return this;
+	}
+
+	/**
+	 * Multiplies this vector by a scalar
+	 * 
+	 * @return This vector for chaining
+	 */
+	public Vector2L scl(long x, long y) {
+		this.x *= x;
+		this.y *= y;
+		return this;
+	}
+
+	public Vector2L scl(Vector2L v) {
+		this.x *= v.x;
+		this.y *= v.y;
+		return this;
+	}
+
+	public Vector2L mulAdd(Vector2L vec, long scalar) {
+		this.x += vec.x * scalar;
+		this.y += vec.y * scalar;
+		return this;
+	}
+
+	public Vector2L mulAdd(Vector2L vec, Vector2L mulVec) {
+		this.x += vec.x * mulVec.x;
+		this.y += vec.y * mulVec.y;
+		return this;
+	}
+
+	public static double dst(long x1, long y1, long x2, long y2) {
+		final long x_d = x2 - x1;
+		final long y_d = y2 - y1;
+		return Math.hypot(x_d, y_d);
+	}
+
+	public double dst(Vector2L v) {
+		final long x_d = v.x - x;
+		final long y_d = v.y - y;
+		return Math.hypot(x_d, y_d);
+	}
+
+	/**
+	 * @param x The x-component of the other vector
+	 * @param y The y-component of the other vector
+	 * @return the distance between this and the other vector
+	 */
+	public double dst(long x, long y) {
+		final long x_d = x - this.x;
+		final long y_d = y - this.y;
+		return Math.hypot(x_d, y_d);
+	}
+
+	public Vector2L limit(long limit) {
+		double len = len();
+		if (len > limit) {
+			return scl(Math.sqrt(limit / len));
+		}
+		return this;
+	}
+
+	public Vector2L clamp(long min, long max) {
+		double len = len();
+		if (len == 0) return this;
+		if (len > max) return scl(Math.sqrt(max / len));
+		if (len < min) return scl(Math.sqrt(min / len));
+		return this;
+	}
+
+	public Vector2L setLength(long len) {
+		double oldLen = len();
+		return (oldLen == 0 || oldLen == len) ? this : scl(Math.sqrt(len / oldLen));
+	}
+
+	/**
+	 * Converts this {@code Vector2L} to a string in the format {@code (x,y)}.
+	 * 
+	 * @return a string representation of this object.
+	 */
 	@Override
-	public boolean equals(Object o) {
-		if (this == o) return true;
-		if (o == null || o.getClass() != this.getClass()) return false;
-		Vector2L g = (Vector2L) o;
-		return this.x == g.x && this.y == g.y;
+	public String toString() {
+		return "(" + x + "," + y + ")";
+	}
+
+	/**
+	 * Sets this {@code Vector2L} to the value represented by the specified string according to the format of {@link #toString()}.
+	 * 
+	 * @param v the string.
+	 * @return this vector for chaining
+	 */
+	public Vector2L fromString(String v) {
+		int s = v.indexOf(',', 1);
+		if (s != -1 && v.charAt(0) == '(' && v.charAt(v.length() - 1) == ')') {
+			try {
+				long x = Long.parseLong(v.substring(1, s));
+				long y = Long.parseLong(v.substring(s + 1, v.length() - 1));
+				return this.set(x, y);
+			} catch (NumberFormatException ex) {
+				// Throw a GdxRuntimeException
+			}
+		}
+		throw new GdxRuntimeException("Malformed Vector2L: " + v);
+	}
+
+	/**
+	 * Calculates the 2D cross product between this and the given vector.
+	 * 
+	 * @param v the other vector
+	 * @return the cross product
+	 */
+	public BigInt crs(Vector2L v) {
+		return crs(v.x, v.y);
+	}
+
+	/**
+	 * Calculates the 2D cross product between this and the given vector.
+	 * 
+	 * @param x the x-coordinate of the other vector
+	 * @param y the y-coordinate of the other vector
+	 * @return the cross product
+	 */
+	public BigInt crs(long x, long y) {
+		// return this.x * y - this.y * x;
+		BigInt X = new BigInt(this.x);
+		BigInt Y = new BigInt(this.y);
+		X.mul(y);
+		Y.mul(x);
+		X.sub(Y);
+		return X;
+	}
+	
+	public double angleTo(Vector2L other){
+		long x = other.x - this.x;
+		long y = other.y - this.y;
+		Vector2D tmp = new Vector2D(x, y);
+		tmp.nor();
+		tmp.scl(this.dst(other));
+		return tmp.angle();
+	}
+
+	/**
+	 * @return the angle in degrees of this vector (point) relative to the x-axis. Angles are towards the positive y-axis (typically
+	 *         counter-clockwise) and between 0 and 360.
+	 */
+	public double angle() {
+		double angle = Math.toDegrees(Math.atan2(y, x));
+		if (angle < 0) angle += 360;
+		return angle;
+	}
+
+	/**
+	 * @return the angle in degrees of this vector (point) relative to the given vector. Angles are towards the positive y-axis (typically
+	 *         counter-clockwise.) between -180 and +180
+	 */
+	public double angle(Vector2L reference) {
+		return Math.toDegrees(angleRad(reference));
+	}
+
+	/**
+	 * @return the angle in radians of this vector (point) relative to the x-axis. Angles are towards the positive y-axis. (typically
+	 *         counter-clockwise)
+	 */
+	public double angleRad() {
+		return Math.atan2(y, x);
+	}
+
+	/**
+	 * @return the angle in radians of this vector (point) relative to the given vector. Angles are towards the positive y-axis. (typically
+	 *         counter-clockwise.)
+	 */
+	public double angleRad(Vector2L reference) {
+		return Math.atan2(crs(reference).doubleValue(), dot(reference).doubleValue());
+	}
+
+	/**
+	 * Sets the angle of the vector in degrees relative to the x-axis, towards the positive y-axis (typically counter-clockwise).
+	 * 
+	 * @param degrees The angle in degrees to set.
+	 */
+	public Vector2L setAngle(float degrees) {
+		return setAngleRad(degrees * MathUtils.degreesToRadians);
+	}
+
+	/**
+	 * Sets the angle of the vector in radians relative to the x-axis, towards the positive y-axis (typically counter-clockwise).
+	 * 
+	 * @param radians The angle in radians to set.
+	 */
+	public Vector2L setAngleRad(float radians) {
+		this.set((long) len(), 0);
+		this.rotateRad(radians);
+
+		return this;
+	}
+	
+	/**
+	 * Rotates the Vector2L by the given angle, counter-clockwise assuming the y-axis points up.
+	 * 
+	 * @param degrees the angle in degrees
+	 */
+	public Vector2L rotate(float degrees) {
+		return rotateRad(degrees * MathUtils.degreesToRadians);
+	}
+
+	/**
+	 * Rotates the Vector2L by the given angle, counter-clockwise assuming the y-axis points up.
+	 * 
+	 * @param radians the angle in radians
+	 */
+	public Vector2L rotateRad(float radians) {
+		double cos = Math.cos(radians);
+		double sin = Math.sin(radians);
+
+		double newX = this.x * cos - this.y * sin;
+		double newY = this.x * sin + this.y * cos;
+
+		this.x = (long) newX;
+		this.y = (long) newY;
+
+		return this;
+	}
+
+	/** Rotates the Vector2L by 90 degrees in the specified direction, where >= 0 is counter-clockwise and < 0 is clockwise. */
+	public Vector2L rotate90(int dir) {
+		long x = this.x;
+		if (dir >= 0) {
+			this.x = -y;
+			y = x;
+		} else {
+			this.x = y;
+			y = -x;
+		}
+		return this;
+	}
+
+	public Vector2L lerp(Vector2L target, double alpha) {
+		final double invAlpha = 1.0 - alpha;
+		this.x = (long) ((x * invAlpha) + (target.x * alpha));
+		this.y = (long) ((y * invAlpha) + (target.y * alpha));
+		return this;
+	}
+
+	public Vector2L interpolate(Vector2L target, float alpha, Interpolation interpolation) {
+		return lerp(target, interpolation.apply(alpha));
 	}
 
 	@Override
 	public int hashCode() {
-		final int prime = 53;
+		final int prime = 31;
 		long result = 1;
-		result = prime * result + this.x;
-		result = prime * result + this.y;
+		result = prime * result + x;
+		result = prime * result + y;
 		return Long.hashCode(result);
 	}
 
 	@Override
-	public String toString() {
-		return "(" + x + ", " + y + ")";
+	public boolean equals(Object obj) {
+		if (this == obj) return true;
+		if (obj == null) return false;
+		if (getClass() != obj.getClass()) return false;
+		Vector2L other = (Vector2L) obj;
+		if (x != other.x) return false;
+		if (y != other.y) return false;
+		return true;
 	}
 
+	public boolean isZero() {
+		return x == 0 && y == 0;
+	}
+
+	public boolean isOnLine(Vector2L other) {
+		return MathUtils.isZero(x * other.y - y * other.x);
+	}
+
+	public boolean isOnLine(Vector2L other, float epsilon) {
+		return MathUtils.isZero(x * other.y - y * other.x, epsilon);
+	}
+
+	public boolean isCollinear(Vector2L other, float epsilon) {
+		return isOnLine(other, epsilon) && dot(other).compareTo(BigInt.ZERO) == 1;
+	}
+
+	public boolean isCollinear(Vector2L other) {
+		return isOnLine(other) && dot(other).compareTo(BigInt.ZERO) == 1;
+	}
+
+	public boolean isCollinearOpposite(Vector2L other, float epsilon) {
+		return isOnLine(other, epsilon) && dot(other).compareTo(BigInt.ZERO) == -1;
+	}
+
+	public boolean isCollinearOpposite(Vector2L other) {
+		return isOnLine(other) && dot(other).compareTo(BigInt.ZERO) == -1;
+	}
+
+	public boolean isPerpendicular(Vector2L vector) {
+		return dot(vector).isZero();
+	}
+
+	public boolean isPerpendicular(Vector2L vector, float epsilon) {
+		return dot(vector).isZero();
+	}
+
+	public boolean hasSameDirection(Vector2L vector) {
+		return dot(vector).compareTo(BigInt.ZERO) == 1;
+	}
+
+	public boolean hasOppositeDirection(Vector2L vector) {
+		return dot(vector).compareTo(BigInt.ZERO) == -1;
+	}
+
+	public Vector2L setZero() {
+		this.x = 0;
+		this.y = 0;
+		return this;
+	}
 }
