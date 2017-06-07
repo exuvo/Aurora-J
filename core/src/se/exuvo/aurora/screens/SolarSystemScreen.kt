@@ -137,11 +137,11 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 	override fun keyDown(keycode: Int): Boolean {
 
 		if (keycode == Input.Keys.G) {
-			system.lock.readLock().lock()
+			system.lock.writeLock().lock()
 			try {
 				system.generateRandomSystem()
 			} finally {
-				system.lock.readLock().unlock()
+				system.lock.writeLock().unlock()
 			}
 		}
 
