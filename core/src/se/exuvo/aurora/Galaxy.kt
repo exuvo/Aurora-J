@@ -1,8 +1,10 @@
 package se.exuvo.aurora
 
+import com.badlogic.ashley.core.ComponentMapper
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.EntityListener
 import org.apache.log4j.Logger
+import se.exuvo.aurora.components.SolarSystemComponent
 import se.exuvo.aurora.systems.GroupSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.TimeUnits
@@ -16,6 +18,7 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable, Ent
 
 	val log = Logger.getLogger(this.javaClass)
 
+	private val solarSystemMapper = ComponentMapper.getFor(SolarSystemComponent::class.java)
 	private val groupSystem by lazy { GameServices[GroupSystem::class.java] }
 	private val threadPool = ThreadPoolTaskGroupHandler<SimpleTaskGroup>("Galaxy", Settings.getInt("Galaxy.Threads"), true) //
 	var thread: Thread? = null
@@ -46,6 +49,10 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable, Ent
 
 	override fun entityRemoved(entity: Entity) {
 		groupSystem.entityRemoved(entity)
+	}
+	
+	fun getSolarSystem(entity: Entity) : SolarSystem {
+		return solarSystemMapper.get(entity).system!!
 	}
 
 	private fun updateDay() {

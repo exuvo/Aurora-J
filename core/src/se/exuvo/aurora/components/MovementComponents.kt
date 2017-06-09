@@ -5,6 +5,8 @@ import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Vector2
 import se.exuvo.aurora.utils.Vector2L
 
+//TODO implement Poolable
+
 // In m
 data class PositionComponent(val position: Vector2L = Vector2L()) : Component {
 	fun getXinKM(): Long {

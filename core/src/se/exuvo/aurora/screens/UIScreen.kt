@@ -1,7 +1,6 @@
 package se.exuvo.aurora.screens
 
 import com.badlogic.ashley.core.ComponentMapper
-import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.InputProcessor
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
@@ -9,17 +8,24 @@ import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Window
 import se.exuvo.aurora.Assets
+import se.exuvo.aurora.Galaxy
+import se.exuvo.aurora.SolarSystem
 import se.exuvo.aurora.components.NameComponent
+import se.exuvo.aurora.components.OrbitComponent
+import se.exuvo.aurora.components.ThrustComponent
 import se.exuvo.aurora.systems.GroupSystem
+import se.exuvo.aurora.systems.TagSystem
 import se.exuvo.aurora.utils.GameServices
-import java.util.Collections
 
 class UIScreen : GameScreenImpl, InputProcessor {
 
 	private val spriteBatch by lazy { GameServices[SpriteBatch::class.java] }
+	private val galaxy by lazy { GameServices[Galaxy::class.java] }
 	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class.java] }
 
 	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java)
+	private val orbitMapper = ComponentMapper.getFor(OrbitComponent::class.java)
+	private val thrustMapper = ComponentMapper.getFor(ThrustComponent::class.java)
 
 	private val uiCamera = OrthographicCamera()
 	private val stage = Stage()
@@ -64,9 +70,34 @@ class UIScreen : GameScreenImpl, InputProcessor {
 
 				for (entity in currentSelection) {
 					if (nameMapper.has(entity)) {
+
 						val name = nameMapper.get(entity).name
 						selectionWindow.row()
 						selectionWindow.add(Label(name, skin))
+
+						val type: String
+
+						if (orbitMapper.has(entity)) {
+
+							val orbitComponent = orbitMapper.get(entity)
+							val solarSystem: SolarSystem = galaxy.getSolarSystem(entity)
+							val tagSystem = solarSystem.engine.getSystem(TagSystem::class.java)
+							val sun = tagSystem[TagSystem.SUN]
+
+							if (orbitComponent.parent == sun) {
+								type = "Planet"
+							} else {
+								type = "Moon"
+							}
+
+						} else if (thrustMapper.has(entity)) {
+							type = "Ship"
+
+						} else {
+							type = "Station"
+						}
+
+						selectionWindow.add(Label(type, skin))
 					}
 				}
 			}
