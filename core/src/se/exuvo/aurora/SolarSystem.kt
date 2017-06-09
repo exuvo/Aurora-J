@@ -20,8 +20,10 @@ import se.exuvo.aurora.systems.MovementSystem
 import se.exuvo.aurora.systems.OrbitSystem
 import se.exuvo.aurora.systems.RenderSystem
 import se.exuvo.aurora.systems.TagSystem
+import se.exuvo.aurora.utils.DummyReentrantReadWriteLock
 import java.util.Random
 import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.write
 
 class SolarSystem {
 	companion object {
@@ -35,7 +37,7 @@ class SolarSystem {
 
 	fun init() {
 		engine.addSystem(TagSystem())
-		engine.addSystem(GroupSystem())
+		engine.addSystem(GroupSystem(DummyReentrantReadWriteLock.INSTANCE))
 		engine.addSystem(OrbitSystem())
 		engine.addSystem(MovementSystem())
 		engine.addSystem(RenderSystem())
@@ -340,13 +342,10 @@ class SolarSystem {
 
 		//TODO use readlock during update
 
-		lock.writeLock().lock()
-		try {
+		lock.write{
 			engine.update(deltaGameTime.toFloat())
 			
 			//TODO send changes over network
-		} finally {
-			lock.writeLock().unlock()
 		}
 	}
 }

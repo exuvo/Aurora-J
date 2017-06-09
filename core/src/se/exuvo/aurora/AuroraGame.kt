@@ -10,8 +10,10 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import org.apache.log4j.Logger
 import se.exuvo.aurora.screens.GameScreenService
 import se.exuvo.aurora.screens.LoadingScreen
+import se.exuvo.aurora.systems.GroupSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.settings.Settings
+import java.util.concurrent.locks.ReentrantReadWriteLock
 
 class AuroraGame(val assetsRoot: String) : ApplicationAdapter() {
 
@@ -23,6 +25,7 @@ class AuroraGame(val assetsRoot: String) : ApplicationAdapter() {
 		GameServices.put(AssetManager(AuroraAssetsResolver(assetsRoot)))
 		GameServices.put(ShapeRenderer())
 		GameServices.put(SpriteBatch())
+		GameServices.put(GroupSystem(ReentrantReadWriteLock()))
 		GameServices.put(screenService)
 
 		Gdx.input.setInputProcessor(screenService)

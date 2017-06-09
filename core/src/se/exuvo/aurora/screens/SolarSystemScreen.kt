@@ -31,12 +31,17 @@ import se.exuvo.aurora.utils.TimeUnits
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.settings.Settings
 import kotlin.properties.Delegates
+import kotlin.concurrent.read
+import kotlin.concurrent.write
 
 class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProcessor {
 
 	private val spriteBatch = GameServices[SpriteBatch::class.java]
 	private val shapeRenderer = GameServices[ShapeRenderer::class.java]
 	private val galaxy by lazy { GameServices[Galaxy::class.java] }
+	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class.java] }
+	private val systemGroupSystem by lazy { system.engine.getSystem(GroupSystem::class.java) }
+
 	private val uiCamera = GameServices[GameScreenService::class.java].uiCamera
 	private var viewport by Delegates.notNull<Viewport>()
 	private var camera by Delegates.notNull<OrthographicCamera>()
@@ -45,7 +50,6 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 	private val circleMapper = ComponentMapper.getFor(CircleComponent::class.java)
 	private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
 	private val moveToMapper = ComponentMapper.getFor(MoveToComponent::class.java)
-	private val groupSystem by lazy { system.engine.getSystem(GroupSystem::class.java) }
 
 	var zoomLevel = 0
 	var zoomSensitivity = Settings.getFloat("UI.zoomSensitivity").toDouble()
@@ -98,12 +102,9 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 	override fun draw() {
 		super.draw()
 
-		system.lock.readLock().lock()
-		try {
+		system.lock.read {
 			system.engine.getSystem(OrbitSystem::class.java).render(viewport, cameraOffset)
 			system.engine.getSystem(RenderSystem::class.java).render(viewport, cameraOffset)
-		} finally {
-			system.lock.readLock().unlock()
 		}
 
 		if (dragSelect) {
@@ -137,11 +138,8 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 	override fun keyDown(keycode: Int): Boolean {
 
 		if (keycode == Input.Keys.G) {
-			system.lock.writeLock().lock()
-			try {
+			system.lock.write {
 				system.generateRandomSystem()
-			} finally {
-				system.lock.writeLock().unlock()
 			}
 		}
 
@@ -216,8 +214,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 			when (button) {
 				Input.Buttons.LEFT -> {
 
-					system.lock.readLock().lock()
-					try {
+					system.lock.read {
 
 						val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
 						val entitiesUnderMouse = ArrayList<Entity>()
@@ -259,12 +256,14 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 							dragSelectPotentialStart = false;
 
-							if (groupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-								groupSystem.clear(GroupSystem.SELECTED)
+							if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+								galaxyGroupSystem.clear(GroupSystem.SELECTED)
+								systemGroupSystem.clear(GroupSystem.SELECTED)
 //								println("cleared selection")
 							}
 
-							groupSystem.add(entitiesUnderMouse, GroupSystem.SELECTED)
+							galaxyGroupSystem.add(entitiesUnderMouse, GroupSystem.SELECTED)
+							systemGroupSystem.add(entitiesUnderMouse, GroupSystem.SELECTED)
 
 						} else {
 
@@ -276,9 +275,6 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 						}
 
 						return true;
-
-					} finally {
-						system.lock.readLock().unlock()
 					}
 				}
 				Input.Buttons.MIDDLE -> {
@@ -289,10 +285,9 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 				}
 				Input.Buttons.RIGHT -> {
 
-					if (groupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
+					if (systemGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
 
-						system.lock.readLock().lock()
-						try {
+						system.lock.read {
 
 							val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
 							val entitiesUnderMouse = ArrayList<Entity>()
@@ -329,7 +324,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 								val targetEntity = entitiesUnderMouse.get(0)
 
-								for (entity in groupSystem.get(GroupSystem.SELECTED)) {
+								for (entity in systemGroupSystem.get(GroupSystem.SELECTED)) {
 									var moveToComponent = moveToMapper.get(entity)
 
 									if (moveToComponent == null) {
@@ -342,15 +337,12 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 									if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
 										approachType = ApproachType.BALLISTIC
 									}
-									
+
 									moveToComponent.apply { target = targetEntity; approach = approachType }
 								}
 							}
 
 							return true;
-
-						} finally {
-							system.lock.readLock().unlock()
 						}
 					}
 				}
@@ -381,8 +373,9 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 		if (dragSelect && button == Input.Buttons.LEFT) {
 
-			if (groupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-				groupSystem.clear(GroupSystem.SELECTED)
+			if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+				galaxyGroupSystem.clear(GroupSystem.SELECTED)
+				systemGroupSystem.clear(GroupSystem.SELECTED)
 //				println("cleared selection")
 			}
 
@@ -408,7 +401,8 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 			}
 
 			if (entitiesInSelection.isNotEmpty()) {
-				groupSystem.add(entitiesInSelection, GroupSystem.SELECTED)
+				galaxyGroupSystem.add(entitiesInSelection, GroupSystem.SELECTED)
+				systemGroupSystem.add(entitiesInSelection, GroupSystem.SELECTED)
 //				println("drag selected ${entitiesInSelection.size} entities")
 			}
 
@@ -417,8 +411,9 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 		}
 
 		if (dragSelectPotentialStart && button == Input.Buttons.LEFT) {
-			if (groupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-				groupSystem.clear(GroupSystem.SELECTED)
+			if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+				galaxyGroupSystem.clear(GroupSystem.SELECTED)
+				systemGroupSystem.clear(GroupSystem.SELECTED)
 //				println("cleared selection")
 			}
 		}

@@ -1,6 +1,9 @@
 package se.exuvo.aurora
 
+import com.badlogic.ashley.core.Entity
+import com.badlogic.ashley.core.EntityListener
 import org.apache.log4j.Logger
+import se.exuvo.aurora.systems.GroupSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.TimeUnits
 import se.exuvo.settings.Settings
@@ -9,10 +12,11 @@ import se.unlogic.standardutils.threads.ThreadPoolTaskGroupHandler
 import se.unlogic.standardutils.threads.ThreadUtils
 import java.util.concurrent.LinkedBlockingQueue
 
-class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
+class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable, EntityListener {
 
 	val log = Logger.getLogger(this.javaClass)
 
+	private val groupSystem by lazy { GameServices[GroupSystem::class.java] }
 	private val threadPool = ThreadPoolTaskGroupHandler<SimpleTaskGroup>("Galaxy", Settings.getInt("Galaxy.Threads"), true) //
 	var thread: Thread? = null
 	var sleeping = false
@@ -21,15 +25,27 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 	var speed: Long = 1 * TimeUnits.NANO_SECOND
 	var paused = false
 
+
 	fun init() {
 		GameServices.put(this)
-		systems.forEach { it.init() }
+		systems.forEach {
+			it.init()
+			it.engine.addEntityListener(this)
+		}
 
 		val thread = Thread(this, "Galaxy");
 		thread.setDaemon(true);
 		thread.start();
 
 		this.thread = thread
+	}
+
+	override fun entityAdded(entity: Entity) {
+		groupSystem.entityAdded(entity)
+	}
+
+	override fun entityRemoved(entity: Entity) {
+		groupSystem.entityRemoved(entity)
 	}
 
 	private fun updateDay() {
@@ -90,7 +106,8 @@ class Galaxy(val systems: List<SolarSystem>, var time: Long = 0) : Runnable {
 						while (!executionController.isFinished() && !executionController.isAborted) {
 							try {
 								executionController.awaitExecution()
-							} catch (ignore: InterruptedException) {}
+							} catch (ignore: InterruptedException) {
+							}
 						}
 
 						val systemUpdateDuration = (System.nanoTime() - systemUpdateStart)

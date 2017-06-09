@@ -1,45 +1,41 @@
 package se.exuvo.aurora.screens
 
+import com.badlogic.ashley.core.ComponentMapper
+import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.InputProcessor
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.badlogic.gdx.scenes.scene2d.InputEvent
-import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Label
-import com.badlogic.gdx.scenes.scene2d.ui.Table
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton
+import com.badlogic.gdx.scenes.scene2d.ui.Window
 import se.exuvo.aurora.Assets
+import se.exuvo.aurora.components.NameComponent
+import se.exuvo.aurora.systems.GroupSystem
 import se.exuvo.aurora.utils.GameServices
+import java.util.Collections
 
-class UIScreen: GameScreenImpl, InputProcessor {
+class UIScreen : GameScreenImpl, InputProcessor {
 
 	private val spriteBatch by lazy { GameServices[SpriteBatch::class.java] }
+	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class.java] }
+
+	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java)
+
 	private val uiCamera = OrthographicCamera()
 	private val stage = Stage()
-	private val table = Table()
+	private val selectionWindow: Window
 	private val skin = Assets.skinUI
-	
+
+	private var previousSelectionModificationCount = 0
+
 	constructor() {
-		stage.addActor(table);
-		table.setDebug(true)
-		
-		table.setFillParent(true);
-//		table.setSize(100f, 100f)
-//		table.setPosition(190f, 142f);
-		
-//		val selectionLabel = Label("Name:", skin)
-//		table.add(selectionLabel);
-		
-//		val button = TextButton("Button 1", skin)
-//		button.addListener(object: InputListener() {
-//			override fun touchDown (event: InputEvent, x: Float, y: Float, pointer: Int, button: Int) : Boolean {
-//				System.out.println("touchDown 1");
-//				return false;
-//			}
-//		});
-//		table.add(button);
-		
+
+		selectionWindow = Window("Selection", skin)
+		stage.addActor(selectionWindow);
+//		selectionWindow.setDebug(true)
+
+		selectionWindow.setPosition(0f, 142f);
+		selectionWindow.pack()
 	}
 
 	override fun show() {
@@ -52,17 +48,43 @@ class UIScreen: GameScreenImpl, InputProcessor {
 
 	override fun update(deltaRealTime: Float) {
 		stage.act(deltaRealTime)
+
+		val selectionModificationCount = galaxyGroupSystem.getModificationCount(GroupSystem.SELECTED)
+
+		if (previousSelectionModificationCount != selectionModificationCount) {
+
+			selectionWindow.clearChildren()
+
+			val currentSelection = galaxyGroupSystem[GroupSystem.SELECTED]
+
+			if (currentSelection.isNotEmpty()) {
+
+				selectionWindow.add(Label("Name", skin))
+				selectionWindow.add(Label("Type", skin))
+
+				for (entity in currentSelection) {
+					if (nameMapper.has(entity)) {
+						val name = nameMapper.get(entity).name
+						selectionWindow.row()
+						selectionWindow.add(Label(name, skin))
+					}
+				}
+			}
+
+			selectionWindow.pack()
+			previousSelectionModificationCount = selectionModificationCount
+		}
 	}
 
 	override fun draw() {
 		stage.draw()
-		
+
 //		spriteBatch.projectionMatrix = uiCamera.combined
 //		spriteBatch.begin()
 //		Assets.fontUI.draw(spriteBatch, "UI", 2f, uiCamera.viewportHeight - 3f - Assets.fontUI.lineHeight)
 //		spriteBatch.end()
 	}
-	
+
 	override fun keyDown(keycode: Int): Boolean {
 		return stage.keyDown(keycode)
 	}
@@ -90,17 +112,18 @@ class UIScreen: GameScreenImpl, InputProcessor {
 	override fun mouseMoved(screenX: Int, screenY: Int): Boolean {
 		return stage.mouseMoved(screenX, screenY)
 	}
-	
+
 	override fun scrolled(amount: Int): Boolean {
 		return stage.scrolled(amount)
 	}
-	
+
 	override val overlay = true
-	
+
 	override fun dispose() {
 		try {
 			stage.dispose()
-		} catch (ignore: IllegalArgumentException){}
+		} catch (ignore: IllegalArgumentException) {
+		}
 		super.dispose()
 	}
 }
