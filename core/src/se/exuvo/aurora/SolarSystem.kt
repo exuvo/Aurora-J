@@ -63,7 +63,6 @@ class SolarSystem : EntityListener {
 
 		engine.addEntity(entity1)
 
-
 		val entity2 = Entity()
 		entity2.add(PositionComponent())
 		entity2.add(RenderComponent())
