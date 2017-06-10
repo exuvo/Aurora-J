@@ -109,6 +109,8 @@ class SolarSystem : EntityListener {
 	}
 
 	override fun entityRemoved(entity: Entity) {
+		val solarSystemComponent = solarSystemMapper.get(entity)
+		solarSystemComponent.system = null
 	}
 
 	fun generateRandomSystem() {
