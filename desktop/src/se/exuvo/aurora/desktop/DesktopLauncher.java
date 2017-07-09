@@ -1,6 +1,5 @@
 package se.exuvo.aurora.desktop;
 
-import java.io.File;
 import java.nio.file.Paths;
 import java.util.Iterator;
 
@@ -8,7 +7,6 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
 
-import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Files.FileType;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
