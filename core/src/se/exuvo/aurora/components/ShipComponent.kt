@@ -10,6 +10,7 @@ import se.exuvo.aurora.shipcomponents.ShipClass
 data class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : Component {
 	var commissionDay: Int? = null
 	val armor = Array<Array<Boolean>>(shipClass.getSurfaceArea(), { Array<Boolean>(shipClass.armorLayers, { true }) })
+	val partHealth = Array<Int>(shipClass.parts.size, { shipClass.parts[it].maxHealth })
 	var containers: List<ShipContainer> = emptyList()
 
 	init {

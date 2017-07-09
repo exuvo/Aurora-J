@@ -51,7 +51,8 @@ abstract class Part {
 	var name: String = ""
 	var designDay: Int? = null
 	var cost: MutableMap<Resources, Int> = LinkedHashMap()
-	var size: Int = 1 // In m3
+	var size = 1 // In m3
+	var maxHealth = 1
 }
 
 abstract class ContainerPart(val capacity: Int) : Part();
