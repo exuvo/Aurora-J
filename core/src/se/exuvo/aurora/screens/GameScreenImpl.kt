@@ -4,7 +4,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 
-abstract class GameScreenImpl() : GameScreen {
+abstract class GameScreenImpl : GameScreen {
     override val overlay = false
     protected var clearColor = Color(Color.BLACK)
         get

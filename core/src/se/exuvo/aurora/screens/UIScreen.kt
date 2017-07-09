@@ -17,7 +17,7 @@ import se.exuvo.aurora.systems.GroupSystem
 import se.exuvo.aurora.systems.TagSystem
 import se.exuvo.aurora.utils.GameServices
 
-class UIScreen : GameScreenImpl, InputProcessor {
+class UIScreen : GameScreenImpl(), InputProcessor {
 
 	private val spriteBatch by lazy { GameServices[SpriteBatch::class.java] }
 	private val galaxy by lazy { GameServices[Galaxy::class.java] }
@@ -34,7 +34,7 @@ class UIScreen : GameScreenImpl, InputProcessor {
 
 	private var previousSelectionModificationCount = 0
 
-	constructor() {
+	init {
 
 		selectionWindow = Window("Selection", skin)
 		stage.addActor(selectionWindow);

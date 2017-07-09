@@ -21,7 +21,6 @@ class AuroraGame(val assetsRoot: String) : ApplicationAdapter() {
 	val screenService = GameScreenService()
 
 	override fun create() {
-
 		GameServices.put(AssetManager(AuroraAssetsResolver(assetsRoot)))
 		GameServices.put(ShapeRenderer())
 		GameServices.put(SpriteBatch())
@@ -51,8 +50,8 @@ class AuroraGame(val assetsRoot: String) : ApplicationAdapter() {
 
 	override fun dispose() {
 		screenService.dispose()
-		GameServices.dispose()
 		Assets.dispose()
+		GameServices.dispose()
 		Settings.save()
 	}
 
