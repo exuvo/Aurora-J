@@ -4,11 +4,16 @@ class ShipClass {
 	var name: String = ""
 	var designDay: Int? = null
 	val parts: MutableList<Part> = ArrayList()
+	var armorLayers = 1
 
 	operator fun <T : Any> get(partClass: Class<T>) = parts.filterIsInstance(partClass)
 
 	fun put(part: Part) {
 		parts.add(part)
+	}
+	
+	fun getWidth() : Int {
+		return 1 + parts.sumBy { it.cost.values.sum() } / 1000
 	}
 }
 
