@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Window
+import com.badlogic.gdx.utils.viewport.ScreenViewport
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.Galaxy
 import se.exuvo.aurora.SolarSystem
@@ -27,8 +28,8 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 	private val orbitMapper = ComponentMapper.getFor(OrbitComponent::class.java)
 	private val thrustMapper = ComponentMapper.getFor(ThrustComponent::class.java)
 
-	private val uiCamera = OrthographicCamera()
-	private val stage = Stage()
+	private val uiCamera = GameServices[GameScreenService::class.java].uiCamera
+	private val stage = Stage(ScreenViewport())
 	private val selectionWindow: Window
 	private val skin = Assets.skinUI
 
@@ -48,8 +49,7 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 	}
 
 	override fun resize(width: Int, height: Int) {
-		uiCamera.setToOrtho(false, width.toFloat(), height.toFloat())
-		stage.getViewport().update(width, height, true);
+		stage.getViewport().update(width, height, false);
 	}
 
 	override fun update(deltaRealTime: Float) {

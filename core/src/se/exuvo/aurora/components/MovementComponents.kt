@@ -29,4 +29,5 @@ enum class ApproachType {
 	BALLISTIC // Arrive at target as quickly as possible
 }
 
-data class MoveToComponent(var target: Entity? = null, var approach: ApproachType = ApproachType.BRACHISTOCHRONE) : Component
+data class MoveToEntityComponent(var target: Entity, var approach: ApproachType = ApproachType.BRACHISTOCHRONE) : Component
+data class MoveToPositionComponent(var target: Vector2L, var approach: ApproachType = ApproachType.BRACHISTOCHRONE) : Component

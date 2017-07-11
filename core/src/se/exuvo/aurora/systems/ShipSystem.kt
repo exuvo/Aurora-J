@@ -8,7 +8,7 @@ import com.badlogic.gdx.math.Vector2
 import org.apache.log4j.Logger
 import se.exuvo.aurora.components.ApproachType
 import se.exuvo.aurora.components.MassComponent
-import se.exuvo.aurora.components.MoveToComponent
+import se.exuvo.aurora.components.MoveToEntityComponent
 import se.exuvo.aurora.components.NameComponent
 import se.exuvo.aurora.components.PositionComponent
 import se.exuvo.aurora.components.ShipComponent
@@ -16,7 +16,7 @@ import se.exuvo.aurora.components.ThrustComponent
 import se.exuvo.aurora.components.VelocityComponent
 import se.exuvo.aurora.utils.Vector2L
 
-class ShipSystem : IteratingSystem(ShipSystem.FAMILY) {
+class ShipSystem : IteratingSystem(FAMILY) {
 	companion object {
 		val FAMILY = Family.all(ShipComponent::class.java).get()
 	}

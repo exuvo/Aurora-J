@@ -14,6 +14,8 @@ import com.badlogic.gdx.utils.viewport.Viewport
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.components.CircleComponent
 import se.exuvo.aurora.components.LineComponent
+import se.exuvo.aurora.components.MoveToEntityComponent
+import se.exuvo.aurora.components.MoveToPositionComponent
 import se.exuvo.aurora.components.NameComponent
 import se.exuvo.aurora.components.PositionComponent
 import se.exuvo.aurora.components.RenderComponent
@@ -41,6 +43,9 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 	private val tagMapper = ComponentMapper.getFor(TagComponent::class.java)
 	private val textMapper = ComponentMapper.getFor(TextComponent::class.java)
 	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java)
+	private val moveToEntityMapper = ComponentMapper.getFor(MoveToEntityComponent::class.java)
+	private val moveToPositionMapper = ComponentMapper.getFor(MoveToPositionComponent::class.java)
+
 	private val shapeRenderer = GameServices[ShapeRenderer::class.java]
 	private val batch = GameServices[SpriteBatch::class.java]
 	private val uiCamera = GameServices[GameScreenService::class.java].uiCamera
@@ -50,11 +55,10 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 
 	override fun processEntity(entity: Entity, renderDelta: Float) {}
 
-
 	fun drawEntities(entities: ImmutableArray<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-		
+
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
 		for (entity in entities) {
@@ -70,22 +74,22 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 
 				val circle = circleMapper.get(entity)
 				shapeRenderer.circle(x, y, circle.radius, getCircleSegments(circle.radius, zoom))
-				
+
 			} else if (lineMapper.has(entity)) {
 
 				val line = lineMapper.get(entity)
 				shapeRenderer.line(x, y, x + line.x, y + line.y)
 			}
 		}
-		
+
 		shapeRenderer.end()
 	}
-	
-	fun drawEntities2(entities: ImmutableArray<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
+
+	fun drawEntityCenters(entities: ImmutableArray<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color.PINK
-		
+
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
 		for (entity in entities) {
@@ -98,16 +102,15 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 				shapeRenderer.circle(x, y, circle.radius * 0.01f, getCircleSegments(circle.radius * 0.01f, zoom))
 			}
 		}
-		
+
 		shapeRenderer.end()
 	}
-	
-	
 
 	fun drawSelections(entities: ImmutableArray<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-		
+		shapeRenderer.color = Color.RED
+
 		val selectedEntities = groupSystem.get(GroupSystem.SELECTED)
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
@@ -117,10 +120,8 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 				val x = (position.getXinKM() - cameraOffset.x).toFloat()
 				val y = (position.getYinKM() - cameraOffset.y).toFloat()
 
-				shapeRenderer.color = Color.RED
 
 				if (circleMapper.has(entity)) {
-
 					val circle = circleMapper.get(entity)
 					val radius = circle.radius * 1.1f + 2 * zoom
 					val segments = getCircleSegments(radius, zoom)
@@ -128,7 +129,39 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 				}
 			}
 		}
-		
+
+		shapeRenderer.end()
+	}
+
+	fun drawSelectionMoveTargets(entities: ImmutableArray<Entity>, cameraOffset: Vector2L) {
+
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+		shapeRenderer.color = Color(0.8f, 0.8f, 0.8f, 0.5f)
+
+		val selectedEntities = groupSystem.get(GroupSystem.SELECTED)
+
+		for (entity in entities) {
+			if (selectedEntities.contains(entity)) {
+				val position = positionMapper.get(entity)
+				val x = (position.getXinKM() - cameraOffset.x).toFloat()
+				val y = (position.getYinKM() - cameraOffset.y).toFloat()
+
+				if (moveToEntityMapper.has(entity)) {
+					val targetEntity = moveToEntityMapper.get(entity).target
+					val targetPosition = positionMapper.get(targetEntity)
+					val x2 = (targetPosition.getXinKM() - cameraOffset.x).toFloat()
+					val y2 = (targetPosition.getYinKM() - cameraOffset.y).toFloat()
+					shapeRenderer.line(x, y, x2, y2)
+
+				} else if (moveToPositionMapper.has(entity)) {
+					val targetPosition = moveToPositionMapper.get(entity).target
+					val x2 = (getXinKM(targetPosition) - cameraOffset.x).toFloat()
+					val y2 = (getYinKM(targetPosition) - cameraOffset.y).toFloat()
+					shapeRenderer.line(x, y, x2, y2)
+				}
+			}
+		}
+
 		shapeRenderer.end()
 	}
 
@@ -140,8 +173,9 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 		shapeRenderer.projectionMatrix = viewport.camera.combined
 
 		drawEntities(sortedEntities, viewport, cameraOffset)
-		drawEntities2(sortedEntities, viewport, cameraOffset)
+		drawEntityCenters(sortedEntities, viewport, cameraOffset)
 		drawSelections(sortedEntities, viewport, cameraOffset)
+		drawSelectionMoveTargets(sortedEntities, cameraOffset)
 
 		batch.projectionMatrix = uiCamera.combined
 		batch.begin()
@@ -199,6 +233,14 @@ class RenderSystem : SortedIteratingSystem(RenderSystem.FAMILY, ZOrderComparator
 		batch.projectionMatrix = viewport.camera.combined
 		batch.begin()
 	}
+}
+
+fun getXinKM(position: Vector2L): Long {
+	return (500 + position.x) / 1000L
+}
+
+fun getYinKM(position: Vector2L): Long {
+	return (500 + position.y) / 1000L
 }
 
 class ZOrderComparator : Comparator<Entity> {

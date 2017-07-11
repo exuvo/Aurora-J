@@ -8,7 +8,8 @@ import com.badlogic.gdx.math.Vector2
 import org.apache.log4j.Logger
 import se.exuvo.aurora.components.ApproachType
 import se.exuvo.aurora.components.MassComponent
-import se.exuvo.aurora.components.MoveToComponent
+import se.exuvo.aurora.components.MoveToEntityComponent
+import se.exuvo.aurora.components.MoveToPositionComponent
 import se.exuvo.aurora.components.NameComponent
 import se.exuvo.aurora.components.OrbitComponent
 import se.exuvo.aurora.components.PositionComponent
@@ -16,11 +17,11 @@ import se.exuvo.aurora.components.ThrustComponent
 import se.exuvo.aurora.components.VelocityComponent
 import se.exuvo.aurora.utils.Vector2L
 
-class MovementSystem : IteratingSystem(MovementSystem.FAMILY) {
+class MovementSystem : IteratingSystem(FAMILY) {
 	companion object {
 		val FAMILY = Family.all(PositionComponent::class.java, VelocityComponent::class.java).exclude(OrbitComponent::class.java).get()
-		val CAN_STOP_FAMILY = Family.all(PositionComponent::class.java, VelocityComponent::class.java, ThrustComponent::class.java, MassComponent::class.java).get()
-		val DESTINATION_FAMILY = Family.all(PositionComponent::class.java, VelocityComponent::class.java, ThrustComponent::class.java, MassComponent::class.java, MoveToComponent::class.java).get()
+		val CAN_ACCELERATE_FAMILY = Family.all(ThrustComponent::class.java, MassComponent::class.java).get()
+		val DESTINATION_FAMILY = Family.one(MoveToPositionComponent::class.java, MoveToEntityComponent::class.java).get()
 	}
 
 	val log = Logger.getLogger(this.javaClass)
@@ -29,7 +30,8 @@ class MovementSystem : IteratingSystem(MovementSystem.FAMILY) {
 	private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
 	private val thrustMapper = ComponentMapper.getFor(ThrustComponent::class.java)
 	private val velocityMapper = ComponentMapper.getFor(VelocityComponent::class.java)
-	private val moveToMapper = ComponentMapper.getFor(MoveToComponent::class.java)
+	private val moveToEntityMapper = ComponentMapper.getFor(MoveToEntityComponent::class.java)
+	private val moveToPositionMapper = ComponentMapper.getFor(MoveToPositionComponent::class.java)
 	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java)
 
 	private val tempPosition = Vector2L()
@@ -40,7 +42,7 @@ class MovementSystem : IteratingSystem(MovementSystem.FAMILY) {
 		val velocity = velocityMapper.get(entity).velocity
 		val position = positionMapper.get(entity).position
 
-		if (!CAN_STOP_FAMILY.matches(entity)) {
+		if (!CAN_ACCELERATE_FAMILY.matches(entity)) {
 
 			position.add(velocity.x.toLong(), velocity.y.toLong())
 			return
@@ -76,9 +78,12 @@ class MovementSystem : IteratingSystem(MovementSystem.FAMILY) {
 			return
 		}
 
-		val moveToComponent = moveToMapper.get(entity)
-		val targetEntity = moveToComponent.target!!
-		val targetPosition = positionMapper.get(targetEntity).position
+		val moveToEntityComponent = moveToEntityMapper.get(entity)
+		val moveToPositionComponent = moveToPositionMapper.get(entity)
+
+		val targetEntity = moveToEntityComponent?.target
+		val targetPosition = if (targetEntity != null) positionMapper.get(targetEntity).position else moveToPositionComponent.target
+		val approach = if (moveToEntityComponent != null) moveToEntityComponent.approach else moveToPositionComponent.approach
 
 		tempPosition.set(targetPosition).sub(position)
 		val distance = tempPosition.len()
@@ -93,12 +98,13 @@ class MovementSystem : IteratingSystem(MovementSystem.FAMILY) {
 
 		if (timeToTraverseFrom0Velocity <= 1) {
 			position.set(targetPosition)
-			entity.remove(MoveToComponent::class.java)
+			entity.remove(MoveToEntityComponent::class.java)
+			entity.remove(MoveToPositionComponent::class.java)
 			println("Target reached distance")
 			return
 		}
 
-		val targetVelocity = velocityMapper.get(targetEntity)?.velocity ?: Vector2.Zero
+		val targetVelocity = if (targetEntity != null) velocityMapper.get(targetEntity)?.velocity ?: Vector2.Zero else Vector2.Zero
 		val targetVelocityMagnitude = targetVelocity.len()
 		val angleToTarget = position.angleTo(targetPosition).toFloat()
 		val velocityAngle = velocity.angle();
@@ -108,7 +114,7 @@ class MovementSystem : IteratingSystem(MovementSystem.FAMILY) {
 		val timeToTargetWithCurrentSpeed = distance / (velocityMagnitute + trueAcceleration)
 //		println("angleToTarget, $angleToTarget , velocityAngle $velocityAngle")
 
-		when (moveToComponent.approach) {
+		when (approach) {
 			ApproachType.BRACHISTOCHRONE -> {
 
 				val timeToStop = (velocityMagnitute - velocityAngleScale * targetVelocityMagnitude) / trueAcceleration
@@ -122,7 +128,8 @@ class MovementSystem : IteratingSystem(MovementSystem.FAMILY) {
 
 					if (timeToStop <= 1) {
 						position.set(targetPosition)
-						entity.remove(MoveToComponent::class.java)
+						entity.remove(MoveToEntityComponent::class.java)
+						entity.remove(MoveToPositionComponent::class.java)
 						println("Brachistochrone target reached time")
 						return
 					}
@@ -155,11 +162,12 @@ class MovementSystem : IteratingSystem(MovementSystem.FAMILY) {
 				if (timeToTargetWithCurrentSpeed <= 1) {
 
 					position.set(targetPosition)
-					entity.remove(MoveToComponent::class.java)
+					entity.remove(MoveToEntityComponent::class.java)
+					entity.remove(MoveToPositionComponent::class.java)
 					println("Ballistic target reached time")
 					return
 				}
-				
+
 				nameMapper.get(entity).name = "a " + velocityMagnitute
 
 				tempVelocity.set(tempPosition.x.toFloat(), tempPosition.y.toFloat()).nor()
@@ -175,7 +183,7 @@ class MovementSystem : IteratingSystem(MovementSystem.FAMILY) {
 
 			}
 			else -> {
-				throw RuntimeException("Unknown approach type: " + moveToComponent.approach)
+				throw RuntimeException("Unknown approach type: " + approach)
 			}
 		}
 

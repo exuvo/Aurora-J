@@ -11,17 +11,19 @@ import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector3
-import com.badlogic.gdx.utils.viewport.ExtendViewport
+import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.badlogic.gdx.utils.viewport.Viewport
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.Galaxy
 import se.exuvo.aurora.SolarSystem
 import se.exuvo.aurora.components.ApproachType
 import se.exuvo.aurora.components.CircleComponent
-import se.exuvo.aurora.components.MoveToComponent
+import se.exuvo.aurora.components.MoveToEntityComponent
+import se.exuvo.aurora.components.MoveToPositionComponent
 import se.exuvo.aurora.components.PositionComponent
 import se.exuvo.aurora.components.RenderComponent
 import se.exuvo.aurora.systems.GroupSystem
+import se.exuvo.aurora.systems.MovementSystem
 import se.exuvo.aurora.systems.OrbitSystem
 import se.exuvo.aurora.systems.RenderSystem
 import se.exuvo.aurora.utils.CircleL
@@ -30,9 +32,9 @@ import se.exuvo.aurora.utils.RectangleL
 import se.exuvo.aurora.utils.TimeUnits
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.settings.Settings
-import kotlin.properties.Delegates
 import kotlin.concurrent.read
 import kotlin.concurrent.write
+import kotlin.properties.Delegates
 
 class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProcessor {
 
@@ -49,7 +51,8 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 	private val circleMapper = ComponentMapper.getFor(CircleComponent::class.java)
 	private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
-	private val moveToMapper = ComponentMapper.getFor(MoveToComponent::class.java)
+	private val moveToEntityMapper = ComponentMapper.getFor(MoveToEntityComponent::class.java)
+	private val moveToPositionMapper = ComponentMapper.getFor(MoveToPositionComponent::class.java)
 
 	var zoomLevel = 0
 	var zoomSensitivity = Settings.getFloat("UI.zoomSensitivity").toDouble()
@@ -57,7 +60,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 	override fun show() {
 
-		viewport = ExtendViewport(500f, 500f)
+		viewport = ScreenViewport()
 		camera = viewport.camera as OrthographicCamera
 
 		viewport.update(Gdx.graphics.width, Gdx.graphics.height)
@@ -287,62 +290,104 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 					if (systemGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
 
-						system.lock.read {
+						val selectedEntities = systemGroupSystem.get(GroupSystem.SELECTED).filter { MovementSystem.CAN_ACCELERATE_FAMILY.matches(it) }
 
-							val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
-							val entitiesUnderMouse = ArrayList<Entity>()
-							val entities = system.engine.getEntitiesFor(selectionFamily)
-							val testCircle = CircleL()
+						if (selectedEntities.isNotEmpty()) {
 
-							// Exact check first
-							for (entity in entities) {
-								val position = positionMapper.get(entity).position
-								val radius = circleMapper.get(entity).radius
-								testCircle.set(position, radius * 1000)
+							system.lock.read {
 
-								if (testCircle.contains(mouseInGameCoordinates)) {
-									entitiesUnderMouse.add(entity)
-								}
-							}
+								val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
+								val entitiesUnderMouse = ArrayList<Entity>()
+								val entities = system.engine.getEntitiesFor(selectionFamily)
+								val testCircle = CircleL()
 
-							// Lenient check if empty
-							if (entitiesUnderMouse.isEmpty()) {
+								// Exact check first
 								for (entity in entities) {
 									val position = positionMapper.get(entity).position
-									val radius = circleMapper.get(entity).radius * 1.1f + 2 * camera.zoom
+									val radius = circleMapper.get(entity).radius
 									testCircle.set(position, radius * 1000)
 
 									if (testCircle.contains(mouseInGameCoordinates)) {
 										entitiesUnderMouse.add(entity)
 									}
 								}
-							}
 
-							if (entitiesUnderMouse.isNotEmpty()) {
+								// Lenient check if empty
+								if (entitiesUnderMouse.isEmpty()) {
+									for (entity in entities) {
+										val position = positionMapper.get(entity).position
+										val radius = circleMapper.get(entity).radius * 1.1f + 2 * camera.zoom
+										testCircle.set(position, radius * 1000)
 
-								println("Issuing move order")
-
-								val targetEntity = entitiesUnderMouse.get(0)
-
-								for (entity in systemGroupSystem.get(GroupSystem.SELECTED)) {
-									var moveToComponent = moveToMapper.get(entity)
-
-									if (moveToComponent == null) {
-										moveToComponent = system.engine.createComponent(MoveToComponent::class.java)
-										entity.add(moveToComponent)
+										if (testCircle.contains(mouseInGameCoordinates)) {
+											entitiesUnderMouse.add(entity)
+										}
 									}
+								}
 
+								if (entitiesUnderMouse.isNotEmpty()) {
+
+//									println("Issuing move to entity order")
+
+									val targetEntity = entitiesUnderMouse.get(0)
 									var approachType = ApproachType.BRACHISTOCHRONE
 
 									if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
 										approachType = ApproachType.BALLISTIC
 									}
 
-									moveToComponent.apply { target = targetEntity; approach = approachType }
-								}
-							}
+									for (entity in selectedEntities) {
 
-							return true;
+										var moveToPositionComponent = moveToPositionMapper.get(entity)
+
+										if (moveToPositionComponent != null) {
+											entity.remove(moveToPositionComponent::class.java)
+										}
+
+										var moveToEntityComponent = moveToEntityMapper.get(entity)
+
+										if (moveToEntityComponent != null) {
+											moveToEntityComponent.apply { target = targetEntity; approach = approachType }
+
+										} else {
+											moveToEntityComponent = MoveToEntityComponent(targetEntity, approachType)
+											entity.add(moveToEntityComponent)
+										}
+									}
+
+								} else {
+
+//									println("Issuing move to position order")
+
+									val targetPosition = mouseInGameCoordinates
+									var approachType = ApproachType.BRACHISTOCHRONE
+
+									if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+										approachType = ApproachType.BALLISTIC
+									}
+
+									for (entity in selectedEntities) {
+
+										var moveToEntityComponent = moveToEntityMapper.get(entity)
+
+										if (moveToEntityComponent != null) {
+											entity.remove(moveToEntityComponent::class.java)
+										}
+
+										var moveToPositionComponent = moveToPositionMapper.get(entity)
+
+										if (moveToPositionComponent != null) {
+											moveToPositionComponent.apply { target = targetPosition; approach = approachType }
+
+										} else {
+											moveToPositionComponent = MoveToPositionComponent(targetPosition, approachType)
+											entity.add(moveToPositionComponent)
+										}
+									}
+								}
+
+								return true;
+							}
 						}
 					}
 				}

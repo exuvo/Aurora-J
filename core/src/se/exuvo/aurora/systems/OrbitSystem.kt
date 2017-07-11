@@ -23,7 +23,7 @@ import se.exuvo.settings.Settings
 import java.util.Collections
 
 //TODO sorted system by no parents first outwards
-class OrbitSystem : GalaxyTimeIntervalIteratingSystem(OrbitSystem.FAMILY, 1 * 60), EntityListener {
+class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60), EntityListener {
 	companion object {
 		val FAMILY = Family.all(OrbitComponent::class.java, PositionComponent::class.java).get()
 		val gravitationalConstant = 6.67408e-11

@@ -10,12 +10,14 @@ import org.apache.log4j.Logger
 import se.exuvo.aurora.components.ApproachType
 import se.exuvo.aurora.components.CircleComponent
 import se.exuvo.aurora.components.MassComponent
-import se.exuvo.aurora.components.MoveToComponent
+import se.exuvo.aurora.components.MoveToEntityComponent
 import se.exuvo.aurora.components.NameComponent
 import se.exuvo.aurora.components.OrbitComponent
 import se.exuvo.aurora.components.PositionComponent
 import se.exuvo.aurora.components.RenderComponent
+import se.exuvo.aurora.components.SolarIrradianceComponent
 import se.exuvo.aurora.components.SolarSystemComponent
+import se.exuvo.aurora.components.SunComponent
 import se.exuvo.aurora.components.TagComponent
 import se.exuvo.aurora.components.ThrustComponent
 import se.exuvo.aurora.components.VelocityComponent
@@ -23,6 +25,8 @@ import se.exuvo.aurora.systems.GroupSystem
 import se.exuvo.aurora.systems.MovementSystem
 import se.exuvo.aurora.systems.OrbitSystem
 import se.exuvo.aurora.systems.RenderSystem
+import se.exuvo.aurora.systems.ShipSystem
+import se.exuvo.aurora.systems.SolarIrradianceSystem
 import se.exuvo.aurora.systems.TagSystem
 import se.exuvo.aurora.utils.DummyReentrantReadWriteLock
 import java.util.Random
@@ -50,6 +54,8 @@ class SolarSystem : EntityListener {
 		engine.addSystem(TagSystem())
 		engine.addSystem(GroupSystem(DummyReentrantReadWriteLock.INSTANCE))
 		engine.addSystem(OrbitSystem())
+		engine.addSystem(SolarIrradianceSystem())
+		engine.addSystem(ShipSystem())
 		engine.addSystem(MovementSystem())
 		engine.addSystem(RenderSystem())
 
@@ -60,6 +66,7 @@ class SolarSystem : EntityListener {
 		entity1.add(MassComponent().apply { mass = 1.988e30 })
 		entity1.add(NameComponent().apply { name = "Sun" })
 		entity1.add(TagComponent().apply { tag = TagSystem.SUN })
+		entity1.add(SunComponent(1361))
 
 		engine.addEntity(entity1)
 
@@ -85,12 +92,13 @@ class SolarSystem : EntityListener {
 		val entity4 = Entity()
 		entity4.add(PositionComponent().apply { position.set((OrbitSystem.AU * 1000L * 1L).toLong(), 0).setAngle(45f) })
 		entity4.add(RenderComponent())
+		entity4.add(SolarIrradianceComponent())
 		entity4.add(CircleComponent().apply { radius = 10f })
 		entity4.add(NameComponent().apply { name = "Ship" })
 		entity4.add(MassComponent().apply { mass = 1000.0 })
 		entity4.add(ThrustComponent().apply { thrust = 10f * 9.82f * 1000f })
 		entity4.add(VelocityComponent().apply { velocity.set(-1000000f, 0f) })
-		entity4.add(MoveToComponent().apply { target = entity1; approach = ApproachType.BRACHISTOCHRONE })
+		entity4.add(MoveToEntityComponent(entity1, ApproachType.BRACHISTOCHRONE))
 
 		engine.addEntity(entity4)
 	}

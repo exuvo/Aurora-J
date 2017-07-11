@@ -90,11 +90,11 @@ interface FueledPart {
 class FueledPartImpl(override val fuel: Resource, override val fuelConsumption: Int) : FueledPart
 
 interface PoweringPart {
-	val power: Int // kW/s
+	val power: Int // W/s
 }
 
 interface PoweredPart {
-	val powerConsumption: Int // kW/s
+	val powerConsumption: Int // W/s
 }
 
 class PoweringPartImpl(override val power: Int) : PoweringPart
@@ -103,7 +103,7 @@ class PoweredPartImpl(override val powerConsumption: Int) : PoweredPart
 // retracts during combat
 class SolarPanel(power: Int = 0) : Part(), PoweringPart by PoweringPartImpl(power)
 
-// power in kW/s
+// power in W/s
 class Reactor(power: Int = 0, fuel: Resource, fuelConsumption: Int) : Part(), PoweringPart by PoweringPartImpl(power), FueledPart by FueledPartImpl(fuel, fuelConsumption) {
 }
 
