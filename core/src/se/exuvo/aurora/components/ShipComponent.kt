@@ -9,13 +9,13 @@ import se.exuvo.aurora.shipcomponents.ShipClass
 import java.util.ArrayList
 import java.security.InvalidParameterException
 
-data class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : Component {
+class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : Component {
 	var commissionDay: Int? = null
 	val armor = Array<Array<Boolean>>(shipClass.getSurfaceArea(), { Array<Boolean>(shipClass.armorLayers, { true }) })
 	val partHealth = Array<Int>(shipClass.parts.size, { shipClass.parts[it].maxHealth })
 	val partState = Array<Int>(shipClass.parts.size, { shipClass.parts[it].maxHealth })
 	var cargo: Map<Resource, ShipCargo> = emptyMap()
-	var itemCargo: MutableList<Part> = ArrayList()
+	var partCargo: MutableList<Part> = ArrayList()
 
 	init {
 		var containerParts = shipClass[ContainerPart::class.java]
@@ -114,7 +114,7 @@ data class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : C
 			}
 
 			shipCargo.usedCapacity += volumeToBeStored
-			itemCargo.add(part)
+			partCargo.add(part)
 
 			return true
 		}
@@ -124,7 +124,7 @@ data class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : C
 
 	fun retrieveCargo(part: Part): Boolean {
 
-		if (!itemCargo.remove(part)) {
+		if (!partCargo.remove(part)) {
 			return false
 		}
 
@@ -135,7 +135,7 @@ data class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : C
 	}
 }
 
-class ShipCargo(val type: CargoType) {
+data class ShipCargo(val type: CargoType) {
 	var maxCapacity = 0
 	var usedCapacity = 0
 	var contents: MutableMap<Resource, Int> = LinkedHashMap()
