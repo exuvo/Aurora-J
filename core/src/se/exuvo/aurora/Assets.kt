@@ -5,6 +5,7 @@ import com.badlogic.gdx.assets.loaders.SkinLoader
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture.TextureFilter
 import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGeneratorLoader
 import com.badlogic.gdx.graphics.g2d.freetype.FreetypeFontLoader
@@ -24,6 +25,7 @@ object Assets : Disposable {
 	var fontMapSmall by Delegates.notNull<BitmapFont>()
 	var fontUI by Delegates.notNull<BitmapFont>()
 	var skinUI by Delegates.notNull<Skin>()
+	var textures by Delegates.notNull<TextureAtlas>()
 
 	fun startLoad() {
 		val resolver = manager.getFileHandleResolver()
@@ -74,6 +76,8 @@ object Assets : Disposable {
 		val uiSkinLoaderParams = SkinLoader.SkinParameter("ui/uiskin.atlas")
 		manager.load("ui/uiskin.json", Skin::class.java, uiSkinLoaderParams);
 		
+		manager.load("images/aurora.atlas", TextureAtlas::class.java);
+		
 		log.info("Queued ${manager.queuedAssets} assets for loading")
 	}
 	
@@ -81,6 +85,7 @@ object Assets : Disposable {
 		fontMap = manager.get("fontMap.ttf", BitmapFont::class.java)
 		fontMapSmall = manager.get("fontMapSmall.ttf", BitmapFont::class.java)
 		skinUI = manager.get("ui/uiskin.json", Skin::class.java)
+		textures = manager.get("images/aurora.atlas")
 	}
 
 	override fun dispose() {

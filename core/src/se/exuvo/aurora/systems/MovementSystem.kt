@@ -39,7 +39,8 @@ class MovementSystem : IteratingSystem(FAMILY) {
 
 	override fun processEntity(entity: Entity, deltaGameTime: Float) {
 
-		val velocity = velocityMapper.get(entity).velocity
+		val velocityComponent = velocityMapper.get(entity)
+		val velocity = velocityComponent.velocity
 		val position = positionMapper.get(entity).position
 
 		if (!CAN_ACCELERATE_FAMILY.matches(entity)) {
@@ -68,6 +69,7 @@ class MovementSystem : IteratingSystem(FAMILY) {
 			} else {
 
 				tempVelocity.set(velocity).nor().scl(acceleration.toFloat())
+				velocityComponent.thrustAngle = tempVelocity.angle()
 				velocity.sub(tempVelocity)
 				tempVelocity.set(velocity).scl(deltaGameTime)
 				position.add(tempVelocity.x.toLong(), tempVelocity.y.toLong())
@@ -135,6 +137,7 @@ class MovementSystem : IteratingSystem(FAMILY) {
 					}
 
 					tempVelocity.set(velocity).nor().scl(acceleration.toFloat())
+					velocityComponent.thrustAngle = tempVelocity.angle()
 					velocity.sub(tempVelocity)
 
 				} else {
@@ -148,6 +151,7 @@ class MovementSystem : IteratingSystem(FAMILY) {
 						tempVelocity.rotate(angleToTarget - velocityAngle)
 					}
 
+					velocityComponent.thrustAngle = tempVelocity.angle()
 					velocity.add(tempVelocity)
 				}
 

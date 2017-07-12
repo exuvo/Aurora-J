@@ -5,6 +5,7 @@ import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.EntityListener
 import com.badlogic.ashley.core.Family
 import com.badlogic.ashley.core.PooledEngine
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.utils.Pool.Poolable
 import org.apache.log4j.Logger
 import se.exuvo.aurora.components.ApproachType
@@ -17,9 +18,11 @@ import se.exuvo.aurora.components.PositionComponent
 import se.exuvo.aurora.components.RenderComponent
 import se.exuvo.aurora.components.SolarIrradianceComponent
 import se.exuvo.aurora.components.SolarSystemComponent
+import se.exuvo.aurora.components.StrategicIconComponent
 import se.exuvo.aurora.components.SunComponent
 import se.exuvo.aurora.components.TagComponent
 import se.exuvo.aurora.components.ThrustComponent
+import se.exuvo.aurora.components.TintComponent
 import se.exuvo.aurora.components.VelocityComponent
 import se.exuvo.aurora.systems.GroupSystem
 import se.exuvo.aurora.systems.MovementSystem
@@ -67,6 +70,8 @@ class SolarSystem : EntityListener {
 		entity1.add(NameComponent().apply { name = "Sun" })
 		entity1.add(TagComponent().apply { tag = TagSystem.SUN })
 		entity1.add(SunComponent(1361))
+		entity1.add(TintComponent(Color.YELLOW))
+		entity1.add(StrategicIconComponent(Assets.textures.findRegion("strategic/sun")))
 
 		engine.addEntity(entity1)
 
@@ -77,15 +82,19 @@ class SolarSystem : EntityListener {
 		entity2.add(NameComponent().apply { name = "Earth" })
 		entity2.add(MassComponent().apply { mass = 5.972e24 })
 		entity2.add(OrbitComponent().apply { parent = entity1; a_semiMajorAxis = 1f; e_eccentricity = 0f; w_argumentOfPeriapsis = -45f })
+		entity2.add(TintComponent(Color.GREEN))
+		entity2.add(StrategicIconComponent(Assets.textures.findRegion("strategic/world")))
 
 		engine.addEntity(entity2)
 
 		val entity3 = Entity()
 		entity3.add(PositionComponent())
-		entity3.add(RenderComponent())
+		entity3.add(RenderComponent().apply { zOrder = 0.4f })
 		entity3.add(CircleComponent().apply { radius = 1737f })
 		entity3.add(NameComponent().apply { name = "Moon" })
 		entity3.add(OrbitComponent().apply { parent = entity2; a_semiMajorAxis = (384400.0 / OrbitSystem.AU).toFloat(); e_eccentricity = 0.2f; M_meanAnomaly = 30f })
+		entity3.add(TintComponent(Color.GRAY))
+		entity3.add(StrategicIconComponent(Assets.textures.findRegion("strategic/moon")))
 
 		engine.addEntity(entity3)
 
@@ -99,6 +108,8 @@ class SolarSystem : EntityListener {
 		entity4.add(ThrustComponent().apply { thrust = 10f * 9.82f * 1000f })
 		entity4.add(VelocityComponent().apply { velocity.set(-1000000f, 0f) })
 		entity4.add(MoveToEntityComponent(entity1, ApproachType.BRACHISTOCHRONE))
+		entity4.add(TintComponent(Color.RED))
+		entity4.add(StrategicIconComponent(Assets.textures.findRegion("strategic/ship")))
 
 		engine.addEntity(entity4)
 	}

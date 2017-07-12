@@ -1,13 +1,13 @@
 package se.exuvo.aurora.components
 
 import com.badlogic.ashley.core.Component
-import se.exuvo.aurora.shipcomponents.CargoType
-import se.exuvo.aurora.shipcomponents.ContainerPart
-import se.exuvo.aurora.shipcomponents.Part
-import se.exuvo.aurora.shipcomponents.Resource
-import se.exuvo.aurora.shipcomponents.ShipClass
-import java.util.ArrayList
+import se.exuvo.aurora.things.CargoType
+import se.exuvo.aurora.things.ContainerPart
+import se.exuvo.aurora.things.Part
+import se.exuvo.aurora.things.Resource
+import se.exuvo.aurora.things.ShipClass
 import java.security.InvalidParameterException
+import java.util.ArrayList
 
 class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : Component {
 	var commissionDay: Int? = null

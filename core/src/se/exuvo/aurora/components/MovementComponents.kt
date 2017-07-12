@@ -22,7 +22,7 @@ data class PositionComponent(val position: Vector2L = Vector2L()) : Component {
 data class ThrustComponent(var thrust: Float = 0f) : Component
 
 // In m/s
-data class VelocityComponent(var velocity: Vector2 = Vector2()) : Component
+data class VelocityComponent(var velocity: Vector2 = Vector2(), var thrustAngle: Float = 0f) : Component
 
 enum class ApproachType {
 	BRACHISTOCHRONE, // Arrive at target using a Brachistochrone trajectory
