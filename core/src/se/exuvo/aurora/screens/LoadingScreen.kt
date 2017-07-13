@@ -110,6 +110,8 @@ class TexturePackerTask(val assetManager: AssetManager) : Thread() {
 
 		try {
 			val imagesPath = assetManager.getFileHandleResolver().resolve("images").file().absolutePath
+			
+			//TODO check if last modified on atlas is newer than files, if true skip generation
 
 			// Packer supports .png .jpg .jpeg
 			// https://github.com/libgdx/libgdx/wiki/Texture-packer
