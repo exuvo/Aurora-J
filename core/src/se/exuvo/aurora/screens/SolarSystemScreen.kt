@@ -43,6 +43,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 	private val galaxy by lazy { GameServices[Galaxy::class.java] }
 	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class.java] }
 	private val systemGroupSystem by lazy { system.engine.getSystem(GroupSystem::class.java) }
+	private val renderSystem by lazy { system.engine.getSystem(RenderSystem::class.java) }
 
 	private val uiCamera = GameServices[GameScreenService::class.java].uiCamera
 	private var viewport by Delegates.notNull<Viewport>()
@@ -215,7 +216,7 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 		if (!moveWindow && !dragSelect) {
 
 			//TODO use strategic icon size when applicable
-			
+
 			when (button) {
 				Input.Buttons.LEFT -> {
 
@@ -225,11 +226,22 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 						val entitiesUnderMouse = ArrayList<Entity>()
 						val entities = system.engine.getEntitiesFor(selectionFamily)
 						val testCircle = CircleL()
+						val zoom = camera.zoom
 
 						// Exact check first
 						for (entity in entities) {
 							val position = positionMapper.get(entity).position
-							val radius = circleMapper.get(entity).radius
+							val radius: Float
+
+							if (renderSystem.inStrategicView(entity, zoom)) {
+
+								radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
+
+							} else {
+
+								radius = circleMapper.get(entity).radius
+							}
+
 							testCircle.set(position, radius * 1000)
 
 							if (testCircle.contains(mouseInGameCoordinates)) {
@@ -241,7 +253,17 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 						if (entitiesUnderMouse.isEmpty()) {
 							for (entity in entities) {
 								val position = positionMapper.get(entity).position
-								val radius = circleMapper.get(entity).radius * 1.1f + 2 * camera.zoom
+								val radius: Float
+
+								if (renderSystem.inStrategicView(entity, zoom)) {
+
+									radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
+
+								} else {
+
+									radius = circleMapper.get(entity).radius * 1.1f + 2 * camera.zoom
+								}
+
 								testCircle.set(position, radius * 1000)
 
 								if (testCircle.contains(mouseInGameCoordinates)) {
@@ -302,11 +324,22 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 								val entitiesUnderMouse = ArrayList<Entity>()
 								val entities = system.engine.getEntitiesFor(selectionFamily)
 								val testCircle = CircleL()
+								val zoom = camera.zoom
 
 								// Exact check first
 								for (entity in entities) {
 									val position = positionMapper.get(entity).position
-									val radius = circleMapper.get(entity).radius
+									val radius: Float
+
+									if (renderSystem.inStrategicView(entity, zoom)) {
+
+										radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
+
+									} else {
+
+										radius = circleMapper.get(entity).radius
+									}
+
 									testCircle.set(position, radius * 1000)
 
 									if (testCircle.contains(mouseInGameCoordinates)) {
@@ -318,7 +351,17 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 								if (entitiesUnderMouse.isEmpty()) {
 									for (entity in entities) {
 										val position = positionMapper.get(entity).position
-										val radius = circleMapper.get(entity).radius * 1.1f + 2 * camera.zoom
+										val radius: Float
+
+										if (renderSystem.inStrategicView(entity, zoom)) {
+
+											radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
+
+										} else {
+
+											radius = circleMapper.get(entity).radius * 1.1f + 2 * camera.zoom
+										}
+
 										testCircle.set(position, radius * 1000)
 
 										if (testCircle.contains(mouseInGameCoordinates)) {
