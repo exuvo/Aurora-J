@@ -214,6 +214,8 @@ class SolarSystemScreen(val system: SolarSystem) : GameScreenImpl(), InputProces
 
 		if (!moveWindow && !dragSelect) {
 
+			//TODO use strategic icon size when applicable
+			
 			when (button) {
 				Input.Buttons.LEFT -> {
 

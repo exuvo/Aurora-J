@@ -69,8 +69,8 @@ class MovementSystem : IteratingSystem(FAMILY) {
 			} else {
 
 				tempVelocity.set(velocity).nor().scl(acceleration.toFloat())
-				velocityComponent.thrustAngle = tempVelocity.angle()
 				velocity.sub(tempVelocity)
+				velocityComponent.thrustAngle = tempVelocity.angle()
 				tempVelocity.set(velocity).scl(deltaGameTime)
 				position.add(tempVelocity.x.toLong(), tempVelocity.y.toLong())
 			}
@@ -137,8 +137,10 @@ class MovementSystem : IteratingSystem(FAMILY) {
 					}
 
 					tempVelocity.set(velocity).nor().scl(acceleration.toFloat())
-					velocityComponent.thrustAngle = tempVelocity.angle()
 					velocity.sub(tempVelocity)
+					
+					velocityComponent.thrustAngle = tempVelocity.angle() - 180
+					if (velocityComponent.thrustAngle < 0) velocityComponent.thrustAngle += 360;
 
 				} else {
 
@@ -151,8 +153,8 @@ class MovementSystem : IteratingSystem(FAMILY) {
 						tempVelocity.rotate(angleToTarget - velocityAngle)
 					}
 
-					velocityComponent.thrustAngle = tempVelocity.angle()
 					velocity.add(tempVelocity)
+					velocityComponent.thrustAngle = tempVelocity.angle()
 				}
 
 				tempVelocity.set(velocity).scl(deltaGameTime)

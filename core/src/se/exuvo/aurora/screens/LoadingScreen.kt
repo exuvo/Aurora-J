@@ -3,6 +3,7 @@ package se.exuvo.aurora.screens
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.assets.AssetManager
+import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.BitmapFont.Glyph
@@ -82,7 +83,7 @@ class LoadingScreen() : GameScreenImpl() {
 
 			var text = "Packing textures.."
 			Assets.fontUI.draw(batch, text, Gdx.graphics.width / 2f - getFontWidth(Assets.fontUI, text) / 2, Gdx.graphics.height / 2f + Assets.fontUI.lineHeight / 2)
-			
+
 			text = texturePackerTask.output.toString()
 			Assets.fontUI.draw(batch, text, Gdx.graphics.width / 2f - getFontWidth(Assets.fontUI, text) / 2, Gdx.graphics.height / 2f + Assets.fontUI.lineHeight / 2 - Assets.fontUI.lineHeight)
 
@@ -104,18 +105,56 @@ class TexturePackerTask(val assetManager: AssetManager) : Thread() {
 
 	override fun run() {
 
+		// if last modified on atlas is newer than files, skip generation
+
+		val images = assetManager.getFileHandleResolver().resolve("images")
+		val atlasName = "aurora.atlas"
+		val existingAtlas = assetManager.getFileHandleResolver().resolve("images/$atlasName")
+
+		if (existingAtlas.exists()) {
+
+			val atlasLastModified = existingAtlas.lastModified()
+			var foundNewerFile = false
+
+			outer@ for (directory: FileHandle in images.list()) {
+
+				if (directory.isDirectory) {
+					for (file in directory.list()) {
+
+						if (file.lastModified() > atlasLastModified) {
+							foundNewerFile = true
+							break@outer
+						}
+					}
+				}
+			}
+
+			if (foundNewerFile) {
+
+				println("Found existing old atlas, regenerating")
+
+			} else {
+
+				done = true
+				println("Found existing up to date atlas, skipping generation")
+				return
+			}
+
+		} else {
+
+			println("Generating new atlas")
+		}
+
 		val realOut = System.out
 
 		System.setOut(PrintStream(output, true))
 
 		try {
-			val imagesPath = assetManager.getFileHandleResolver().resolve("images").file().absolutePath
-			
-			//TODO check if last modified on atlas is newer than files, if true skip generation
+			val absolutePath = images.file().absolutePath
 
 			// Packer supports .png .jpg .jpeg
 			// https://github.com/libgdx/libgdx/wiki/Texture-packer
-			TexturePacker.process(imagesPath, imagesPath, "aurora.atlas")
+			TexturePacker.process(absolutePath, absolutePath, atlasName)
 			done = true
 
 		} catch(e: Exception) {
