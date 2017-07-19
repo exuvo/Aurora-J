@@ -8,9 +8,9 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import org.apache.log4j.Logger
+import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.screens.GameScreenService
 import se.exuvo.aurora.screens.LoadingScreen
-import se.exuvo.aurora.systems.GroupSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.settings.Settings
 import java.util.concurrent.locks.ReentrantReadWriteLock

@@ -6,10 +6,10 @@ import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import se.exuvo.aurora.Assets
-import se.exuvo.aurora.Galaxy
-import se.exuvo.aurora.SolarSystem
+import se.exuvo.aurora.galactic.Galaxy
+import se.exuvo.aurora.planetarysystems.PlanetarySystem
 import se.exuvo.aurora.utils.GameServices
-import java.util.Collections
+import se.exuvo.aurora.utils.Vector2L
 
 class MainMenuScreen() : GameScreenImpl() {
 
@@ -27,16 +27,20 @@ class MainMenuScreen() : GameScreenImpl() {
 	override fun update(deltaRealTime: Float) {
 		if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
 			Gdx.app.exit()
-    }
-		
+		}
+
 //		if (Gdx.input.isKeyPressed(Input.Keys.ENTER)) {
-			
-			val system = SolarSystem()
-			val galaxy = Galaxy(Collections.singletonList(system), 0) //Int.MAX_VALUE.toLong()
-			galaxy.init()
-		
-			GameServices[GameScreenService::class.java].add(UIScreen())
-			GameServices[GameScreenService::class.java].add(SolarSystemScreen(system))
+
+		val system = PlanetarySystem("s1", Vector2L(0, 0))
+		val system2 = PlanetarySystem("s2", Vector2L(4367, 0))
+		val system3 = PlanetarySystem("s3", Vector2L(-2000, -5000))
+		val galaxy = Galaxy(listOf(system, system2, system3), 0)
+		galaxy.init()
+
+		val systemView = PlanetarySystemScreen(system)
+		GameServices.put(GalaxyScreen(systemView))
+		GameServices[GameScreenService::class.java].add(UIScreen())
+		GameServices[GameScreenService::class.java].add(systemView)
 //    }
 	}
 

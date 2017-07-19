@@ -2,20 +2,19 @@ package se.exuvo.aurora.screens
 
 import com.badlogic.ashley.core.ComponentMapper
 import com.badlogic.gdx.InputProcessor
-import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Window
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import se.exuvo.aurora.Assets
-import se.exuvo.aurora.Galaxy
-import se.exuvo.aurora.SolarSystem
-import se.exuvo.aurora.components.NameComponent
-import se.exuvo.aurora.components.OrbitComponent
-import se.exuvo.aurora.components.ThrustComponent
-import se.exuvo.aurora.systems.GroupSystem
-import se.exuvo.aurora.systems.TagSystem
+import se.exuvo.aurora.galactic.Galaxy
+import se.exuvo.aurora.planetarysystems.PlanetarySystem
+import se.exuvo.aurora.planetarysystems.components.NameComponent
+import se.exuvo.aurora.planetarysystems.components.OrbitComponent
+import se.exuvo.aurora.planetarysystems.components.ThrustComponent
+import se.exuvo.aurora.planetarysystems.systems.GroupSystem
+import se.exuvo.aurora.planetarysystems.systems.TagSystem
 import se.exuvo.aurora.utils.GameServices
 
 class UIScreen : GameScreenImpl(), InputProcessor {
@@ -80,8 +79,8 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 						if (orbitMapper.has(entity)) {
 
 							val orbitComponent = orbitMapper.get(entity)
-							val solarSystem: SolarSystem = galaxy.getSolarSystem(entity)
-							val tagSystem = solarSystem.engine.getSystem(TagSystem::class.java)
+							val planetarySystem: PlanetarySystem = galaxy.getPlanetarySystem(entity)
+							val tagSystem = planetarySystem.engine.getSystem(TagSystem::class.java)
 							val sun = tagSystem[TagSystem.SUN]
 
 							if (orbitComponent.parent == sun) {
