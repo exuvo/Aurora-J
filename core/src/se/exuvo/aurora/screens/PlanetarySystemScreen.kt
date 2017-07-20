@@ -16,6 +16,7 @@ import com.badlogic.gdx.utils.viewport.Viewport
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.planetarysystems.PlanetarySystem
+import se.exuvo.aurora.planetarysystems.PlanetarySystemGeneration
 import se.exuvo.aurora.planetarysystems.components.ApproachType
 import se.exuvo.aurora.planetarysystems.components.CircleComponent
 import se.exuvo.aurora.planetarysystems.components.MoveToEntityComponent
@@ -34,7 +35,6 @@ import se.exuvo.aurora.utils.TimeUnits
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.settings.Settings
 import kotlin.concurrent.read
-import kotlin.concurrent.write
 import kotlin.properties.Delegates
 
 class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), InputProcessor {
@@ -144,9 +144,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	override fun keyDown(keycode: Int): Boolean {
 
 		if (keycode == Input.Keys.G) {
-			system.lock.write {
-				system.generateRandomSystem()
-			}
+			PlanetarySystemGeneration(system).generateRandomSystem()
 		}
 		
 		if (keycode == Input.Keys.M) {
