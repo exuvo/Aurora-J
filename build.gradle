@@ -20,10 +20,6 @@ allprojects {
     ext {
         appName = "Aurora J"
         gdxVersion = '1.9.6'
-        roboVMVersion = '2.3.0'
-        box2DLightsVersion = '1.4'
-        ashleyVersion = '1.7.0'
-        aiVersion = '1.8.0'
         log4jVersion = '1.2.17'
         jsapVersion = '2.1'
     }
@@ -46,7 +42,6 @@ project(":desktop") {
         compile "com.badlogicgames.gdx:gdx-backend-lwjgl:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
         compile "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
-        compile "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
         compile "log4j:log4j:$log4jVersion"
         compile "com.martiansoftware:jsap:$jsapVersion"
@@ -61,13 +56,15 @@ project(":core") {
         compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
         compile "com.badlogicgames.gdx:gdx:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
-        compile "com.badlogicgames.gdx:gdx-ai:$aiVersion"
+        compile "com.badlogicgames.gdx:gdx-ai:1.8.0"
         compile "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
-        compile "com.badlogicgames.box2dlights:box2dlights:$box2DLightsVersion"
-        compile "com.badlogicgames.ashley:ashley:$ashleyVersion"
+        compile "com.badlogicgames.box2dlights:box2dlights:1.4"
+        compile "com.badlogicgames.ashley:ashley:1.7.0"
         compile "log4j:log4j:$log4jVersion"
         compile "com.martiansoftware:jsap:$jsapVersion"
+        compile "com.esotericsoftware:kryo:4.0.0"
+        compile "com.esotericsoftware:jsonbeans:0.7"
     }
 }
 

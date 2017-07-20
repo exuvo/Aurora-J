@@ -294,7 +294,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 							}
 
 							galaxyGroupSystem.add(entitiesUnderMouse, GroupSystem.SELECTED)
-							systemGroupSystem.add(entitiesUnderMouse, GroupSystem.SELECTED)
+							systemGroupSystem.add(entitiesUnderMouse, GroupSystem.SELECTED) // TODO only use galaxy Selected
 
 						} else {
 
