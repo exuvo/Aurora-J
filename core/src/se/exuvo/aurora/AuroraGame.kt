@@ -7,6 +7,7 @@ import com.badlogic.gdx.assets.loaders.FileHandleResolver
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.esotericsoftware.kryonet.MinlogTolog4j
 import org.apache.log4j.Logger
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.screens.GameScreenService
@@ -21,6 +22,9 @@ class AuroraGame(val assetsRoot: String) : ApplicationAdapter() {
 	val screenService = GameScreenService()
 
 	override fun create() {
+		com.esotericsoftware.minlog.Log.setLogger(MinlogTolog4j())
+		com.esotericsoftware.minlog.Log.set(com.esotericsoftware.minlog.Log.LEVEL_WARN)
+
 		GameServices.put(AssetManager(AuroraAssetsResolver(assetsRoot)))
 		GameServices.put(ShapeRenderer())
 		GameServices.put(SpriteBatch())

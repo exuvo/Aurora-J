@@ -12,6 +12,7 @@ import kotlin.concurrent.write
 
 class GroupSystem(val lock: ReentrantReadWriteLock) : EntitySystem(), EntityListener {
 	companion object {
+		// Galaxy only
 		val SELECTED = "selected"
 	}
 

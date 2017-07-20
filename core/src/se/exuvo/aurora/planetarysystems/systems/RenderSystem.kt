@@ -17,6 +17,7 @@ import se.exuvo.aurora.planetarysystems.components.LineComponent
 import se.exuvo.aurora.planetarysystems.components.MoveToEntityComponent
 import se.exuvo.aurora.planetarysystems.components.MoveToPositionComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
+import se.exuvo.aurora.planetarysystems.components.PlanetarySystemComponent
 import se.exuvo.aurora.planetarysystems.components.PositionComponent
 import se.exuvo.aurora.planetarysystems.components.RenderComponent
 import se.exuvo.aurora.planetarysystems.components.StrategicIconComponent
@@ -51,6 +52,7 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 	private val spriteBatch = GameServices[SpriteBatch::class.java]
 	private val uiCamera = GameServices[GameScreenService::class.java].uiCamera
 	private val groupSystem by lazy { engine.getSystem(GroupSystem::class.java) }
+	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class.java] }
 
 	override fun checkProcessing() = false
 
@@ -162,63 +164,56 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 		spriteBatch.end()
 	}
 
-	fun drawSelections(entities: ImmutableArray<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
+	fun drawSelections(entities: List<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color.RED
 
-		val selectedEntities = groupSystem.get(GroupSystem.SELECTED)
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
 		for (entity in entities) {
-			if (selectedEntities.contains(entity)) {
-				val position = positionMapper.get(entity)
-				val x = (position.getXinKM() - cameraOffset.x).toFloat()
-				val y = (position.getYinKM() - cameraOffset.y).toFloat()
+			val position = positionMapper.get(entity)
+			val x = (position.getXinKM() - cameraOffset.x).toFloat()
+			val y = (position.getYinKM() - cameraOffset.y).toFloat()
 
-				if (strategicIconMapper.has(entity) && inStrategicView(entity, zoom)) {
-					val radius = zoom * STRATEGIC_ICON_SIZE / 2 + 3 * zoom
-					val segments = getCircleSegments(radius, zoom)
-					shapeRenderer.circle(x, y, radius, segments)
+			if (strategicIconMapper.has(entity) && inStrategicView(entity, zoom)) {
+				val radius = zoom * STRATEGIC_ICON_SIZE / 2 + 3 * zoom
+				val segments = getCircleSegments(radius, zoom)
+				shapeRenderer.circle(x, y, radius, segments)
 
-				} else if (circleMapper.has(entity)) {
-					val circle = circleMapper.get(entity)
-					val radius = circle.radius + 3 * zoom
-					val segments = getCircleSegments(radius, zoom)
-					shapeRenderer.circle(x, y, radius, segments)
-				}
+			} else if (circleMapper.has(entity)) {
+				val circle = circleMapper.get(entity)
+				val radius = circle.radius + 3 * zoom
+				val segments = getCircleSegments(radius, zoom)
+				shapeRenderer.circle(x, y, radius, segments)
 			}
 		}
 
 		shapeRenderer.end()
 	}
 
-	fun drawSelectionMoveTargets(entities: ImmutableArray<Entity>, cameraOffset: Vector2L) {
+	fun drawSelectionMoveTargets(entities: List<Entity>, cameraOffset: Vector2L) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color(0.8f, 0.8f, 0.8f, 0.5f)
 
-		val selectedEntities = groupSystem.get(GroupSystem.SELECTED)
-
 		for (entity in entities) {
-			if (selectedEntities.contains(entity)) {
-				val position = positionMapper.get(entity)
-				val x = (position.getXinKM() - cameraOffset.x).toFloat()
-				val y = (position.getYinKM() - cameraOffset.y).toFloat()
+			val position = positionMapper.get(entity)
+			val x = (position.getXinKM() - cameraOffset.x).toFloat()
+			val y = (position.getYinKM() - cameraOffset.y).toFloat()
 
-				if (moveToEntityMapper.has(entity)) {
-					val targetEntity = moveToEntityMapper.get(entity).target
-					val targetPosition = positionMapper.get(targetEntity)
-					val x2 = (targetPosition.getXinKM() - cameraOffset.x).toFloat()
-					val y2 = (targetPosition.getYinKM() - cameraOffset.y).toFloat()
-					shapeRenderer.line(x, y, x2, y2)
+			if (moveToEntityMapper.has(entity)) {
+				val targetEntity = moveToEntityMapper.get(entity).target
+				val targetPosition = positionMapper.get(targetEntity)
+				val x2 = (targetPosition.getXinKM() - cameraOffset.x).toFloat()
+				val y2 = (targetPosition.getYinKM() - cameraOffset.y).toFloat()
+				shapeRenderer.line(x, y, x2, y2)
 
-				} else if (moveToPositionMapper.has(entity)) {
-					val targetPosition = moveToPositionMapper.get(entity).target
-					val x2 = (getXinKM(targetPosition) - cameraOffset.x).toFloat()
-					val y2 = (getYinKM(targetPosition) - cameraOffset.y).toFloat()
-					shapeRenderer.line(x, y, x2, y2)
-				}
+			} else if (moveToPositionMapper.has(entity)) {
+				val targetPosition = moveToPositionMapper.get(entity).target
+				val x2 = (getXinKM(targetPosition) - cameraOffset.x).toFloat()
+				val y2 = (getYinKM(targetPosition) - cameraOffset.y).toFloat()
+				shapeRenderer.line(x, y, x2, y2)
 			}
 		}
 
@@ -234,8 +229,12 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 		drawEntities(sortedEntities, viewport, cameraOffset)
 		drawEntityCenters(sortedEntities, viewport, cameraOffset)
-		drawSelections(sortedEntities, viewport, cameraOffset)
-		drawSelectionMoveTargets(sortedEntities, cameraOffset)
+
+		val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED)
+		val sortedAndSelectedEntities = sortedEntities.filter { selectedEntities.contains(it) }
+
+		drawSelections(sortedAndSelectedEntities, viewport, cameraOffset)
+		drawSelectionMoveTargets(sortedAndSelectedEntities, cameraOffset)
 
 		spriteBatch.projectionMatrix = viewport.camera.combined
 
@@ -254,11 +253,11 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 			val name = nameMapper.get(it).name!!
 
 			var radius = 0f
-			
+
 			if (inStrategicView(it, zoom)) {
-				
+
 				radius = zoom * STRATEGIC_ICON_SIZE / 2
-				
+
 			} else if (circleMapper.has(it)) {
 
 				val circleComponent = circleMapper.get(it)

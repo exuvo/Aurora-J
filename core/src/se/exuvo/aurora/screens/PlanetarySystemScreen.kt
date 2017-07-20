@@ -20,6 +20,7 @@ import se.exuvo.aurora.planetarysystems.components.ApproachType
 import se.exuvo.aurora.planetarysystems.components.CircleComponent
 import se.exuvo.aurora.planetarysystems.components.MoveToEntityComponent
 import se.exuvo.aurora.planetarysystems.components.MoveToPositionComponent
+import se.exuvo.aurora.planetarysystems.components.PlanetarySystemComponent
 import se.exuvo.aurora.planetarysystems.components.PositionComponent
 import se.exuvo.aurora.planetarysystems.components.RenderComponent
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
@@ -55,6 +56,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
 	private val moveToEntityMapper = ComponentMapper.getFor(MoveToEntityComponent::class.java)
 	private val moveToPositionMapper = ComponentMapper.getFor(MoveToPositionComponent::class.java)
+	private val planetarySystemMapper = ComponentMapper.getFor(PlanetarySystemComponent::class.java)
 
 	var zoomLevel = 0
 	var zoomSensitivity = Settings.getFloat("UI.zoomSensitivity").toDouble()
@@ -289,12 +291,10 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 							if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
 								galaxyGroupSystem.clear(GroupSystem.SELECTED)
-								systemGroupSystem.clear(GroupSystem.SELECTED)
 //								println("cleared selection")
 							}
 
 							galaxyGroupSystem.add(entitiesUnderMouse, GroupSystem.SELECTED)
-							systemGroupSystem.add(entitiesUnderMouse, GroupSystem.SELECTED) // TODO only use galaxy Selected
 
 						} else {
 
@@ -316,9 +316,13 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 				}
 				Input.Buttons.RIGHT -> {
 
-					if (systemGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
+					if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
 
-						val selectedEntities = systemGroupSystem.get(GroupSystem.SELECTED).filter { MovementSystem.CAN_ACCELERATE_FAMILY.matches(it) }
+						val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED).filter {
+							
+							val planetarySystem = planetarySystemMapper.get(it)
+							system == planetarySystem?.system && MovementSystem.CAN_ACCELERATE_FAMILY.matches(it)
+						}
 
 						if (selectedEntities.isNotEmpty()) {
 
@@ -469,7 +473,6 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 			if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
 				galaxyGroupSystem.clear(GroupSystem.SELECTED)
-				systemGroupSystem.clear(GroupSystem.SELECTED)
 //				println("cleared selection")
 			}
 
@@ -496,7 +499,6 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 			if (entitiesInSelection.isNotEmpty()) {
 				galaxyGroupSystem.add(entitiesInSelection, GroupSystem.SELECTED)
-				systemGroupSystem.add(entitiesInSelection, GroupSystem.SELECTED)
 //				println("drag selected ${entitiesInSelection.size} entities")
 			}
 
@@ -507,7 +509,6 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 		if (dragSelectPotentialStart && button == Input.Buttons.LEFT) {
 			if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
 				galaxyGroupSystem.clear(GroupSystem.SELECTED)
-				systemGroupSystem.clear(GroupSystem.SELECTED)
 //				println("cleared selection")
 			}
 		}
