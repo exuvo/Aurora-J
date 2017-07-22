@@ -35,7 +35,7 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 
 		system.lock.write {
 			
-			for (entity in engine.getEntitiesFor(FAMILY).toArray<Entity>(Entity::class.java)) {
+			for (entity in engine.getEntitiesFor(FAMILY).toArray()) {
 				engine.removeEntity(entity)
 			}
 
