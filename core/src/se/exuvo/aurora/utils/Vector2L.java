@@ -355,7 +355,7 @@ public class Vector2L implements Serializable {
 	 * 
 	 * @param radians the angle in radians
 	 */
-	public Vector2L rotateRad(float radians) {
+	public Vector2L rotateRad(double radians) {
 		double cos = Math.cos(radians);
 		double sin = Math.sin(radians);
 

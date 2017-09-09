@@ -23,6 +23,7 @@ import se.exuvo.aurora.planetarysystems.components.StrategicIconComponent
 import se.exuvo.aurora.planetarysystems.components.SunComponent
 import se.exuvo.aurora.planetarysystems.components.TagComponent
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
+import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.TintComponent
 import se.exuvo.aurora.planetarysystems.components.VelocityComponent
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
@@ -101,7 +102,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		engine.addEntity(entity3)
 
 		val entity4 = Entity()
-		entity4.add(PositionComponent().apply { position.set((OrbitSystem.AU * 1000L * 1L).toLong(), 0).setAngle(45f) })
+		entity4.add(PositionComponent().apply { position.set((OrbitSystem.AU * 1000L * 1L).toLong(), 0).rotate(45f) })
 		entity4.add(RenderComponent())
 		entity4.add(SolarIrradianceComponent())
 		entity4.add(CircleComponent().apply { radius = 10f })
@@ -112,6 +113,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		entity4.add(MoveToEntityComponent(entity1, ApproachType.BRACHISTOCHRONE))
 		entity4.add(TintComponent(Color.RED))
 		entity4.add(StrategicIconComponent(Assets.textures.findRegion("strategic/ship")))
+		entity4.add(TimedMovementComponent(Vector2L(entity4.getComponent(PositionComponent::class.java).position), 0))
 
 		engine.addEntity(entity4)
 	}
