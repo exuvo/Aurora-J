@@ -29,5 +29,6 @@ class ShipSystem : IteratingSystem(FAMILY) {
 		val thrust = thrustMapper.get(entity).thrust
 
 		//TODO calculate power need, availability and drain resources from reactors
+		// Give power first to boolean poweredParts then to scalable powered parts 
 	}
 }
