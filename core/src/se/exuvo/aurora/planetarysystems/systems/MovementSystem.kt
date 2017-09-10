@@ -14,16 +14,14 @@ import se.exuvo.aurora.planetarysystems.components.MoveToPositionComponent
 import se.exuvo.aurora.planetarysystems.components.MovementValues
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.OrbitComponent
-import se.exuvo.aurora.planetarysystems.components.PositionComponent
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
-import se.exuvo.aurora.planetarysystems.components.VelocityComponent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
 
 class MovementSystem : IteratingSystem(FAMILY) {
 	companion object {
-		val FAMILY = Family.all(PositionComponent::class.java, VelocityComponent::class.java).exclude(OrbitComponent::class.java).get()
+		val FAMILY = Family.all(TimedMovementComponent::class.java).exclude(OrbitComponent::class.java).get()
 		val CAN_ACCELERATE_FAMILY = Family.all(ThrustComponent::class.java, MassComponent::class.java).get()
 		val DESTINATION_FAMILY = Family.one(MoveToPositionComponent::class.java, MoveToEntityComponent::class.java).get()
 	}
@@ -31,13 +29,11 @@ class MovementSystem : IteratingSystem(FAMILY) {
 	val log = Logger.getLogger(this.javaClass)
 
 	private val massMapper = ComponentMapper.getFor(MassComponent::class.java)
-	private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
 	private val thrustMapper = ComponentMapper.getFor(ThrustComponent::class.java)
-	private val velocityMapper = ComponentMapper.getFor(VelocityComponent::class.java)
 	private val moveToEntityMapper = ComponentMapper.getFor(MoveToEntityComponent::class.java)
 	private val moveToPositionMapper = ComponentMapper.getFor(MoveToPositionComponent::class.java)
 	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java)
-	private val timedMovementMapper = ComponentMapper.getFor(TimedMovementComponent::class.java)
+	private val movementMapper = ComponentMapper.getFor(TimedMovementComponent::class.java)
 
 	private val galaxy = GameServices[Galaxy::class.java]
 
@@ -46,22 +42,32 @@ class MovementSystem : IteratingSystem(FAMILY) {
 
 	override fun processEntity(entity: Entity, deltaGameTime: Float) {
 
-		val velocityComponent = velocityMapper.get(entity)
-		val velocity = velocityComponent.velocity
-		val position = positionMapper.get(entity).position
+		val movement = movementMapper.get(entity)
+
+		val velocity = movement.previous.value.velocity
+		val position = movement.previous.value.position
 
 		if (!CAN_ACCELERATE_FAMILY.matches(entity)) {
 
 			position.add(velocity.x.toLong(), velocity.y.toLong())
+			movement.previous.time = galaxy.time
 			return
 		}
 
 		val mass = massMapper.get(entity).mass
-		val thrust = thrustMapper.get(entity).thrust
-		val trueAcceleration = thrust / mass
-		val acceleration = trueAcceleration * deltaGameTime
+		val thrustComponent = thrustMapper.get(entity)
+		val acceleration = thrustComponent.thrust / mass
+		val tickAcceleration = acceleration * deltaGameTime
 
 		if (!DESTINATION_FAMILY.matches(entity)) {
+
+			if (movement.next != null) {
+
+				println("Movement: Prediction aborted due to order removed")
+				val current = movement.get(galaxy.time)
+				movement.set(current.value, galaxy.time)
+				movement.next = null
+			}
 
 			if (velocity.isZero()) {
 				return
@@ -69,30 +75,85 @@ class MovementSystem : IteratingSystem(FAMILY) {
 
 			val velocityMagnitute = velocity.len()
 
-			if (velocityMagnitute < acceleration) {
+			if (velocityMagnitute < tickAcceleration) {
 
 				velocity.setZero()
 
 			} else {
 
-				tempVelocity.set(velocity).nor().scl(acceleration.toFloat())
+				tempVelocity.set(velocity).nor().scl(tickAcceleration.toFloat())
 				velocity.sub(tempVelocity)
-				velocityComponent.thrustAngle = tempVelocity.angle()
+				thrustComponent.thrustAngle = tempVelocity.angle() + 180
 				tempVelocity.set(velocity).scl(deltaGameTime)
 				position.add(tempVelocity.x.toLong(), tempVelocity.y.toLong())
+				movement.previous.time = galaxy.time
 			}
 
-			nameMapper.get(entity).name = "c " + velocityMagnitute
-
+			nameMapper.get(entity).name = "s " + velocityMagnitute
 			return
 		}
 
-		val moveToEntityComponent = moveToEntityMapper.get(entity)
 		val moveToPositionComponent = moveToPositionMapper.get(entity)
-		val timedMovement = timedMovementMapper.get(entity)
+
+		if (movement.next != null) {
+
+			if (moveToPositionComponent != null && !movement.next!!.value.position.equals(moveToPositionComponent.target)) {
+
+				println("Movement: Prediction aborted due to changed target position")
+				val current = movement.get(galaxy.time)
+				movement.set(current.value, galaxy.time)
+				movement.next = null
+
+			} else {
+
+				val next = movement.next!!
+
+				if (galaxy.time >= next.time) {
+
+					println("Movement: target reached predicted time")
+					movement.previous = next
+					movement.next = null
+
+					entity.remove(MoveToEntityComponent::class.java)
+					entity.remove(MoveToPositionComponent::class.java)
+
+				} else {
+
+					val current = movement.get(galaxy.time)
+
+					when (movement.approach) {
+						ApproachType.BRACHISTOCHRONE -> {
+
+						}
+						ApproachType.BALLISTIC -> {
+							nameMapper.get(entity).name = "a " + current.value.velocity.len()
+						}
+						else -> {
+							throw RuntimeException("Unknown approach type: " + movement.approach)
+						}
+					}
+				}
+
+				return
+			}
+		}
+
+		val moveToEntityComponent = moveToEntityMapper.get(entity)
 
 		val targetEntity = moveToEntityComponent?.target
-		val targetPosition = if (targetEntity != null) positionMapper.get(targetEntity).position else moveToPositionComponent.target
+		var targetMovement: MovementValues? = null
+		val targetPosition: Vector2L
+
+		if (targetEntity != null) {
+
+			targetMovement = movementMapper.get(targetEntity).get(galaxy.time).value
+			targetPosition = targetMovement.position
+
+		} else {
+
+			targetPosition = moveToPositionComponent.target
+		}
+
 		val approach = if (moveToEntityComponent != null) moveToEntityComponent.approach else moveToPositionComponent.approach
 
 		tempPosition.set(targetPosition).sub(position)
@@ -102,7 +163,7 @@ class MovementSystem : IteratingSystem(FAMILY) {
 
 		// t = sqrt(2d / a)
 		// d = ut + 1/2at^2
-		val timeToTraverseFrom0Velocity = 2 * Math.sqrt(distance / acceleration) // Base formula = t = sqrt(2d / a), Inital speed 0 and reaches target at speed 
+		val timeToTraverseFrom0Velocity = 2 * Math.sqrt(distance / tickAcceleration) // Base formula = t = sqrt(2d / a), Inital speed 0 and reaches target at speed 
 
 //		println("timeToTraverseFrom0Velocity ${TimeUnits.secondsToString(timeToTraverseFrom0Velocity.toLong())}")
 
@@ -110,24 +171,24 @@ class MovementSystem : IteratingSystem(FAMILY) {
 			position.set(targetPosition)
 			entity.remove(MoveToEntityComponent::class.java)
 			entity.remove(MoveToPositionComponent::class.java)
-			println("Target reached distance")
+			println("Movement: target reached distance")
 			return
 		}
 
-		val targetVelocity = if (targetEntity != null) velocityMapper.get(targetEntity)?.velocity ?: Vector2.Zero else Vector2.Zero
+		val targetVelocity = if (targetMovement != null) targetMovement.velocity else Vector2.Zero
 		val targetVelocityMagnitude = targetVelocity.len()
 		val angleToTarget = position.angleTo(targetPosition).toFloat()
 		val velocityAngle = velocity.angle();
 		val targetVelocityAngle = targetVelocity.angle()
 		val velocityAngleScale = (targetVelocityAngle - velocityAngle) / 180
 		val velocityMagnitute = velocity.len()
-		val timeToTargetWithCurrentSpeed = distance / (velocityMagnitute + trueAcceleration)
+		val timeToTargetWithCurrentSpeed = distance / (velocityMagnitute + acceleration)
 //		println("angleToTarget, $angleToTarget , velocityAngle $velocityAngle")
 
 		when (approach) {
 			ApproachType.BRACHISTOCHRONE -> {
 
-				val timeToStop = (velocityMagnitute - velocityAngleScale * targetVelocityMagnitude) / trueAcceleration
+				val timeToStop = (velocityMagnitute - velocityAngleScale * targetVelocityMagnitude) / acceleration
 
 //			println("timeToTargetWithCurrentSpeed ${timeToTargetWithCurrentSpeed}, timeToStop ${timeToStop}")
 //				println("angleToTarget, $angleToTarget, velocityAngle $velocityAngle, tempVelocityAngle ${tempVelocity.angle()}")
@@ -145,35 +206,35 @@ class MovementSystem : IteratingSystem(FAMILY) {
 						position.set(targetPosition)
 						entity.remove(MoveToEntityComponent::class.java)
 						entity.remove(MoveToPositionComponent::class.java)
-						println("Brachistochrone target reached time")
-
-						if (timedMovement.next != null) {
-							timedMovement.previous = timedMovement.next!!
-							timedMovement.next = null
-						}
+						println("Movement: Brachistochrone target reached time")
 
 						return
 					}
 
-					tempVelocity.set(velocity).nor().scl(acceleration.toFloat())
+					tempVelocity.set(velocity).nor().scl(tickAcceleration.toFloat())
 					velocity.sub(tempVelocity)
 
-					velocityComponent.thrustAngle = tempVelocity.angle() - 180
-					if (velocityComponent.thrustAngle < 0) velocityComponent.thrustAngle += 360;
+					thrustComponent.thrustAngle = tempVelocity.angle() - 180
+					if (thrustComponent.thrustAngle < 0) thrustComponent.thrustAngle += 360;
 
 				} else {
 
 					nameMapper.get(entity).name = "a " + velocityMagnitute
 
 					tempVelocity.set(tempPosition.x.toFloat(), tempPosition.y.toFloat()).nor()
-					tempVelocity.scl(acceleration.toFloat())
+					tempVelocity.scl(tickAcceleration.toFloat())
 
-					if (velocityMagnitute > 0 && Math.abs(angleToTarget - velocityAngle) < 90) {
-						tempVelocity.rotate(angleToTarget - velocityAngle)
+					if (velocityMagnitute > 10 * acceleration) {
+						if (Math.abs(angleToTarget - velocityAngle) <= 90) {
+							tempVelocity.rotate(angleToTarget - velocityAngle)
+
+						} else if (Math.abs(angleToTarget - velocityAngle) > 90) {
+							tempVelocity.rotate(180 - (angleToTarget - velocityAngle))
+						}
 					}
 
 					velocity.add(tempVelocity)
-					velocityComponent.thrustAngle = tempVelocity.angle()
+					thrustComponent.thrustAngle = tempVelocity.angle()
 				}
 
 				tempVelocity.set(velocity).scl(deltaGameTime)
@@ -184,12 +245,40 @@ class MovementSystem : IteratingSystem(FAMILY) {
 			}
 			ApproachType.BALLISTIC -> {
 
-				if (timedMovement != null && (timedMovement.next == null || !timedMovement.next!!.value.position.equals(targetPosition))) {
+				nameMapper.get(entity).name = "a " + velocityMagnitute
 
-					timedMovement.set(MovementValues(position.cpy(), velocity.cpy()), galaxy.time)
+				if (movement.next == null && targetEntity == null && Math.abs(angleToTarget - velocityAngle) < 5) {
 
-					tempVelocity.set(1f, 0f).rotate(angleToTarget).scl((acceleration * timeToTargetWithCurrentSpeed).toFloat()).add(velocity)
-					timedMovement.setPredictionBallistic(MovementValues(targetPosition.cpy(), tempVelocity.cpy()), trueAcceleration, trueAcceleration, galaxy.time + timeToTargetWithCurrentSpeed.toLong())
+					println("Movement: ballistic prediction to target")
+					val finalVelocity = Math.sqrt(velocityMagnitute * velocityMagnitute + 2 * acceleration * distance)
+
+					val timeToTarget: Double
+
+					if (velocityMagnitute == 0f) {
+
+						timeToTarget = Math.sqrt(2 * distance / acceleration)
+
+					} else {
+
+						// Quadric formula https://en.wikipedia.org/wiki/Quadratic_equation#Quadratic_formula_and_its_derivation
+						val a = acceleration / 2
+						val b = velocityMagnitute
+						val c = -distance
+						val pos = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a)
+						val neg = (-b - Math.sqrt(b * b - 4 * a * c)) / (2 * a)
+
+//						println("+$pos $neg")
+						timeToTarget = Math.max(pos, neg)
+					}
+
+//					println("timeToTarget $timeToTarget, final velocity $finalVelocity, distance $distance, acceleration $acceleration")
+
+					tempVelocity.set(1f, 0f).rotate(angleToTarget).scl(finalVelocity.toFloat())
+					movement.previous.time = galaxy.time
+					movement.setPredictionBallistic(MovementValues(targetPosition.cpy(), tempVelocity.cpy()), acceleration, acceleration, galaxy.time + timeToTarget.toLong())
+					thrustComponent.thrustAngle = angleToTarget
+
+					return
 				}
 
 				if (timeToTargetWithCurrentSpeed <= 1) {
@@ -197,27 +286,25 @@ class MovementSystem : IteratingSystem(FAMILY) {
 					position.set(targetPosition)
 					entity.remove(MoveToEntityComponent::class.java)
 					entity.remove(MoveToPositionComponent::class.java)
-					println("Ballistic target reached time")
-
-					if (timedMovement.next != null) {
-						timedMovement.previous = timedMovement.next!!
-						timedMovement.next = null
-					}
+					println("Movement: Ballistic target reached time")
 
 					return
 				}
 
-				nameMapper.get(entity).name = "a " + velocityMagnitute
-
 				tempVelocity.set(tempPosition.x.toFloat(), tempPosition.y.toFloat()).nor()
-				tempVelocity.scl(acceleration.toFloat())
+				tempVelocity.scl(tickAcceleration.toFloat())
 
-				if (velocityMagnitute > 0 && Math.abs(angleToTarget - velocityAngle) < 90) {
-					tempVelocity.rotate(2f * (angleToTarget - velocityAngle))
+				if (velocityMagnitute > 10 * acceleration) {
+					if (Math.abs(angleToTarget - velocityAngle) <= 90) {
+						tempVelocity.rotate(angleToTarget - velocityAngle)
+
+					} else if (Math.abs(angleToTarget - velocityAngle) > 90) {
+						tempVelocity.rotate(180 - (angleToTarget - velocityAngle))
+					}
 				}
 
 				velocity.add(tempVelocity)
-				velocityComponent.thrustAngle = tempVelocity.angle()
+				thrustComponent.thrustAngle = tempVelocity.angle()
 
 				tempVelocity.set(velocity).scl(deltaGameTime)
 				position.add(tempVelocity.x.toLong(), tempVelocity.y.toLong())

@@ -14,8 +14,7 @@ import com.badlogic.gdx.utils.viewport.Viewport
 import org.apache.log4j.Logger
 import se.exuvo.aurora.planetarysystems.components.MassComponent
 import se.exuvo.aurora.planetarysystems.components.OrbitComponent
-import se.exuvo.aurora.planetarysystems.components.PositionComponent
-import se.exuvo.aurora.planetarysystems.components.VelocityComponent
+import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2D
 import se.exuvo.aurora.utils.Vector2L
@@ -25,7 +24,7 @@ import java.util.Collections
 //TODO sorted system by no parents first outwards
 class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60), EntityListener {
 	companion object {
-		val FAMILY = Family.all(OrbitComponent::class.java, PositionComponent::class.java).get()
+		val FAMILY = Family.all(OrbitComponent::class.java, TimedMovementComponent::class.java).get()
 		val gravitationalConstant = 6.67408e-11
 		val AU = 149597870.7 // In km
 	}
@@ -34,8 +33,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60), EntityLis
 
 	private val orbitMapper = ComponentMapper.getFor(OrbitComponent::class.java)
 	private val massMapper = ComponentMapper.getFor(MassComponent::class.java)
-	private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
-	private val velocityMapper = ComponentMapper.getFor(VelocityComponent::class.java)
+	private val movementMapper = ComponentMapper.getFor(TimedMovementComponent::class.java)
 	private val orbitsCache = HashMap<Entity, OrbitCache>()
 	private val moonsCache = HashMap<Entity, MutableSet<Entity>?>()
 
@@ -98,12 +96,6 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60), EntityLis
 		}
 
 		moonsSet.add(entity)
-
-		val velocityComponent = velocityMapper.get(entity)
-
-		if (velocityComponent == null) {
-			entity.add((engine as PooledEngine).createComponent(VelocityComponent::class.java))
-		}
 	}
 
 	override fun entityRemoved(entity: Entity) {
@@ -179,16 +171,20 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60), EntityLis
 		tempPosition.scl(1000.0) // km to m
 
 		val parentEntity = orbit.parent
-		val parentPosition = positionMapper.get(parentEntity).position
-		val position = positionMapper.get(entity).position
+		val parentMovement = movementMapper.get(parentEntity).get(galaxy.time)
+		val parentPosition = parentMovement.value.position
+		
+		val movement = movementMapper.get(entity).previous
+		val position = movement.value.position
+		
 		oldPosition.set(position)
 		position.set(parentPosition.x + tempPosition.x.toLong(), parentPosition.y + tempPosition.y.toLong())
 		
 		oldPosition.sub(position)
 		tempVelocity.set(oldPosition.x.toFloat(), oldPosition.y.toFloat()).scl(1f / interval)
 		
-		val velocityComponent = velocityMapper.get(entity)
-		velocityComponent.velocity.set(tempVelocity)
+		movement.value.velocity.set(tempVelocity)
+		movement.time = galaxy.time
 	}
 
 	private val shapeRenderer by lazy { GameServices[ShapeRenderer::class.java] }
@@ -203,9 +199,9 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60), EntityLis
 			val orbit = orbitMapper.get(it)
 			val orbitCache: OrbitCache = orbitsCache.get(it)!!
 			val parentEntity = orbit.parent
-			val parentPosition = positionMapper.get(parentEntity)
-			val x = (parentPosition.getXinKM() - cameraOffset.x).toDouble()
-			val y = (parentPosition.getYinKM() - cameraOffset.y).toDouble()
+			val parentMovement = movementMapper.get(parentEntity).get(galaxy.time).value
+			val x = (parentMovement.getXinKM() - cameraOffset.x).toDouble()
+			val y = (parentMovement.getYinKM() - cameraOffset.y).toDouble()
 
 			for (point in orbitCache.orbitPoints) {
 				shapeRenderer.point((x + point.x).toFloat(), (y + point.y).toFloat(), 0f);

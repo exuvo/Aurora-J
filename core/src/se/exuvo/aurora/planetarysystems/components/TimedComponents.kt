@@ -4,32 +4,35 @@ import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Vector2
 import se.exuvo.aurora.utils.Vector2L
+import java.lang.RuntimeException
 
-data class TimedValue<T>(var value: T, var time: Long) {
+data class TimedValue<T>(val value: T, var time: Long) {
 }
 
 abstract class TimedComponent<T>() : Component {
-	abstract fun get(time: Long): T
+	abstract fun get(time: Long): TimedValue<T>
 }
 
-abstract class SteppedComponent<T>(var current: TimedValue<T>) : TimedComponent<T>() {
-
-	fun set(value: T, time: Long) {
-		if (time >= current.time) {
-			current.value = value;
-			current.time = time
-		}
-	}
-
-	override fun get(time: Long): T {
-		return current.value
-	}
-}
+//abstract class SteppedComponent<T>(var current: TimedValue<T>) : TimedComponent<T>() {
+//
+//	fun set(value: T, time: Long) {
+//		if (time >= current.time) {
+//			current.value = value;
+//			current.time = time
+//		}
+//	}
+//
+//	override fun get(time: Long): T {
+//		return current.value
+//	}
+//}
 
 abstract class InterpolatedComponent<T>(val initial: TimedValue<T>) : TimedComponent<T>() {
 	var previous: TimedValue<T> = initial
 	var interpolated: TimedValue<T>? = null
 	var next: TimedValue<T>? = null
+
+	abstract fun setValue(timedValue: TimedValue<T>, newValue: T)
 
 	fun set(value: T, time: Long) {
 
@@ -39,11 +42,11 @@ abstract class InterpolatedComponent<T>(val initial: TimedValue<T>) : TimedCompo
 
 		val next2 = next
 
-		if (next2 != null && next2.time >= time) {
+		if (next2 != null && time >= next2.time) {
 			next = null
 		}
 
-		previous.value = value
+		setValue(previous, value)
 		previous.time = time
 	}
 
@@ -62,7 +65,7 @@ abstract class InterpolatedComponent<T>(val initial: TimedValue<T>) : TimedCompo
 
 		} else {
 
-			next2.value = value
+			setValue(next2, value)
 			next2.time = time
 			next = next2
 		}
@@ -72,28 +75,30 @@ abstract class InterpolatedComponent<T>(val initial: TimedValue<T>) : TimedCompo
 
 	abstract fun interpolate(time: Long)
 
-	override fun get(time: Long): T {
+	override fun get(time: Long): TimedValue<T> {
 
 		val next2 = next
-		
+
 		if (time <= previous.time || next == null) {
-			return previous.value;
+			return previous;
 		}
 
 		if (next2 != null && time >= next2.time) {
-			return next2.value
+			return next2
 		}
 
 		val interpolated2 = interpolated
 
 		if (interpolated2 == null || interpolated2.time != time) {
 			interpolate(time)
+			interpolated!!.time = time
 		}
 
-		return interpolated!!.value
+		return interpolated!!
 	}
 }
 
+// In m
 data class MovementValues(val position: Vector2L, val velocity: Vector2) {
 	fun getXinKM(): Long {
 		return (500 + position.x) / 1000L
@@ -104,10 +109,32 @@ data class MovementValues(val position: Vector2L, val velocity: Vector2) {
 	}
 }
 
-class TimedMovementComponent(val initialPosition: Vector2L = Vector2L(), val initialTime: Long) : InterpolatedComponent<MovementValues>(TimedValue(MovementValues(initialPosition, Vector2()), initialTime)) {
+class TimedMovementComponent(val initialPosition: Vector2L = Vector2L(), val initialVelocity: Vector2 = Vector2(), val initialTime: Long = 0) : InterpolatedComponent<MovementValues>(TimedValue(MovementValues(initialPosition, initialVelocity), initialTime)) {
 	var approach: ApproachType? = null
 	var startAcceleration: Double? = null
 	var finalAcceleration: Double? = null
+
+	override fun setValue(timedValue: TimedValue<MovementValues>, newValue: MovementValues) {
+		timedValue.value.position.set(newValue.position)
+		timedValue.value.velocity.set(newValue.velocity)
+	}
+
+	fun set(position: Vector2L, velocity: Vector2, time: Long) {
+
+		if (previous.time > time) {
+			return
+		}
+
+		val next2 = next
+
+		if (next2 != null && time >= next2.time) {
+			next = null
+		}
+
+		previous.value.position.set(position)
+		previous.value.velocity.set(velocity)
+		previous.time = time
+	}
 
 	override fun setPrediction(value: MovementValues, time: Long): Boolean {
 		val updated = super.setPrediction(value, time);
@@ -133,6 +160,7 @@ class TimedMovementComponent(val initialPosition: Vector2L = Vector2L(), val ini
 		return false
 	}
 
+	// Only works with static targets and initial velocity in the target direction
 	fun setPredictionBallistic(value: MovementValues, startAcceleration: Double, finalAcceleration: Double, time: Long): Boolean {
 
 		if (setPrediction(value, time)) {
@@ -145,7 +173,6 @@ class TimedMovementComponent(val initialPosition: Vector2L = Vector2L(), val ini
 		return false
 	}
 
-	// Assumes startVelocity is in the correct direction
 	override fun interpolate(time: Long) {
 
 		var interpolated = this.interpolated
@@ -172,17 +199,20 @@ class TimedMovementComponent(val initialPosition: Vector2L = Vector2L(), val ini
 		val travelTime = endTime - startTime
 		val traveledTime = time - startTime
 
+		if (traveledTime > travelTime) {
+			throw RuntimeException("Invalid state: startTime $startTime, endTime $endTime, traveledTime $traveledTime");
+		}
+
 		when (approach) {
 			ApproachType.BALLISTIC -> {
-				val acceleration = startAcceleration + (finalAcceleration - startAcceleration) * traveledTime / travelTime
-				var distanceTraveled = startVelocity.len().toDouble() * traveledTime.toDouble() + (acceleration * traveledTime * traveledTime) / 2.0
+				val acceleration = startAcceleration + (finalAcceleration - startAcceleration) * (traveledTime / travelTime)
+				var distanceTraveled = startVelocity.len().toDouble() * traveledTime.toDouble() + 0.5 * acceleration * traveledTime * traveledTime
 
 				position.set(startPosition).sub(endPosition)
 				val angle = position.angleRad() + Math.PI
+
 				position.set(distanceTraveled.toLong(), 0).rotateRad(angle)
 				position.add(startPosition)
-
-				interpolated.value.position.set(position)
 
 				velocity.set(1f, 0f).rotateRad(angle.toFloat()).scl((acceleration * traveledTime).toFloat()).add(startVelocity)
 			}

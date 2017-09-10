@@ -1,8 +1,6 @@
 package se.exuvo.aurora.screens
 
 import com.badlogic.ashley.core.ComponentMapper
-import com.badlogic.ashley.core.Entity
-import com.badlogic.ashley.core.Family
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputProcessor
@@ -16,17 +14,11 @@ import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.galactic.systems.GalacticRenderSystem
 import se.exuvo.aurora.planetarysystems.PlanetarySystem
-import se.exuvo.aurora.planetarysystems.components.CircleComponent
 import se.exuvo.aurora.planetarysystems.components.GalacticPositionComponent
-import se.exuvo.aurora.planetarysystems.components.PositionComponent
-import se.exuvo.aurora.planetarysystems.components.RenderComponent
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
-import se.exuvo.aurora.planetarysystems.systems.MovementSystem
-import se.exuvo.aurora.planetarysystems.systems.RenderSystem
 import se.exuvo.aurora.utils.CircleL
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.TimeUnits
-import se.exuvo.aurora.utils.Vector2D
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.settings.Settings
 import kotlin.concurrent.read

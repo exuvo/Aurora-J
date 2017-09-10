@@ -22,7 +22,7 @@ import se.exuvo.aurora.planetarysystems.components.CircleComponent
 import se.exuvo.aurora.planetarysystems.components.MoveToEntityComponent
 import se.exuvo.aurora.planetarysystems.components.MoveToPositionComponent
 import se.exuvo.aurora.planetarysystems.components.PlanetarySystemComponent
-import se.exuvo.aurora.planetarysystems.components.PositionComponent
+import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.RenderComponent
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.planetarysystems.systems.MovementSystem
@@ -38,6 +38,15 @@ import kotlin.concurrent.read
 import kotlin.properties.Delegates
 
 class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), InputProcessor {
+	companion object {
+		
+		fun secondsToString(time: Long): String {
+			val hours = (time / 3600) % 24
+			val minutes = (time / 60) % 60
+			val seconds = time % 60
+			return String.format("%02d:%02d:%02d", hours, minutes, seconds)
+		}
+	}
 
 	private val spriteBatch = GameServices[SpriteBatch::class.java]
 	private val shapeRenderer = GameServices[ShapeRenderer::class.java]
@@ -53,7 +62,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	private val cameraOffset = Vector2L()
 
 	private val circleMapper = ComponentMapper.getFor(CircleComponent::class.java)
-	private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
+	private val movementMapper = ComponentMapper.getFor(TimedMovementComponent::class.java)
 	private val moveToEntityMapper = ComponentMapper.getFor(MoveToEntityComponent::class.java)
 	private val moveToPositionMapper = ComponentMapper.getFor(MoveToPositionComponent::class.java)
 	private val planetarySystemMapper = ComponentMapper.getFor(PlanetarySystemComponent::class.java)
@@ -134,19 +143,12 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 		spriteBatch.end()
 	}
 
-	private fun secondsToString(time: Long): String {
-		val hours = (time / 3600) % 24
-		val minutes = (time / 60) % 60
-		val seconds = time % 60
-		return String.format("%02d:%02d:%02d", hours, minutes, seconds)
-	}
-
 	override fun keyDown(keycode: Int): Boolean {
 
 		if (keycode == Input.Keys.G) {
 			PlanetarySystemGeneration(system).generateRandomSystem()
 		}
-		
+
 		if (keycode == Input.Keys.M) {
 			val galaxyScreen = GameServices[GalaxyScreen::class.java]
 			galaxyScreen.centerOnPlanetarySystem(system)
@@ -212,7 +214,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 	var dragSelectPotentialStart = false
 	var dragSelect = false
-	val selectionFamily = Family.all(PositionComponent::class.java, RenderComponent::class.java).one(CircleComponent::class.java).get()
+	val selectionFamily = Family.all(TimedMovementComponent::class.java, RenderComponent::class.java).one(CircleComponent::class.java).get()
 
 	var dragX = 0
 	var dragY = 0
@@ -234,7 +236,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 						// Exact check first
 						for (entity in entities) {
-							val position = positionMapper.get(entity).position
+							val position = movementMapper.get(entity).get(galaxy.time).value.position
 							val radius: Float
 
 							if (renderSystem.inStrategicView(entity, zoom)) {
@@ -256,7 +258,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 						// Lenient check if empty
 						if (entitiesUnderMouse.isEmpty()) {
 							for (entity in entities) {
-								val position = positionMapper.get(entity).position
+								val position = movementMapper.get(entity).get(galaxy.time).value.position
 								val radius: Float
 
 								if (renderSystem.inStrategicView(entity, zoom)) {
@@ -317,7 +319,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 					if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
 
 						val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED).filter {
-							
+
 							val planetarySystem = planetarySystemMapper.get(it)
 							system == planetarySystem?.system && MovementSystem.CAN_ACCELERATE_FAMILY.matches(it)
 						}
@@ -334,7 +336,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 								// Exact check first
 								for (entity in entities) {
-									val position = positionMapper.get(entity).position
+									val position = movementMapper.get(entity).get(galaxy.time).value.position
 									val radius: Float
 
 									if (renderSystem.inStrategicView(entity, zoom)) {
@@ -356,7 +358,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 								// Lenient check if empty
 								if (entitiesUnderMouse.isEmpty()) {
 									for (entity in entities) {
-										val position = positionMapper.get(entity).position
+										val position = movementMapper.get(entity).get(galaxy.time).value.position
 										val radius: Float
 
 										if (renderSystem.inStrategicView(entity, zoom)) {
@@ -488,7 +490,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 			// Exact check first
 			for (entity in entities) {
-				val position = positionMapper.get(entity).position
+				val position = movementMapper.get(entity).get(galaxy.time).value.position
 
 				if (testRectangle.contains(position)) {
 					entitiesInSelection.add(entity)

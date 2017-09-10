@@ -4,20 +4,20 @@ import com.badlogic.ashley.core.ComponentMapper
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.Family
 import org.apache.log4j.Logger
-import se.exuvo.aurora.planetarysystems.components.PositionComponent
+import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
 import se.exuvo.aurora.planetarysystems.components.SunComponent
 import se.exuvo.aurora.utils.Vector2L
 
 class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10 * 60) {
 	companion object {
-		val FAMILY = Family.all(SolarIrradianceComponent::class.java, PositionComponent::class.java).get()
-		val SUNS_FAMILY = Family.all(SunComponent::class.java, PositionComponent::class.java).get()
+		val FAMILY = Family.all(SolarIrradianceComponent::class.java, TimedMovementComponent::class.java).get()
+		val SUNS_FAMILY = Family.all(SunComponent::class.java, TimedMovementComponent::class.java).get()
 	}
 
 	val log = Logger.getLogger(this.javaClass)
 
-	private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
+	private val movementMapper = ComponentMapper.getFor(TimedMovementComponent::class.java)
 	private val irradianceMapper = ComponentMapper.getFor(SolarIrradianceComponent::class.java)
 	private val sunIrradianceMapper = ComponentMapper.getFor(SunComponent::class.java)
 
@@ -40,7 +40,7 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10 * 60)
 			for (sun in sunEntites) {
 
 				var solarConstant = sunIrradianceMapper.get(sun).solarConstant
-				var position = positionMapper.get(sun).position
+				var position = movementMapper.get(sun).get(galaxy.time).value.position
 
 				mutableSuns.add(Sun(position, solarConstant))
 			}
@@ -53,7 +53,7 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10 * 60)
 
 	override fun processEntity(entity: Entity) {
 
-		val position = positionMapper.get(entity).position
+		val position = movementMapper.get(entity).get(galaxy.time).value.position
 
 		var totalIrradiance = 0.0
 

@@ -14,7 +14,6 @@ import com.badlogic.gdx.utils.viewport.Viewport
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.planetarysystems.components.GalacticPositionComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
-import se.exuvo.aurora.planetarysystems.components.PositionComponent
 import se.exuvo.aurora.planetarysystems.components.RenderComponent
 import se.exuvo.aurora.planetarysystems.components.StrategicIconComponent
 import se.exuvo.aurora.planetarysystems.components.TagComponent

@@ -11,7 +11,7 @@ import se.exuvo.aurora.planetarysystems.components.MassComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.OrbitComponent
 import se.exuvo.aurora.planetarysystems.components.PlanetarySystemComponent
-import se.exuvo.aurora.planetarysystems.components.PositionComponent
+import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.RenderComponent
 import se.exuvo.aurora.planetarysystems.components.StrategicIconComponent
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
@@ -150,7 +150,7 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 	fun addStar(starMass: Double, starRadius: Float, starName: String): Entity {
 
 		val entity = Entity()
-		entity.add(PositionComponent().apply { position.set(0, 0) })
+		entity.add(TimedMovementComponent().apply { previous.value.position.set(0, 0) })
 		entity.add(RenderComponent())
 		entity.add(CircleComponent().apply { radius = starRadius })
 		entity.add(MassComponent().apply { mass = starMass })
@@ -241,7 +241,7 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 	fun addPlanet(planetParent: Entity, planetMass: Double, planetRadius: Float, planetName: String, semiMajorAxis: Float, eccentricity: Float, argumentOfPeriapsis: Float, meanAnomaly: Float): Entity {
 
 		val entity = Entity()
-		entity.add(PositionComponent())
+		entity.add(TimedMovementComponent())
 		entity.add(RenderComponent())
 		entity.add(CircleComponent().apply { radius = planetRadius })
 		entity.add(NameComponent().apply { name = planetName })
@@ -257,7 +257,7 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 	fun addMoon(moonParent: Entity, moonMass: Double, moonRadius: Float, moonName: String, semiMajorAxis: Float, eccentricity: Float, argumentOfPeriapsis: Float, meanAnomaly: Float): Entity {
 
 		val entity = Entity()
-		entity.add(PositionComponent())
+		entity.add(TimedMovementComponent())
 		entity.add(RenderComponent())
 		entity.add(CircleComponent().apply { radius = moonRadius })
 		entity.add(NameComponent().apply { name = moonName })
@@ -273,7 +273,7 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 	fun addAsteroid(asteroidParent: Entity, asteroidMass: Double, asteroidRadius: Float, asteroidName: String, semiMajorAxis: Float, eccentricity: Float, argumentOfPeriapsis: Float, meanAnomaly: Float): Entity {
 
 		val entity = Entity()
-		entity.add(PositionComponent())
+		entity.add(TimedMovementComponent())
 		entity.add(RenderComponent())
 		entity.add(CircleComponent().apply { radius = asteroidRadius })
 		entity.add(NameComponent().apply { name = asteroidName })

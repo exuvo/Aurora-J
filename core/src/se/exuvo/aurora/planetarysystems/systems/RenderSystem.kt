@@ -13,42 +13,39 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.viewport.Viewport
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.planetarysystems.components.CircleComponent
-import se.exuvo.aurora.planetarysystems.components.LineComponent
 import se.exuvo.aurora.planetarysystems.components.MoveToEntityComponent
 import se.exuvo.aurora.planetarysystems.components.MoveToPositionComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
-import se.exuvo.aurora.planetarysystems.components.PositionComponent
 import se.exuvo.aurora.planetarysystems.components.RenderComponent
 import se.exuvo.aurora.planetarysystems.components.StrategicIconComponent
 import se.exuvo.aurora.planetarysystems.components.TagComponent
 import se.exuvo.aurora.planetarysystems.components.TextComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.TintComponent
-import se.exuvo.aurora.planetarysystems.components.VelocityComponent
 import se.exuvo.aurora.screens.GameScreenService
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
 import java.util.Comparator
 import se.exuvo.aurora.galactic.Galaxy
+import se.exuvo.aurora.planetarysystems.components.ThrustComponent
+import se.exuvo.aurora.screens.PlanetarySystemScreen
 
 class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 	companion object {
-		val FAMILY = Family.all(PositionComponent::class.java, RenderComponent::class.java).one(CircleComponent::class.java, LineComponent::class.java).get()
+		val FAMILY = Family.all(TimedMovementComponent::class.java, RenderComponent::class.java, CircleComponent::class.java).get()
 		val STRATEGIC_ICON_SIZE = 24f
 	}
 
 	private val circleMapper = ComponentMapper.getFor(CircleComponent::class.java)
-	private val lineMapper = ComponentMapper.getFor(LineComponent::class.java)
 	private val tintMapper = ComponentMapper.getFor(TintComponent::class.java)
-	private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
 	private val tagMapper = ComponentMapper.getFor(TagComponent::class.java)
 	private val textMapper = ComponentMapper.getFor(TextComponent::class.java)
 	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java)
 	private val moveToEntityMapper = ComponentMapper.getFor(MoveToEntityComponent::class.java)
 	private val moveToPositionMapper = ComponentMapper.getFor(MoveToPositionComponent::class.java)
 	private val strategicIconMapper = ComponentMapper.getFor(StrategicIconComponent::class.java)
-	private val velocityMapper = ComponentMapper.getFor(VelocityComponent::class.java)
-	private val timedMovementMapper = ComponentMapper.getFor(TimedMovementComponent::class.java)
+	private val movementMapper = ComponentMapper.getFor(TimedMovementComponent::class.java)
+	private val thrustMapper = ComponentMapper.getFor(ThrustComponent::class.java)
 
 	private val shapeRenderer = GameServices[ShapeRenderer::class.java]
 	private val spriteBatch = GameServices[SpriteBatch::class.java]
@@ -63,28 +60,24 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 	fun drawEntities(entities: Iterable<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
-		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+
 		for (entity in entities) {
-			val position = positionMapper.get(entity)
-			val tintComponent = if (tintMapper.has(entity)) tintMapper.get(entity) else null
-			val x = (position.getXinKM() - cameraOffset.x).toFloat()
-			val y = (position.getYinKM() - cameraOffset.y).toFloat()
 
-			val color = Color(tintComponent?.color ?: Color.WHITE)
-			shapeRenderer.color = color
+			if (!strategicIconMapper.has(entity) || !inStrategicView(entity, zoom)) {
 
-			if (circleMapper.has(entity)) {
+				val movement = movementMapper.get(entity).get(galaxy.time).value
+				val tintComponent = if (tintMapper.has(entity)) tintMapper.get(entity) else null
+				val x = (movement.getXinKM() - cameraOffset.x).toFloat()
+				val y = (movement.getYinKM() - cameraOffset.y).toFloat()
+
+				val color = Color(tintComponent?.color ?: Color.WHITE)
+				shapeRenderer.color = color
 
 				val circle = circleMapper.get(entity)
 				shapeRenderer.circle(x, y, circle.radius, getCircleSegments(circle.radius, zoom))
-
-			} else if (lineMapper.has(entity)) {
-
-				val line = lineMapper.get(entity)
-				shapeRenderer.line(x, y, x + line.x, y + line.y)
 			}
 		}
 
@@ -93,17 +86,19 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 	fun drawEntityCenters(entities: Iterable<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
+		val zoom = (viewport.camera as OrthographicCamera).zoom
+
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color.PINK
 
-		val zoom = (viewport.camera as OrthographicCamera).zoom
-
 		for (entity in entities) {
-			val position = positionMapper.get(entity)
-			val x = (position.getXinKM() - cameraOffset.x).toFloat()
-			val y = (position.getYinKM() - cameraOffset.y).toFloat()
 
-			if (circleMapper.has(entity)) {
+			if (!strategicIconMapper.has(entity) || !inStrategicView(entity, zoom)) {
+
+				val movement = movementMapper.get(entity).get(galaxy.time).value
+				val x = (movement.getXinKM() - cameraOffset.x).toFloat()
+				val y = (movement.getYinKM() - cameraOffset.y).toFloat()
+
 				val circle = circleMapper.get(entity)
 				shapeRenderer.circle(x, y, circle.radius * 0.01f, getCircleSegments(circle.radius * 0.01f, zoom))
 			}
@@ -125,41 +120,38 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 		spriteBatch.begin()
 
 		for (entity in entities) {
-			if (strategicIconMapper.has(entity) && circleMapper.has(entity)) {
 
-				if (inStrategicView(entity, zoom)) {
+			if (strategicIconMapper.has(entity) && inStrategicView(entity, zoom)) {
 
-					val position = positionMapper.get(entity)
-					val tintComponent = if (tintMapper.has(entity)) tintMapper.get(entity) else null
-					var x = (position.getXinKM() - cameraOffset.x).toFloat()
-					var y = (position.getYinKM() - cameraOffset.y).toFloat()
-					val texture = strategicIconMapper.get(entity).texture
+				val movement = movementMapper.get(entity).get(galaxy.time).value
+				val tintComponent = if (tintMapper.has(entity)) tintMapper.get(entity) else null
+				var x = (movement.getXinKM() - cameraOffset.x).toFloat()
+				var y = (movement.getYinKM() - cameraOffset.y).toFloat()
+				val texture = strategicIconMapper.get(entity).texture
 
-					val color = Color(tintComponent?.color ?: Color.WHITE)
+				val color = Color(tintComponent?.color ?: Color.WHITE)
 
-					// https://github.com/libgdx/libgdx/wiki/Spritebatch%2C-Textureregions%2C-and-Sprites
-					spriteBatch.setColor(color.r, color.g, color.b, color.a);
+				// https://github.com/libgdx/libgdx/wiki/Spritebatch%2C-Textureregions%2C-and-Sprites
+				spriteBatch.setColor(color.r, color.g, color.b, color.a);
 
-					val width = zoom * STRATEGIC_ICON_SIZE
-					val height = zoom * STRATEGIC_ICON_SIZE
-					x = x - width / 2
-					y = y - height / 2
+				val width = zoom * STRATEGIC_ICON_SIZE
+				val height = zoom * STRATEGIC_ICON_SIZE
+				x = x - width / 2
+				y = y - height / 2
 
-					if (velocityMapper.has(entity)) {
+				if (thrustMapper.has(entity)) {
 
-						val thrustAngle = velocityMapper.get(entity).thrustAngle
+					val thrustAngle = thrustMapper.get(entity).thrustAngle
 
-						val originX = width / 2
-						val originY = height / 2
-						val scale = 1f
+					val originX = width / 2
+					val originY = height / 2
+					val scale = 1f
 
-						spriteBatch.draw(texture, x, y, originX, originY, width, height, scale, scale, thrustAngle)
+					spriteBatch.draw(texture, x, y, originX, originY, width, height, scale, scale, thrustAngle)
 
-					} else {
+				} else {
 
-						spriteBatch.draw(texture, x, y, width, height)
-					}
-
+					spriteBatch.draw(texture, x, y, width, height)
 				}
 			}
 		}
@@ -169,22 +161,25 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 	fun drawSelections(entities: Iterable<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
+		val zoom = (viewport.camera as OrthographicCamera).zoom
+
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color.RED
 
-		val zoom = (viewport.camera as OrthographicCamera).zoom
-
 		for (entity in entities) {
-			val position = positionMapper.get(entity)
-			val x = (position.getXinKM() - cameraOffset.x).toFloat()
-			val y = (position.getYinKM() - cameraOffset.y).toFloat()
+
+			val movement = movementMapper.get(entity).get(galaxy.time).value
+			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
+			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
 
 			if (strategicIconMapper.has(entity) && inStrategicView(entity, zoom)) {
+
 				val radius = zoom * STRATEGIC_ICON_SIZE / 2 + 3 * zoom
 				val segments = getCircleSegments(radius, zoom)
 				shapeRenderer.circle(x, y, radius, segments)
 
-			} else if (circleMapper.has(entity)) {
+			} else {
+
 				val circle = circleMapper.get(entity)
 				val radius = circle.radius + 3 * zoom
 				val segments = getCircleSegments(radius, zoom)
@@ -197,71 +192,49 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 	fun drawTimedMovement(entities: Iterable<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
-		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-
 		val zoom = (viewport.camera as OrthographicCamera).zoom
+
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 
 		for (entity in entities) {
 
-			if (timedMovementMapper.has(entity)) {
+			if (movementMapper.has(entity)) {
 
-				val movement = timedMovementMapper.get(entity)
-				var movementValues = movement.get(galaxy.time)
+				val strategic = strategicIconMapper.has(entity) && inStrategicView(entity, zoom)
+				val movement = movementMapper.get(entity)
 
-				var x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
-				var y = (movementValues.getYinKM() - cameraOffset.y).toFloat()
+				if (movement.previous.time != galaxy.time && movement.next != null) {
 
-				shapeRenderer.color = Color.PINK
+					val movementValues = movement.previous.value
+					val x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
+					val y = (movementValues.getYinKM() - cameraOffset.y).toFloat()
 
-				if (strategicIconMapper.has(entity) && inStrategicView(entity, zoom)) {
-					val radius = zoom * STRATEGIC_ICON_SIZE / 2 + 2 * zoom
-					val segments = getCircleSegments(radius, zoom)
-					shapeRenderer.circle(x, y, radius, segments)
+					val nextMovementValues = movement.next!!.value
+					val x2 = (nextMovementValues.getXinKM() - cameraOffset.x).toFloat()
+					val y2 = (nextMovementValues.getYinKM() - cameraOffset.y).toFloat()
 
-				} else if (circleMapper.has(entity)) {
-					val circle = circleMapper.get(entity)
-					val radius = circle.radius + 3 * zoom
-					val segments = getCircleSegments(radius, zoom)
-					shapeRenderer.circle(x, y, radius, segments)
-				}
+					if (strategic) {
 
-				if (movement.previous.time != galaxy.time) {
-					movementValues = movement.previous.value
-					x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
-					y = (movementValues.getYinKM() - cameraOffset.y).toFloat()
-
-					shapeRenderer.color = Color.GREEN
-
-					if (strategicIconMapper.has(entity) && inStrategicView(entity, zoom)) {
 						val radius = zoom * STRATEGIC_ICON_SIZE / 2 + 4 * zoom
 						val segments = getCircleSegments(radius, zoom)
+
+						shapeRenderer.color = Color.GREEN
 						shapeRenderer.circle(x, y, radius, segments)
 
-					} else if (circleMapper.has(entity)) {
+						shapeRenderer.color = Color.PINK
+						shapeRenderer.circle(x2, y2, radius, segments)
+
+					} else {
+
 						val circle = circleMapper.get(entity)
 						val radius = circle.radius + 3 * zoom
 						val segments = getCircleSegments(radius, zoom)
-						shapeRenderer.circle(x, y, radius, segments)
-					}
-				}
 
-				if (movement.next != null) {
-					movementValues = movement.next!!.value
-					x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
-					y = (movementValues.getYinKM() - cameraOffset.y).toFloat()
-
-					shapeRenderer.color = Color.RED
-
-					if (strategicIconMapper.has(entity) && inStrategicView(entity, zoom)) {
-						val radius = zoom * STRATEGIC_ICON_SIZE / 2 + 5 * zoom
-						val segments = getCircleSegments(radius, zoom)
+						shapeRenderer.color = Color.GREEN
 						shapeRenderer.circle(x, y, radius, segments)
 
-					} else if (circleMapper.has(entity)) {
-						val circle = circleMapper.get(entity)
-						val radius = circle.radius + 3 * zoom
-						val segments = getCircleSegments(radius, zoom)
-						shapeRenderer.circle(x, y, radius, segments)
+						shapeRenderer.color = Color.PINK
+						shapeRenderer.circle(x2, y2, radius, segments)
 					}
 				}
 			}
@@ -276,18 +249,20 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 		shapeRenderer.color = Color(0.8f, 0.8f, 0.8f, 0.5f)
 
 		for (entity in entities) {
-			val position = positionMapper.get(entity)
-			val x = (position.getXinKM() - cameraOffset.x).toFloat()
-			val y = (position.getYinKM() - cameraOffset.y).toFloat()
+			val movement = movementMapper.get(entity).get(galaxy.time).value
+			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
+			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
 
 			if (moveToEntityMapper.has(entity)) {
+
 				val targetEntity = moveToEntityMapper.get(entity).target
-				val targetPosition = positionMapper.get(targetEntity)
-				val x2 = (targetPosition.getXinKM() - cameraOffset.x).toFloat()
-				val y2 = (targetPosition.getYinKM() - cameraOffset.y).toFloat()
+				val targetMovement = movementMapper.get(targetEntity).get(galaxy.time).value
+				val x2 = (targetMovement.getXinKM() - cameraOffset.x).toFloat()
+				val y2 = (targetMovement.getYinKM() - cameraOffset.y).toFloat()
 				shapeRenderer.line(x, y, x2, y2)
 
 			} else if (moveToPositionMapper.has(entity)) {
+
 				val targetPosition = moveToPositionMapper.get(entity).target
 				val x2 = (getXinKM(targetPosition) - cameraOffset.x).toFloat()
 				val y2 = (getYinKM(targetPosition) - cameraOffset.y).toFloat()
@@ -328,7 +303,7 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 		val screenPosition = Vector3()
 
 		entities.filter { nameMapper.has(it) }.forEach {
-			val position = positionMapper.get(it)
+			val movement = movementMapper.get(it).get(galaxy.time).value
 			val name = nameMapper.get(it).name!!
 
 			var radius = 0f
@@ -341,15 +316,10 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 				val circleComponent = circleMapper.get(it)
 				radius = circleComponent.radius
-
-			} else if (lineMapper.has(it)) {
-
-				val lineComponent = lineMapper.get(it)
-				radius = lineComponent.y
 			}
 
-			val x = (position.getXinKM() - cameraOffset.x).toFloat()
-			val y = (position.getYinKM() - cameraOffset.y).toFloat()
+			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
+			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
 
 			screenPosition.set(x, y - radius * 1.2f, 0f)
 			viewport.camera.project(screenPosition)
@@ -357,9 +327,9 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 			font.draw(spriteBatch, name, screenPosition.x - name.length * font.spaceWidth * .5f, screenPosition.y - 0.5f * font.lineHeight)
 		}
 
-		entities.filter { timedMovementMapper.has(it) }.forEach {
+		entities.filter { movementMapper.has(it) }.forEach {
 
-			val movement = timedMovementMapper.get(it)
+			val movement = movementMapper.get(it)
 
 			var radius = 0f
 
@@ -371,39 +341,35 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 				val circleComponent = circleMapper.get(it)
 				radius = circleComponent.radius
-
-			} else if (lineMapper.has(it)) {
-
-				val lineComponent = lineMapper.get(it)
-				radius = lineComponent.y
 			}
 
-			if (movement.previous.time != galaxy.time) {
-				
-				val text = movement.previous.time.toString()
-				val movementValues = movement.previous.value
-				val x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
-				val y = (movementValues.getYinKM() - cameraOffset.y).toFloat()
+			if (movement.next != null && movement.previous.time != galaxy.time) {
 
-				screenPosition.set(x, y - radius * 1.2f, 0f)
-				viewport.camera.project(screenPosition)
+				run {
+					val text = "${(movement.previous.time / (24L * 60L * 60L)).toInt()} ${PlanetarySystemScreen.secondsToString(movement.previous.time)}"
+					val movementValues = movement.previous.value
+					val x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
+					val y = (movementValues.getYinKM() - cameraOffset.y).toFloat()
 
-				font.color = Color.GREEN
-				font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceWidth * .5f, screenPosition.y - 1.5f * font.lineHeight)
-			}
+					screenPosition.set(x, y - radius * 1.2f, 0f)
+					viewport.camera.project(screenPosition)
 
-			if (movement.next != null) {
-				
-				val text = movement.next!!.time.toString()
-				val movementValues = movement.next!!.value
-				val x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
-				val y = (movementValues.getYinKM() - cameraOffset.y).toFloat()
+					font.color = Color.GREEN
+					font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceWidth * .5f, screenPosition.y - 1.5f * font.lineHeight)
+				}
 
-				screenPosition.set(x, y - radius * 1.2f, 0f)
-				viewport.camera.project(screenPosition)
+				run {
+					val text = "${(movement.next!!.time / (24L * 60L * 60L)).toInt()} ${PlanetarySystemScreen.secondsToString(movement.next!!.time)}"
+					val movementValues = movement.next!!.value
+					val x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
+					val y = (movementValues.getYinKM() - cameraOffset.y).toFloat()
 
-				font.color = Color.RED
-				font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceWidth * .5f, screenPosition.y - 1.5f * font.lineHeight)
+					screenPosition.set(x, y - radius * 1.2f, 0f)
+					viewport.camera.project(screenPosition)
+
+					font.color = Color.RED
+					font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceWidth * .5f, screenPosition.y - 1.5f * font.lineHeight)
+				}
 			}
 		}
 

@@ -16,7 +16,6 @@ import se.exuvo.aurora.planetarysystems.components.MoveToEntityComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.OrbitComponent
 import se.exuvo.aurora.planetarysystems.components.PlanetarySystemComponent
-import se.exuvo.aurora.planetarysystems.components.PositionComponent
 import se.exuvo.aurora.planetarysystems.components.RenderComponent
 import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
 import se.exuvo.aurora.planetarysystems.components.StrategicIconComponent
@@ -25,7 +24,6 @@ import se.exuvo.aurora.planetarysystems.components.TagComponent
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.TintComponent
-import se.exuvo.aurora.planetarysystems.components.VelocityComponent
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.planetarysystems.systems.MovementSystem
 import se.exuvo.aurora.planetarysystems.systems.OrbitSystem
@@ -66,7 +64,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		engine.addSystem(RenderSystem())
 
 		val entity1 = Entity()
-		entity1.add(PositionComponent().apply { position.set(0, 0) })
+		entity1.add(TimedMovementComponent().apply { previous.value.position.set(0, 0) })
 		entity1.add(RenderComponent())
 		entity1.add(CircleComponent().apply { radius = 695700f })
 		entity1.add(MassComponent().apply { mass = 1.988e30 })
@@ -79,7 +77,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		engine.addEntity(entity1)
 
 		val entity2 = Entity()
-		entity2.add(PositionComponent())
+		entity2.add(TimedMovementComponent())
 		entity2.add(RenderComponent())
 		entity2.add(CircleComponent().apply { radius = 6371f })
 		entity2.add(NameComponent().apply { name = "Earth" })
@@ -91,7 +89,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		engine.addEntity(entity2)
 
 		val entity3 = Entity()
-		entity3.add(PositionComponent())
+		entity3.add(TimedMovementComponent())
 		entity3.add(RenderComponent().apply { zOrder = 0.4f })
 		entity3.add(CircleComponent().apply { radius = 1737f })
 		entity3.add(NameComponent().apply { name = "Moon" })
@@ -102,18 +100,16 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		engine.addEntity(entity3)
 
 		val entity4 = Entity()
-		entity4.add(PositionComponent().apply { position.set((OrbitSystem.AU * 1000L * 1L).toLong(), 0).rotate(45f) })
+		entity4.add(TimedMovementComponent().apply { previous.value.position.set((OrbitSystem.AU * 1000L * 1L).toLong(), 0).rotate(45f) }) //; previous.value.velocity.set(-1000000f, 0f)
 		entity4.add(RenderComponent())
 		entity4.add(SolarIrradianceComponent())
 		entity4.add(CircleComponent().apply { radius = 10f })
 		entity4.add(NameComponent().apply { name = "Ship" })
 		entity4.add(MassComponent().apply { mass = 1000.0 })
 		entity4.add(ThrustComponent().apply { thrust = 10f * 9.82f * 1000f })
-		entity4.add(VelocityComponent().apply { velocity.set(-1000000f, 0f) })
-		entity4.add(MoveToEntityComponent(entity1, ApproachType.BRACHISTOCHRONE))
+//		entity4.add(MoveToEntityComponent(entity1, ApproachType.BRACHISTOCHRONE))
 		entity4.add(TintComponent(Color.RED))
 		entity4.add(StrategicIconComponent(Assets.textures.findRegion("strategic/ship")))
-		entity4.add(TimedMovementComponent(Vector2L(entity4.getComponent(PositionComponent::class.java).position), 0))
 
 		engine.addEntity(entity4)
 	}
