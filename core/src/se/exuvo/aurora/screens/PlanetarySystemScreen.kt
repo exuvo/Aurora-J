@@ -53,7 +53,6 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	private val galaxy by lazy { GameServices[Galaxy::class.java] }
 	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class.java] }
 	private val systemGroupSystem by lazy { system.engine.getSystem(GroupSystem::class.java) }
-	private val orbitSystem by lazy { system.engine.getSystem(OrbitSystem::class.java) }
 	private val renderSystem by lazy { system.engine.getSystem(RenderSystem::class.java) }
 
 	private val uiCamera = GameServices[GameScreenService::class.java].uiCamera
@@ -118,7 +117,6 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 		super.draw()
 
 		system.lock.read {
-			orbitSystem.render(viewport, cameraOffset)
 			renderSystem.render(viewport, cameraOffset)
 		}
 

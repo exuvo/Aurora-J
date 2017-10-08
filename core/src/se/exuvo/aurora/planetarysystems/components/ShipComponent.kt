@@ -16,6 +16,7 @@ class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : Compon
 	val partState = Array<Int>(shipClass.parts.size, { shipClass.parts[it].maxHealth })
 	var cargo: Map<Resource, ShipCargo> = emptyMap()
 	var partCargo: MutableList<Part> = ArrayList()
+	var mass: Long = 0
 
 	init {
 		var containerParts = shipClass[ContainerPart::class.java]
@@ -107,7 +108,7 @@ class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : Compon
 
 		if (shipCargo != null) {
 
-			val volumeToBeStored = part.size
+			val volumeToBeStored = part.getVolume()
 
 			if (shipCargo.usedCapacity + volumeToBeStored > shipCargo.maxCapacity) {
 				return false;
@@ -129,7 +130,7 @@ class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : Compon
 		}
 
 		val shipCargo = cargo[Resource.ITEMS]
-		shipCargo!!.usedCapacity -= part.size
+		shipCargo!!.usedCapacity -= part.getVolume()
 
 		return true
 	}

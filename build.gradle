@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.1.2-3'
+    ext.kotlin_version = '1.1.51'
 
     repositories {
         mavenLocal()
@@ -56,11 +56,11 @@ project(":core") {
         compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
         compile "com.badlogicgames.gdx:gdx:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
-        compile "com.badlogicgames.gdx:gdx-ai:1.8.0"
+        compile "com.badlogicgames.gdx:gdx-ai:1.8.1"
         compile "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
         compile "com.badlogicgames.box2dlights:box2dlights:1.4"
-        compile "com.badlogicgames.ashley:ashley:1.7.0"
+        compile "com.badlogicgames.ashley:ashley:1.7.3"
         compile "log4j:log4j:$log4jVersion"
         compile "com.martiansoftware:jsap:$jsapVersion"
         compile "com.esotericsoftware:kryo:4.0.0"

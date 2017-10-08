@@ -8,16 +8,16 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.utils.Pool.Poolable
 import org.apache.log4j.Logger
 import se.exuvo.aurora.Assets
-import se.exuvo.aurora.planetarysystems.components.ApproachType
 import se.exuvo.aurora.planetarysystems.components.CircleComponent
+import se.exuvo.aurora.planetarysystems.components.EmissionsComponent
 import se.exuvo.aurora.planetarysystems.components.GalacticPositionComponent
 import se.exuvo.aurora.planetarysystems.components.MassComponent
-import se.exuvo.aurora.planetarysystems.components.MoveToEntityComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.OrbitComponent
 import se.exuvo.aurora.planetarysystems.components.PlanetarySystemComponent
 import se.exuvo.aurora.planetarysystems.components.RenderComponent
 import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
+import se.exuvo.aurora.planetarysystems.components.Spectrum
 import se.exuvo.aurora.planetarysystems.components.StrategicIconComponent
 import se.exuvo.aurora.planetarysystems.components.SunComponent
 import se.exuvo.aurora.planetarysystems.components.TagComponent
@@ -28,6 +28,7 @@ import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.planetarysystems.systems.MovementSystem
 import se.exuvo.aurora.planetarysystems.systems.OrbitSystem
 import se.exuvo.aurora.planetarysystems.systems.RenderSystem
+import se.exuvo.aurora.planetarysystems.systems.SensorSystem
 import se.exuvo.aurora.planetarysystems.systems.ShipSystem
 import se.exuvo.aurora.planetarysystems.systems.SolarIrradianceSystem
 import se.exuvo.aurora.planetarysystems.systems.TagSystem
@@ -35,6 +36,8 @@ import se.exuvo.aurora.utils.DummyReentrantReadWriteLock
 import se.exuvo.aurora.utils.Vector2L
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
+import se.exuvo.aurora.planetarysystems.components.SensorsComponent
+import se.exuvo.aurora.galactic.Sensor
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : Entity(), EntityListener {
 
@@ -58,9 +61,10 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		engine.addSystem(TagSystem())
 		engine.addSystem(GroupSystem(DummyReentrantReadWriteLock.INSTANCE))
 		engine.addSystem(OrbitSystem())
+		engine.addSystem(MovementSystem())
 		engine.addSystem(SolarIrradianceSystem())
 		engine.addSystem(ShipSystem())
-		engine.addSystem(MovementSystem())
+		engine.addSystem(SensorSystem())
 		engine.addSystem(RenderSystem())
 
 		val entity1 = Entity()
@@ -96,6 +100,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		entity3.add(OrbitComponent().apply { parent = entity2; a_semiMajorAxis = (384400.0 / OrbitSystem.AU).toFloat(); e_eccentricity = 0.2f; M_meanAnomaly = 30f })
 		entity3.add(TintComponent(Color.GRAY))
 		entity3.add(StrategicIconComponent(Assets.textures.findRegion("strategic/moon")))
+		entity3.add(EmissionsComponent(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10)))
 
 		engine.addEntity(entity3)
 
@@ -109,6 +114,11 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		entity4.add(ThrustComponent().apply { thrust = 10f * 9.82f * 1000f })
 //		entity4.add(MoveToEntityComponent(entity1, ApproachType.BRACHISTOCHRONE))
 		entity4.add(TintComponent(Color.RED))
+		val sensor1 = Sensor(0, Spectrum.Electromagnetic, 1e-4, 5);
+		sensor1.name = "1e-4"
+		val sensor2 = Sensor(0, Spectrum.Thermal, 1e-10, 4);
+		sensor2.name = "1e-10"
+		entity4.add(SensorsComponent(listOf(sensor1, sensor2)))
 		entity4.add(StrategicIconComponent(Assets.textures.findRegion("strategic/ship")))
 
 		engine.addEntity(entity4)

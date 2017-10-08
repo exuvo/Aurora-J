@@ -21,7 +21,7 @@ class ShipSystem : IteratingSystem(FAMILY) {
 	private val shipMapper = ComponentMapper.getFor(ShipComponent::class.java)
 	private val thrustMapper = ComponentMapper.getFor(ThrustComponent::class.java)
 	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java)
-
+	
 	override fun processEntity(entity: Entity, deltaGameTime: Float) {
 
 		val shipComponent = shipMapper.get(entity)

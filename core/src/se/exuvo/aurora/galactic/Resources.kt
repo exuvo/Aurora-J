@@ -1,6 +1,6 @@
 package se.exuvo.aurora.galactic
 
-// Amounts should be stored in grams of mass
+// Amounts should be stored in m3
 // Density in kg per m3
 enum class Resource(val density: Int) {
 	// No storage requirements

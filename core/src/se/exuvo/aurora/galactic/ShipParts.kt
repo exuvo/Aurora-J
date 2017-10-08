@@ -1,12 +1,18 @@
 package se.exuvo.aurora.galactic
 
+import se.exuvo.aurora.planetarysystems.components.Spectrum
+
 abstract class Part {
 	var name: String = ""
 	var designDay: Int? = null
-	val cost: MutableMap<Resource, Int> = LinkedHashMap()
-	var size = 1 // In m3
+	val cost: MutableMap<Resource, Int> = LinkedHashMap() 
 	var maxHealth = 1
 	var crewRequirement = 1
+	
+	// In m3
+	fun getVolume() : Int {
+		return cost.values.sum()
+	}
 }
 
 abstract class ContainerPart(val capacity: Int, val cargoType: CargoType) : Part();
@@ -50,3 +56,5 @@ class ElectricalThruster(thrust: Float, powerConsumption: Int) : Thruster(thrust
 // Chemical: Hybrid, Bipropellant, Tripropellant. https://en.wikipedia.org/wiki/Rocket_engine#Chemically_powered
 // Nuclear https://en.wikipedia.org/wiki/Nuclear_pulse_propulsion
 class FueledThruster(thrust: Float, fuel: Resource, fuelConsumption: Int) : Thruster(thrust), FueledPart by FueledPartImpl(fuel, fuelConsumption)
+
+class Sensor(powerConsumption: Int = 0, val spectrum: Spectrum, val sensitivity: Double, val arcSegments: Int) : Part(), PoweredPart by PoweredPartImpl(powerConsumption)

@@ -20,7 +20,7 @@ class ShipClass {
 	}
 
 	fun getVolume(): Int {
-		return parts.sumBy { it.cost.values.sum() }
+		return parts.sumBy { it.getVolume() }
 	}
 
 	fun getSurfaceArea(): Int {
