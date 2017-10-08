@@ -313,7 +313,7 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 					val targetAngle = position.angleTo(targetPosition)
 
 					tempPosition.set(targetPosition).sub(position)
-					
+
 					// In km
 					val distance = tempPosition.len().div(1000)
 
@@ -321,13 +321,48 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 						val sensor = hit.sensor
 
+						if (shapeRenderer.getCurrentType() == ShapeRenderer.ShapeType.Line) {
+							when (sensor.spectrum) {
+
+								Spectrum.Thermal -> {
+									shapeRenderer.color = Color.CORAL
+								}
+
+								Spectrum.Electromagnetic -> {
+									shapeRenderer.color = Color.VIOLET
+								}
+
+								else -> {
+									shapeRenderer.color = Color.WHITE
+								}
+							}
+						} else {
+							when (sensor.spectrum) {
+
+								Spectrum.Thermal -> {
+									shapeRenderer.color = Color.CORAL.cpy()
+									shapeRenderer.color.a = 0.2f
+								}
+
+								Spectrum.Electromagnetic -> {
+									shapeRenderer.color = Color.VIOLET.cpy()
+									shapeRenderer.color.a = 0.3f
+								}
+
+								else -> {
+									shapeRenderer.color = Color.WHITE.cpy()
+									shapeRenderer.color.a = 0.2f
+								}
+							}
+						}
+
 						val arcWidth = 360.0 / sensor.arcSegments
-						val arcAngle = Math.floor(targetAngle / arcWidth) * arcWidth
+						val arcAngle = sensor.angleOffset + Math.floor((targetAngle - sensor.angleOffset) / arcWidth) * arcWidth
 
 						val minRadius = Math.floor(distance / sensor.distanceResolution) * sensor.distanceResolution
 						val maxRadius = minRadius + sensor.distanceResolution
 						val segments = Math.min(100, Math.max(3, getCircleSegments(maxRadius.toFloat(), zoom) / 4))
-						
+
 						shapeRenderer.scanArc(x, y, maxRadius, minRadius, arcAngle, arcWidth, segments)
 					}
 				}
@@ -336,22 +371,16 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 		// https://stackoverflow.com/questions/25347456/how-to-do-blending-in-libgdx
 		Gdx.gl.glEnable(GL30.GL_BLEND);
-		Gdx.gl.glBlendFunc(GL30.GL_SRC_ALPHA, GL30.GL_ZERO);
+		Gdx.gl.glBlendFunc(GL30.GL_SRC_ALPHA, GL30.GL_ONE_MINUS_SRC_ALPHA);
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-		shapeRenderer.color = Color.RED.cpy()
-		shapeRenderer.color.a = 0.3f
-
 		drawDetectionsInner()
-
 		shapeRenderer.end()
+
 		Gdx.gl.glDisable(GL30.GL_BLEND);
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-		shapeRenderer.color = Color.RED
-
 		drawDetectionsInner()
-
 		shapeRenderer.end()
 	}
 
@@ -400,7 +429,7 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 				var i = 0;
 				while (i < sensor.arcSegments) {
 
-					val arcAngle = i * arcWidth
+					val arcAngle = i * arcWidth + sensor.angleOffset
 
 					shapeRenderer.scanArc(x, y, maxRadius, minRadius, arcAngle, arcWidth, segments)
 

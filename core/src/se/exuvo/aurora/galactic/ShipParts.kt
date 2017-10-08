@@ -58,4 +58,4 @@ class ElectricalThruster(thrust: Float, powerConsumption: Int) : Thruster(thrust
 class FueledThruster(thrust: Float, fuel: Resource, fuelConsumption: Int) : Thruster(thrust), FueledPart by FueledPartImpl(fuel, fuelConsumption)
 
 // distanceResolution in km
-class Sensor(powerConsumption: Int = 0, val spectrum: Spectrum, val sensitivity: Double, val arcSegments: Int, val distanceResolution: Double) : Part(), PoweredPart by PoweredPartImpl(powerConsumption)
+class Sensor(powerConsumption: Int = 0, val spectrum: Spectrum, val sensitivity: Double, val arcSegments: Int, val distanceResolution: Double, val angleOffset: Int) : Part(), PoweredPart by PoweredPartImpl(powerConsumption)

@@ -114,9 +114,9 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		entity4.add(ThrustComponent().apply { thrust = 10f * 9.82f * 1000f })
 //		entity4.add(MoveToEntityComponent(entity1, ApproachType.BRACHISTOCHRONE))
 		entity4.add(TintComponent(Color.RED))
-		val sensor1 = Sensor(0, Spectrum.Electromagnetic, 3e-6, 16, OrbitSystem.AU * 0.4);
+		val sensor1 = Sensor(0, Spectrum.Electromagnetic, 1e-7, 14, OrbitSystem.AU * 0.3, 20);
 		sensor1.name = "1e-4"
-		val sensor2 = Sensor(0, Spectrum.Thermal, 1e-8, 8, OrbitSystem.AU * 1);
+		val sensor2 = Sensor(0, Spectrum.Thermal, 1e-8, 8, OrbitSystem.AU * 1, 0);
 		sensor2.name = "1e-10"
 		entity4.add(SensorsComponent(listOf(sensor1, sensor2)))
 		entity4.add(StrategicIconComponent(Assets.textures.findRegion("strategic/ship")))
