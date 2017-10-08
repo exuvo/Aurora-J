@@ -303,14 +303,14 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 				val position = movementValues.position
 				val detection = detectionMapper.get(it)
 
-				val x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
-				val y = (movementValues.getYinKM() - cameraOffset.y).toFloat()
+				val x = (movementValues.getXinKM() - cameraOffset.x).toDouble()
+				val y = (movementValues.getYinKM() - cameraOffset.y).toDouble()
 
 				for (entry in detection.detections.entries) {
 
 					val entity = entry.key
 					val targetPosition = movementMapper.get(entity).get(galaxy.time).value.position
-					val targetAngle = position.angleTo(targetPosition).toFloat()
+					val targetAngle = position.angleTo(targetPosition)
 
 					tempPosition.set(targetPosition).sub(position)
 					
@@ -321,14 +321,14 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 						val sensor = hit.sensor
 
-						val arcWidth = 360f / sensor.arcSegments
-						val arcAngle = MathUtils.floor(targetAngle / arcWidth) * arcWidth
+						val arcWidth = 360.0 / sensor.arcSegments
+						val arcAngle = Math.floor(targetAngle / arcWidth) * arcWidth
 
 						val minRadius = Math.floor(distance / sensor.distanceResolution) * sensor.distanceResolution
-						val maxRadius = (minRadius + sensor.distanceResolution).toFloat()
-						val segments = Math.min(100, Math.max(3, getCircleSegments(maxRadius, zoom) / 4))
+						val maxRadius = minRadius + sensor.distanceResolution
+						val segments = Math.min(100, Math.max(3, getCircleSegments(maxRadius.toFloat(), zoom) / 4))
 						
-						shapeRenderer.scanArc(x, y, maxRadius, minRadius.toFloat(), arcAngle, arcWidth, segments)
+						shapeRenderer.scanArc(x, y, maxRadius, minRadius, arcAngle, arcWidth, segments)
 					}
 				}
 			}
@@ -367,8 +367,8 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 			val entity = it
 
 			val movement = movementMapper.get(entity).get(galaxy.time).value
-			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
-			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
+			val x = (movement.getXinKM() - cameraOffset.x).toDouble()
+			val y = (movement.getYinKM() - cameraOffset.y).toDouble()
 
 			val sensors = sensorsMapper.get(it)
 
@@ -392,17 +392,17 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 					}
 				}
 
-				val arcWidth = 360f / sensor.arcSegments
+				val arcWidth = 360.0 / sensor.arcSegments
 				val minRadius = sensor.distanceResolution
-				val maxRadius = (minRadius + sensor.distanceResolution).toFloat()
-				val segments = Math.min(100, Math.max(3, getCircleSegments(maxRadius, zoom) / 4))
+				val maxRadius = minRadius + sensor.distanceResolution
+				val segments = Math.min(100, Math.max(3, getCircleSegments(maxRadius.toFloat(), zoom) / 4))
 
 				var i = 0;
 				while (i < sensor.arcSegments) {
 
 					val arcAngle = i * arcWidth
 
-					shapeRenderer.scanArc(x, y, maxRadius, minRadius.toFloat(), arcAngle, arcWidth, segments)
+					shapeRenderer.scanArc(x, y, maxRadius, minRadius, arcAngle, arcWidth, segments)
 
 					i++
 				}

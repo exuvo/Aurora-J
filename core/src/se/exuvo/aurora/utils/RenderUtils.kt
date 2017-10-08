@@ -4,26 +4,26 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType
 import com.badlogic.gdx.math.MathUtils
 
-fun ShapeRenderer.scanArc(x: Float, y: Float, radiusOuter: Float, radiusInner: Float, start: Float, degrees: Float, segments: Int) {
+fun ShapeRenderer.scanArc(x: Double, y: Double, radiusOuter: Double, radiusInner: Double, start: Double, degrees: Double, segments: Int) {
 
 	if (segments <= 0) {
 		throw IllegalArgumentException("segments must be > 0.")
 	}
 
-	val colorBits: Float = color.toFloatBits();
-	val theta: Float = (2 * MathUtils.PI * (degrees / 360.0f)) / segments;
-	val cos: Float = MathUtils.cos(theta);
-	val sin: Float = MathUtils.sin(theta);
-	var cx: Float = radiusOuter * MathUtils.cos(start * MathUtils.degreesToRadians);
-	var cy: Float = radiusOuter * MathUtils.sin(start * MathUtils.degreesToRadians);
-	var cx2: Float = radiusInner * MathUtils.cos(start * MathUtils.degreesToRadians);
-	var cy2: Float = radiusInner * MathUtils.sin(start * MathUtils.degreesToRadians);
+	val colorBits = color.toFloatBits();
+	val theta: Double = (2 * Math.PI * (degrees / 360.0)) / segments;
+	val cos: Double = Math.cos(theta);
+	val sin: Double = Math.sin(theta);
+	var cx: Double = radiusOuter * Math.cos(Math.toRadians(start));
+	var cy: Double = radiusOuter * Math.sin(Math.toRadians(start));
+	var cx2: Double = radiusInner * Math.cos(Math.toRadians(start));
+	var cy2: Double = radiusInner * Math.sin(Math.toRadians(start));
 
 	this.scanArcInner(x, y, cos, sin, cx, cy, cx2, cy2, segments)
 
-	val theta2: Float = 2 * MathUtils.PI * (degrees / 360.0f)
-	val cos2: Float = MathUtils.cos(theta2)
-	val sin2: Float = MathUtils.sin(theta2)
+	val theta2: Double = 2 * MathUtils.PI * (degrees / 360.0f)
+	val cos2: Double = Math.cos(theta2)
+	val sin2: Double = Math.sin(theta2)
 
 	val x1End = cos2 * cx - sin2 * cy
 	val y1End = sin2 * cx + cos2 * cy
@@ -33,15 +33,15 @@ fun ShapeRenderer.scanArc(x: Float, y: Float, radiusOuter: Float, radiusInner: F
 	if (this.getCurrentType() == ShapeType.Line) {
 
 		renderer.color(colorBits);
-		renderer.vertex(x + cx, y + cy, 0f);
+		renderer.vertex((x + cx).toFloat(), (y + cy).toFloat(), 0f);
 		renderer.color(colorBits);
-		renderer.vertex(x + cx2, y + cy2, 0f);
-		
+		renderer.vertex((x + cx2).toFloat(), (y + cy2).toFloat(), 0f);
+
 		renderer.color(colorBits);
-		renderer.vertex(x + x1End, y + y1End, 0f);
+		renderer.vertex((x + x1End).toFloat(), (y + y1End).toFloat(), 0f);
 		renderer.color(colorBits);
-		renderer.vertex(x + x2End, y + y2End, 0f);
- 
+		renderer.vertex((x + x2End).toFloat(), (y + y2End).toFloat(), 0f);
+
 		this.scanArcInner(x, y, cos, sin, cx2, cy2, cx2, cy2, segments)
 
 	} else {
@@ -50,13 +50,13 @@ fun ShapeRenderer.scanArc(x: Float, y: Float, radiusOuter: Float, radiusInner: F
 	}
 }
 
-fun ShapeRenderer.scanArcInner(x: Float, y: Float, cos: Float, sin: Float, cx1: Float, cy1: Float, cx2: Float, cy2: Float, segments: Int) {
+fun ShapeRenderer.scanArcInner(x: Double, y: Double, cos: Double, sin: Double, cx1: Double, cy1: Double, cx2: Double, cy2: Double, segments: Int) {
 
 	if (segments <= 0) {
 		throw IllegalArgumentException("segments must be > 0.")
 	}
 
-	val colorBits: Float = color.toFloatBits();
+	val colorBits = color.toFloatBits();
 	var cx = cx1
 	var cy = cy1
 
@@ -68,14 +68,14 @@ fun ShapeRenderer.scanArcInner(x: Float, y: Float, cos: Float, sin: Float, cx1: 
 		while (i++ < segments) {
 
 			renderer.color(colorBits);
-			renderer.vertex(x + cx, y + cy, 0f);
+			renderer.vertex((x + cx).toFloat(), (y + cy).toFloat(), 0f);
 
 			val temp = cx;
 			cx = cos * cx - sin * cy;
 			cy = sin * temp + cos * cy;
 
 			renderer.color(colorBits);
-			renderer.vertex(x + cx, y + cy, 0f);
+			renderer.vertex((x + cx).toFloat(), (y + cy).toFloat(), 0f);
 		}
 
 	} else {
@@ -86,16 +86,16 @@ fun ShapeRenderer.scanArcInner(x: Float, y: Float, cos: Float, sin: Float, cx1: 
 		while (i++ < segments) {
 
 			renderer.color(colorBits);
-			renderer.vertex(x + cx2, y + cy2, 0f);
+			renderer.vertex((x + cx2).toFloat(), (y + cy2).toFloat(), 0f);
 			renderer.color(colorBits);
-			renderer.vertex(x + cx, y + cy, 0f);
+			renderer.vertex((x + cx).toFloat(), (y + cy).toFloat(), 0f);
 
 			val temp = cx;
 			cx = cos * cx - sin * cy;
 			cy = sin * temp + cos * cy;
 
 			renderer.color(colorBits);
-			renderer.vertex(x + cx, y + cy, 0f);
+			renderer.vertex((x + cx).toFloat(), (y + cy).toFloat(), 0f);
 		}
 	}
 }
