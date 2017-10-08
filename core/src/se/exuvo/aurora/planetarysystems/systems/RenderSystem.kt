@@ -5,11 +5,12 @@ import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.Family
 import com.badlogic.ashley.systems.SortedIteratingSystem
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.GL30
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.viewport.Viewport
@@ -17,11 +18,13 @@ import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.planetarysystems.components.CircleComponent
 import se.exuvo.aurora.planetarysystems.components.DetectionComponent
+import se.exuvo.aurora.planetarysystems.components.DetectionHit
 import se.exuvo.aurora.planetarysystems.components.MoveToEntityComponent
 import se.exuvo.aurora.planetarysystems.components.MoveToPositionComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.RenderComponent
 import se.exuvo.aurora.planetarysystems.components.SensorsComponent
+import se.exuvo.aurora.planetarysystems.components.Spectrum
 import se.exuvo.aurora.planetarysystems.components.StrategicIconComponent
 import se.exuvo.aurora.planetarysystems.components.TagComponent
 import se.exuvo.aurora.planetarysystems.components.TextComponent
@@ -32,10 +35,8 @@ import se.exuvo.aurora.screens.GameScreenService
 import se.exuvo.aurora.screens.PlanetarySystemScreen
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
+import se.exuvo.aurora.utils.scanArc
 import java.util.Comparator
-import org.lwjgl.opengl.GL45
-import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.graphics.GL30
 
 class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 	companion object {
@@ -292,29 +293,118 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 	fun drawDetections(entities: Iterable<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val zoom = (viewport.camera as OrthographicCamera).zoom
+		val tempPosition = Vector2L()
+		val detectionEntitites = entities.filter { detectionMapper.has(it) }
+
+		fun drawDetectionsInner() {
+			detectionEntitites.forEach {
+
+				val movementValues = movementMapper.get(it).get(galaxy.time).value
+				val position = movementValues.position
+				val detection = detectionMapper.get(it)
+
+				val x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
+				val y = (movementValues.getYinKM() - cameraOffset.y).toFloat()
+
+				for (entry in detection.detections.entries) {
+
+					val entity = entry.key
+					val targetPosition = movementMapper.get(entity).get(galaxy.time).value.position
+					val targetAngle = position.angleTo(targetPosition).toFloat()
+
+					tempPosition.set(targetPosition).sub(position)
+					
+					// In km
+					val distance = tempPosition.len().div(1000)
+
+					for (hit: DetectionHit in entry.value) {
+
+						val sensor = hit.sensor
+
+						val arcWidth = 360f / sensor.arcSegments
+						val arcAngle = MathUtils.floor(targetAngle / arcWidth) * arcWidth
+
+						val minRadius = Math.floor(distance / sensor.distanceResolution) * sensor.distanceResolution
+						val maxRadius = (minRadius + sensor.distanceResolution).toFloat()
+						val segments = Math.min(100, Math.max(3, getCircleSegments(maxRadius, zoom) / 4))
+						
+						shapeRenderer.scanArc(x, y, maxRadius, minRadius.toFloat(), arcAngle, arcWidth, segments)
+					}
+				}
+			}
+		}
+
+		// https://stackoverflow.com/questions/25347456/how-to-do-blending-in-libgdx
+		Gdx.gl.glEnable(GL30.GL_BLEND);
+		Gdx.gl.glBlendFunc(GL30.GL_SRC_ALPHA, GL30.GL_ZERO);
+
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+		shapeRenderer.color = Color.RED.cpy()
+		shapeRenderer.color.a = 0.3f
+
+		drawDetectionsInner()
+
+		shapeRenderer.end()
+		Gdx.gl.glDisable(GL30.GL_BLEND);
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color.RED
 
-		entities.filter { detectionMapper.has(it) }.forEach {
+		drawDetectionsInner()
 
-			val detection = detectionMapper.get(it)
+		shapeRenderer.end()
+	}
 
-			for (entry in detection.detections.entries) {
+	fun drawSelectionDetectionZones(selectedEntities: Iterable<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
-				val entity = entry.key
-				val movementValues = movementMapper.get(entity).get(galaxy.time).value
+		val zoom = (viewport.camera as OrthographicCamera).zoom
+		val sensorEntitites = selectedEntities.filter { sensorsMapper.has(it) }
 
-				for (hit in entry.value) {
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 
-					val x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
-					val y = (movementValues.getYinKM() - cameraOffset.y).toFloat()
+		sensorEntitites.forEach {
 
+			val entity = it
 
-//					val circle = circleMapper.get(entity)
-//					val radius = circle.radius + 3 * zoom
-//					val segments = getCircleSegments(radius, zoom)
-//					shapeRenderer.circle(x, y, radius, segments)
+			val movement = movementMapper.get(entity).get(galaxy.time).value
+			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
+			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
+
+			val sensors = sensorsMapper.get(it)
+
+			for (sensor in sensors.sensors) {
+
+				when (sensor.spectrum) {
+
+					Spectrum.Thermal -> {
+						shapeRenderer.color = Color.CORAL.cpy()
+						shapeRenderer.color.a = 0.2f
+					}
+
+					Spectrum.Electromagnetic -> {
+						shapeRenderer.color = Color.VIOLET.cpy()
+						shapeRenderer.color.a = 0.3f
+					}
+
+					else -> {
+						shapeRenderer.color = Color.WHITE.cpy()
+						shapeRenderer.color.a = 0.2f
+					}
+				}
+
+				val arcWidth = 360f / sensor.arcSegments
+				val minRadius = sensor.distanceResolution
+				val maxRadius = (minRadius + sensor.distanceResolution).toFloat()
+				val segments = Math.min(100, Math.max(3, getCircleSegments(maxRadius, zoom) / 4))
+
+				var i = 0;
+				while (i < sensor.arcSegments) {
+
+					val arcAngle = i * arcWidth
+
+					shapeRenderer.scanArc(x, y, maxRadius, minRadius.toFloat(), arcAngle, arcWidth, segments)
+
+					i++
 				}
 			}
 		}
@@ -370,179 +460,6 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 		}
 	}
 
-	fun drawSelectionDetectionZones(selectedEntities: Iterable<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
-
-		val zoom = (viewport.camera as OrthographicCamera).zoom
-		val sensorEntitites = selectedEntities.filter { sensorsMapper.has(it) }
-
-		// https://stackoverflow.com/questions/25347456/how-to-do-blending-in-libgdx
-		Gdx.gl.glEnable(GL30.GL_BLEND);
-		Gdx.gl.glBlendFunc(GL30.GL_SRC_ALPHA, GL30.GL_ZERO);
-
-		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-		shapeRenderer.color = Color.RED
-		shapeRenderer.color.a = 0.3f
-
-		sensorEntitites.forEach {
-
-			val entity = it
-
-			val movement = movementMapper.get(entity).get(galaxy.time).value
-			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
-			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
-
-			val circle = circleMapper.get(entity)
-			val radius = 100 * (circle.radius + 3 * zoom)
-			val segments = Math.max(3, getCircleSegments(radius, zoom) / 4)
-
-			shapeRenderer.scanArc(x, y, radius, radius / 2, 0f, 30f, segments)
-
-			val sensors = sensorsMapper.get(it)
-
-			for (sensor in sensors.sensors) {
-
-				var i = 0;
-
-				while (i < sensor.arcSegments) {
-
-					i++
-				}
-			}
-		}
-
-		shapeRenderer.end()
-		Gdx.gl.glDisable(GL30.GL_BLEND);
-
-		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-		shapeRenderer.color = Color.RED
-
-		sensorEntitites.forEach {
-
-			val entity = it
-
-			val movement = movementMapper.get(entity).get(galaxy.time).value
-			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
-			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
-
-			val circle = circleMapper.get(entity)
-			val radius = 100 * (circle.radius + 3 * zoom)
-			val segments = Math.max(3, getCircleSegments(radius, zoom) / 4)
-
-			shapeRenderer.scanArc(x, y, radius, radius / 2, 0f, 30f, segments)
-
-			val sensors = sensorsMapper.get(it)
-
-			for (sensor in sensors.sensors) {
-
-				var i = 0;
-
-				while (i < sensor.arcSegments) {
-
-					i++
-				}
-			}
-		}
-
-		shapeRenderer.end()
-	}
-
-	fun ShapeRenderer.scanArc(x: Float, y: Float, radiusOuter: Float, radiusInner: Float, start: Float, degrees: Float, segments: Int) {
-
-		if (segments <= 0) {
-			throw IllegalArgumentException("segments must be > 0.")
-		}
-
-		val colorBits: Float = color.toFloatBits();
-		val theta: Float = (2 * MathUtils.PI * (degrees / 360.0f)) / segments;
-		val cos: Float = MathUtils.cos(theta);
-		val sin: Float = MathUtils.sin(theta);
-		var cx: Float = radiusOuter * MathUtils.cos(start * MathUtils.degreesToRadians);
-		var cy: Float = radiusOuter * MathUtils.sin(start * MathUtils.degreesToRadians);
-		var cx2: Float = radiusInner * MathUtils.cos(start * MathUtils.degreesToRadians);
-		var cy2: Float = radiusInner * MathUtils.sin(start * MathUtils.degreesToRadians);
-
-		this.scanArcInner(x, y, cos, sin, cx, cy, cx2, cy2, segments)
-
-		val theta2: Float = 2 * MathUtils.PI * (degrees / 360.0f);
-		val cos2: Float = MathUtils.cos(theta2);
-		val sin2: Float = MathUtils.sin(theta2);
-
-		val x1End = cos2 * cx - sin2 * cy
-		val y1End = sin2 * cx + cos2 * cy
-		val x2End = cos2 * cx2 - sin2 * cy2
-		val y2End = sin2 * cx2 + cos2 * cy2
-
-		if (this.getCurrentType() == ShapeType.Line) {
-
-			renderer.color(colorBits);
-			renderer.vertex(x + x2End, y + y2End, 0f);
-
-			this.scanArcInner(x, y, cos, sin, cx2, cy2, cx2, cy2, segments)
-
-		} else {
-
-			this.scanArcInner(x, y, cos, sin, cx2, cy2, x1End, y1End, segments)
-		}
-	}
-
-	fun ShapeRenderer.scanArcInner(x: Float, y: Float, cos: Float, sin: Float, cx1: Float, cy1: Float, cx2: Float, cy2: Float, segments: Int) {
-
-		if (segments <= 0) {
-			throw IllegalArgumentException("segments must be > 0.")
-		}
-
-		val colorBits: Float = color.toFloatBits();
-		var cx = cx1
-		var cy = cy1
-
-		if (this.getCurrentType() == ShapeType.Line) {
-
-//			this.check(ShapeType.Line, ShapeType.Filled, segments * 2 + 2);
-
-			renderer.color(colorBits);
-			renderer.vertex(x + cx2, y + cy2, 0f);
-			renderer.color(colorBits);
-			renderer.vertex(x + cx, y + cy, 0f);
-
-			var i = 0
-			while (i++ < segments) {
-
-				renderer.color(colorBits);
-				renderer.vertex(x + cx, y + cy, 0f);
-
-				val temp = cx;
-				cx = cos * cx - sin * cy;
-				cy = sin * temp + cos * cy;
-
-				renderer.color(colorBits);
-				renderer.vertex(x + cx, y + cy, 0f);
-			}
-
-			renderer.color(colorBits);
-			renderer.vertex(x + cx, y + cy, 0f);
-
-		} else {
-
-//			this.check(ShapeType.Line, ShapeType.Filled, segments * 3 + 3);
-
-			var i = 0
-			while (i++ < segments) {
-
-				renderer.color(colorBits);
-				renderer.vertex(x + cx2, y + cy2, 0f);
-				renderer.color(colorBits);
-				renderer.vertex(x + cx, y + cy, 0f);
-
-				val temp = cx;
-				cx = cos * cx - sin * cy;
-				cy = sin * temp + cos * cy;
-
-				renderer.color(colorBits);
-				renderer.vertex(x + cx, y + cy, 0f);
-			}
-		}
-	}
-
 	fun render(viewport: Viewport, cameraOffset: Vector2L) {
 
 		val sortedEntities = getEntities()
@@ -552,13 +469,17 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 		viewport.apply()
 		shapeRenderer.projectionMatrix = viewport.camera.combined
 
-		drawSelectionDetectionZones(sortedAndSelectedEntities, viewport, cameraOffset)
+		drawDetections(sortedEntities, viewport, cameraOffset)
+
+		if (Gdx.input.isKeyPressed(Input.Keys.C)) {
+			drawSelectionDetectionZones(sortedAndSelectedEntities, viewport, cameraOffset)
+		}
+
 		orbitSystem.render(viewport, cameraOffset)
 
 		drawEntities(sortedEntities, viewport, cameraOffset)
 		drawEntityCenters(sortedEntities, viewport, cameraOffset)
 		drawTimedMovement(sortedEntities, viewport, cameraOffset)
-		drawDetections(sortedEntities, viewport, cameraOffset)
 
 		drawSelections(sortedAndSelectedEntities, viewport, cameraOffset)
 		drawSelectionMoveTargets(sortedAndSelectedEntities, cameraOffset)
