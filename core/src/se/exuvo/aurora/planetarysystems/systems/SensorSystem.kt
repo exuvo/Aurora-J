@@ -8,15 +8,16 @@ import org.apache.log4j.Logger
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.planetarysystems.components.DetectionComponent
 import se.exuvo.aurora.planetarysystems.components.EmissionsComponent
-import se.exuvo.aurora.planetarysystems.components.SensorsComponent
+import se.exuvo.aurora.planetarysystems.components.PassiveSensorsComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.planetarysystems.components.DetectionHit
+import se.exuvo.aurora.galactic.PassiveSensor
 
 class SensorSystem : IteratingSystem(FAMILY) {
 	companion object {
-		val FAMILY = Family.all(SensorsComponent::class.java).get()
+		val FAMILY = Family.all(PassiveSensorsComponent::class.java).get()
 		val EMISSION_FAMILY = Family.all(EmissionsComponent::class.java).get()
 	}
 
@@ -24,7 +25,7 @@ class SensorSystem : IteratingSystem(FAMILY) {
 	private val galaxy = GameServices[Galaxy::class.java]
 
 	private val movementMapper = ComponentMapper.getFor(TimedMovementComponent::class.java)
-	private val sensorsMapper = ComponentMapper.getFor(SensorsComponent::class.java)
+	private val sensorsMapper = ComponentMapper.getFor(PassiveSensorsComponent::class.java)
 	private val emissionsMapper = ComponentMapper.getFor(EmissionsComponent::class.java)
 	private val detectionMapper = ComponentMapper.getFor(DetectionComponent::class.java)
 
@@ -65,33 +66,57 @@ class SensorSystem : IteratingSystem(FAMILY) {
 
 		val sensors = sensorsMapper.get(entity).sensors
 
-		val detections = HashMap<Entity, MutableList<DetectionHit>>()
+		val detections = HashMap<PassiveSensor, HashMap<Int, HashMap<Int, DetectionHit>>>()
 
 		for (sensor in sensors) {
+			
+			val arcWidth = 360.0 / sensor.arcSegments
+			
 			for (emitter in emitters) {
 
+				val emitterPosition = emitter.position
 				val emission = emitter.emissions.emissions[sensor.spectrum];
 
 				if (emission != null) {
 
-					val distance: Double = sensorPosition.dst(emitter.position) / 1000
+					val distanceInKM: Double = sensorPosition.dst(emitterPosition) / 1000
 
 					// https://en.wikipedia.org/wiki/Inverse-square_law
-					val signalStrength = emission / (4 * Math.PI * Math.pow(distance / 2, 2.0))
+					val signalStrength = emission / (4 * Math.PI * Math.pow(distanceInKM / 2, 2.0))
 
-//					println("${sensor.spectrum} signalStrength $signalStrength")
-					
 					if (signalStrength >= sensor.sensitivity) {
+						
+						val targetAngle = sensorPosition.angleTo(emitterPosition)
+						
+						val arcAngleStep = Math.floor((targetAngle - sensor.angleOffset) / arcWidth).toInt()
+						val distanceStep = Math.floor(distanceInKM / sensor.distanceResolution).toInt()
 
-						var detectionHits: MutableList<DetectionHit>? = detections[emitter.entity]
+						var angleSteps: HashMap<Int, HashMap<Int, DetectionHit>>? = detections[sensor]
 
-						if (detectionHits == null) {
+						if (angleSteps == null) {
 							
-							detectionHits = ArrayList<DetectionHit>()
-							detections[emitter.entity] = detectionHits
+							angleSteps = HashMap<Int, HashMap<Int, DetectionHit>>()
+							detections[sensor] = angleSteps
+						}
+						
+						var distanceSteps: HashMap<Int, DetectionHit>? = angleSteps[arcAngleStep]
+
+						if (distanceSteps == null) {
+							
+							distanceSteps = HashMap<Int, DetectionHit>()
+							angleSteps[arcAngleStep] = distanceSteps
+						}
+						
+						var detectionHit: DetectionHit? = distanceSteps[distanceStep]
+
+						if (detectionHit == null) {
+							
+							detectionHit = DetectionHit(0.0, ArrayList<Entity>())
+							distanceSteps[distanceStep] = detectionHit
 						}
 
-						detectionHits.add(DetectionHit(sensor, signalStrength))
+						detectionHit.signalStrength += signalStrength
+						detectionHit.entities.add(emitter.entity)
 					}
 				}
 			}

@@ -36,8 +36,8 @@ import se.exuvo.aurora.utils.DummyReentrantReadWriteLock
 import se.exuvo.aurora.utils.Vector2L
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
-import se.exuvo.aurora.planetarysystems.components.SensorsComponent
-import se.exuvo.aurora.galactic.Sensor
+import se.exuvo.aurora.planetarysystems.components.PassiveSensorsComponent
+import se.exuvo.aurora.galactic.PassiveSensor
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : Entity(), EntityListener {
 
@@ -89,6 +89,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		entity2.add(OrbitComponent().apply { parent = entity1; a_semiMajorAxis = 1f; e_eccentricity = 0f; w_argumentOfPeriapsis = -45f })
 		entity2.add(TintComponent(Color.GREEN))
 		entity2.add(StrategicIconComponent(Assets.textures.findRegion("strategic/world")))
+		entity2.add(EmissionsComponent(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10)))
 
 		engine.addEntity(entity2)
 
@@ -100,7 +101,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		entity3.add(OrbitComponent().apply { parent = entity2; a_semiMajorAxis = (384400.0 / OrbitSystem.AU).toFloat(); e_eccentricity = 0.2f; M_meanAnomaly = 30f })
 		entity3.add(TintComponent(Color.GRAY))
 		entity3.add(StrategicIconComponent(Assets.textures.findRegion("strategic/moon")))
-		entity3.add(EmissionsComponent(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10)))
+		entity3.add(EmissionsComponent(mapOf(Spectrum.Electromagnetic to 5e9, Spectrum.Thermal to 5e9)))
 
 		engine.addEntity(entity3)
 
@@ -114,11 +115,11 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		entity4.add(ThrustComponent().apply { thrust = 10f * 9.82f * 1000f })
 //		entity4.add(MoveToEntityComponent(entity1, ApproachType.BRACHISTOCHRONE))
 		entity4.add(TintComponent(Color.RED))
-		val sensor1 = Sensor(0, Spectrum.Electromagnetic, 1e-7, 14, OrbitSystem.AU * 0.3, 20);
+		val sensor1 = PassiveSensor(0, Spectrum.Electromagnetic, 1e-7, 14, OrbitSystem.AU * 0.3, 20);
 		sensor1.name = "1e-4"
-		val sensor2 = Sensor(0, Spectrum.Thermal, 1e-8, 8, OrbitSystem.AU * 1, 0);
+		val sensor2 = PassiveSensor(0, Spectrum.Thermal, 1e-8, 8, OrbitSystem.AU * 1, 0);
 		sensor2.name = "1e-10"
-		entity4.add(SensorsComponent(listOf(sensor1, sensor2)))
+		entity4.add(PassiveSensorsComponent(listOf(sensor1, sensor2)))
 		entity4.add(StrategicIconComponent(Assets.textures.findRegion("strategic/ship")))
 
 		engine.addEntity(entity4)

@@ -4,7 +4,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType
 import com.badlogic.gdx.math.MathUtils
 
-fun ShapeRenderer.scanArc(x: Double, y: Double, radiusOuter: Double, radiusInner: Double, start: Double, degrees: Double, segments: Int) {
+fun ShapeRenderer.scanCircleSector(x: Double, y: Double, radiusOuter: Double, radiusInner: Double, start: Double, degrees: Double, segments: Int) {
 
 	if (segments <= 0) {
 		throw IllegalArgumentException("segments must be > 0.")
@@ -19,7 +19,7 @@ fun ShapeRenderer.scanArc(x: Double, y: Double, radiusOuter: Double, radiusInner
 	var cx2: Double = radiusInner * Math.cos(Math.toRadians(start));
 	var cy2: Double = radiusInner * Math.sin(Math.toRadians(start));
 
-	this.scanArcInner(x, y, cos, sin, cx, cy, cx2, cy2, segments)
+	this.scanCircleSectorInner(x, y, cos, sin, cx, cy, cx2, cy2, segments)
 
 	val theta2: Double = 2 * MathUtils.PI * (degrees / 360.0f)
 	val cos2: Double = Math.cos(theta2)
@@ -42,15 +42,15 @@ fun ShapeRenderer.scanArc(x: Double, y: Double, radiusOuter: Double, radiusInner
 		renderer.color(colorBits);
 		renderer.vertex((x + x2End).toFloat(), (y + y2End).toFloat(), 0f);
 
-		this.scanArcInner(x, y, cos, sin, cx2, cy2, cx2, cy2, segments)
+		this.scanCircleSectorInner(x, y, cos, sin, cx2, cy2, cx2, cy2, segments)
 
 	} else {
 
-		this.scanArcInner(x, y, cos, sin, cx2, cy2, x1End, y1End, segments)
+		this.scanCircleSectorInner(x, y, cos, sin, cx2, cy2, x1End, y1End, segments)
 	}
 }
 
-fun ShapeRenderer.scanArcInner(x: Double, y: Double, cos: Double, sin: Double, cx1: Double, cy1: Double, cx2: Double, cy2: Double, segments: Int) {
+fun ShapeRenderer.scanCircleSectorInner(x: Double, y: Double, cos: Double, sin: Double, cx1: Double, cy1: Double, cx2: Double, cy2: Double, segments: Int) {
 
 	if (segments <= 0) {
 		throw IllegalArgumentException("segments must be > 0.")

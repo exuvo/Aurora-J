@@ -1,7 +1,7 @@
 package se.exuvo.aurora.planetarysystems.components
 
 import com.badlogic.ashley.core.Component
-import se.exuvo.aurora.galactic.Sensor
+import se.exuvo.aurora.galactic.PassiveSensor
 import com.badlogic.ashley.core.Entity
 
 enum class Spectrum(val short: String) {
@@ -14,10 +14,11 @@ enum class Spectrum(val short: String) {
 	}
 }
 
-data class SensorsComponent(var sensors: List<Sensor>) : Component
+data class PassiveSensorsComponent(var sensors: List<PassiveSensor>) : Component
 
 data class EmissionsComponent(var emissions: Map<Spectrum, Double>) : Component
 
-data class DetectionComponent(var detections: Map<Entity, List<DetectionHit>>) : Component
+// Sensor, AngleStep, DistanceStep
+data class DetectionComponent(var detections: Map<PassiveSensor, Map<Int, Map<Int, DetectionHit>>>) : Component
 
-data class DetectionHit(val sensor: Sensor, val signalStrength: Double)
+data class DetectionHit(var signalStrength: Double, val entities: MutableList<Entity>)

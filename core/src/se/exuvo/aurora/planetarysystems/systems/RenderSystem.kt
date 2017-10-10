@@ -23,7 +23,7 @@ import se.exuvo.aurora.planetarysystems.components.MoveToEntityComponent
 import se.exuvo.aurora.planetarysystems.components.MoveToPositionComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.RenderComponent
-import se.exuvo.aurora.planetarysystems.components.SensorsComponent
+import se.exuvo.aurora.planetarysystems.components.PassiveSensorsComponent
 import se.exuvo.aurora.planetarysystems.components.Spectrum
 import se.exuvo.aurora.planetarysystems.components.StrategicIconComponent
 import se.exuvo.aurora.planetarysystems.components.TagComponent
@@ -35,7 +35,7 @@ import se.exuvo.aurora.screens.GameScreenService
 import se.exuvo.aurora.screens.PlanetarySystemScreen
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
-import se.exuvo.aurora.utils.scanArc
+import se.exuvo.aurora.utils.scanCircleSector
 import java.util.Comparator
 
 class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
@@ -55,7 +55,7 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 	private val movementMapper = ComponentMapper.getFor(TimedMovementComponent::class.java)
 	private val thrustMapper = ComponentMapper.getFor(ThrustComponent::class.java)
 	private val detectionMapper = ComponentMapper.getFor(DetectionComponent::class.java)
-	private val sensorsMapper = ComponentMapper.getFor(SensorsComponent::class.java)
+	private val sensorsMapper = ComponentMapper.getFor(PassiveSensorsComponent::class.java)
 
 	private val shapeRenderer = GameServices[ShapeRenderer::class.java]
 	private val spriteBatch = GameServices[SpriteBatch::class.java]
@@ -293,77 +293,79 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 	fun drawDetections(entities: Iterable<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val zoom = (viewport.camera as OrthographicCamera).zoom
-		val tempPosition = Vector2L()
 		val detectionEntitites = entities.filter { detectionMapper.has(it) }
+
+		//TODO if multiple detections with the same strength overlap (ie they see the same things), only draw overlap
 
 		fun drawDetectionsInner() {
 			detectionEntitites.forEach {
 
 				val movementValues = movementMapper.get(it).get(galaxy.time).value
-				val position = movementValues.position
-				val detection = detectionMapper.get(it)
-
 				val x = (movementValues.getXinKM() - cameraOffset.x).toDouble()
 				val y = (movementValues.getYinKM() - cameraOffset.y).toDouble()
 
-				for (entry in detection.detections.entries) {
+				val detection = detectionMapper.get(it)
 
-					val entity = entry.key
-					val targetPosition = movementMapper.get(entity).get(galaxy.time).value.position
-					val targetAngle = position.angleTo(targetPosition)
+				for (sensorEntry in detection.detections.entries) {
 
-					tempPosition.set(targetPosition).sub(position)
+					val sensor = sensorEntry.key
+					val arcWidth = 360.0 / sensor.arcSegments
 
-					// In km
-					val distance = tempPosition.len().div(1000)
+					if (shapeRenderer.getCurrentType() == ShapeRenderer.ShapeType.Line) {
 
-					for (hit: DetectionHit in entry.value) {
+						when (sensor.spectrum) {
 
-						val sensor = hit.sensor
-
-						if (shapeRenderer.getCurrentType() == ShapeRenderer.ShapeType.Line) {
-							when (sensor.spectrum) {
-
-								Spectrum.Thermal -> {
-									shapeRenderer.color = Color.CORAL
-								}
-
-								Spectrum.Electromagnetic -> {
-									shapeRenderer.color = Color.VIOLET
-								}
-
-								else -> {
-									shapeRenderer.color = Color.WHITE
-								}
+							Spectrum.Thermal -> {
+								shapeRenderer.color = Color.CORAL
 							}
-						} else {
-							when (sensor.spectrum) {
 
-								Spectrum.Thermal -> {
-									shapeRenderer.color = Color.CORAL.cpy()
-									shapeRenderer.color.a = 0.2f
-								}
+							Spectrum.Electromagnetic -> {
+								shapeRenderer.color = Color.VIOLET
+							}
 
-								Spectrum.Electromagnetic -> {
-									shapeRenderer.color = Color.VIOLET.cpy()
-									shapeRenderer.color.a = 0.3f
-								}
-
-								else -> {
-									shapeRenderer.color = Color.WHITE.cpy()
-									shapeRenderer.color.a = 0.2f
-								}
+							else -> {
+								shapeRenderer.color = Color.WHITE
 							}
 						}
 
-						val arcWidth = 360.0 / sensor.arcSegments
-						val arcAngle = sensor.angleOffset + Math.floor((targetAngle - sensor.angleOffset) / arcWidth) * arcWidth
+					} else {
 
-						val minRadius = Math.floor(distance / sensor.distanceResolution) * sensor.distanceResolution
-						val maxRadius = minRadius + sensor.distanceResolution
-						val segments = Math.min(100, Math.max(3, getCircleSegments(maxRadius.toFloat(), zoom) / 4))
+						when (sensor.spectrum) {
 
-						shapeRenderer.scanArc(x, y, maxRadius, minRadius, arcAngle, arcWidth, segments)
+							Spectrum.Thermal -> {
+								shapeRenderer.color = Color.CORAL.cpy()
+								shapeRenderer.color.a = 0.2f
+							}
+
+							Spectrum.Electromagnetic -> {
+								shapeRenderer.color = Color.VIOLET.cpy()
+								shapeRenderer.color.a = 0.3f
+							}
+
+							else -> {
+								shapeRenderer.color = Color.WHITE.cpy()
+								shapeRenderer.color.a = 0.2f
+							}
+						}
+					}
+
+					val angleSteps = sensorEntry.value
+
+					for (angleEntry in angleSteps.entries) {
+
+						val angleStep = angleEntry.key
+						val arcAngle = sensor.angleOffset + angleStep * arcWidth
+
+						for (distanceEntry in angleEntry.value) {
+
+							val distanceStep = distanceEntry.key
+
+							val minRadius = distanceStep * sensor.distanceResolution
+							val maxRadius = minRadius + sensor.distanceResolution
+							val segments = Math.min(100, Math.max(3, getCircleSegments(maxRadius.toFloat(), zoom) / 4))
+
+							shapeRenderer.scanCircleSector(x, y, maxRadius, minRadius, arcAngle, arcWidth, segments)
+						}
 					}
 				}
 			}
@@ -431,8 +433,7 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 					val arcAngle = i * arcWidth + sensor.angleOffset
 
-					shapeRenderer.scanArc(x, y, maxRadius, minRadius, arcAngle, arcWidth, segments)
-
+					shapeRenderer.scanCircleSector(x, y, maxRadius, minRadius, arcAngle, arcWidth, segments)
 					i++
 				}
 			}
@@ -451,40 +452,50 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 		selectedEntities.filter { detectionMapper.has(it) }.forEach {
 
+			var textRow = 0
+			
+			val movementValues = movementMapper.get(it).get(galaxy.time).value
+			val sensorX = (movementValues.getXinKM() - cameraOffset.x).toDouble()
+			val sensorY = (movementValues.getYinKM() - cameraOffset.y).toDouble()
+
 			val detection = detectionMapper.get(it)
 
-			for (entry in detection.detections.entries) {
+			for (sensorEntry in detection.detections.entries) {
 
-				val entity = entry.key
+				val sensor = sensorEntry.key
+				val arcWidth = 360.0 / sensor.arcSegments
 
-				val movement = movementMapper.get(entity)
-				var radius = 0f
+				val angleSteps = sensorEntry.value
 
-				if (inStrategicView(entity, zoom)) {
+				for (angleEntry in angleSteps.entries) {
 
-					radius = zoom * STRATEGIC_ICON_SIZE / 2
+					val angleStep = angleEntry.key
+					val angle = sensor.angleOffset + angleStep * arcWidth + 0.5 * arcWidth
 
-				} else if (circleMapper.has(entity)) {
+					for (distanceEntry in angleEntry.value) {
 
-					val circleComponent = circleMapper.get(entity)
-					radius = circleComponent.radius
+						val distanceStep = distanceEntry.key
+						val hit = distanceEntry.value
+
+						val minRadius = distanceStep * sensor.distanceResolution
+						val maxRadius = minRadius + sensor.distanceResolution
+						val radius = (minRadius + maxRadius) / 2
+
+						val text = "${sensor.spectrum} ${String.format("%.2e", hit.signalStrength)} - ${sensor.name}"
+						
+						val angleRad = Math.toRadians(angle)
+						val x = (sensorX + radius * Math.cos(angleRad)).toFloat()
+						val y = (sensorY + radius * Math.sin(angleRad)).toFloat()
+
+						screenPosition.set(x, y, 0f)
+						viewport.camera.project(screenPosition)
+
+						font.color = Color.GREEN
+						font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceWidth * .5f, screenPosition.y - textRow * font.lineHeight)
+					}
 				}
-
-				var offset = 1.5f;
-
-				for (hit in entry.value) {
-
-					val text = "${hit.sensor.spectrum} ${String.format("%.2e", hit.signalStrength)} - ${hit.sensor.name}"
-					val movementValues = movement.previous.value
-					val x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
-					val y = (movementValues.getYinKM() - cameraOffset.y).toFloat()
-
-					screenPosition.set(x, y - radius * 1.2f, 0f)
-					viewport.camera.project(screenPosition)
-
-					font.color = Color.GREEN
-					font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceWidth * .5f, screenPosition.y - offset++ * font.lineHeight)
-				}
+				
+				textRow++
 			}
 		}
 	}
