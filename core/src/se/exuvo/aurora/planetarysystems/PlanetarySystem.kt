@@ -28,7 +28,7 @@ import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.planetarysystems.systems.MovementSystem
 import se.exuvo.aurora.planetarysystems.systems.OrbitSystem
 import se.exuvo.aurora.planetarysystems.systems.RenderSystem
-import se.exuvo.aurora.planetarysystems.systems.SensorSystem
+import se.exuvo.aurora.planetarysystems.systems.PassiveSensorSystem
 import se.exuvo.aurora.planetarysystems.systems.ShipSystem
 import se.exuvo.aurora.planetarysystems.systems.SolarIrradianceSystem
 import se.exuvo.aurora.planetarysystems.systems.TagSystem
@@ -64,7 +64,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		engine.addSystem(MovementSystem())
 		engine.addSystem(SolarIrradianceSystem())
 		engine.addSystem(ShipSystem())
-		engine.addSystem(SensorSystem())
+		engine.addSystem(PassiveSensorSystem())
 		engine.addSystem(RenderSystem())
 
 		val entity1 = Entity()
@@ -121,6 +121,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		sensor2.name = "1e-10"
 		entity4.add(PassiveSensorsComponent(listOf(sensor1, sensor2)))
 		entity4.add(StrategicIconComponent(Assets.textures.findRegion("strategic/ship")))
+		entity4.add(EmissionsComponent(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10)))
 
 		engine.addEntity(entity4)
 	}

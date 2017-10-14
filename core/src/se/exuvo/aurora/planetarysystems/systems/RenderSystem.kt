@@ -499,45 +499,15 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 			}
 		}
 	}
+	
+	fun drawNames(entities: Iterable<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
-	fun render(viewport: Viewport, cameraOffset: Vector2L) {
-
-		val sortedEntities = getEntities()
-		val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED)
-		val sortedAndSelectedEntities = sortedEntities.filter { selectedEntities.contains(it) }
-
-		viewport.apply()
-		shapeRenderer.projectionMatrix = viewport.camera.combined
-
-		drawDetections(sortedEntities, viewport, cameraOffset)
-
-		if (Gdx.input.isKeyPressed(Input.Keys.C)) {
-			drawSelectionDetectionZones(sortedAndSelectedEntities, viewport, cameraOffset)
-		}
-
-		orbitSystem.render(viewport, cameraOffset)
-
-		drawEntities(sortedEntities, viewport, cameraOffset)
-		drawEntityCenters(sortedEntities, viewport, cameraOffset)
-		drawTimedMovement(sortedEntities, viewport, cameraOffset)
-
-		drawSelections(sortedAndSelectedEntities, viewport, cameraOffset)
-		drawSelectionMoveTargets(sortedAndSelectedEntities, cameraOffset)
-
-		spriteBatch.projectionMatrix = viewport.camera.combined
-
-		drawStrategicEntities(sortedEntities, viewport, cameraOffset)
-
-		spriteBatch.projectionMatrix = uiCamera.combined
-		spriteBatch.begin()
-
-		drawSelectionDetectionStrength(sortedAndSelectedEntities, viewport, cameraOffset)
-
-		val font = Assets.fontMap
-		font.color = Color.WHITE
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 		val screenPosition = Vector3()
 
+		val font = Assets.fontMap
+		font.color = Color.WHITE
+		
 		entities.filter { nameMapper.has(it) }.forEach {
 			val movement = movementMapper.get(it).get(galaxy.time).value
 			val name = nameMapper.get(it).name!!
@@ -562,6 +532,15 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 			font.draw(spriteBatch, name, screenPosition.x - name.length * font.spaceWidth * .5f, screenPosition.y - 0.5f * font.lineHeight)
 		}
+	}
+	
+	fun drawMovementTimes(entities: Iterable<Entity>, selectedEntities: Iterable<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
+
+		val zoom = (viewport.camera as OrthographicCamera).zoom
+		val screenPosition = Vector3()
+
+		val font = Assets.fontMap
+		font.color = Color.WHITE
 
 		entities.filter { movementMapper.has(it) }.forEach {
 
@@ -608,6 +587,42 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 				}
 			}
 		}
+	}
+
+	fun render(viewport: Viewport, cameraOffset: Vector2L) {
+
+		val sortedEntities = getEntities()
+		val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED)
+		val sortedAndSelectedEntities = sortedEntities.filter { selectedEntities.contains(it) }
+
+		viewport.apply()
+		shapeRenderer.projectionMatrix = viewport.camera.combined
+
+		drawDetections(sortedEntities, viewport, cameraOffset)
+
+		if (Gdx.input.isKeyPressed(Input.Keys.C)) {
+			drawSelectionDetectionZones(sortedAndSelectedEntities, viewport, cameraOffset)
+		}
+
+		orbitSystem.render(viewport, cameraOffset)
+
+		drawEntities(sortedEntities, viewport, cameraOffset)
+		drawEntityCenters(sortedEntities, viewport, cameraOffset)
+		drawTimedMovement(sortedEntities, viewport, cameraOffset)
+
+		drawSelections(sortedAndSelectedEntities, viewport, cameraOffset)
+		drawSelectionMoveTargets(sortedAndSelectedEntities, cameraOffset)
+
+		spriteBatch.projectionMatrix = viewport.camera.combined
+
+		drawStrategicEntities(sortedEntities, viewport, cameraOffset)
+
+		spriteBatch.projectionMatrix = uiCamera.combined
+		spriteBatch.begin()
+
+		drawSelectionDetectionStrength(sortedAndSelectedEntities, viewport, cameraOffset)
+		drawNames(sortedEntities, viewport, cameraOffset)
+		drawMovementTimes(sortedEntities, sortedAndSelectedEntities, viewport, cameraOffset)
 
 		spriteBatch.end()
 	}

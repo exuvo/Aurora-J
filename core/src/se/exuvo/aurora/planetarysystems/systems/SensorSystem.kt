@@ -15,7 +15,7 @@ import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.planetarysystems.components.DetectionHit
 import se.exuvo.aurora.galactic.PassiveSensor
 
-class SensorSystem : IteratingSystem(FAMILY) {
+class PassiveSensorSystem : IteratingSystem(FAMILY) {
 	companion object {
 		val FAMILY = Family.all(PassiveSensorsComponent::class.java).get()
 		val EMISSION_FAMILY = Family.all(EmissionsComponent::class.java).get()
@@ -43,17 +43,17 @@ class SensorSystem : IteratingSystem(FAMILY) {
 
 		} else if (emissionEntities.size() != emitters.size) {
 
-			val mutableSuns = ArrayList<Emitter>(emissionEntities.size())
+			val tempEmitters = ArrayList<Emitter>(emissionEntities.size())
 
 			for (entity in emissionEntities) {
 
 				var emissions = emissionsMapper.get(entity)
 				var position = movementMapper.get(entity).get(galaxy.time).value.position
 
-				mutableSuns.add(Emitter(entity, position, emissions))
+				tempEmitters.add(Emitter(entity, position, emissions))
 			}
 
-			emitters = mutableSuns
+			emitters = tempEmitters
 		}
 
 		super.update(deltaTime)
@@ -74,6 +74,12 @@ class SensorSystem : IteratingSystem(FAMILY) {
 			
 			for (emitter in emitters) {
 
+				if (emitter.entity == entity) {
+					continue
+				}
+				
+				//TODO ignore if friendly
+				
 				val emitterPosition = emitter.position
 				val emission = emitter.emissions.emissions[sensor.spectrum];
 
@@ -140,9 +146,7 @@ class SensorSystem : IteratingSystem(FAMILY) {
 
 				entity.add(DetectionComponent(detections))
 			}
-
 		}
-
 	}
 
 	data class Emitter(val entity: Entity, val position: Vector2L, val emissions: EmissionsComponent)
