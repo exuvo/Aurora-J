@@ -57,5 +57,6 @@ class ElectricalThruster(thrust: Float, powerConsumption: Int) : Thruster(thrust
 // Nuclear https://en.wikipedia.org/wiki/Nuclear_pulse_propulsion
 class FueledThruster(thrust: Float, fuel: Resource, fuelConsumption: Int) : Thruster(thrust), FueledPart by FueledPartImpl(fuel, fuelConsumption)
 
+//TODO refresh rate, accuracy (results in fixed offset for each entity id, scaled by distance)
 // distanceResolution in km
 class PassiveSensor(powerConsumption: Int = 0, val spectrum: Spectrum, val sensitivity: Double, val arcSegments: Int, val distanceResolution: Double, val angleOffset: Int) : Part(), PoweredPart by PoweredPartImpl(powerConsumption)

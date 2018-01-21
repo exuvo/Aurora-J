@@ -14,6 +14,7 @@ import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.planetarysystems.components.DetectionHit
 import se.exuvo.aurora.galactic.PassiveSensor
+import se.exuvo.aurora.planetarysystems.components.OwnerComponent
 
 class PassiveSensorSystem : IteratingSystem(FAMILY) {
 	companion object {
@@ -28,6 +29,7 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 	private val sensorsMapper = ComponentMapper.getFor(PassiveSensorsComponent::class.java)
 	private val emissionsMapper = ComponentMapper.getFor(EmissionsComponent::class.java)
 	private val detectionMapper = ComponentMapper.getFor(DetectionComponent::class.java)
+	private val ownerMapper = ComponentMapper.getFor(OwnerComponent::class.java)
 
 	var emitters: List<Emitter> = emptyList()
 
@@ -63,6 +65,7 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 
 		val movement = movementMapper.get(entity)
 		val sensorPosition = movement.get(galaxy.time).value.position
+		val owner = ownerMapper.get(entity)
 
 		val sensors = sensorsMapper.get(entity).sensors
 
@@ -78,7 +81,9 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 					continue
 				}
 				
-				//TODO ignore if friendly
+				if (owner != null && ownerMapper.has(emitter.entity) && owner.empire == ownerMapper.get(emitter.entity).empire){
+					continue
+				}
 				
 				val emitterPosition = emitter.position
 				val emission = emitter.emissions.emissions[sensor.spectrum];
