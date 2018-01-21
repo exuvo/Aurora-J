@@ -8,12 +8,13 @@ import se.exuvo.aurora.galactic.Resource
 import se.exuvo.aurora.galactic.ShipClass
 import java.security.InvalidParameterException
 import java.util.ArrayList
+import java.lang.IllegalArgumentException
 
 class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : Component {
 	var commissionDay: Int? = null
-	val armor = Array<Array<Boolean>>(shipClass.getSurfaceArea(), { Array<Boolean>(shipClass.armorLayers, { true }) })
+	val armor = Array<Int>(shipClass.getSurfaceArea(), { shipClass.armorLayers })
 	val partHealth = Array<Int>(shipClass.parts.size, { shipClass.parts[it].maxHealth })
-	val partState = Array<Int>(shipClass.parts.size, { shipClass.parts[it].maxHealth })
+	val partEnabled = Array<Boolean>(shipClass.parts.size, { true })
 	var cargo: Map<Resource, ShipCargo> = emptyMap()
 	var partCargo: MutableList<Part> = ArrayList()
 	var mass: Long = 0
@@ -44,6 +45,50 @@ class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : Compon
 
 			cargo = mutableCargo
 		}
+	}
+	
+	fun getPartHealth(part: Part): Int {
+		val index = shipClass.parts.indexOf(part)
+
+		if (index == -1) {
+			throw IllegalArgumentException()
+		}
+
+		return partHealth[index]
+	}
+	
+	fun setPartHealth(part: Part, health: Int) {
+		val index = shipClass.parts.indexOf(part)
+
+		if (index == -1) {
+			throw IllegalArgumentException()
+		}
+		
+		if (health < 0 || health > shipClass.parts[index].maxHealth){
+			throw IllegalArgumentException()
+		}
+
+		partHealth[index] = health
+	}
+
+	fun isPartEnabled(part: Part): Boolean {
+		val index = shipClass.parts.indexOf(part)
+
+		if (index == -1) {
+			throw IllegalArgumentException()
+		}
+
+		return partEnabled[index]
+	}
+	
+	fun setPartEnabled(part: Part, enabled: Boolean) {
+		val index = shipClass.parts.indexOf(part)
+
+		if (index == -1) {
+			throw IllegalArgumentException()
+		}
+
+		partEnabled[index] = enabled
 	}
 
 	fun addCargo(resource: Resource, amount: Int): Boolean {

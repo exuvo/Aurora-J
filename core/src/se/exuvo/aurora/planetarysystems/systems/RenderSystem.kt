@@ -37,6 +37,7 @@ import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.scanCircleSector
 import java.util.Comparator
+import se.exuvo.settings.Settings
 
 class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 	companion object {
@@ -65,6 +66,7 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 	private val galaxy = GameServices[Galaxy::class.java]
 	private val orbitSystem by lazy { engine.getSystem(OrbitSystem::class.java) }
 
+	private val debugPassiveSensors = Settings.getBol("Render.DebugPassiveSensors")
 	override fun checkProcessing() = false
 
 	override fun processEntity(entity: Entity, renderDelta: Float) {}
@@ -384,6 +386,33 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		drawDetectionsInner()
 		shapeRenderer.end()
+
+		if (debugPassiveSensors) {
+			shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+			shapeRenderer.color = Color.PINK
+
+			detectionEntitites.forEach {
+				val detection = detectionMapper.get(it)
+
+				for (sensorEntry in detection.detections.entries) {
+					for (angleEntry in sensorEntry.value.entries) {
+						for (distanceEntry in angleEntry.value) {
+							for (hitPosition in distanceEntry.value.hitPositions) {
+
+								val x = ((500 + hitPosition.x) / 1000L - cameraOffset.x).toFloat()
+								val y = ((500 + hitPosition.y) / 1000L - cameraOffset.y).toFloat()
+
+								val radius = 10 + 3 * zoom
+								val segments = getCircleSegments(radius, zoom)
+								shapeRenderer.circle(x, y, radius, segments)
+							}
+						}
+					}
+				}
+			}
+
+			shapeRenderer.end()
+		}
 	}
 
 	fun drawSelectionDetectionZones(selectedEntities: Iterable<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
@@ -453,7 +482,7 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 		selectedEntities.filter { detectionMapper.has(it) }.forEach {
 
 			var textRow = 0
-			
+
 			val movementValues = movementMapper.get(it).get(galaxy.time).value
 			val sensorX = (movementValues.getXinKM() - cameraOffset.x).toDouble()
 			val sensorY = (movementValues.getYinKM() - cameraOffset.y).toDouble()
@@ -482,7 +511,7 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 						val radius = (minRadius + maxRadius) / 2
 
 						val text = "${sensor.spectrum} ${String.format("%.2e", hit.signalStrength)} - ${sensor.name}"
-						
+
 						val angleRad = Math.toRadians(angle)
 						val x = (sensorX + radius * Math.cos(angleRad)).toFloat()
 						val y = (sensorY + radius * Math.sin(angleRad)).toFloat()
@@ -494,12 +523,12 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 						font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceWidth * .5f, screenPosition.y - textRow * font.lineHeight)
 					}
 				}
-				
+
 				textRow++
 			}
 		}
 	}
-	
+
 	fun drawNames(entities: Iterable<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val zoom = (viewport.camera as OrthographicCamera).zoom
@@ -507,7 +536,7 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 		val font = Assets.fontMap
 		font.color = Color.WHITE
-		
+
 		entities.filter { nameMapper.has(it) }.forEach {
 			val movement = movementMapper.get(it).get(galaxy.time).value
 			val name = nameMapper.get(it).name!!
@@ -533,7 +562,7 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 			font.draw(spriteBatch, name, screenPosition.x - name.length * font.spaceWidth * .5f, screenPosition.y - 0.5f * font.lineHeight)
 		}
 	}
-	
+
 	fun drawMovementTimes(entities: Iterable<Entity>, selectedEntities: Iterable<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val zoom = (viewport.camera as OrthographicCamera).zoom

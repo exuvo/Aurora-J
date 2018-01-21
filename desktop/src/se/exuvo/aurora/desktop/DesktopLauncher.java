@@ -102,6 +102,7 @@ public class DesktopLauncher {
 		Settings.add("UI.zoomSensitivity", 1.25f);
 
 		Settings.add("Orbits.DotsRepresentSpeed", true);
+		Settings.add("Render.DebugPassiveSensors", false);
 		Settings.add("Galaxy.Threads", Runtime.getRuntime().availableProcessors());
 
 		if (!Settings.start(conf, "AuroraJ")) {

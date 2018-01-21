@@ -38,17 +38,31 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
 import se.exuvo.aurora.planetarysystems.components.PassiveSensorsComponent
 import se.exuvo.aurora.galactic.PassiveSensor
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
+import se.exuvo.aurora.planetarysystems.components.EntityUUID
+import se.exuvo.aurora.planetarysystems.components.UUIDComponent
+import se.exuvo.aurora.galactic.Empire
+import se.exuvo.aurora.utils.GameServices
+import se.exuvo.aurora.galactic.Galaxy
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : Entity(), EntityListener {
+	companion object {
+		val planetarySystemIDGenerator = AtomicInteger()
+		val entityIDGenerator = AtomicLong()
+	}
 
+	val id = planetarySystemIDGenerator.getAndIncrement()
 	val log = Logger.getLogger(this.javaClass)
 	val lock = ReentrantReadWriteLock()
 	val engine = PooledEngine()
 
 	private val solarSystemMapper = ComponentMapper.getFor(PlanetarySystemComponent::class.java)
+	private val uuidMapper = ComponentMapper.getFor(UUIDComponent::class.java)
+	private val galaxy by lazy {GameServices[Galaxy::class.java]}
 
-	/* All missiles and other short lived entites should be Pooled using engine.createEntity() and engine.createComponent()
-   * Everything else which should either be capable of moving between systems or is static should be created normally with Entity() and Component() 
+	/* All missiles and other short lived entites should be Pooled using createEntityPooled() and engine.createComponent()
+   * Everything else which should either be capable of moving between systems or is static should be created normally with createEntity and Component() 
 	 */
 	fun init() {
 		add(GalacticPositionComponent(initialPosition))
@@ -67,7 +81,9 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		engine.addSystem(PassiveSensorSystem())
 		engine.addSystem(RenderSystem())
 
-		val entity1 = Entity()
+		val empire1 = galaxy.getEmpire(1)
+		
+		val entity1 = createEntity(empire1)
 		entity1.add(TimedMovementComponent().apply { previous.value.position.set(0, 0) })
 		entity1.add(RenderComponent())
 		entity1.add(CircleComponent().apply { radius = 695700f })
@@ -80,7 +96,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 
 		engine.addEntity(entity1)
 
-		val entity2 = Entity()
+		val entity2 = createEntity(empire1)
 		entity2.add(TimedMovementComponent())
 		entity2.add(RenderComponent())
 		entity2.add(CircleComponent().apply { radius = 6371f })
@@ -93,7 +109,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 
 		engine.addEntity(entity2)
 
-		val entity3 = Entity()
+		val entity3 = createEntity(empire1)
 		entity3.add(TimedMovementComponent())
 		entity3.add(RenderComponent().apply { zOrder = 0.4f })
 		entity3.add(CircleComponent().apply { radius = 1737f })
@@ -105,7 +121,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 
 		engine.addEntity(entity3)
 
-		val entity4 = Entity()
+		val entity4 = createEntity(empire1)
 		entity4.add(TimedMovementComponent().apply { previous.value.position.set((OrbitSystem.AU * 1000L * 1L).toLong(), 0).rotate(45f) }) //; previous.value.velocity.set(-1000000f, 0f)
 		entity4.add(RenderComponent())
 		entity4.add(SolarIrradianceComponent())
@@ -115,9 +131,9 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		entity4.add(ThrustComponent().apply { thrust = 10f * 9.82f * 1000f })
 //		entity4.add(MoveToEntityComponent(entity1, ApproachType.BRACHISTOCHRONE))
 		entity4.add(TintComponent(Color.RED))
-		val sensor1 = PassiveSensor(0, Spectrum.Electromagnetic, 1e-7, 14, OrbitSystem.AU * 0.3, 20);
+		val sensor1 = PassiveSensor(0, Spectrum.Electromagnetic, 1e-7, 14, OrbitSystem.AU * 0.3, 20, 0.97, 1);
 		sensor1.name = "1e-4"
-		val sensor2 = PassiveSensor(0, Spectrum.Thermal, 1e-8, 8, OrbitSystem.AU * 1, 0);
+		val sensor2 = PassiveSensor(0, Spectrum.Thermal, 1e-8, 8, OrbitSystem.AU * 1, 0, 0.9, 5);
 		sensor2.name = "1e-10"
 		entity4.add(PassiveSensorsComponent(listOf(sensor1, sensor2)))
 		entity4.add(StrategicIconComponent(Assets.textures.findRegion("strategic/ship")))
@@ -126,6 +142,20 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		engine.addEntity(entity4)
 	}
 
+	fun createEntity(empire: Empire): Entity {
+		val entity = Entity()
+		entity.add(PlanetarySystemComponent(this))
+		entity.add(UUIDComponent(EntityUUID(id, empire.id, getNewEnitityID())))
+		return entity
+	}
+
+	fun createEntityPooled(empire: Empire): Entity? {
+		val entity = engine.createEntity()
+		entity.add(engine.createComponent(PlanetarySystemComponent::class.java).apply { system = this@PlanetarySystem })
+		entity.add(engine.createComponent(UUIDComponent::class.java).apply { EntityUUID(id, empire.id, getNewEnitityID()) })
+		return entity
+	}
+	
 	override fun entityAdded(entity: Entity) {
 		if (!solarSystemMapper.has(entity)) {
 			if (entity is Poolable) {
@@ -143,15 +173,17 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		val solarSystemComponent = solarSystemMapper.get(entity)
 		solarSystemComponent.system = null
 	}
-
+	
 	fun update(deltaGameTime: Int) {
-
-		//TODO use readlock during update
 
 		lock.write {
 			engine.update(deltaGameTime.toFloat())
 
 			//TODO send changes over network
 		}
+	}
+	
+	private fun getNewEnitityID(): Long {
+		return entityIDGenerator.incrementAndGet();
 	}
 }

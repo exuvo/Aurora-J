@@ -6,6 +6,7 @@ import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import se.exuvo.aurora.Assets
+import se.exuvo.aurora.galactic.Empire
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.planetarysystems.PlanetarySystem
 import se.exuvo.aurora.utils.GameServices
@@ -31,10 +32,12 @@ class MainMenuScreen() : GameScreenImpl() {
 
 //		if (Gdx.input.isKeyPressed(Input.Keys.ENTER)) {
 
+		val empires = listOf(Empire("player1"), Empire("player2"))
+		
 		val system = PlanetarySystem("s1", Vector2L(0, 0))
 //		val system2 = PlanetarySystem("s2", Vector2L(4367, 0))
 //		val system3 = PlanetarySystem("s3", Vector2L(-2000, -5000))
-		val galaxy = Galaxy(listOf(system), 0) //, system2, system3
+		val galaxy = Galaxy(empires, listOf(system), 0) //, system2, system3
 		galaxy.init()
 
 		val systemView = PlanetarySystemScreen(system)

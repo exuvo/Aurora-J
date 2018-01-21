@@ -18,8 +18,9 @@ import se.unlogic.standardutils.threads.ThreadUtils
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
+import java.lang.IllegalArgumentException
 
-class Galaxy(val systems: List<PlanetarySystem>, var time: Long = 0) : Runnable, EntityListener {
+class Galaxy(val empires: List<Empire>, val systems: List<PlanetarySystem>, var time: Long = 0) : Runnable, EntityListener {
 
 	val log = Logger.getLogger(this.javaClass)
 
@@ -32,7 +33,7 @@ class Galaxy(val systems: List<PlanetarySystem>, var time: Long = 0) : Runnable,
 	var day: Int = 0
 	var speed: Long = 1 * TimeUnits.NANO_SECOND
 	var paused = false
-	
+
 	val engineLock = ReentrantReadWriteLock()
 	val engine = Engine()
 
@@ -43,7 +44,7 @@ class Galaxy(val systems: List<PlanetarySystem>, var time: Long = 0) : Runnable,
 			it.init()
 			it.engine.addEntityListener(this)
 		}
-		
+
 		engine.addSystem(GalacticRenderSystem())
 
 		val thread = Thread(this, "Galaxy");
@@ -53,6 +54,24 @@ class Galaxy(val systems: List<PlanetarySystem>, var time: Long = 0) : Runnable,
 		this.thread = thread
 	}
 
+	fun getEmpire(id: Int): Empire {
+		for (empire in empires) {
+			if (empire.id == id) {
+				return empire;
+			}
+		}
+		throw IllegalArgumentException()
+	}
+	
+	fun getPlanetarySystem(id: Int): PlanetarySystem {
+		for (system in systems) {
+			if (system.id == id) {
+				return system;
+			}
+		}
+		throw IllegalArgumentException()
+	}
+
 	override fun entityAdded(entity: Entity) {
 		groupSystem.entityAdded(entity)
 	}
@@ -60,8 +79,8 @@ class Galaxy(val systems: List<PlanetarySystem>, var time: Long = 0) : Runnable,
 	override fun entityRemoved(entity: Entity) {
 		groupSystem.entityRemoved(entity)
 	}
-	
-	fun getPlanetarySystem(entity: Entity) : PlanetarySystem {
+
+	fun getPlanetarySystem(entity: Entity): PlanetarySystem {
 		return planetarySystemMapper.get(entity).system!!
 	}
 
@@ -126,7 +145,7 @@ class Galaxy(val systems: List<PlanetarySystem>, var time: Long = 0) : Runnable,
 							} catch (ignore: InterruptedException) {
 							}
 						}
-						
+
 						engineLock.write {
 							engine.update(tickSize.toFloat())
 						}

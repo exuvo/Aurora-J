@@ -15,8 +15,10 @@ import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.planetarysystems.components.DetectionHit
 import se.exuvo.aurora.galactic.PassiveSensor
 import se.exuvo.aurora.planetarysystems.components.OwnerComponent
+import com.badlogic.ashley.core.Engine
+import com.badlogic.ashley.core.EntityListener
 
-class PassiveSensorSystem : IteratingSystem(FAMILY) {
+class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 	companion object {
 		val FAMILY = Family.all(PassiveSensorsComponent::class.java).get()
 		val EMISSION_FAMILY = Family.all(EmissionsComponent::class.java).get()
@@ -31,31 +33,46 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 	private val detectionMapper = ComponentMapper.getFor(DetectionComponent::class.java)
 	private val ownerMapper = ComponentMapper.getFor(OwnerComponent::class.java)
 
+	override fun addedToEngine(engine: Engine) {
+		super.addedToEngine(engine)
+		engine.addEntityListener(EMISSION_FAMILY, this)
+	}
+
 	var emitters: List<Emitter> = emptyList()
+	var emissionFamilyChanged = true
+
+	override fun entityAdded(entity: Entity?) {
+		emissionFamilyChanged = true
+	}
+
+	override fun entityRemoved(entity: Entity?) {
+		emissionFamilyChanged = true
+	}
 
 	override fun update(deltaTime: Float) {
 
-		val emissionEntities = engine.getEntitiesFor(EMISSION_FAMILY)
+		if (emissionFamilyChanged) {
+			emissionFamilyChanged = false
 
-		if (emissionEntities.size() == 0) {
+			val emissionEntities = engine.getEntitiesFor(EMISSION_FAMILY)
 
-			if (emitters.isNotEmpty()) {
+			if (emissionEntities.size() == 0) {
+
 				emitters = emptyList()
+
+			} else {
+
+				val tempEmitters = ArrayList<Emitter>(emissionEntities.size())
+
+				for (entity in emissionEntities) {
+					var emissions = emissionsMapper.get(entity)
+					var position = movementMapper.get(entity).get(galaxy.time).value.position
+
+					tempEmitters.add(Emitter(entity, position, emissions))
+				}
+
+				emitters = tempEmitters
 			}
-
-		} else if (emissionEntities.size() != emitters.size) {
-
-			val tempEmitters = ArrayList<Emitter>(emissionEntities.size())
-
-			for (entity in emissionEntities) {
-
-				var emissions = emissionsMapper.get(entity)
-				var position = movementMapper.get(entity).get(galaxy.time).value.position
-
-				tempEmitters.add(Emitter(entity, position, emissions))
-			}
-
-			emitters = tempEmitters
 		}
 
 		super.update(deltaTime)
@@ -72,62 +89,67 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 		val detections = HashMap<PassiveSensor, HashMap<Int, HashMap<Int, DetectionHit>>>()
 
 		for (sensor in sensors) {
-			
+
 			val arcWidth = 360.0 / sensor.arcSegments
-			
+
 			for (emitter in emitters) {
 
 				if (emitter.entity == entity) {
 					continue
 				}
-				
-				if (owner != null && ownerMapper.has(emitter.entity) && owner.empire == ownerMapper.get(emitter.entity).empire){
+
+				if (owner != null && ownerMapper.has(emitter.entity) && owner.empire == ownerMapper.get(emitter.entity).empire) {
 					continue
 				}
-				
-				val emitterPosition = emitter.position
+
+				var emitterPosition = emitter.position
 				val emission = emitter.emissions.emissions[sensor.spectrum];
 
 				if (emission != null) {
 
-					val distanceInKM: Double = sensorPosition.dst(emitterPosition) / 1000
+					val trueDistanceInKM: Double = sensorPosition.dst(emitterPosition) / 1000
 
 					// https://en.wikipedia.org/wiki/Inverse-square_law
-					val signalStrength = emission / (4 * Math.PI * Math.pow(distanceInKM / 2, 2.0))
+					val signalStrength = emission / (4 * Math.PI * Math.pow(trueDistanceInKM / 2, 2.0))
 
 					if (signalStrength >= sensor.sensitivity) {
+
+						if (sensor.accuracy != 1.0) {
+							val temp = emitterPosition.cpy().sub(sensorPosition).scl(Math.random() * (1 - sensor.accuracy))
+							temp.rotateRad(2 * Math.PI * Math.random())
+							emitterPosition = emitterPosition.cpy().add(temp)
+						}
 						
+						val distanceInKM: Double = sensorPosition.dst(emitterPosition) / 1000
 						val targetAngle = sensorPosition.angleTo(emitterPosition)
-						
-						val arcAngleStep = Math.floor((targetAngle - sensor.angleOffset) / arcWidth).toInt()
+
+						val arcAngleStep = Math.floor((targetAngle - sensor.angleOffset)  / arcWidth).toInt()
 						val distanceStep = Math.floor(distanceInKM / sensor.distanceResolution).toInt()
 
 						var angleSteps: HashMap<Int, HashMap<Int, DetectionHit>>? = detections[sensor]
 
 						if (angleSteps == null) {
-							
 							angleSteps = HashMap<Int, HashMap<Int, DetectionHit>>()
 							detections[sensor] = angleSteps
 						}
-						
+
 						var distanceSteps: HashMap<Int, DetectionHit>? = angleSteps[arcAngleStep]
 
 						if (distanceSteps == null) {
-							
 							distanceSteps = HashMap<Int, DetectionHit>()
 							angleSteps[arcAngleStep] = distanceSteps
 						}
-						
+
 						var detectionHit: DetectionHit? = distanceSteps[distanceStep]
 
 						if (detectionHit == null) {
-							
-							detectionHit = DetectionHit(0.0, ArrayList<Entity>())
+							detectionHit = DetectionHit(0.0, ArrayList<Entity>(), ArrayList<Vector2L>())
 							distanceSteps[distanceStep] = detectionHit
 						}
 
 						detectionHit.signalStrength += signalStrength
 						detectionHit.entities.add(emitter.entity)
+						detectionHit.hitPositions.add(emitterPosition)
 					}
 				}
 			}
