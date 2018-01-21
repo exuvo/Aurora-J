@@ -18,6 +18,7 @@ import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.systems.OrbitSystem
 import java.util.Random
 import kotlin.concurrent.write
+import se.unlogic.standardutils.reflection.ReflectionUtils
 
 class PlanetarySystemGeneration(val system: PlanetarySystem) {
 	companion object {
@@ -35,7 +36,7 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 
 		system.lock.write {
 			
-			for (entity in engine.getEntitiesFor(FAMILY).toArray()) {
+			for (entity in engine.getEntitiesFor(FAMILY).toArray<Entity>(Entity::class.java)) {
 				engine.removeEntity(entity)
 			}
 
