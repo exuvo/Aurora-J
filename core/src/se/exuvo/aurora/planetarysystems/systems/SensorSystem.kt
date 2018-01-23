@@ -89,6 +89,8 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 		val detections = HashMap<PassiveSensor, HashMap<Int, HashMap<Int, DetectionHit>>>()
 
 		for (sensor in sensors) {
+			
+			//TODO use refreshDelay
 
 			val arcWidth = 360.0 / sensor.arcSegments
 

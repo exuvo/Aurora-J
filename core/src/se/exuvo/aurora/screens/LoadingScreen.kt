@@ -13,6 +13,7 @@ import se.exuvo.aurora.Assets
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.OutputStreamListener
 import java.io.PrintStream
+import se.exuvo.aurora.galactic.Technology
 
 // See GlyphLayout::setText and BitmapFont$BitmapFontData::getGlyphs
 fun getFontWidth(font: BitmapFont, text: String): Float {
@@ -69,6 +70,7 @@ class LoadingScreen() : GameScreenImpl() {
 
 		} else if (texturePackerTask.done && assetManager.update()) {
 			Assets.finishLoad()
+			Technology.initTech()
 			GameServices[GameScreenService::class.java].add(MainMenuScreen())
 		}
 	}

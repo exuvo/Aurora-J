@@ -46,7 +46,7 @@ class Galaxy(val empires: List<Empire>, val systems: List<PlanetarySystem>, var 
 		}
 
 		engine.addSystem(GalacticRenderSystem())
-
+		
 		val thread = Thread(this, "Galaxy");
 		thread.setDaemon(true);
 		thread.start();
