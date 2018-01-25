@@ -27,6 +27,7 @@ abstract class TimedComponent<T>() : Component {
 //	}
 //}
 
+//TODO save all old points
 abstract class InterpolatedComponent<T>(val initial: TimedValue<T>) : TimedComponent<T>() {
 	var previous: TimedValue<T> = initial
 	var interpolated: TimedValue<T>? = null
