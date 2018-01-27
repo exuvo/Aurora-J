@@ -2,6 +2,7 @@ package se.exuvo.aurora.galactic
 
 import org.apache.log4j.Logger
 import java.lang.NullPointerException
+import se.unlogic.standardutils.numbers.NumberUtils
 
 abstract class ResearchJob(val researchPoints: Int, var progress: Int = 0) {
 
@@ -141,15 +142,9 @@ class Technology(val code: String, // Image is mapped from name
 								 val description: String,
 								 val discoveryChance: Float = 1f
 ) {
-	val requirements: List<Technology>
+	val requirements = ArrayList<Technology>()
 
 	init {
-		if (requirementNames.isEmpty()) {
-			requirements = emptyList()
-		} else {
-			requirements = ArrayList()
-		}
-
 		var techList = technologies[category]
 
 		if (techList == null) {
@@ -157,7 +152,13 @@ class Technology(val code: String, // Image is mapped from name
 			technologies[category] = techList
 		}
 
-		techList.put(name, this)
+		techList.put(code, this)
+	}
+	
+	fun getNumber(): Int {
+		val split = code.split(" ")
+		val number = NumberUtils.toInt(split[split.size - 1])
+		return number!!
 	}
 
 	companion object {
@@ -167,7 +168,8 @@ class Technology(val code: String, // Image is mapped from name
 
 			// Missiles
 			Technology("Launchers 1", ResearchCategory.LAUNCHERS, 10, emptyList(), "", "")
-			Technology("Warheads 1", ResearchCategory.WARHEADS, 10, emptyList(), "", "")
+			Technology("Explosive Warheads 1", ResearchCategory.WARHEADS, 10, emptyList(), "", "")
+			Technology("EMP Warheads 1", ResearchCategory.WARHEADS, 10, emptyList(), "", "")
 			Technology("Magazines 1", ResearchCategory.MAGAZINES, 10, emptyList(), "", "")
 
 			// Lasers
@@ -175,6 +177,9 @@ class Technology(val code: String, // Image is mapped from name
 			Technology("Wavelengths 1", ResearchCategory.WAVELENGTHS, 10, emptyList(), "", "")
 
 			// Railguns
+			// https://en.wikipedia.org/wiki/Railgun
+			Technology("Railguns 1", ResearchCategory.RAILGUNS, 10, emptyList(), "", "")
+			Technology("Plasma Railguns 1", ResearchCategory.RAILGUNS, 10, emptyList(), "Plasma Railgun", "")
 			Technology("Projectiles 1", ResearchCategory.PROJECTILES, 10, emptyList(), "", "")
 			Technology("Wear reduction 1", ResearchCategory.WEAR_REDUCTION, 10, emptyList(), "", "")
 
@@ -182,20 +187,23 @@ class Technology(val code: String, // Image is mapped from name
 			Technology("Solar Cells 1", ResearchCategory.SOLAR_CELLS, 10, emptyList(), "", "")
 			Technology("Fission Reactor 1", ResearchCategory.FISSION, 10, emptyList(), "", "")
 			Technology("Fusion Reactor 1", ResearchCategory.FUSION, 10, emptyList(), "", "")
+			Technology("Antimatter Reactor 1", ResearchCategory.FUSION, 10, emptyList(), "", "")
 			Technology("Batteries 1", ResearchCategory.BATTERIES, 10, emptyList(), "", "")
 			Technology("Flywheels 1", ResearchCategory.FLYWHEELS, 10, emptyList(), "", "")
 			Technology("Capacitors 1", ResearchCategory.CAPACITORS, 10, emptyList(), "", "")
 			Technology("Shields 1", ResearchCategory.SHIELDS, 10, emptyList(), "", "")
 			// https://en.wikipedia.org/wiki/Spacecraft_thermal_control
+			// https://en.wikipedia.org/wiki/Thermoelectric_cooling
 			Technology("Buffered Cooling 1", ResearchCategory.COOLING, 10, emptyList(), "", "")
-			Technology("Emissive Cooling 1", ResearchCategory.COOLING, 10, emptyList(), "", "")
-			Technology("Thermoelectric Cooling 1", ResearchCategory.COOLING, 10, emptyList(), "", "") // https://en.wikipedia.org/wiki/Thermoelectric_cooling
+			Technology("Passive Cooling 1", ResearchCategory.COOLING, 10, emptyList(), "", "")
+			Technology("Active Cooling 1", ResearchCategory.COOLING, 10, emptyList(), "", "")
 
 			// Industry			
 			Technology("Mining 1", ResearchCategory.MINING, 10, emptyList(), "", "")
 			Technology("Civilian Production 1", ResearchCategory.PRODUCTION, 10, emptyList(), "", "")
 			Technology("Military Production 1", ResearchCategory.PRODUCTION, 10, emptyList(), "", "")
-			Technology("Shipyards 1", ResearchCategory.PRODUCTION, 10, emptyList(), "", "")
+			Technology("Shipyards 1", ResearchCategory.PRODUCTION, 10, emptyList(), "", "") // Faster build time, chemical fuel cost to launch ships to space
+			Technology("Orbital Shipyards 1", ResearchCategory.PRODUCTION, 10, emptyList(), "", "")
 			Technology("Mineral Refining 1", ResearchCategory.REFINING, 10, emptyList(), "", "")
 			Technology("Combustible Refining 1", ResearchCategory.REFINING, 10, emptyList(), "", "")
 			Technology("Fissile Refining 1", ResearchCategory.REFINING, 10, emptyList(), "", "")
@@ -204,19 +212,19 @@ class Technology(val code: String, // Image is mapped from name
 			Technology("Atmospherics 1", ResearchCategory.COLONISATION, 10, emptyList(), "", "")
 			Technology("Infrastructure 1", ResearchCategory.COLONISATION, 10, emptyList(), "", "")
 			Technology("Agriculture 1", ResearchCategory.COLONISATION, 10, emptyList(), "", "")
-			Technology("Agriculture 1", ResearchCategory.G_LIMITS, 10, emptyList(), "", "")
-			Technology("Agriculture 1", ResearchCategory.G_LIMITS, 10, emptyList(), "", "")
-			Technology("Agriculture 1", ResearchCategory.G_LIMITS, 10, emptyList(), "", "")
+			Technology("Dampeners 1", ResearchCategory.G_LIMITS, 10, emptyList(), "", "")
+			Technology("The Expanse Juice 1", ResearchCategory.G_LIMITS, 10, emptyList(), "", "")
+			Technology("G Suits 1", ResearchCategory.G_LIMITS, 10, emptyList(), "", "") // Military only
 
 			// Propulsion
 			// https://en.wikipedia.org/wiki/Nuclear_pulse_propulsion
 			Technology("Electrostatic Thruster 1", ResearchCategory.ELECTRICAL_THRUSTERS, 10, emptyList(), "Gridded Ion Thruster", "")
 			Technology("Electrostatic Thruster 2", ResearchCategory.ELECTRICAL_THRUSTERS, 10, emptyList(), "Hall Effect Thruster", "")
-			Technology("Electrostatic Thruster 4", ResearchCategory.ELECTRICAL_THRUSTERS, 10, emptyList(), "Field Emmision Electric Propulsion", "")
-			Technology("Electrothermal Thruster 1", ResearchCategory.ELECTRICAL_THRUSTERS, 10, emptyList(), "Resistojet", "")
+			Technology("Electrostatic Thruster 3", ResearchCategory.ELECTRICAL_THRUSTERS, 10, emptyList(), "Field Emmision Electric Propulsion", "")
+			Technology("Electrothermal Thruster 1", ResearchCategory.ELECTRICAL_THRUSTERS, 10, listOf("Electrostatic Thruster 3"), "Resistojet", "")
 			Technology("Electrothermal Thruster 2", ResearchCategory.ELECTRICAL_THRUSTERS, 10, emptyList(), "Arcjet", "")
 			Technology("Electrothermal Thruster 3", ResearchCategory.ELECTRICAL_THRUSTERS, 10, emptyList(), "Microwave Arcjet", "")
-			Technology("Electromagnetic Thruster 1", ResearchCategory.ELECTRICAL_THRUSTERS, 10, emptyList(), "Pulsed Plasma Thruster", "")
+			Technology("Electromagnetic Thruster 1", ResearchCategory.ELECTRICAL_THRUSTERS, 10, listOf("Electrothermal Thruster 3"), "Pulsed Plasma Thruster", "")
 			Technology("Electromagnetic Thruster 2", ResearchCategory.ELECTRICAL_THRUSTERS, 10, emptyList(), "Pulsed Inductive Thruster", "")
 			Technology("Electromagnetic Thruster 3", ResearchCategory.ELECTRICAL_THRUSTERS, 10, emptyList(), "Electrodeless Plasma Thruster", "")
 			Technology("Electromagnetic Thruster 4", ResearchCategory.ELECTRICAL_THRUSTERS, 10, emptyList(), "Helicon Double Layer Thruster", "")
@@ -226,20 +234,20 @@ class Technology(val code: String, // Image is mapped from name
 			// https://en.wikipedia.org/wiki/Nuclear_propulsion
 			// https://en.wikipedia.org/wiki/Nuclear_thermal_rocket
 			// https://en.wikipedia.org/wiki/Nuclear_pulse_propulsion
-			Technology("Nuclear Thermal Thruster 1", ResearchCategory.NUCLEAR_THRUSTERS, 10, emptyList(), "Solid Core Thermal Thruster", "")
+			Technology("Nuclear Thermal Thruster 1", ResearchCategory.NUCLEAR_THRUSTERS, 10, listOf("Fission Reactor 1"), "Solid Core Thermal Thruster", "")
 			Technology("Nuclear Thermal Thruster 2", ResearchCategory.NUCLEAR_THRUSTERS, 10, emptyList(), "Pulsed Thermal Thruster", "")
 			Technology("Nuclear Thermal Thruster 3", ResearchCategory.NUCLEAR_THRUSTERS, 10, emptyList(), "Liquid Core Thermal Thruster", "")
 			Technology("Nuclear Thermal Thruster 4", ResearchCategory.NUCLEAR_THRUSTERS, 10, emptyList(), "Gas Core Thermal Thruster", "")
-			Technology("Direct Nuclear Thruster 1", ResearchCategory.NUCLEAR_THRUSTERS, 10, emptyList(), "Rotating Fission-Fragment Reactor", "") // High wear
+			Technology("Direct Nuclear Thruster 1", ResearchCategory.NUCLEAR_THRUSTERS, 10, listOf("Nuclear Thermal Thruster 4"), "Rotating Fission-Fragment Reactor", "") // High wear
 			Technology("Direct Nuclear Thruster 2", ResearchCategory.NUCLEAR_THRUSTERS, 10, emptyList(), "Dusty Plasma Reactor", "") // High wear
 			Technology("Direct Nuclear Thruster 3", ResearchCategory.NUCLEAR_THRUSTERS, 10, emptyList(), "Gas Core Reactor", "")
 			Technology("Direct Nuclear Thruster 4", ResearchCategory.NUCLEAR_THRUSTERS, 10, emptyList(), "Nuclear Salt-Water Reactor", "")
-			Technology("Direct Nuclear Thruster 5", ResearchCategory.NUCLEAR_THRUSTERS, 10, emptyList(), "Magneto-Inertial Fusion Reactor", "")
-			Technology("Nuclear Pulse Thruster 1", ResearchCategory.NUCLEAR_THRUSTERS, 10, emptyList(), "Orion", "")
+			Technology("Direct Nuclear Thruster 5", ResearchCategory.NUCLEAR_THRUSTERS, 10, listOf("Fusion Reactor 1"), "Magneto-Inertial Fusion Reactor", "")
+			Technology("Nuclear Pulse Thruster 1", ResearchCategory.NUCLEAR_THRUSTERS, 10, listOf("Nuclear Thermal Thruster 2"), "Orion", "")
 			Technology("Nuclear Pulse Thruster 2", ResearchCategory.NUCLEAR_THRUSTERS, 10, emptyList(), "Medusa", "")
-			Technology("Nuclear Pulse Thruster 3", ResearchCategory.NUCLEAR_THRUSTERS, 10, emptyList(), "Longshot", "")
+			Technology("Nuclear Pulse Thruster 3", ResearchCategory.NUCLEAR_THRUSTERS, 10, listOf("Fusion Reactor 1"), "Longshot", "")
 			Technology("Nuclear Pulse Thruster 4", ResearchCategory.NUCLEAR_THRUSTERS, 10, emptyList(), "Daedalus", "")
-			Technology("Nuclear Pulse Thruster 5", ResearchCategory.NUCLEAR_THRUSTERS, 10, emptyList(), "Antimatter-Catalyzed Nuclear Pulse Propulsion", "")
+			Technology("Nuclear Pulse Thruster 5", ResearchCategory.NUCLEAR_THRUSTERS, 10, listOf("Antimatter Reactor 1"), "Antimatter-Catalyzed Nuclear Pulse Propulsion", "")
 			// https://en.wikipedia.org/wiki/Rocket_engine
 			// https://en.wikipedia.org/wiki/Rocket_propellant#Liquid_propellants
 			Technology("Chemical Thruster 1", ResearchCategory.CHEMICAL_THRUSTERS, 10, emptyList(), "Solid-propellant thruster", "")
@@ -249,12 +257,19 @@ class Technology(val code: String, // Image is mapped from name
 			Technology("Chemical Thruster 5", ResearchCategory.CHEMICAL_THRUSTERS, 10, emptyList(), "Liquid-propellant LOX + LH", "")
 			Technology("Chemical Thruster 6", ResearchCategory.CHEMICAL_THRUSTERS, 10, emptyList(), "Liquid-propellant Nitrogen Tetroxide + Hydrazine", "")
 			// https://en.wikipedia.org/wiki/Alcubierre_drive
-			Technology("Alcubierre Drive 1", ResearchCategory.EXOTIC_PROPULSION, 10, emptyList(), "Alcubierre Drive", "") 
+			Technology("Alcubierre Drive 1", ResearchCategory.EXOTIC_PROPULSION, 10, emptyList(), "Alcubierre Drive", "")
 			// https://en.wikipedia.org/wiki/Hyperdrive
-			Technology("Hyperdrive 1", ResearchCategory.EXOTIC_PROPULSION, 10, emptyList(), "Hyperdrive", "")
+			Technology("Hyperdrive 1", ResearchCategory.EXOTIC_PROPULSION, 10, listOf("Alcubierre Drive 1"), "Hyperdrive", "") // Inflicts damage during travel
+			Technology("Hyperdrive 2", ResearchCategory.EXOTIC_PROPULSION, 10, emptyList(), "Safe Hyperdrive", "")
 			// https://en.wikipedia.org/wiki/Jump_drive
-			Technology("Jump Drive 1", ResearchCategory.EXOTIC_PROPULSION, 10, emptyList(), "Jump Drive", "") // Charge time
+			Technology("Jump Drive 1", ResearchCategory.EXOTIC_PROPULSION, 10, listOf("Jump Gates 3"), "Jump Drive", "") // Charge time
 			Technology("Jump Drive 2", ResearchCategory.EXOTIC_PROPULSION, 10, emptyList(), "Blink Drive", "") // No charge time
+			// https://en.wikipedia.org/wiki/Jumpgate
+			Technology("Jump Gates 1", ResearchCategory.EXOTIC_PROPULSION, 10, emptyList(), "Small Jump Gate", "") // Fixed destionation
+			Technology("Jump Gates 2", ResearchCategory.EXOTIC_PROPULSION, 10, emptyList(), "Medium Jump Gate", "")
+			Technology("Jump Gates 3", ResearchCategory.EXOTIC_PROPULSION, 10, emptyList(), "Large Jump Gate", "")
+			Technology("Wormhole Gates 1", ResearchCategory.EXOTIC_PROPULSION, 10, listOf("Jump Gates 3"), "Stargate", "") // Can travel to any other known stargate
+			Technology("Wormhole Gates 2", ResearchCategory.EXOTIC_PROPULSION, 10, emptyList(), "Ship Scale Stargate", "")
 
 			// Sensors
 			Technology("EM Sensor 1", ResearchCategory.ELECTRO_MAGNETIC_SENSOR, 10, emptyList(), "", "")
@@ -265,8 +280,23 @@ class Technology(val code: String, // Image is mapped from name
 
 			// Computation
 			Technology("Targeting Computers 1", ResearchCategory.TARGETING_ALGORITHMS, 10, emptyList(), "", "")
+			Technology("Missile Computers 1", ResearchCategory.TARGETING_ALGORITHMS, 10, emptyList(), "Coast Mode", "")
+			Technology("Missile Computers 2", ResearchCategory.TARGETING_ALGORITHMS, 10, emptyList(), "Stage At Set Distance", "")
+			Technology("Missile Computers 3", ResearchCategory.TARGETING_ALGORITHMS, 10, emptyList(), "Retargeting", "")
+			Technology("Missile Computers 4", ResearchCategory.TARGETING_ALGORITHMS, 10, emptyList(), "Avoid Overkill", "")
+			Technology("Missile Computers 5", ResearchCategory.TARGETING_ALGORITHMS, 10, emptyList(), "Avoid Friendly During Retargeting", "")
+			Technology("Missile Computers 6", ResearchCategory.TARGETING_ALGORITHMS, 10, emptyList(), "Manual Retargeting", "")
+			Technology("Missile Computers 7", ResearchCategory.TARGETING_ALGORITHMS, 10, emptyList(), "Course Correction", "") // If fired at enemy that dissapeared during flight and then appeared somewhere else
 			Technology("Processors 1", ResearchCategory.PROCESSORS, 10, emptyList(), "", "")
-			Technology("AI 1", ResearchCategory.ELECTRONICS, 10, emptyList(), "", "")
+			Technology("Drone AI 1", ResearchCategory.ELECTRONICS, 10, emptyList(), "Move To Point", "")
+			Technology("Drone AI 2", ResearchCategory.ELECTRONICS, 10, emptyList(), "Move To Distance", "")
+			Technology("Drone AI 3", ResearchCategory.ELECTRONICS, 10, emptyList(), "Follow", "")
+			Technology("Drone AI 4", ResearchCategory.ELECTRONICS, 10, emptyList(), "Enable/Disable Parts", "")
+			Technology("Drone AI 5", ResearchCategory.ELECTRONICS, 10, emptyList(), "Use Active Parts", "")
+			Technology("Drone AI 6", ResearchCategory.ELECTRONICS, 10, emptyList(), "Flee When Damaged", "")
+			Technology("Drone AI 7", ResearchCategory.ELECTRONICS, 10, emptyList(), "Auto Return For Resupply", "")
+			Technology("Drone AI 8", ResearchCategory.ELECTRONICS, 10, emptyList(), "Attack", "")
+			Technology("Drone AI 9", ResearchCategory.ELECTRONICS, 10, emptyList(), "Delay Order", "")
 
 			// Infantry
 			Technology("Boarding 1", ResearchCategory.INFANTRY, 10, emptyList(), "", "")
@@ -275,31 +305,50 @@ class Technology(val code: String, // Image is mapped from name
 			Technology("Ground Armor 1", ResearchCategory.INFANTRY_ARMOR, 10, emptyList(), "", "")
 			Technology("Space Suits 1", ResearchCategory.INFANTRY_ARMOR, 10, emptyList(), "", "")
 
+			var reqirements = 0
+			var autoReqirements = 0
+			
 			for (techs in technologies.values) {
 				for (tech in techs.values) {
-					if (tech.requirements is MutableList) {
+					if (tech.requirementNames.isNotEmpty()) {
 						for (techname in tech.requirementNames) {
-							tech.requirements.add(getTech(techname))
+							tech.requirements.add(getTech(techname)!!)
+							reqirements++
+						}
+					}
+
+					// Auto add requirements
+					val split = tech.code.split(" ")
+					val number = NumberUtils.toInt(split[split.size - 1])
+
+					if (number != null) {
+
+						val reqquirementName = tech.code.substring(0, tech.code.length - split[split.size - 1].length) + (number - 1)
+						val requirement = getTech(reqquirementName);
+
+						if (requirement != null) {
+							autoReqirements++
+							tech.requirements.add(requirement)
 						}
 					}
 				}
 			}
-
+			
 			var techCount = technologies.values.sumBy { it.size }
 
-			println("Loaded $techCount technologies")
+			println("Loaded $techCount technologies, $reqirements requirements, $autoReqirements auto requirements")
 		}
 
-		fun getTech(name: String): Technology {
+		fun getTech(code: String): Technology? {
 			for (techs in technologies.values) {
-				val tech = techs.get(name)
+				val tech = techs.get(code)
 
 				if (tech != null) {
 					return tech
 				}
 			}
 
-			throw NullPointerException("Found no technology with name $name")
+			return null
 		}
 	}
 }
