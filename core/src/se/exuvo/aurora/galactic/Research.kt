@@ -15,6 +15,12 @@ class DesignResearchJob(val part: Part, researchPoints: Int) : ResearchJob(resea
 class ResearchTeam() {
 	var currentJob: ResearchJob? = null
 	val theoreticalTheory = HashMap<TheoreticalTheory, Int>()
+	
+	init {
+		for (theory in TheoreticalTheory.values()) {
+			theoreticalTheory.put(theory, (Math.random() * 10).toInt())
+		}
+	}
 }
 
 enum class ResearchCategory(val parent: ResearchCategory? = null) {

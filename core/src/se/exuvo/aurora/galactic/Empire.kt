@@ -22,4 +22,12 @@ companion object {
 	val researchTeams = ArrayList<ResearchTeam>()
 	val practicalTheory = HashMap<PracticalTheory, Int>()
 
+	init {
+		researchTeams.add(ResearchTeam())
+		researchTeams.add(ResearchTeam())
+		
+		practicalTheory.put(PracticalTheory.CHEMICAL_THRUSTERS, 5)
+		practicalTheory.put(PracticalTheory.INFANTRY, 5)
+		practicalTheory.put(PracticalTheory.REFINING, 5)
+	}
 }
