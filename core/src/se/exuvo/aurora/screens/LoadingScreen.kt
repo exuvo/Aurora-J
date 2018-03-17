@@ -54,11 +54,12 @@ class LoadingScreen() : GameScreenImpl() {
 	override fun show() {
 		val profiler = GameServices[GLProfiler::class.java]
 		profiler.enable()
-		
-		// https://www.khronos.org/opengl/wiki/Common_Mistakes#Checking_for_OpenGL_Errors
-		// The magnification filter can't specify the use of mipmaps; only the minification filter can do that.
-		
+
 		/* TODO fix throws GL_INVALID_ENUM
+ 
+ 			https://www.khronos.org/opengl/wiki/Common_Mistakes#Checking_for_OpenGL_Errors
+			The magnification filter can't specify the use of mipmaps; only the minification filter can do that.
+ 
 		 	at com.badlogic.gdx.graphics.GLTexture.setFilter(GLTexture.java:164)
 			at com.badlogic.gdx.assets.loaders.TextureLoader.loadSync(TextureLoader.java:87)
 			at com.badlogic.gdx.assets.loaders.TextureLoader.loadSync(TextureLoader.java:41)
@@ -67,8 +68,9 @@ class LoadingScreen() : GameScreenImpl() {
 			at com.badlogic.gdx.assets.AssetManager.updateTask(AssetManager.java:507)
 			at com.badlogic.gdx.assets.AssetManager.update(AssetManager.java:381)
 		 */
-//		profiler.setListener(GLErrorListener.THROWING_LISTENER)
 		
+//		profiler.setListener(GLErrorListener.THROWING_LISTENER)
+
 		Assets.startLoad()
 	}
 

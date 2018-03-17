@@ -49,7 +49,7 @@ public class SwedishPhoneNumberValidator implements StringFormatValidator {
 		tests.add(new Test("", false));
 		tests.add(new Test("sfdgsdfg", false));
 		tests.add(new Test("1234f567", false));
-		tests.add(new Test("1234ง567", false));
+		tests.add(new Test("1234ยง567", false));
 		tests.add(new Test("++0732193727", false));
 		tests.add(new Test("-0732193727", false));
 		tests.add(new Test("0732193727-", false));

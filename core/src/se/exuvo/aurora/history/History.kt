@@ -54,7 +54,7 @@ class History : Disposable {
 		dataSource.setUrl("jdbc:sqlite:history.db")
 //		dataSource.setUrl("jdbc:sqlite::memory")
 		dataSource.setDatabaseName("history")
-		connectionPool = MiniConnectionPoolManager(dataSource, 1)
+		connectionPool = MiniConnectionPoolManager(dataSource, 2)
 
 		daoFactory = SimpleAnnotatedDAOFactory(connectionPool);
 

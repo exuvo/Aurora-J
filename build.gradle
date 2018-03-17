@@ -59,7 +59,8 @@ project(":core") {
     apply plugin: "kotlin"
 
     dependencies {
-        compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+        compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+        compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 				
         compile "com.badlogicgames.gdx:gdx:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
@@ -98,7 +99,6 @@ project(":core") {
 					exclude group: 'org.jogamp.jogl'
 					exclude group: 'org.lwjgl'
         }
-        
     }
 }
 

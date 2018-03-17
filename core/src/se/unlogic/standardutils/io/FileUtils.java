@@ -38,7 +38,7 @@ public class FileUtils {
 
 	public static String toValidHttpFilename(String string) {
 
-		return string.replaceAll("[^0-9a-zA-Z+åäöÅÄÖ()!@áé&%$§=. -]", "_");
+		return string.replaceAll("[^0-9a-zA-Z+Ã¥Ã¤Ã¶Ã…Ã„Ã–()!@Ã¡Ã©&%$Â§=. -]", "_");
 	}
 
 	public final static byte[] getRawBytes(File f) throws IOException {

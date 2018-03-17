@@ -392,16 +392,6 @@ public class StringUtils {
 		return new ByteArrayInputStream(text.getBytes());
 	}
 
-	public static String replaceUTF8Quotes(String text) {
-
-		text = text.replace("”", "\"");
-		text = text.replace("“", "\"");
-		text = text.replace("‘", "'");
-		text = text.replace("’", "'");
-
-		return text;
-	}
-
 	public static boolean isEmpty(String... strings) {
 
 		if (strings == null) {

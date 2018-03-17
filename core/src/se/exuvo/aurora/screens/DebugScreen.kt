@@ -5,12 +5,15 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputProcessor
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics
-import com.badlogic.gdx.graphics.GL20
+import glm_.vec2.Vec2
 import glm_.vec2.Vec2d
 import imgui.Context
 import imgui.ImGui
+import imgui.WindowFlags
 import imgui.impl.LwjglGL3
+import org.apache.log4j.Logger
 import org.lwjgl.glfw.GLFW
+import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.OrbitComponent
@@ -21,6 +24,8 @@ import uno.glfw.GlfwWindow
 
 class DebugScreen : GameScreenImpl(), InputProcessor {
 
+	val log = Logger.getLogger(this.javaClass)
+	
 	private val galaxy by lazy { GameServices[Galaxy::class.java] }
 	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class.java] }
 
@@ -50,6 +55,7 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 		gdxGLFWKeyMap[Input.Keys.END] = GLFW.GLFW_KEY_END
 
 		gdxGLFWKeyMap[Input.Keys.BACKSPACE] = GLFW.GLFW_KEY_BACKSPACE
+		gdxGLFWKeyMap[Input.Keys.FORWARD_DEL] = GLFW.GLFW_KEY_DELETE
 
 		gdxGLFWKeyMap[Input.Keys.ENTER] = GLFW.GLFW_KEY_ENTER
 		gdxGLFWKeyMap[Input.Keys.ESCAPE] = GLFW.GLFW_KEY_ESCAPE
@@ -73,31 +79,71 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 	}
 
 	override fun show() {}
-	
-	var f = 0f
+
+//	operator fun <T> KProperty0<T>.getValue(thisRef: Any?, property: KProperty<*>): T = get()
+//	operator fun <T> KMutableProperty0<T>.setValue(thisRef: Any?, property: KProperty<*>, value: T) = set(value)
+
+	var slider = FloatArray(1)
+	var stringbuf = CharArray(10)
+	var img = Assets.textures.findRegion("strategic/sun")
+	var menuBarState = BooleanArray(1)
+	var graphValues = floatArrayOf(0f, 5f, 2f, 4f)
 
 	override fun draw() {
 
 		// https://github.com/kotlin-graphics/imgui/wiki/Using-libGDX
+		// https://github.com/ocornut/imgui
 
-		LwjglGL3.newFrame()
+		if (debugVisible) {
+			try {
+				LwjglGL3.newFrame()
 
-		ImGui.text("Hello, world %d", 123)
-		ImGui.text("ctx.hoveredWindow ${ctx.hoveredWindow}")
-		ImGui.text("ctx.navWindow ${ctx.navWindow}")
-		
-//		ImGui.button("OK") {
-//			// react
-//		}
-//		ImGui.inputText("string", buf)
-//		ImGui.sliderFloat("float", ::f, 0f, 1f)
-//		ImGui.image(texture.textureObjectHandle, Vec2(imageWidth, imageHeight))
+				var windowClose = booleanArrayOf(debugVisible)
 
-		ImGui.render()
+				ImGui.showDemoWindow(windowClose)
 
-		if (ImGui.drawData != null) {
+				if (ImGui.begin("Debug window", windowClose, WindowFlags.MenuBar.i)) {
 
-			LwjglGL3.renderDrawData(ImGui.drawData!!)
+					if (ImGui.beginMenuBar()) {
+						if (ImGui.beginMenu("File")) {
+							if (ImGui.menuItem("Open..", "Ctrl+O")) {
+								/* Do stuff */
+							}
+							if (ImGui.menuItem("Save", "Ctrl+S")) {
+								/* Do stuff */
+							}
+							if (ImGui.menuItem("Close", "Ctrl+W")) {
+								menuBarState[0] = false;
+							}
+							ImGui.endMenu();
+						}
+						ImGui.endMenuBar();
+					}
+
+					ImGui.text("Hello, world %d", 4)
+					ImGui.text("ctx.hoveredWindow ${ctx.hoveredWindow}")
+					ImGui.text("ctx.navWindow ${ctx.navWindow}")
+					ImGui.plotLines("plot", graphValues)
+
+					if (ImGui.button("OK")) {
+						println("click")
+					}
+
+					ImGui.inputText("string", stringbuf)
+					ImGui.sliderFloat("float", slider, 0f, 1f)
+					ImGui.image(img.getTexture().textureObjectHandle, Vec2(64, 64))
+				}
+				debugVisible = windowClose[0]
+				ImGui.end()
+
+				ImGui.render()
+
+				if (ImGui.drawData != null) {
+					LwjglGL3.renderDrawData(ImGui.drawData!!)
+				}
+			} catch (e: Throwable) {
+				log.error("Error drawing debug window", e)
+			}
 		}
 	}
 
@@ -106,42 +152,66 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 	override fun update(deltaRealTime: Float) {}
 
 	override fun keyDown(keycode: Int): Boolean {
-		gdxGLFWKeyMap[keycode]?.apply {
-			LwjglGL3.keyCallback(this, 0, GLFW.GLFW_PRESS, 0)
+
+		if (keycode == Input.Keys.GRAVE) {
+			debugVisible = !debugVisible;
+			return true;
 		}
-		return ctx.navWindow != null
+
+		if (debugVisible) {
+			gdxGLFWKeyMap[keycode]?.apply {
+				LwjglGL3.keyCallback(this, 0, GLFW.GLFW_PRESS, 0)
+			}
+		}
+
+		return debugVisible && ctx.navWindow != null
 	}
-	
+
 	override fun keyUp(keycode: Int): Boolean {
-		gdxGLFWKeyMap[keycode]?.apply {
-			LwjglGL3.keyCallback(this, 0, GLFW.GLFW_RELEASE, 0)
+		if (debugVisible) {
+			gdxGLFWKeyMap[keycode]?.apply {
+				LwjglGL3.keyCallback(this, 0, GLFW.GLFW_RELEASE, 0)
+			}
 		}
-		return ctx.navWindow != null
+
+		return debugVisible && ctx.navWindow != null
 	}
-	
+
 	override fun keyTyped(character: Char): Boolean {
-		LwjglGL3.charCallback(character.toInt())
-		return ctx.navWindow != null
+		if (debugVisible) {
+			LwjglGL3.charCallback(character.toInt())
+		}
+
+		return debugVisible && ctx.navWindow != null
 	}
 
+	// Seems to read mouse state every frame
 	override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
-		return ctx.navWindow != null
+		return debugVisible && ctx.navWindow != null
 	}
 
+	// Seems to read mouse state every frame
 	override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
-		LwjglGL3.mouseButtonCallback(button, GLFW.GLFW_PRESS, 0)
-		return ctx.navWindow != null
-	}
-	
-	override fun touchDragged(screenX: Int, screenY: Int, pointer: Int): Boolean {
-		return ctx.navWindow != null
-	}
-	
-	override fun scrolled(amount: Int): Boolean {
-		LwjglGL3.scrollCallback(Vec2d(0, -amount))
-		return ctx.navWindow != null
+		if (debugVisible) {
+//			LwjglGL3.mouseButtonCallback(button, GLFW.GLFW_PRESS, 0)
+		}
+
+		return debugVisible && ctx.navWindow != null
 	}
 
+	override fun touchDragged(screenX: Int, screenY: Int, pointer: Int): Boolean {
+		return debugVisible && ctx.navWindow != null
+	}
+
+	override fun scrolled(amount: Int): Boolean {
+		if (debugVisible) {
+			LwjglGL3.scrollCallback(Vec2d(0, -amount))
+		}
+
+		return debugVisible && ctx.navWindow != null
+	}
+
+	// Seems to read mouse pos every frame
 	override fun mouseMoved(screenX: Int, screenY: Int): Boolean {
 		return false
 	}
