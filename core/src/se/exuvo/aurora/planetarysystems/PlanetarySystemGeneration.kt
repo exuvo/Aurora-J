@@ -6,19 +6,18 @@ import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.Family
 import org.apache.log4j.Logger
 import se.exuvo.aurora.Assets
+import se.exuvo.aurora.galactic.Empire
 import se.exuvo.aurora.planetarysystems.components.CircleComponent
 import se.exuvo.aurora.planetarysystems.components.MassComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.OrbitComponent
-import se.exuvo.aurora.planetarysystems.components.PlanetarySystemComponent
-import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.RenderComponent
 import se.exuvo.aurora.planetarysystems.components.StrategicIconComponent
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
+import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.systems.OrbitSystem
 import java.util.Random
 import kotlin.concurrent.write
-import se.unlogic.standardutils.reflection.ReflectionUtils
 
 class PlanetarySystemGeneration(val system: PlanetarySystem) {
 	companion object {
@@ -37,7 +36,7 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 		system.lock.write {
 			
 			for (entity in engine.getEntitiesFor(FAMILY).toArray<Entity>(Entity::class.java)) {
-				engine.removeEntity(entity)
+				system.destroyEntity(entity)
 			}
 
 			// Mass range of stellar objects in kg
@@ -150,7 +149,7 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 
 	fun addStar(starMass: Double, starRadius: Float, starName: String): Entity {
 
-		val entity = Entity()
+		val entity = system.createEntity(Empire.GAIA)
 		entity.add(TimedMovementComponent().apply { previous.value.position.set(0, 0) })
 		entity.add(RenderComponent())
 		entity.add(CircleComponent().apply { radius = starRadius })
@@ -241,7 +240,7 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 
 	fun addPlanet(planetParent: Entity, planetMass: Double, planetRadius: Float, planetName: String, semiMajorAxis: Float, eccentricity: Float, argumentOfPeriapsis: Float, meanAnomaly: Float): Entity {
 
-		val entity = Entity()
+		val entity = system.createEntity(Empire.GAIA)
 		entity.add(TimedMovementComponent())
 		entity.add(RenderComponent())
 		entity.add(CircleComponent().apply { radius = planetRadius })
@@ -257,7 +256,7 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 
 	fun addMoon(moonParent: Entity, moonMass: Double, moonRadius: Float, moonName: String, semiMajorAxis: Float, eccentricity: Float, argumentOfPeriapsis: Float, meanAnomaly: Float): Entity {
 
-		val entity = Entity()
+		val entity = system.createEntity(Empire.GAIA)
 		entity.add(TimedMovementComponent())
 		entity.add(RenderComponent())
 		entity.add(CircleComponent().apply { radius = moonRadius })
@@ -273,7 +272,7 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 
 	fun addAsteroid(asteroidParent: Entity, asteroidMass: Double, asteroidRadius: Float, asteroidName: String, semiMajorAxis: Float, eccentricity: Float, argumentOfPeriapsis: Float, meanAnomaly: Float): Entity {
 
-		val entity = Entity()
+		val entity = system.createEntity(Empire.GAIA)
 		entity.add(TimedMovementComponent())
 		entity.add(RenderComponent())
 		entity.add(CircleComponent().apply { radius = asteroidRadius })

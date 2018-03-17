@@ -9,6 +9,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 class Empire(var name: String) {
 companion object {
 		val empireIDGenerator = AtomicInteger()
+		val GAIA = Empire("Gaia")
 	}
 
 	val id = empireIDGenerator.getAndIncrement()

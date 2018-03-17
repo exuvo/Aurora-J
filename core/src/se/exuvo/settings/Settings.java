@@ -1,6 +1,5 @@
 package se.exuvo.settings;
 
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -28,101 +27,101 @@ import com.martiansoftware.jsap.JSAPResult;
 import com.martiansoftware.jsap.UnspecifiedParameterException;
 
 public class Settings {
-	private static Hashtable<String,Setting> settings = new Hashtable<String,Setting>();
+
+	private static Hashtable<String, Setting> settings = new Hashtable<String, Setting>();
 	protected static final Logger log = Logger.getLogger(Settings.class);
 	private static String name;
 
-	
-	public static String getSectionName(){
+	public static String getSectionName() {
 		return name;
 	}
-	
-	public static String getStr(String name){
+
+	public static String getStr(String name) {
 		Setting s = settings.get(name);
-		if(s != null && s.getName().equals(name)){
+		if (s != null && s.getName().equals(name)) {
 			return s.getStr();
 		}
 		return "";
 	}
-	
-	public static boolean getBol(String name){
+
+	public static Boolean getBol(String name) {
 		Setting s = settings.get(name);
-		if(s != null && s.getName().equals(name)){
+		if (s != null && s.getName().equals(name)) {
 			return s.getBol();
 		}
 		return false;
 	}
-	
-	public static int getInt(String name){
+
+	public static Integer getInt(String name) {
 		Setting s = settings.get(name);
-		if(s != null && s.getName().equals(name)){
+		if (s != null && s.getName().equals(name)) {
 			return s.getInt();
 		}
-		return 0;
+		return null;
 	}
-	
-	public static float getFloat(String name){
+
+	public static Float getFloat(String name) {
 		Setting s = settings.get(name);
-		if(s != null && s.getName().equals(name)){
+		if (s != null && s.getName().equals(name)) {
 			return s.getFloat();
 		}
 		return 0f;
 	}
-	
-	public static void remove(String name){
+
+	public static void remove(String name) {
 		settings.remove(name);
 	}
-	
-	public static void set(String name,String value){
+
+	public static void set(String name, String value) {
 		Setting s = settings.get(name);
-		if(s != null && s.getName().equals(name)){
+		if (s != null && s.getName().equals(name)) {
 			s.setStr(value);
 			return;
 		}
-		add(name,value);
+		add(name, value);
 	}
-	
-	public static void set(String name,boolean value){
+
+	public static void set(String name, boolean value) {
 		Setting s = settings.get(name);
-		if(s != null && s.getName().equals(name)){
+		if (s != null && s.getName().equals(name)) {
 			s.setBol(value);
 			return;
 		}
-		add(name,value);
+		add(name, value);
 	}
-	
-	public static void set(String name,int value){
+
+	public static void set(String name, int value) {
 		Setting s = settings.get(name);
-		if(s != null && s.getName().equals(name)){
+		if (s != null && s.getName().equals(name)) {
 			s.setInt(value);
 			return;
 		}
-		add(name,value);
+		add(name, value);
 	}
-	
-	public static void set(String name,float value){
+
+	public static void set(String name, float value) {
 		Setting s = settings.get(name);
-		if(s != null && s.getName().equals(name)){
+		if (s != null && s.getName().equals(name)) {
 			s.setFloat(value);
 			return;
 		}
-		add(name,value);
+		add(name, value);
 	}
-	
-	public static void set(String name, String value, char type){
+
+	public static void set(String name, String value, Setting.Type type) {
 		Setting s = settings.get(name);
-		if(s != null && s.getName().equals(name)){
-			switch(type){
-				case Setting.STRING:
+		if (s != null && s.getName().equals(name)) {
+			switch (type) {
+				case STRING:
 					s.setStr(value);
 					break;
-				case Setting.BOOLEAN:
+				case BOOLEAN:
 					s.setBol(Boolean.parseBoolean(value));
 					break;
-				case Setting.INTEGER:
+				case INTEGER:
 					s.setInt(Integer.parseInt(value));
 					break;
-				case Setting.FLOAT:
+				case FLOAT:
 					s.setFloat(Float.parseFloat(value));
 					break;
 				default:
@@ -132,90 +131,90 @@ public class Settings {
 		}
 		add(name, value, type);
 	}
-	
-	public static void add(String name,String value){
+
+	public static void add(String name, String value) {
 		settings.put(name, new Setting(name, value));
 	}
-	
-	public static void add(String name,boolean value){
+
+	public static void add(String name, Boolean value) {
 		settings.put(name, new Setting(name, value));
 	}
-	
-	public static void add(String name,int value){
+
+	public static void add(String name, Integer value) {
 		settings.put(name, new Setting(name, value));
 	}
-	
-	public static void add(String name,float value){
+
+	public static void add(String name, Float value) {
 		settings.put(name, new Setting(name, value));
 	}
-	
-	public static void add(String name, String value, char type){
+
+	public static void add(String name, String value, Setting.Type type) {
 		settings.put(name, new Setting(name, value, type));
 	}
-	
-	public static void add(Setting setting){
+
+	public static void add(Setting setting) {
 		settings.put(name, setting);
 	}
-	
+
 	/**
-     * Saves settings list to xml file.
-     */
-	public static boolean save(){
+	 * Saves settings list to xml file.
+	 */
+	public static boolean save() {
 		log.info("Saving settings");
 		File file = new File("settings.xml");
 		Document doc;
 		XPath xPath = XPathFactory.newInstance().newXPath();
-		
-		if(!file.exists()){
+
+		if (!file.exists()) {
 			doc = XMLUtils.createDomDocument();
 			log.info("Creating new settings file");
-		}else{
+		} else {
 			try {
 				doc = XMLUtils.parseXMLFile(file, false, false);
 			} catch (SAXException e) {
 				log.error("SAXException: " + e + " while parsing " + file);
-				//doc = Xml.newxml();
+				// doc = Xml.newxml();
 				return false;
 			} catch (IOException e) {
-				log.error("IOException: " + e + " while opening "+ file);
+				log.error("IOException: " + e + " while opening " + file);
 				return false;
 			} catch (ParserConfigurationException e) {
-				log.error("ParserConfigurationException: " + e + " while parsing "+ file);
+				log.error("ParserConfigurationException: " + e + " while parsing " + file);
 				return false;
 			}
 		}
-		
-		try{
+
+		try {
 			// Root
-			Node root = (Node) xPath.evaluate("/" + name, doc,XPathConstants.NODE);
-			if(root == null){
+			Node root = (Node) xPath.evaluate("/" + name, doc, XPathConstants.NODE);
+			if (root == null) {
 				root = doc.createElement(name);
 				doc.appendChild(root);
 			}
-			
+
 			// Settings
-			Node configElement = (Node) xPath.evaluate("/" + name + "/settings", doc,XPathConstants.NODE);
-			if(configElement == null){
+			Node configElement = (Node) xPath.evaluate("/" + name + "/settings", doc, XPathConstants.NODE);
+			if (configElement == null) {
 				configElement = doc.createElement("settings");
 				root.appendChild(configElement);
 			}
-			
-			for (Iterator<Setting> it = settings.values().iterator();it.hasNext(); ){
+
+			for (Iterator<Setting> it = settings.values().iterator(); it.hasNext();) {
 				Setting s = it.next();
-				Element n = (Element) xPath.evaluate("/" + name + "/settings/" + s.getName(), doc,XPathConstants.NODE);
-				if(n == null){
+				Element n = (Element) xPath.evaluate("/" + name + "/settings/" + s.getName(), doc, XPathConstants.NODE);
+				if (n == null) {
 					Element e = XMLUtils.createElement(s.getName(), s.getValue(), doc);
-					e.setAttribute("type", "" + s.getType());
+					e.setAttribute("type", "" + s.getType().getCode());
 					configElement.appendChild(e);
-				}else{
+				} else {
 					n.setTextContent(s.getValue());
-					n.setAttribute("type", "" + s.getType());
+					n.setAttribute("type", "" + s.getType().getCode());
 				}
 			}
-	
+
 			XMLUtils.writeXMLFile(doc, file, true, "UTF-8");
 			return true;
-		}catch(XPathExpressionException e){
+		} catch (XPathExpressionException e) {
 			log.error("XPathExpressionException: " + e + " while writing xml");
 			return false;
 		} catch (TransformerFactoryConfigurationError e) {
@@ -225,32 +224,39 @@ public class Settings {
 			log.error("TransformerException: " + e + " while writing xml");
 			return false;
 		} catch (FileNotFoundException e) {
-				log.error("FileNotFoundException: " + e + " while writing xml");
-				return false;
+			log.error("FileNotFoundException: " + e + " while writing xml");
+			return false;
 		}
-			
+
 	}
-	
+
 	/**
-     * Loads settings from xml file.
-     */
-	public static boolean load(){
+	 * Loads settings from xml file.
+	 */
+	public static boolean load() {
 		File file = new File("settings.xml");
-		
-		if(!file.exists()){
+
+		if (!file.exists()) {
 			save();
 		}
-		
-		try{
+
+		try {
 			Document doc = XMLUtils.parseXMLFile(file, false, false);
 			XPath xPath = XPathFactory.newInstance().newXPath();
-			
-			NodeList nodeList = (NodeList) xPath.evaluate("/" + name + "/settings/*", doc,XPathConstants.NODESET);
-			for (int i=0; i<nodeList.getLength(); i++){
+
+			NodeList nodeList = (NodeList) xPath.evaluate("/" + name + "/settings/*", doc, XPathConstants.NODESET);
+			for (int i = 0; i < nodeList.getLength(); i++) {
 				Element e = (Element) nodeList.item(i);
-				set(nodeList.item(i).getNodeName(), nodeList.item(i).getTextContent(), e.getAttribute("type").charAt(0));
+
+				String value = nodeList.item(i).getTextContent();
+
+				if ("null".equals(value)) {
+					value = null;
+				}
+
+				set(nodeList.item(i).getNodeName(), value, Setting.Type.valueOf(e.getAttribute("type").charAt(0)));
 			}
-		
+
 			return true;
 		} catch (SAXException e) {
 			log.warn("SAXException: " + e + " while reading xml");
@@ -263,41 +269,40 @@ public class Settings {
 		}
 		return false;
 	}
-	
-	public static boolean start(JSAPResult conf,String name){
+
+	public static boolean start(JSAPResult conf, String name) {
 		Settings.name = name;
-		if(!load()){
+		if (!load()) {
 			return false;
 		}
 		loadconfig(conf);
 		return true;
 	}
-	
+
 	/**
-     * Loads settings specified at command line
-     */
-	public static void loadconfig(JSAPResult config){
-		for(Iterator<Setting> it=settings.values().iterator();it.hasNext();){
+	 * Loads settings specified at command line
+	 */
+	public static void loadconfig(JSAPResult config) {
+		for (Iterator<Setting> it = settings.values().iterator(); it.hasNext();) {
 			Setting s = it.next();
-			if(config.userSpecified(s.getName())){
-				try{
-					switch(s.getType()){
-					case Setting.STRING:
-						s.setStr(config.getString(s.getName()));
-						break;
-					case Setting.BOOLEAN:
-						s.setBol(config.getBoolean(s.getName()));
-						break;
-					case Setting.INTEGER:
-						s.setInt(config.getInt(s.getName()));
-						break;
-					default:
-						throw new Setting.InvalidTypeException("Trying to set unknown type!");
-				}
-				}catch(UnspecifiedParameterException e){
-				}
+			if (config.userSpecified(s.getName())) {
+				try {
+					switch (s.getType()) {
+						case STRING:
+							s.setStr(config.getString(s.getName()));
+							break;
+						case BOOLEAN:
+							s.setBol(config.getBoolean(s.getName()));
+							break;
+						case INTEGER:
+							s.setInt(config.getInt(s.getName()));
+							break;
+						default:
+							throw new Setting.InvalidTypeException("Trying to set unknown type!");
+					}
+				} catch (UnspecifiedParameterException e) {}
 			}
 		}
 	}
-	
+
 }

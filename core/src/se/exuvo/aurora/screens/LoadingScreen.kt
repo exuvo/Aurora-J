@@ -8,12 +8,14 @@ import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.BitmapFont.Glyph
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.profiling.GLErrorListener
+import com.badlogic.gdx.graphics.profiling.GLProfiler
 import com.badlogic.gdx.tools.texturepacker.TexturePacker
 import se.exuvo.aurora.Assets
+import se.exuvo.aurora.galactic.Technology
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.OutputStreamListener
 import java.io.PrintStream
-import se.exuvo.aurora.galactic.Technology
 
 // See GlyphLayout::setText and BitmapFont$BitmapFontData::getGlyphs
 fun getFontWidth(font: BitmapFont, text: String): Float {
@@ -50,6 +52,20 @@ class LoadingScreen() : GameScreenImpl() {
 	private var texturePackerTask = TexturePackerTask(assetManager)
 
 	override fun show() {
+		val profiler = GameServices[GLProfiler::class.java]
+		profiler.enable()
+		
+		/* TODO fix throws GL_INVALID_ENUM
+		 	at com.badlogic.gdx.graphics.GLTexture.setFilter(GLTexture.java:164)
+			at com.badlogic.gdx.assets.loaders.TextureLoader.loadSync(TextureLoader.java:87)
+			at com.badlogic.gdx.assets.loaders.TextureLoader.loadSync(TextureLoader.java:41)
+			at com.badlogic.gdx.assets.AssetLoadingTask.handleAsyncLoader(AssetLoadingTask.java:125)
+			at com.badlogic.gdx.assets.AssetLoadingTask.update(AssetLoadingTask.java:90)
+			at com.badlogic.gdx.assets.AssetManager.updateTask(AssetManager.java:507)
+			at com.badlogic.gdx.assets.AssetManager.update(AssetManager.java:381)
+		 */
+//		profiler.setListener(GLErrorListener.THROWING_LISTENER)
+		
 		Assets.startLoad()
 	}
 

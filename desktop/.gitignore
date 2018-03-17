@@ -1,3 +1,7 @@
 /log.error
 /log.log
 /settings.xml
+/history.db
+/history.db-shm
+/history.db-wal
+/imgui.ini

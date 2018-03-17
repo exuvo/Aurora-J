@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.1.51'
+    ext.kotlin_version = '1.2.30'
 
     repositories {
         mavenLocal()
@@ -20,12 +20,14 @@ allprojects {
     ext {
         appName = "Aurora J"
         gdxVersion = '1.9.8'
+        ktxVersion = '1.9.8-b2'
         gdxAI = '1.8.1'
         log4jVersion = '1.2.17'
         jsapVersion = '2.1'
         box2dlightsVersion = '1.4'
         ashleyVersion = '1.7.3'
         kryoVersion = '4.0.1'
+        lwjglVersion = '3.1.6'
     }
 
     repositories {
@@ -33,6 +35,7 @@ allprojects {
         mavenCentral()
         maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
         maven { url "https://oss.sonatype.org/content/repositories/releases/" }
+        maven { url 'https://jitpack.io' }
     }
 }
 
@@ -43,7 +46,6 @@ project(":desktop") {
     dependencies {
         compile project(":core")
         compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
-        compile "com.badlogicgames.gdx:gdx-backend-lwjgl:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
         compile "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
         compile "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
@@ -58,17 +60,45 @@ project(":core") {
 
     dependencies {
         compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+				
         compile "com.badlogicgames.gdx:gdx:$gdxVersion"
+        compile "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-ai:$gdxAI"
         compile "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
-        compile "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
         compile "com.badlogicgames.box2dlights:box2dlights:$box2dlightsVersion"
         compile "com.badlogicgames.ashley:ashley:$ashleyVersion"
+        compile "io.github.libktx:ktx-actors:$ktxVersion"
+        compile "io.github.libktx:ktx-app:$ktxVersion"
+        compile "io.github.libktx:ktx-ashley:$ktxVersion"
+        compile "io.github.libktx:ktx-assets:$ktxVersion"
+        compile "io.github.libktx:ktx-collections:$ktxVersion"
+        compile "io.github.libktx:ktx-freetype:$ktxVersion"
+        compile "io.github.libktx:ktx-freetype-async:$ktxVersion"
+        compile "io.github.libktx:ktx-math:$ktxVersion"
+        compile "io.github.libktx:ktx-scene2d:$ktxVersion"
+        compile "io.github.libktx:ktx-style:$ktxVersion"
         compile "log4j:log4j:$log4jVersion"
         compile "com.martiansoftware:jsap:$jsapVersion"
         compile "com.esotericsoftware:kryo:$kryoVersion"
         compile "com.esotericsoftware:jsonbeans:0.7"
+        compile "org.xerial:sqlite-jdbc:3.21.0"
+        // compile files("lib/sqlite-jdbc-3.21.0.jar")
+        
+        compile "org.lwjgl:lwjgl:$lwjglVersion"
+        compile "org.lwjgl:lwjgl-glfw:$lwjglVersion"
+        compile "org.lwjgl:lwjgl-jemalloc:$lwjglVersion"
+        compile "org.lwjgl:lwjgl-opengl:$lwjglVersion"
+        compile "org.lwjgl:lwjgl-openal:$lwjglVersion"
+				compile "org.lwjgl:lwjgl-stb:$lwjglVersion"
+				compile "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-windows"
+				
+        compile ("com.github.kotlin-graphics:imgui:-SNAPSHOT") {
+					exclude group: 'org.jogamp.gluegen'
+					exclude group: 'org.jogamp.jogl'
+					exclude group: 'org.lwjgl'
+        }
+        
     }
 }
 

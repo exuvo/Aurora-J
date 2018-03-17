@@ -20,7 +20,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
 import java.lang.IllegalArgumentException
 
-class Galaxy(val empires: List<Empire>, val systems: List<PlanetarySystem>, var time: Long = 0) : Runnable, EntityListener {
+class Galaxy(val empires: MutableList<Empire>, val systems: MutableList<PlanetarySystem>, var time: Long = 0) : Runnable, EntityListener {
 
 	val log = Logger.getLogger(this.javaClass)
 
@@ -38,6 +38,8 @@ class Galaxy(val empires: List<Empire>, val systems: List<PlanetarySystem>, var 
 	val engine = Engine()
 
 	fun init() {
+		empires.add(Empire.GAIA)
+		
 		GameServices.put(this)
 		systems.forEach {
 			engine.addEntity(it)
@@ -60,7 +62,7 @@ class Galaxy(val empires: List<Empire>, val systems: List<PlanetarySystem>, var 
 				return empire;
 			}
 		}
-		throw IllegalArgumentException()
+		throw IllegalArgumentException("$id")
 	}
 	
 	fun getPlanetarySystem(id: Int): PlanetarySystem {
@@ -69,7 +71,7 @@ class Galaxy(val empires: List<Empire>, val systems: List<PlanetarySystem>, var 
 				return system;
 			}
 		}
-		throw IllegalArgumentException()
+		throw IllegalArgumentException("$id")
 	}
 
 	override fun entityAdded(entity: Entity) {

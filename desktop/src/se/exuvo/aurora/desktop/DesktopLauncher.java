@@ -8,9 +8,12 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
 
 import com.badlogic.gdx.Files.FileType;
-import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
-import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
-import com.badlogic.gdx.tools.texturepacker.TexturePacker;
+import com.badlogic.gdx.Graphics.DisplayMode;
+import com.badlogic.gdx.Graphics.Monitor;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import com.badlogic.gdx.graphics.profiling.GLProfiler;
+import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.martiansoftware.jsap.JSAP;
 import com.martiansoftware.jsap.JSAPException;
 import com.martiansoftware.jsap.JSAPResult;
@@ -59,21 +62,69 @@ public class DesktopLauncher {
 		Logger.getLogger("se.exuvo").setLevel(level);
 		log.info("Changed log level to " + level);
 
-		LwjglApplicationConfiguration windowConfig = new LwjglApplicationConfiguration();
-		windowConfig.title = "Aurora J";
-		windowConfig.width = Settings.getInt("G.Width");
-		windowConfig.height = Settings.getInt("G.Height");
-		windowConfig.foregroundFPS = Settings.getInt("G.FrameLimit");
-		windowConfig.backgroundFPS = Settings.getInt("G.BackgroundFrameLimit");
-		windowConfig.fullscreen = Settings.getBol("G.Fullscreen");
-		windowConfig.vSyncEnabled = Settings.getBol("G.VSync");
-		windowConfig.resizable = Settings.getBol("G.Resizable");
-		windowConfig.preferencesDirectory = Paths.get("").toAbsolutePath().toString();
-		windowConfig.preferencesFileType = FileType.Absolute;
+		Lwjgl3ApplicationConfiguration windowConfig = new Lwjgl3ApplicationConfiguration();
+		windowConfig.setTitle("Aurora J");
+
+		if (Settings.getBol("G.Fullscreen")) {
+
+			Monitor monitor;
+			Integer monitorIndex = Settings.getInt("G.MonitorIndex");
+
+			if (monitorIndex == null) {
+				monitor = Lwjgl3ApplicationConfiguration.getPrimaryMonitor();
+
+			} else {
+				monitor = Lwjgl3ApplicationConfiguration.getMonitors()[monitorIndex];
+			}
+
+			DisplayMode displayMode = null;
+
+			if (Settings.getInt("G.Width") == null && Settings.getInt("G.Height") == null) {
+
+				displayMode = Lwjgl3ApplicationConfiguration.getDisplayMode(monitor);
+
+			} else {
+
+				DisplayMode[] displayModes = Lwjgl3ApplicationConfiguration.getDisplayModes(monitor);
+
+				Integer refreshRate = Settings.getInt("G.RefreshRate");
+
+				for (DisplayMode dm : displayModes) {
+
+					if (dm.width == Settings.getInt("G.Width") && dm.height == Settings.getInt("G.Height") && (refreshRate == null || dm.refreshRate == refreshRate)) {
+						displayMode = dm;
+						break;
+					}
+				}
+
+				if (displayMode == null) {
+
+					throw new UnsupportedOperationException("Found no valid display mode for given display settings");
+				}
+			}
+
+			windowConfig.setFullscreenMode(displayMode);
+
+		} else {
+
+			windowConfig.setWindowedMode(Settings.getInt("G.Width"), Settings.getInt("G.Height"));
+		}
+
+//		windowConfig.foregroundFPS = Settings.getInt("G.FrameLimit");
+		windowConfig.setIdleFPS(Settings.getInt("G.IdleFrameLimit"));
+		windowConfig.useVsync(Settings.getBol("G.VSync"));
+		windowConfig.setResizable(Settings.getBol("G.Resizable"));
+		windowConfig.setPreferencesConfig(Paths.get("").toAbsolutePath().toString(), FileType.Absolute);
 
 		String assetsURI = FileUtils.fileExists("assets") ? "assets/" : "../core/assets/";
 
-		new LwjglApplication(new AuroraGame(assetsURI), windowConfig);
+		try {
+			new Lwjgl3Application(new AuroraGame(assetsURI), windowConfig);
+			
+		} catch (GdxRuntimeException e) {
+			log.error("", e);
+			System.exit(1);
+		}
 	}
 
 	private static final void arguments(JSAP jsap) {
@@ -90,15 +141,17 @@ public class DesktopLauncher {
 	private static final void loadSettings(JSAPResult conf) {
 		Settings.add("loglvl", "INFO");
 
-		Settings.add("G.FrameLimit", 60);
-		Settings.add("G.BackgroundFrameLimit", 20);
+//		Settings.add("G.FrameLimit", 60);
+		Settings.add("G.IdleFrameLimit", 20);
 		Settings.add("G.Width", 1024);
 		Settings.add("G.Height", 768);
 		Settings.add("G.Fullscreen", false);
+		Settings.add("G.RefreshRate", 60);
+		Settings.add("G.MonitorIndex", 0);
 		Settings.add("G.VSync", false);
 		Settings.add("G.Resizable", true);
 		Settings.add("G.ShowFPS", true);
-		
+
 		Settings.add("UI.zoomSensitivity", 1.25f);
 
 		Settings.add("Orbits.DotsRepresentSpeed", true);

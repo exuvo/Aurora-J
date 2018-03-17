@@ -89,6 +89,7 @@ object Assets : Disposable {
 	}
 
 	override fun dispose() {
-		manager.dispose()
+		// Already disposed of by game services
+		// manager.dispose() 
 	}
 }

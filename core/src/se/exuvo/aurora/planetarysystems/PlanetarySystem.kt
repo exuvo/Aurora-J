@@ -8,12 +8,18 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.utils.Pool.Poolable
 import org.apache.log4j.Logger
 import se.exuvo.aurora.Assets
+import se.exuvo.aurora.galactic.Empire
+import se.exuvo.aurora.galactic.Galaxy
+import se.exuvo.aurora.galactic.PassiveSensor
+import se.exuvo.aurora.history.History
 import se.exuvo.aurora.planetarysystems.components.CircleComponent
 import se.exuvo.aurora.planetarysystems.components.EmissionsComponent
+import se.exuvo.aurora.planetarysystems.components.EntityUUID
 import se.exuvo.aurora.planetarysystems.components.GalacticPositionComponent
 import se.exuvo.aurora.planetarysystems.components.MassComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.OrbitComponent
+import se.exuvo.aurora.planetarysystems.components.PassiveSensorsComponent
 import se.exuvo.aurora.planetarysystems.components.PlanetarySystemComponent
 import se.exuvo.aurora.planetarysystems.components.RenderComponent
 import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
@@ -24,27 +30,22 @@ import se.exuvo.aurora.planetarysystems.components.TagComponent
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.TintComponent
+import se.exuvo.aurora.planetarysystems.components.UUIDComponent
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.planetarysystems.systems.MovementSystem
 import se.exuvo.aurora.planetarysystems.systems.OrbitSystem
-import se.exuvo.aurora.planetarysystems.systems.RenderSystem
 import se.exuvo.aurora.planetarysystems.systems.PassiveSensorSystem
+import se.exuvo.aurora.planetarysystems.systems.RenderSystem
 import se.exuvo.aurora.planetarysystems.systems.ShipSystem
 import se.exuvo.aurora.planetarysystems.systems.SolarIrradianceSystem
 import se.exuvo.aurora.planetarysystems.systems.TagSystem
 import se.exuvo.aurora.utils.DummyReentrantReadWriteLock
+import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
-import java.util.concurrent.locks.ReentrantReadWriteLock
-import kotlin.concurrent.write
-import se.exuvo.aurora.planetarysystems.components.PassiveSensorsComponent
-import se.exuvo.aurora.galactic.PassiveSensor
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
-import se.exuvo.aurora.planetarysystems.components.EntityUUID
-import se.exuvo.aurora.planetarysystems.components.UUIDComponent
-import se.exuvo.aurora.galactic.Empire
-import se.exuvo.aurora.utils.GameServices
-import se.exuvo.aurora.galactic.Galaxy
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.write
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : Entity(), EntityListener {
 	companion object {
@@ -60,9 +61,11 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 	private val solarSystemMapper = ComponentMapper.getFor(PlanetarySystemComponent::class.java)
 	private val uuidMapper = ComponentMapper.getFor(UUIDComponent::class.java)
 	private val galaxy by lazy {GameServices[Galaxy::class.java]}
+	private val history by lazy {GameServices[History::class.java]}
 
 	/* All missiles and other short lived entites should be Pooled using createEntityPooled() and engine.createComponent()
-   * Everything else which should either be capable of moving between systems or is static should be created normally with createEntity and Component() 
+   * Everything else which should either be capable of moving between systems or is static should be created normally with createEntity() and Component()
+   * Destroy them with destroyEntity()
 	 */
 	fun init() {
 		add(GalacticPositionComponent(initialPosition))
@@ -83,7 +86,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 
 		val empire1 = galaxy.getEmpire(1)
 		
-		val entity1 = createEntity(empire1)
+		val entity1 = createEntity(Empire.GAIA)
 		entity1.add(TimedMovementComponent().apply { previous.value.position.set(0, 0) })
 		entity1.add(RenderComponent())
 		entity1.add(CircleComponent().apply { radius = 695700f })
@@ -146,6 +149,8 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		val entity = Entity()
 		entity.add(PlanetarySystemComponent(this))
 		entity.add(UUIDComponent(EntityUUID(id, empire.id, getNewEnitityID())))
+		
+		history.entityCreated(entity)
 		return entity
 	}
 
@@ -153,7 +158,14 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		val entity = engine.createEntity()
 		entity.add(engine.createComponent(PlanetarySystemComponent::class.java).apply { system = this@PlanetarySystem })
 		entity.add(engine.createComponent(UUIDComponent::class.java).apply { EntityUUID(id, empire.id, getNewEnitityID()) })
+		
+		history.entityCreated(entity)
 		return entity
+	}
+	
+	fun destroyEntity(entity: Entity) {
+		history.entityDestroyed(entity)
+		engine.removeEntity(entity)
 	}
 	
 	override fun entityAdded(entity: Entity) {

@@ -5,10 +5,14 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.assets.loaders.FileHandleResolver
 import com.badlogic.gdx.files.FileHandle
+import com.badlogic.gdx.graphics.GL30
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.graphics.profiling.GLErrorListener
+import com.badlogic.gdx.graphics.profiling.GLProfiler
 import com.esotericsoftware.kryonet.MinlogTolog4j
 import org.apache.log4j.Logger
+import se.exuvo.aurora.history.History
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.screens.GameScreenService
 import se.exuvo.aurora.screens.LoadingScreen
@@ -24,11 +28,13 @@ class AuroraGame(val assetsRoot: String) : ApplicationAdapter() {
 	override fun create() {
 		com.esotericsoftware.minlog.Log.setLogger(MinlogTolog4j())
 		com.esotericsoftware.minlog.Log.set(com.esotericsoftware.minlog.Log.LEVEL_WARN)
-
+		
+		GameServices.put(GLProfiler(Gdx.graphics))
 		GameServices.put(AssetManager(AuroraAssetsResolver(assetsRoot)))
 		GameServices.put(ShapeRenderer())
 		GameServices.put(SpriteBatch())
 		GameServices.put(GroupSystem(ReentrantReadWriteLock()))
+		GameServices.put(History())
 		GameServices.put(screenService)
 
 		Gdx.input.setInputProcessor(screenService)
@@ -53,7 +59,6 @@ class AuroraGame(val assetsRoot: String) : ApplicationAdapter() {
 	}
 
 	override fun dispose() {
-		screenService.dispose()
 		Assets.dispose()
 		GameServices.dispose()
 		Settings.save()

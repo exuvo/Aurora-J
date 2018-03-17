@@ -1,0 +1,32 @@
+<DBScripts>
+	<Script version="1">
+		<Query>
+			<![CDATA[
+				CREATE TABLE entities (
+					eventID           INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+			    time              INTEGER NOT NULL,
+			    planetarySystemID INTEGER NOT NULL,
+			    empireID          INTEGER NOT NULL,
+			    shipID            INTEGER NOT NULL,
+			    eventType         CHAR (30)
+				);
+			]]>
+		</Query>
+		<Query>
+			<![CDATA[
+				CREATE INDEX time ON entities (
+    			time
+				);
+			]]>
+		</Query>
+		<Query>
+			<![CDATA[
+				CREATE INDEX uuid ON entities (
+			    planetarySystemID,
+			    empireID,
+			    shipID
+				);
+			]]>
+		</Query>
+	</Script>
+</DBScripts>

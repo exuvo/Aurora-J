@@ -7,4 +7,6 @@ import se.exuvo.aurora.planetarysystems.PlanetarySystem
 data class UUIDComponent(val uuid: EntityUUID) : Component
 
 data class EntityUUID(val planetarySystemID: Int, val empireID: Int, val shipID: Long) {
+
+	override fun toString(): String = "$planetarySystemID:$empireID:$shipID"
 }
