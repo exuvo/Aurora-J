@@ -17,11 +17,14 @@ enum class Resource(val density: Int) {
 	ROCKET_FUEL(1), // LOX + kerosene, LOX + H, nitrogen tetroxide + hydrazine. https://en.wikipedia.org/wiki/Rocket_propellant#Liquid_propellants
 	// Requires temperature control and atmosphere
 	LIFE_SUPPORT(1), // Food, Water, Air
+	MISSILES(1),
+	SABOTS(1),
 	ITEMS(0);
 }
 
 enum class CargoType(val resources: List<Resource>) {
 	NORMAL(listOf(Resource.MAINTENANCE_SUPPLIES, Resource.GENERIC, Resource.METAL_LIGHT, Resource.METAL_CONDUCTIVE, Resource.SEMICONDUCTORS, Resource.RARE_EARTH, Resource.ITEMS)),
+	AMMUNITION(listOf(Resource.MISSILES, Resource.SABOTS)),
 	FUEL(listOf(Resource.ROCKET_FUEL)),
 	LIFE_SUPPORT(listOf(Resource.LIFE_SUPPORT)),
 	NUCLEAR(listOf(Resource.NUCLEAR_FISSION, Resource.NUCLEAR_FUSION))

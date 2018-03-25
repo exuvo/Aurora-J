@@ -10,3 +10,5 @@ data class EntityUUID(val planetarySystemID: Int, val empireID: Int, val shipID:
 
 	override fun toString(): String = "$planetarySystemID:$empireID:$shipID"
 }
+
+data class NameComponent(var name: String = "") : Component

@@ -9,12 +9,21 @@ import se.exuvo.aurora.galactic.ShipClass
 import java.security.InvalidParameterException
 import java.util.ArrayList
 import java.lang.IllegalArgumentException
+import se.exuvo.aurora.galactic.PoweredPart
+import se.exuvo.aurora.galactic.ChargedPart
+import se.exuvo.aurora.galactic.AmmunitionPart
+import com.badlogic.gdx.utils.Queue
+import se.exuvo.aurora.galactic.ReloadablePart
+import se.exuvo.aurora.galactic.FueledPart
+import se.exuvo.aurora.galactic.PoweringPart
+import kotlin.reflect.KClass
 
 class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : Component {
 	var commissionDay: Int? = null
 	val armor = Array<Int>(shipClass.getSurfaceArea(), { shipClass.armorLayers })
 	val partHealth = Array<Int>(shipClass.parts.size, { shipClass.parts[it].maxHealth })
 	val partEnabled = Array<Boolean>(shipClass.parts.size, { true })
+	val partState = Array<PartState>(shipClass.parts.size, { PartState() })
 	var cargo: Map<Resource, ShipCargo> = emptyMap()
 	var partCargo: MutableList<Part> = ArrayList()
 	var mass: Long = 0
@@ -45,6 +54,44 @@ class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : Compon
 
 			cargo = mutableCargo
 		}
+		
+		partState.forEachIndexed { partIndex, state ->
+			val part = shipClass.parts[partIndex]
+			
+			if (part is PoweringPart) {
+				state.put(PoweringPartState())
+			}
+			
+			if (part is PoweredPart) {
+				state.put(PoweredPartState())
+			}
+			
+			if (part is ChargedPart) {
+				state.put(ChargedPartState())
+			}
+			
+			if (part is AmmunitionPart) {
+				state.put(AmmunitionPartState(Queue<Part>(part.ammunitionAmount)))
+			}
+			
+			if (part is ReloadablePart) {
+				state.put(ReloadablePartState())
+			}
+			
+			if (part is FueledPart) {
+				state.put(FueledPartState())
+			}
+		}
+	}
+	
+	fun getPartState(part: Part): PartState {
+		val index = shipClass.parts.indexOf(part)
+
+		if (index == -1) {
+			throw IllegalArgumentException()
+		}
+
+		return partState[index]
 	}
 	
 	fun getPartHealth(part: Part): Int {
@@ -192,3 +239,44 @@ data class ShipCargo(val type: CargoType) {
 		}
 	}
 }
+
+@Suppress("UNCHECKED_CAST")
+class PartState {
+	private val states = HashMap<KClass<*>, Any>()
+
+	operator fun <T : Any> get(serviceClass: KClass<T>) = states[serviceClass] as T
+	fun <T : Any> tryGet(serviceClass: KClass<T>) = states[serviceClass] as? T
+
+	fun put(state: Any) {
+		states[state::class] = state
+	}
+
+	fun put(state: Any, savedClass: KClass<*>) {
+		states[savedClass] = state
+	}
+}
+
+data class FueledPartState(var requestedFuel: Int = 0,
+													 var givenFuel: Int = 0
+)
+
+data class PoweringPartState(var availiablePower: Int = 0,
+														 var producedPower: Int = 0
+)
+
+data class PoweredPartState(var requestedPower: Int = 0,
+														var givenPower: Int = 0
+)
+
+data class ChargedPartState(var charge: Int = 0)
+
+data class AmmunitionPartState(var ammunition: Queue<Part>)
+
+data class WeaponPartState(var requestedPower: Int = 0,
+													 var givenPower: Int = 0
+)
+
+data class ReloadablePartState(var loaded: Boolean = true,
+															 var reloadedAt: Int = 0
+)
+
