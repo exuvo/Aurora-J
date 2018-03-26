@@ -1,5 +1,7 @@
 package se.exuvo.aurora.galactic
 
+import se.exuvo.aurora.planetarysystems.components.PowerScheme
+
 class ShipClass {
 	var name: String = ""
 	var designDay: Int? = null
@@ -7,6 +9,7 @@ class ShipClass {
 	var armorLayers = 1
 	var preferredCargo: Map<Resource, Int> = LinkedHashMap()
 	var preferredItemCargo: MutableList<Part> = ArrayList()
+	var powerScheme: PowerScheme = PowerScheme.SOLAR_BATTERY_REACTOR
 	//TODO default weapon assignments
 
 	operator fun <T : Any> get(partClass: Class<T>) = parts.filterIsInstance(partClass)

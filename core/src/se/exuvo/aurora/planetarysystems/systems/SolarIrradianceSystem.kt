@@ -1,15 +1,21 @@
 package se.exuvo.aurora.planetarysystems.systems
 
 import com.badlogic.ashley.core.ComponentMapper
+import com.badlogic.ashley.core.Engine
 import com.badlogic.ashley.core.Entity
+import com.badlogic.ashley.core.EntityListener
 import com.badlogic.ashley.core.Family
 import org.apache.log4j.Logger
-import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
+import se.exuvo.aurora.galactic.ChargedPart
+import se.exuvo.aurora.galactic.PoweredPart
+import se.exuvo.aurora.galactic.PoweringPart
+import se.exuvo.aurora.planetarysystems.components.PowerComponent
 import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
 import se.exuvo.aurora.planetarysystems.components.SunComponent
+import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.utils.Vector2L
 
-class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10 * 60) {
+class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60), EntityListener {
 	companion object {
 		val FAMILY = Family.all(SolarIrradianceComponent::class.java, TimedMovementComponent::class.java).get()
 		val SUNS_FAMILY = Family.all(SunComponent::class.java, TimedMovementComponent::class.java).get()
@@ -21,10 +27,32 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10 * 60)
 	private val irradianceMapper = ComponentMapper.getFor(SolarIrradianceComponent::class.java)
 	private val sunIrradianceMapper = ComponentMapper.getFor(SunComponent::class.java)
 
+	
+	override fun addedToEngine(engine: Engine) {
+		super.addedToEngine(engine)
+
+		engine.addEntityListener(SUNS_FAMILY, this)
+	}
+
+	override fun removedFromEngine(engine: Engine) {
+		super.removedFromEngine(engine)
+
+		engine.removeEntityListener(this)
+	}
+	
+	override fun entityAdded(entity: Entity) {
+		cacheSuns()
+		runOnNextUpdate()
+	}
+
+	override fun entityRemoved(entity: Entity) {
+		cacheSuns()
+		runOnNextUpdate()
+	}
+
 	var suns: List<Sun> = emptyList()
 
-	override fun update(deltaTime: Float) {
-
+	fun cacheSuns() {
 		val sunEntites = engine.getEntitiesFor(SUNS_FAMILY)
 
 		if (sunEntites.size() == 0) {
@@ -46,11 +74,14 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10 * 60)
 			}
 
 			suns = mutableSuns
+			log.info("Cached solar irradiance for ${suns.size} suns")
 		}
-
+	}
+	
+	override fun update(deltaTime: Float) {
 		super.update(deltaTime)
 	}
-
+	
 	override fun processEntity(entity: Entity) {
 
 		val position = movementMapper.get(entity).get(galaxy.time).value.position

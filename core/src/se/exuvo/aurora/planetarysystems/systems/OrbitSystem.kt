@@ -21,7 +21,7 @@ import se.exuvo.settings.Settings
 import se.exuvo.aurora.utils.printUUID
 import java.util.Collections
 
-//TODO sorted system by no parents first outwards
+//TODO sorted system by no parents first then outwards
 class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60), EntityListener {
 	companion object {
 		val FAMILY = Family.all(OrbitComponent::class.java, TimedMovementComponent::class.java).get()

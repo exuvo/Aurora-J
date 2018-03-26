@@ -31,7 +31,7 @@ abstract class DailyIteratingSystem(family: Family) : IteratingSystem(family) {
 abstract class DailySystem() : EntitySystem() {
 
 	val galaxy = GameServices[Galaxy::class.java]
-	var lastDay: Int = -1
+	var lastDay: Int = galaxy.day - 1
 
 	override fun checkProcessing(): Boolean {
 		return galaxy.day > lastDay
@@ -41,6 +41,10 @@ abstract class DailySystem() : EntitySystem() {
 		dailyUpdate()
 		lastDay = galaxy.day
 	}
+	
+	fun runOnNextUpdate() {
+		lastDay = galaxy.day - 1
+	}
 
 	abstract fun dailyUpdate()
 }
@@ -48,7 +52,7 @@ abstract class DailySystem() : EntitySystem() {
 abstract class GalaxyTimeIntervalIteratingSystem(family: Family, val interval: Long) : IteratingSystem(family) {
 
 	val galaxy = GameServices[Galaxy::class.java]
-	var lastTime: Long = -interval - 1
+	var lastTime: Long = galaxy.time - interval - 1
 
 	override fun checkProcessing(): Boolean {
 		return galaxy.time - lastTime > interval
@@ -58,9 +62,13 @@ abstract class GalaxyTimeIntervalIteratingSystem(family: Family, val interval: L
 		super.update(deltaTime)
 		lastTime = galaxy.time
 	}
-
+	
 	override fun processEntity(entity: Entity, deltaTime: Float) {
 		processEntity(entity)
+	}
+	
+	fun runOnNextUpdate() {
+		lastTime = galaxy.time - interval - 1
 	}
 
 	abstract fun processEntity(entity: Entity)
@@ -69,7 +77,7 @@ abstract class GalaxyTimeIntervalIteratingSystem(family: Family, val interval: L
 abstract class GalaxyTimeIntervalSystem(val interval: Long) : EntitySystem() {
 
 	val galaxy = GameServices[Galaxy::class.java]
-	var lastTime: Long = -interval -1
+	var lastTime: Long = galaxy.time - interval - 1
 
 	override fun checkProcessing(): Boolean {
 		return galaxy.time - lastTime > interval
@@ -78,6 +86,10 @@ abstract class GalaxyTimeIntervalSystem(val interval: Long) : EntitySystem() {
 	override fun update(deltaTime: Float) {
 		dailyUpdate()
 		lastTime = galaxy.time
+	}
+	
+	fun runOnNextUpdate() {
+		lastTime = galaxy.time - interval - 1
 	}
 
 	abstract fun dailyUpdate()

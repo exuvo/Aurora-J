@@ -32,3 +32,7 @@ fun Entity.printName(): String {
 	return "";
 }
 
+fun Entity.printID(): String {
+
+	return "${this.printName()} (${this.printUUID()})"
+}

@@ -43,6 +43,10 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 	companion object {
 		val FAMILY = Family.all(TimedMovementComponent::class.java, RenderComponent::class.java, CircleComponent::class.java).get()
 		val STRATEGIC_ICON_SIZE = 24f
+		
+		var debugPassiveSensors = false
+		var debugDisableStrategicView = false
+		var debugDrawPassiveSensors = true
 	}
 
 	private val circleMapper = ComponentMapper.getFor(CircleComponent::class.java)
@@ -66,7 +70,6 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 	private val galaxy = GameServices[Galaxy::class.java]
 	private val orbitSystem by lazy { engine.getSystem(OrbitSystem::class.java) }
 
-	private val debugPassiveSensors = Settings.getBol("Render.DebugPassiveSensors")
 	override fun checkProcessing() = false
 
 	override fun processEntity(entity: Entity, renderDelta: Float) {}
@@ -122,6 +125,10 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 	fun inStrategicView(entity: Entity, zoom: Float): Boolean {
 
+		if (debugDisableStrategicView) {
+			return false
+		}
+		
 		val radius = circleMapper.get(entity).radius
 		return radius / zoom < 5f
 	}

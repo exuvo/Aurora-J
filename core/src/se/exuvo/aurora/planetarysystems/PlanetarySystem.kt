@@ -46,6 +46,11 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
+import se.exuvo.aurora.planetarysystems.systems.PowerSystem
+import se.exuvo.aurora.planetarysystems.components.ShipComponent
+import se.exuvo.aurora.galactic.ShipClass
+import se.exuvo.aurora.galactic.SolarPanel
+import se.exuvo.aurora.galactic.Resource
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : Entity(), EntityListener {
 	companion object {
@@ -82,6 +87,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		engine.addSystem(SolarIrradianceSystem())
 		engine.addSystem(ShipSystem())
 		engine.addSystem(PassiveSensorSystem())
+		engine.addSystem(PowerSystem())
 		engine.addSystem(RenderSystem())
 
 		val empire1 = galaxy.getEmpire(1)
@@ -141,6 +147,11 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		entity4.add(PassiveSensorsComponent(listOf(sensor1, sensor2)))
 		entity4.add(StrategicIconComponent(Assets.textures.findRegion("strategic/ship")))
 		entity4.add(EmissionsComponent(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10)))
+		val shipClass = ShipClass()
+		val solarPanel = SolarPanel(1000)
+		solarPanel.cost[Resource.SEMICONDUCTORS] = 250
+		shipClass.parts.add(solarPanel)
+		entity4.add(ShipComponent(shipClass, galaxy.time))
 
 		engine.addEntity(entity4)
 	}

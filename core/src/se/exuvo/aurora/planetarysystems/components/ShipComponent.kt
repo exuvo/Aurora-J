@@ -18,7 +18,7 @@ import se.exuvo.aurora.galactic.FueledPart
 import se.exuvo.aurora.galactic.PoweringPart
 import kotlin.reflect.KClass
 
-class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : Component {
+class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Component {
 	var commissionDay: Int? = null
 	val armor = Array<Int>(shipClass.getSurfaceArea(), { shipClass.armorLayers })
 	val partHealth = Array<Int>(shipClass.parts.size, { shipClass.parts[it].maxHealth })
@@ -136,6 +136,26 @@ class ShipComponent(var shipClass: ShipClass, val constructionDay: Int) : Compon
 		}
 
 		partEnabled[index] = enabled
+	}
+	
+	fun getCargoAmount(resource: Resource): Int {
+
+		if (resource.density == 0) {
+			throw InvalidParameterException()
+		}
+
+		val shipCargo = cargo[resource]
+
+		if (shipCargo != null) {
+
+			val available = shipCargo.contents[resource]
+
+			if (available != null) {
+				return available
+			}
+		}
+
+		return 0
 	}
 
 	fun addCargo(resource: Resource, amount: Int): Boolean {

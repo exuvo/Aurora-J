@@ -21,22 +21,29 @@ import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.utils.GameServices
 import uno.glfw.GlfwWindow
+import se.exuvo.aurora.planetarysystems.components.ShipComponent
+import se.exuvo.aurora.planetarysystems.components.PowerComponent
+import se.exuvo.aurora.utils.printID
+import se.exuvo.aurora.planetarysystems.systems.RenderSystem
+import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
 
 class DebugScreen : GameScreenImpl(), InputProcessor {
 
 	val log = Logger.getLogger(this.javaClass)
-	
+
 	private val galaxy by lazy { GameServices[Galaxy::class.java] }
 	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class.java] }
 
 	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java)
+	private val shipMapper = ComponentMapper.getFor(ShipComponent::class.java)
+	private val powerMapper = ComponentMapper.getFor(PowerComponent::class.java)
 	private val orbitMapper = ComponentMapper.getFor(OrbitComponent::class.java)
 	private val thrustMapper = ComponentMapper.getFor(ThrustComponent::class.java)
+	private val irradianceMapper = ComponentMapper.getFor(SolarIrradianceComponent::class.java)
 
 	private val uiCamera = GameServices[GameScreenService::class.java].uiCamera
 
 	override val overlay = true
-	private var debugVisible = false
 	private val ctx: Context
 	private val gdxGLFWKeyMap = mutableMapOf<Int, Int>()
 
@@ -80,9 +87,10 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 
 	override fun show() {}
 
-//	operator fun <T> KProperty0<T>.getValue(thisRef: Any?, property: KProperty<*>): T = get()
-//	operator fun <T> KMutableProperty0<T>.setValue(thisRef: Any?, property: KProperty<*>, value: T) = set(value)
-
+	private var demoVisible = false
+	private var mainDebugVisible = false
+	private var shipDebugVisible = true
+	
 	var slider = FloatArray(1)
 	var stringbuf = CharArray(10)
 	var img = Assets.textures.findRegion("strategic/sun")
@@ -94,26 +102,36 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 		// https://github.com/kotlin-graphics/imgui/wiki/Using-libGDX
 		// https://github.com/ocornut/imgui
 
-		if (debugVisible) {
-			try {
-				LwjglGL3.newFrame()
+		try {
+			LwjglGL3.newFrame()
 
-				var windowClose = booleanArrayOf(debugVisible)
-
+			if (demoVisible) {
+				var windowClose = booleanArrayOf(demoVisible)
 				ImGui.showDemoWindow(windowClose)
+				demoVisible = windowClose[0]
+			}
+			
+			if (mainDebugVisible) {
+				var windowClose = booleanArrayOf(mainDebugVisible)
 
 				if (ImGui.begin("Debug window", windowClose, WindowFlags.MenuBar.i)) {
 
 					if (ImGui.beginMenuBar()) {
-						if (ImGui.beginMenu("File")) {
-							if (ImGui.menuItem("Open..", "Ctrl+O")) {
-								/* Do stuff */
+						if (ImGui.beginMenu("Windows")) {
+							if (ImGui.menuItem("Ship debug", "", shipDebugVisible)) {
+								shipDebugVisible = !shipDebugVisible
 							}
-							if (ImGui.menuItem("Save", "Ctrl+S")) {
-								/* Do stuff */
+							if (ImGui.menuItem("ImGui Demo", "hotkey", demoVisible)) {
+								demoVisible = !demoVisible
 							}
-							if (ImGui.menuItem("Close", "Ctrl+W")) {
-								menuBarState[0] = false;
+							ImGui.endMenu();
+						}
+						if (ImGui.beginMenu("Render")) {
+							if (ImGui.menuItem("Show PassiveSensor hits", "", RenderSystem.debugPassiveSensors)) {
+								RenderSystem.debugPassiveSensors = !RenderSystem.debugPassiveSensors
+							}
+							if (ImGui.menuItem("DisableStrategicView", "", RenderSystem.debugDisableStrategicView)) {
+								RenderSystem.debugDisableStrategicView = !RenderSystem.debugDisableStrategicView
 							}
 							ImGui.endMenu();
 						}
@@ -133,17 +151,91 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 					ImGui.sliderFloat("float", slider, 0f, 1f)
 					ImGui.image(img.getTexture().textureObjectHandle, Vec2(64, 64))
 				}
-				debugVisible = windowClose[0]
 				ImGui.end()
 
-				ImGui.render()
-
-				if (ImGui.drawData != null) {
-					LwjglGL3.renderDrawData(ImGui.drawData!!)
-				}
-			} catch (e: Throwable) {
-				log.error("Error drawing debug window", e)
+				mainDebugVisible = windowClose[0]
 			}
+			
+			shipDebug()
+
+			ImGui.render()
+
+			if (ImGui.drawData != null) {
+				LwjglGL3.renderDrawData(ImGui.drawData!!)
+			}
+		} catch (e: Throwable) {
+			log.error("Error drawing debug window", e)
+		}
+	}
+
+	var lastDebugTime = 0L
+	var powerAvailiableValues = FloatArray(60)
+	var powerRequestedValues = FloatArray(60)
+	var powerUsedValues = FloatArray(60)
+	var arrayIndex = 0
+	private fun shipDebug() {
+		
+		if (shipDebugVisible) {
+			var windowClose = booleanArrayOf(shipDebugVisible)
+
+			if (ImGui.begin("Ship debug", windowClose, WindowFlags.AlwaysAutoResize.i)) {
+
+				val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED)
+
+				if (selectedEntities.isEmpty()) {
+					ImGui.text("Nothing selected")
+					
+				} else {
+
+					val entity = selectedEntities.iterator().next()
+					val shipComponent = shipMapper.get(entity)
+					
+					ImGui.text("Entity ${entity.printID()}")
+
+					if (shipComponent != null) {
+
+						val powerComponent = powerMapper.get(entity)
+
+						if (powerComponent != null) {
+
+							ImGui.separator()
+							ImGui.text("Power")
+							
+							val now = System.currentTimeMillis()
+							
+							if (now - lastDebugTime > 500) {
+								lastDebugTime = now
+								
+								powerAvailiableValues[arrayIndex] = powerComponent.totalAvailiablePower.toFloat()
+								powerRequestedValues[arrayIndex] = powerComponent.totalRequestedPower.toFloat()
+								powerUsedValues[arrayIndex] = powerComponent.totalUsedPower.toFloat()
+								arrayIndex++
+								
+								if (arrayIndex >= 60) {
+									arrayIndex = 0
+								}
+							}
+							
+							ImGui.plotLines("AvailiablePower", {powerAvailiableValues[(arrayIndex + it) % 60]}, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
+							ImGui.plotLines("RequestedPower", {powerRequestedValues[(arrayIndex + it) % 60]}, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
+							ImGui.plotLines("UsedPower", {powerUsedValues[(arrayIndex + it) % 60]}, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
+						}
+						
+						val solarIrradiance = irradianceMapper.get(entity)
+						
+						if (solarIrradiance != null) {
+							
+							ImGui.separator()
+							ImGui.text("Solar irradiance ${solarIrradiance.irradiance} W/m2")
+						}
+					}
+				}
+
+
+			}
+			ImGui.end()
+
+			shipDebugVisible = windowClose[0]
 		}
 	}
 
@@ -154,61 +246,61 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 	override fun keyDown(keycode: Int): Boolean {
 
 		if (keycode == Input.Keys.GRAVE) {
-			debugVisible = !debugVisible;
+			mainDebugVisible = !mainDebugVisible;
 			return true;
 		}
 
-		if (debugVisible) {
+		if (mainDebugVisible) {
 			gdxGLFWKeyMap[keycode]?.apply {
 				LwjglGL3.keyCallback(this, 0, GLFW.GLFW_PRESS, 0)
 			}
 		}
 
-		return debugVisible && ctx.navWindow != null
+		return mainDebugVisible && ctx.navWindow != null
 	}
 
 	override fun keyUp(keycode: Int): Boolean {
-		if (debugVisible) {
+		if (mainDebugVisible) {
 			gdxGLFWKeyMap[keycode]?.apply {
 				LwjglGL3.keyCallback(this, 0, GLFW.GLFW_RELEASE, 0)
 			}
 		}
 
-		return debugVisible && ctx.navWindow != null
+		return mainDebugVisible && ctx.navWindow != null
 	}
 
 	override fun keyTyped(character: Char): Boolean {
-		if (debugVisible) {
+		if (mainDebugVisible) {
 			LwjglGL3.charCallback(character.toInt())
 		}
 
-		return debugVisible && ctx.navWindow != null
+		return mainDebugVisible && ctx.navWindow != null
 	}
 
 	// Seems to read mouse state every frame
 	override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
-		return debugVisible && ctx.navWindow != null
+		return mainDebugVisible && ctx.navWindow != null
 	}
 
 	// Seems to read mouse state every frame
 	override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
-		if (debugVisible) {
+		if (mainDebugVisible) {
 //			LwjglGL3.mouseButtonCallback(button, GLFW.GLFW_PRESS, 0)
 		}
 
-		return debugVisible && ctx.navWindow != null
+		return mainDebugVisible && ctx.navWindow != null
 	}
 
 	override fun touchDragged(screenX: Int, screenY: Int, pointer: Int): Boolean {
-		return debugVisible && ctx.navWindow != null
+		return mainDebugVisible && ctx.navWindow != null
 	}
 
 	override fun scrolled(amount: Int): Boolean {
-		if (debugVisible) {
+		if (mainDebugVisible) {
 			LwjglGL3.scrollCallback(Vec2d(0, -amount))
 		}
 
-		return debugVisible && ctx.navWindow != null
+		return mainDebugVisible && ctx.navWindow != null
 	}
 
 	// Seems to read mouse pos every frame

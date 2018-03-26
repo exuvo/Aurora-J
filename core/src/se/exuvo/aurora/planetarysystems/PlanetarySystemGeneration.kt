@@ -18,6 +18,7 @@ import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.systems.OrbitSystem
 import java.util.Random
 import kotlin.concurrent.write
+import se.exuvo.aurora.planetarysystems.components.SunComponent
 
 class PlanetarySystemGeneration(val system: PlanetarySystem) {
 	companion object {
@@ -156,7 +157,13 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 		entity.add(MassComponent().apply { mass = starMass })
 		entity.add(NameComponent().apply { name = starName })
 		entity.add(StrategicIconComponent(Assets.textures.findRegion("strategic/sun")))
-
+		// Always gives the same value
+//		val luminosity = Math.random() * 10000.0 * 3.839e26 // https://en.wikipedia.org/wiki/Solar_luminosity, https://en.wikipedia.org/wiki/List_of_most_luminous_stars
+//		val sunComponent = SunComponent((luminosity / (4 * Math.PI * starRadius.toDouble() * starRadius.toDouble())).toInt()) // Our sun is 1361 W/m2
+//		println("luminosity $luminosity solarConstant ${sunComponent.solarConstant}") 
+		val sunComponent = SunComponent((Math.random() * 3000).toInt()) // Our sun is 1361 W/m2
+		entity.add(sunComponent)
+		
 		engine.addEntity(entity)
 
 		return entity

@@ -9,9 +9,15 @@ abstract class Part {
 	var maxHealth = 1
 	var crewRequirement = 1
 	
-	// In m3
+	// In cm3
 	fun getVolume() : Int {
-		return cost.values.sum()
+		var volume = 0
+		
+		cost.forEach({resource, amount ->
+			volume += amount * resource.density
+		})
+		
+		return volume
 	}
 }
 
@@ -72,7 +78,7 @@ class Battery(powerConsumption: Int = 0,
 		ChargedPart by ChargedPartImpl(capacity)
 
 class SolarPanel(power: Int = 0,
-								 val efficiency: Float = 1f
+								 val efficiency: Float = 0.46f
 ) : Part(),
 		PoweringPart by PoweringPartImpl(power)
 

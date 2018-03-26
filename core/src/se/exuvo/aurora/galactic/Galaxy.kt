@@ -30,7 +30,7 @@ class Galaxy(val empires: MutableList<Empire>, val systems: MutableList<Planetar
 	var thread: Thread? = null
 	var sleeping = false
 
-	var day: Int = 0
+	var day: Int = updateDay()
 	var speed: Long = 1 * TimeUnits.NANO_SECOND
 	var paused = false
 
@@ -86,8 +86,9 @@ class Galaxy(val empires: MutableList<Empire>, val systems: MutableList<Planetar
 		return planetarySystemMapper.get(entity).system!!
 	}
 
-	private fun updateDay() {
+	private fun updateDay(): Int {
 		day = (time / (24L * 60L * 60L)).toInt()
+		return day
 	}
 
 	override fun run() {
