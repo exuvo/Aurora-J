@@ -38,7 +38,7 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 			for (container in containerParts) {
 				for (cargo in shipCargos) {
 					if (cargo.type.equals(container.cargoType)) {
-						cargo.maxCapacity += container.capacity
+						cargo.maxVolume += container.capacity
 						break
 					}
 				}
@@ -140,10 +140,6 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 	
 	fun getCargoAmount(resource: Resource): Int {
 
-		if (resource.density == 0) {
-			throw InvalidParameterException()
-		}
-
 		val shipCargo = cargo[resource]
 
 		if (shipCargo != null) {
@@ -157,10 +153,86 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 
 		return 0
 	}
+	
+	fun getUsedCargoVolume(resource: Resource): Int {
+
+		val shipCargo = cargo[resource]
+
+		if (shipCargo != null) {
+
+			return shipCargo.usedVolume
+		}
+
+		return 0
+	}
+	
+	fun getMaxCargoVolume(resource: Resource): Int {
+
+		val shipCargo = cargo[resource]
+
+		if (shipCargo != null) {
+
+			return shipCargo.maxVolume
+		}
+
+		return 0
+	}
+	
+	fun getUsedCargoVolume(type: CargoType): Int {
+
+		val shipCargo = cargo[type.resources[0]]
+
+		if (shipCargo != null) {
+
+			return shipCargo.usedVolume
+		}
+
+		return 0
+	}
+	
+	fun getMaxCargoVolume(type: CargoType): Int {
+
+		val shipCargo = cargo[type.resources[0]]
+
+		if (shipCargo != null) {
+
+			return shipCargo.maxVolume
+		}
+
+		return 0
+	}
+	
+	fun getUsedCargoMass(resource: Resource): Int {
+
+		val shipCargo = cargo[resource]
+
+		if (shipCargo != null) {
+
+			val amount = shipCargo.contents[resource]
+			
+			if (amount != null) {
+				return amount
+			}
+		}
+
+		return 0
+	}
+	
+	fun getUsedCargoMass(type: CargoType): Int {
+
+		val shipCargo = cargo[type.resources[0]]
+
+		if (shipCargo != null) {
+
+			return shipCargo.contents.values.sum()
+		}
+
+		return 0
+	}
 
 	fun addCargo(resource: Resource, amount: Int): Boolean {
 
-		if (resource.density == 0) {
+		if (resource.specificVolume == 0) {
 			throw InvalidParameterException()
 		}
 
@@ -168,13 +240,13 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 
 		if (shipCargo != null) {
 
-			val volumeToBeStored = amount * resource.density
+			val volumeToBeStored = amount * resource.specificVolume
 
-			if (shipCargo.usedCapacity + volumeToBeStored > shipCargo.maxCapacity) {
+			if (shipCargo.usedVolume + volumeToBeStored > shipCargo.maxVolume) {
 				return false;
 			}
 
-			shipCargo.usedCapacity += volumeToBeStored
+			shipCargo.usedVolume += volumeToBeStored
 			shipCargo.contents[resource] = shipCargo.contents[resource]!! + amount
 
 			return true
@@ -185,7 +257,7 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 
 	fun retrieveCargo(resource: Resource, amount: Int): Int {
 
-		if (resource.density == 0) {
+		if (resource.specificVolume == 0) {
 			throw InvalidParameterException()
 		}
 
@@ -206,7 +278,7 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 			}
 
 			shipCargo.contents[resource] = available - retrievedAmount
-			shipCargo.usedCapacity -= retrievedAmount * resource.density
+			shipCargo.usedVolume -= retrievedAmount * resource.specificVolume
 
 			return retrievedAmount
 		}
@@ -222,11 +294,11 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 
 			val volumeToBeStored = part.getVolume()
 
-			if (shipCargo.usedCapacity + volumeToBeStored > shipCargo.maxCapacity) {
+			if (shipCargo.usedVolume + volumeToBeStored > shipCargo.maxVolume) {
 				return false;
 			}
 
-			shipCargo.usedCapacity += volumeToBeStored
+			shipCargo.usedVolume += volumeToBeStored
 			partCargo.add(part)
 
 			return true
@@ -242,15 +314,15 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 		}
 
 		val shipCargo = cargo[Resource.ITEMS]
-		shipCargo!!.usedCapacity -= part.getVolume()
+		shipCargo!!.usedVolume -= part.getVolume()
 
 		return true
 	}
 }
 
 data class ShipCargo(val type: CargoType) {
-	var maxCapacity = 0
-	var usedCapacity = 0
+	var maxVolume = 0
+	var usedVolume = 0
 	var contents: MutableMap<Resource, Int> = LinkedHashMap()
 
 	init {
@@ -276,9 +348,7 @@ class PartState {
 	}
 }
 
-data class FueledPartState(var requestedFuel: Int = 0,
-													 var givenFuel: Int = 0
-)
+data class FueledPartState(var fuelTimeRemaining: Int = 0)
 
 data class PoweringPartState(var availiablePower: Int = 0,
 														 var producedPower: Int = 0

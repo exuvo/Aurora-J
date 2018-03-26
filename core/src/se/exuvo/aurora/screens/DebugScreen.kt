@@ -26,6 +26,11 @@ import se.exuvo.aurora.planetarysystems.components.PowerComponent
 import se.exuvo.aurora.utils.printID
 import se.exuvo.aurora.planetarysystems.systems.RenderSystem
 import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
+import se.exuvo.aurora.planetarysystems.components.PoweringPartState
+import se.exuvo.aurora.planetarysystems.components.PoweredPartState
+import imgui.TreeNodeFlags
+import se.exuvo.aurora.galactic.Resource
+import se.exuvo.aurora.galactic.CargoType
 
 class DebugScreen : GameScreenImpl(), InputProcessor {
 
@@ -85,12 +90,14 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 		LwjglGL3.init(GlfwWindow((Gdx.graphics as Lwjgl3Graphics).window.windowHandle), false)
 	}
 
-	override fun show() {}
+	override fun show() {
+		addResourceAmount[0] = 1
+	}
 
 	private var demoVisible = false
 	private var mainDebugVisible = false
 	private var shipDebugVisible = true
-	
+
 	var slider = FloatArray(1)
 	var stringbuf = CharArray(10)
 	var img = Assets.textures.findRegion("strategic/sun")
@@ -110,7 +117,7 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 				ImGui.showDemoWindow(windowClose)
 				demoVisible = windowClose[0]
 			}
-			
+
 			if (mainDebugVisible) {
 				var windowClose = booleanArrayOf(mainDebugVisible)
 
@@ -155,7 +162,7 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 
 				mainDebugVisible = windowClose[0]
 			}
-			
+
 			shipDebug()
 
 			ImGui.render()
@@ -173,8 +180,10 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 	var powerRequestedValues = FloatArray(60)
 	var powerUsedValues = FloatArray(60)
 	var arrayIndex = 0
+	var addResource = Resource.NUCLEAR_FISSION
+	var addResourceAmount = IntArray(1)
 	private fun shipDebug() {
-		
+
 		if (shipDebugVisible) {
 			var windowClose = booleanArrayOf(shipDebugVisible)
 
@@ -184,53 +193,151 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 
 				if (selectedEntities.isEmpty()) {
 					ImGui.text("Nothing selected")
-					
+
 				} else {
 
 					val entity = selectedEntities.iterator().next()
 					val shipComponent = shipMapper.get(entity)
-					
+
 					ImGui.text("Entity ${entity.printID()}")
 
 					if (shipComponent != null) {
 
-						val powerComponent = powerMapper.get(entity)
+						if (ImGui.collapsingHeader("Power", TreeNodeFlags.DefaultOpen.i)) {
 
-						if (powerComponent != null) {
+							val solarIrradiance = irradianceMapper.get(entity)
 
-							ImGui.separator()
-							ImGui.text("Power")
-							
-							val now = System.currentTimeMillis()
-							
-							if (now - lastDebugTime > 500) {
-								lastDebugTime = now
-								
-								powerAvailiableValues[arrayIndex] = powerComponent.totalAvailiablePower.toFloat()
-								powerRequestedValues[arrayIndex] = powerComponent.totalRequestedPower.toFloat()
-								powerUsedValues[arrayIndex] = powerComponent.totalUsedPower.toFloat()
-								arrayIndex++
-								
-								if (arrayIndex >= 60) {
-									arrayIndex = 0
+							if (solarIrradiance != null) {
+
+								ImGui.text("Solar irradiance ${solarIrradiance.irradiance} W/m2")
+							}
+
+							val powerComponent = powerMapper.get(entity)
+
+							if (powerComponent != null) {
+
+								ImGui.separator()
+
+								val now = System.currentTimeMillis()
+
+								if (now - lastDebugTime > 500) {
+									lastDebugTime = now
+
+									powerAvailiableValues[arrayIndex] = powerComponent.totalAvailiablePower.toFloat()
+									powerRequestedValues[arrayIndex] = powerComponent.totalRequestedPower.toFloat()
+									powerUsedValues[arrayIndex] = powerComponent.totalUsedPower.toFloat()
+									arrayIndex++
+
+									if (arrayIndex >= 60) {
+										arrayIndex = 0
+									}
+								}
+
+								ImGui.plotLines("AvailiablePower", { powerAvailiableValues[(arrayIndex + it) % 60] }, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
+								ImGui.plotLines("RequestedPower", { powerRequestedValues[(arrayIndex + it) % 60] }, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
+								ImGui.plotLines("UsedPower", { powerUsedValues[(arrayIndex + it) % 60] }, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
+
+								if (ImGui.treeNode("Producers")) {
+									powerComponent.poweringParts.forEach({
+										val part = it
+										val poweringState = shipComponent.getPartState(part).get(PoweringPartState::class)
+
+										val power = if (poweringState.availiablePower == 0) 0f else poweringState.producedPower / poweringState.availiablePower.toFloat()
+										ImGui.progressBar(power, Vec2(), "${poweringState.producedPower}/${poweringState.availiablePower}")
+
+										ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
+										ImGui.text("${part.name}")
+									})
+									
+									ImGui.treePop()
+								}
+
+								if (ImGui.treeNode("Consumers")) {
+									powerComponent.poweredParts.forEach({
+										val part = it
+										val poweredState = shipComponent.getPartState(part).get(PoweredPartState::class)
+
+										val power = if (poweredState.requestedPower == 0) 1f else poweredState.givenPower / poweredState.requestedPower.toFloat()
+										ImGui.progressBar(power, Vec2(), "${poweredState.givenPower}/${poweredState.requestedPower}")
+
+										ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
+										ImGui.text("${part.name}")
+									})
+									
+									ImGui.treePop()
 								}
 							}
-							
-							ImGui.plotLines("AvailiablePower", {powerAvailiableValues[(arrayIndex + it) % 60]}, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
-							ImGui.plotLines("RequestedPower", {powerRequestedValues[(arrayIndex + it) % 60]}, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
-							ImGui.plotLines("UsedPower", {powerUsedValues[(arrayIndex + it) % 60]}, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
 						}
-						
-						val solarIrradiance = irradianceMapper.get(entity)
-						
-						if (solarIrradiance != null) {
+
+						if (ImGui.collapsingHeader("Cargo", TreeNodeFlags.DefaultOpen.i)) {
+
+							CargoType.values().forEach {
+								val cargo = it
+
+								val usedVolume = shipComponent.getUsedCargoVolume(cargo)
+								val maxVolume = shipComponent.getMaxCargoVolume(cargo)
+								val usedMass = shipComponent.getUsedCargoMass(cargo)
+								val usage = if (maxVolume == 0) 0f else usedVolume / maxVolume.toFloat()
+								ImGui.progressBar(usage, Vec2(), "$usedMass kg, ${usedVolume / 1000}/${maxVolume / 1000} m³")
+
+								ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
+								ImGui.text("${cargo.name}")
+							}
+
+							ImGui.separator();
 							
-							ImGui.separator()
-							ImGui.text("Solar irradiance ${solarIrradiance.irradiance} W/m2")
+							if (ImGui.beginCombo("", addResource.name)) { // The second parameter is the label previewed before opening the combo.
+								for (resource in Resource.values()) {
+									val isSelected = addResource == resource
+
+									if (ImGui.selectable(resource.name, isSelected)) {
+										addResource = resource
+									}
+
+									if (isSelected) { // Set the initial focus when opening the combo (scrolling + for keyboard navigation support in the upcoming navigation branch)
+										ImGui.setItemDefaultFocus()
+									}
+								}
+								ImGui.endCombo()
+							}
+
+							ImGui.inputScalarEx("kg", imgui.internal.DataType.Int, addResourceAmount, 10, 100, "%d", 0)
+
+							if (ImGui.button("Add")) {
+								if (!shipComponent.addCargo(addResource, addResourceAmount[0])) {
+									println("Cargo does not fit")
+								}
+							}
+
+							ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
+
+							if (ImGui.button("Remove")) {
+								val retreived = shipComponent.retrieveCargo(addResource, addResourceAmount[0])
+								if (retreived != addResourceAmount[0]) {
+									println("Does not have enough of specified cargo")
+								}
+							}
+
+							if (ImGui.treeNode("Each resource")) {
+								Resource.values().forEach {
+									val resource = it
+
+									val usedVolume = shipComponent.getUsedCargoVolume(resource)
+									val maxVolume = shipComponent.getMaxCargoVolume(resource)
+									val usedMass = shipComponent.getUsedCargoMass(resource)
+									val usage = if (maxVolume == 0) 0f else usedVolume / maxVolume.toFloat()
+									ImGui.progressBar(usage, Vec2(), "$usedMass kg, ${usedVolume / 1000}/${maxVolume / 1000} m³")
+
+									ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
+									ImGui.text("${resource.name}")
+								}
+								
+								ImGui.treePop()
+							}
 						}
+
 					}
 				}
-
 
 			}
 			ImGui.end()
@@ -250,36 +357,30 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 			return true;
 		}
 
-		if (mainDebugVisible) {
-			gdxGLFWKeyMap[keycode]?.apply {
-				LwjglGL3.keyCallback(this, 0, GLFW.GLFW_PRESS, 0)
-			}
+		gdxGLFWKeyMap[keycode]?.apply {
+			LwjglGL3.keyCallback(this, 0, GLFW.GLFW_PRESS, 0)
 		}
 
-		return mainDebugVisible && ctx.navWindow != null
+		return ctx.navWindow != null
 	}
 
 	override fun keyUp(keycode: Int): Boolean {
-		if (mainDebugVisible) {
-			gdxGLFWKeyMap[keycode]?.apply {
-				LwjglGL3.keyCallback(this, 0, GLFW.GLFW_RELEASE, 0)
-			}
+		gdxGLFWKeyMap[keycode]?.apply {
+			LwjglGL3.keyCallback(this, 0, GLFW.GLFW_RELEASE, 0)
 		}
 
-		return mainDebugVisible && ctx.navWindow != null
+		return ctx.navWindow != null
 	}
 
 	override fun keyTyped(character: Char): Boolean {
-		if (mainDebugVisible) {
-			LwjglGL3.charCallback(character.toInt())
-		}
+		LwjglGL3.charCallback(character.toInt())
 
-		return mainDebugVisible && ctx.navWindow != null
+		return ctx.navWindow != null
 	}
 
 	// Seems to read mouse state every frame
 	override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
-		return mainDebugVisible && ctx.navWindow != null
+		return ctx.hoveredWindow != null
 	}
 
 	// Seems to read mouse state every frame
@@ -288,19 +389,19 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 //			LwjglGL3.mouseButtonCallback(button, GLFW.GLFW_PRESS, 0)
 		}
 
-		return mainDebugVisible && ctx.navWindow != null
+		return ctx.hoveredWindow != null
 	}
 
 	override fun touchDragged(screenX: Int, screenY: Int, pointer: Int): Boolean {
-		return mainDebugVisible && ctx.navWindow != null
+		return ctx.hoveredWindow != null
 	}
 
 	override fun scrolled(amount: Int): Boolean {
-		if (mainDebugVisible) {
-			LwjglGL3.scrollCallback(Vec2d(0, -amount))
-		}
+//		if (mainDebugVisible) {
+		LwjglGL3.scrollCallback(Vec2d(0, -amount))
+//		}
 
-		return mainDebugVisible && ctx.navWindow != null
+		return ctx.hoveredWindow != null
 	}
 
 	// Seems to read mouse pos every frame

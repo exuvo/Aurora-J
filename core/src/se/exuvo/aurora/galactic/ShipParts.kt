@@ -14,7 +14,7 @@ abstract class Part {
 		var volume = 0
 		
 		cost.forEach({resource, amount ->
-			volume += amount * resource.density
+			volume += amount * resource.specificVolume
 		})
 		
 		return volume
@@ -30,7 +30,12 @@ class NuclearContainerPart(capacity: Int) : ContainerPart(capacity, CargoType.NU
 
 interface FueledPart {
 	val fuel: Resource
-	val fuelConsumption: Int // gram per second usage
+	val fuelConsumption: Int // kg per second usage
+	val fuelTime: Int // seconds of usage for each kg
+}
+
+interface FuelWastePart {
+	val waste: Resource
 }
 
 interface PoweringPart {
@@ -59,7 +64,8 @@ interface ThrustingPart {
 	val thrust: Float
 }
 
-class FueledPartImpl(override val fuel: Resource, override val fuelConsumption: Int) : FueledPart
+class FueledPartImpl(override val fuel: Resource, override val fuelConsumption: Int, override val fuelTime: Int) : FueledPart
+class FuelWastePartImpl(override val waste: Resource) : FuelWastePart
 class PoweringPartImpl(override val power: Int) : PoweringPart
 class PoweredPartImpl(override val powerConsumption: Int) : PoweredPart
 class ChargedPartImpl(override val capacitor: Int) : ChargedPart
@@ -77,18 +83,30 @@ class Battery(powerConsumption: Int = 0,
 		PoweringPart by PoweringPartImpl(power),
 		ChargedPart by ChargedPartImpl(capacity)
 
-class SolarPanel(power: Int = 0,
-								 val efficiency: Float = 0.46f
+class SolarPanel(val efficiency: Float = 0.46f
 ) : Part(),
-		PoweringPart by PoweringPartImpl(power)
+		PoweringPart by PoweringPartImpl(0)
 
 // power in W/s
-class Reactor(power: Int = 0,
+abstract class Reactor(power: Int = 1000000,
 							fuel: Resource,
-							fuelConsumption: Int
+							fuelTime: Int 
 ) : Part(),
 		PoweringPart by PoweringPartImpl(power),
-		FueledPart by FueledPartImpl(fuel, fuelConsumption)
+		FueledPart by FueledPartImpl(fuel, 1, fuelTime)
+
+class FissionReactor(power: Int = 1000000, // Min 1MW
+							val efficiency: Float = 0.33f, // Heat to energy 33%
+							fuelTime: Int = ((86400000000000L / power) * efficiency.toDouble()).toInt()
+							// 1 gram of fissile material yields about 1 megawatt-day (MWd) of heat energy.  https://www.nuclear-power.net/nuclear-power-plant/nuclear-fuel/fuel-consumption-of-conventional-reactor/
+							// 1 MWd = 1 second of 86,400,000,000W
+) : Reactor(power, Resource.NUCLEAR_FISSION, fuelTime),
+		FuelWastePart by FuelWastePartImpl(Resource.NUCLEAR_WASTE)
+
+class FusionReactor(power: Int = 1000000, // Min 1MW
+										val efficiency: Float = 0.33f, // Heat to energy 33%
+										fuelTime: Int = ((86400000000000L / power) * efficiency.toDouble()).toInt()
+) : Reactor(power, Resource.NUCLEAR_FUSION, fuelTime)
 
 
 // Electrical https://en.wikipedia.org/wiki/Electrically_powered_spacecraft_propulsion#Types
@@ -105,7 +123,7 @@ class FueledThruster(thrust: Float,
 										 fuelConsumption: Int
 ) : Part(),
 		ThrustingPart by ThrustingPartImpl(thrust),
-		FueledPart by FueledPartImpl(fuel, fuelConsumption)
+		FueledPart by FueledPartImpl(fuel, fuelConsumption, 1)
 
 //TODO refresh rate, accuracy (results in fixed offset for each entity id, scaled by distance)
 class PassiveSensor(powerConsumption: Int = 0,

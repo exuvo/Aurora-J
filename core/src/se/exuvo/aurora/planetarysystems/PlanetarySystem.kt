@@ -51,6 +51,9 @@ import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.galactic.ShipClass
 import se.exuvo.aurora.galactic.SolarPanel
 import se.exuvo.aurora.galactic.Resource
+import se.exuvo.aurora.galactic.Reactor
+import se.exuvo.aurora.galactic.NuclearContainerPart
+import se.exuvo.aurora.galactic.FissionReactor
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : Entity(), EntityListener {
 	companion object {
@@ -147,11 +150,28 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		entity4.add(PassiveSensorsComponent(listOf(sensor1, sensor2)))
 		entity4.add(StrategicIconComponent(Assets.textures.findRegion("strategic/ship")))
 		entity4.add(EmissionsComponent(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10)))
+		
 		val shipClass = ShipClass()
-		val solarPanel = SolarPanel(1000)
+		
+		val solarPanel = SolarPanel()
+		solarPanel.name = "Solar Panel"
 		solarPanel.cost[Resource.SEMICONDUCTORS] = 250
 		shipClass.parts.add(solarPanel)
-		entity4.add(ShipComponent(shipClass, galaxy.time))
+		
+		val reactor = FissionReactor(1000000)
+		reactor.name = "Nuclear Reactor"
+		reactor.cost[Resource.GENERIC] = 1000
+		shipClass.parts.add(reactor)
+//		println("Reactor fuel consumption ${reactor.fuelConsumption} kg / ${reactor.fuelTime} s")
+		
+		val nuclearStorage = NuclearContainerPart(10000)
+		nuclearStorage.name = "Nuclear Cargo"
+		nuclearStorage.cost[Resource.GENERIC] = 100
+		shipClass.parts.add(nuclearStorage)
+		
+		val shipComponent = ShipComponent(shipClass, galaxy.time)
+		shipComponent.addCargo(Resource.NUCLEAR_FISSION, 10) 
+		entity4.add(shipComponent)
 
 		engine.addEntity(entity4)
 	}
