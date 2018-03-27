@@ -31,6 +31,13 @@ import se.exuvo.aurora.planetarysystems.components.PoweredPartState
 import imgui.TreeNodeFlags
 import se.exuvo.aurora.galactic.Resource
 import se.exuvo.aurora.galactic.CargoType
+import kotlin.concurrent.read
+import kotlin.concurrent.write
+import se.exuvo.aurora.galactic.FueledPart
+import se.exuvo.aurora.planetarysystems.components.FueledPartState
+import se.exuvo.aurora.utils.TimeUnits
+import se.exuvo.aurora.galactic.PoweredPart
+import se.exuvo.aurora.galactic.PoweringPart
 
 class DebugScreen : GameScreenImpl(), InputProcessor {
 
@@ -197,142 +204,161 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 				} else {
 
 					val entity = selectedEntities.iterator().next()
-					val shipComponent = shipMapper.get(entity)
+					val system = galaxy.getPlanetarySystem(entity)
 
-					ImGui.text("Entity ${entity.printID()}")
+					system.lock.read {
 
-					if (shipComponent != null) {
+						val shipComponent = shipMapper.get(entity)
 
-						if (ImGui.collapsingHeader("Power", TreeNodeFlags.DefaultOpen.i)) {
+						ImGui.text("Entity ${entity.printID()}")
 
-							val solarIrradiance = irradianceMapper.get(entity)
+						if (shipComponent != null) {
 
-							if (solarIrradiance != null) {
+							if (ImGui.collapsingHeader("Power", TreeNodeFlags.DefaultOpen.i)) {
 
-								ImGui.text("Solar irradiance ${solarIrradiance.irradiance} W/m2")
-							}
+								val solarIrradiance = irradianceMapper.get(entity)
 
-							val powerComponent = powerMapper.get(entity)
+								if (solarIrradiance != null) {
 
-							if (powerComponent != null) {
-
-								ImGui.separator()
-
-								val now = System.currentTimeMillis()
-
-								if (now - lastDebugTime > 500) {
-									lastDebugTime = now
-
-									powerAvailiableValues[arrayIndex] = powerComponent.totalAvailiablePower.toFloat()
-									powerRequestedValues[arrayIndex] = powerComponent.totalRequestedPower.toFloat()
-									powerUsedValues[arrayIndex] = powerComponent.totalUsedPower.toFloat()
-									arrayIndex++
-
-									if (arrayIndex >= 60) {
-										arrayIndex = 0
-									}
+									ImGui.text("Solar irradiance ${solarIrradiance.irradiance} W/m2")
 								}
 
-								ImGui.plotLines("AvailiablePower", { powerAvailiableValues[(arrayIndex + it) % 60] }, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
-								ImGui.plotLines("RequestedPower", { powerRequestedValues[(arrayIndex + it) % 60] }, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
-								ImGui.plotLines("UsedPower", { powerUsedValues[(arrayIndex + it) % 60] }, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
+								val powerComponent = powerMapper.get(entity)
 
-								if (ImGui.treeNode("Producers")) {
-									powerComponent.poweringParts.forEach({
-										val part = it
-										val poweringState = shipComponent.getPartState(part).get(PoweringPartState::class)
+								if (powerComponent != null) {
 
-										val power = if (poweringState.availiablePower == 0) 0f else poweringState.producedPower / poweringState.availiablePower.toFloat()
-										ImGui.progressBar(power, Vec2(), "${poweringState.producedPower}/${poweringState.availiablePower}")
+									ImGui.separator()
 
-										ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
-										ImGui.text("${part.name}")
-									})
-									
-									ImGui.treePop()
-								}
+									val now = System.currentTimeMillis()
 
-								if (ImGui.treeNode("Consumers")) {
-									powerComponent.poweredParts.forEach({
-										val part = it
-										val poweredState = shipComponent.getPartState(part).get(PoweredPartState::class)
+									if (now - lastDebugTime > 500) {
+										lastDebugTime = now
 
-										val power = if (poweredState.requestedPower == 0) 1f else poweredState.givenPower / poweredState.requestedPower.toFloat()
-										ImGui.progressBar(power, Vec2(), "${poweredState.givenPower}/${poweredState.requestedPower}")
+										powerAvailiableValues[arrayIndex] = powerComponent.totalAvailiablePower.toFloat()
+										powerRequestedValues[arrayIndex] = powerComponent.totalRequestedPower.toFloat()
+										powerUsedValues[arrayIndex] = powerComponent.totalUsedPower.toFloat() / powerComponent.totalAvailiablePower.toFloat()
+										arrayIndex++
 
-										ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
-										ImGui.text("${part.name}")
-									})
-									
-									ImGui.treePop()
-								}
-							}
-						}
-
-						if (ImGui.collapsingHeader("Cargo", TreeNodeFlags.DefaultOpen.i)) {
-
-							CargoType.values().forEach {
-								val cargo = it
-
-								val usedVolume = shipComponent.getUsedCargoVolume(cargo)
-								val maxVolume = shipComponent.getMaxCargoVolume(cargo)
-								val usedMass = shipComponent.getUsedCargoMass(cargo)
-								val usage = if (maxVolume == 0) 0f else usedVolume / maxVolume.toFloat()
-								ImGui.progressBar(usage, Vec2(), "$usedMass kg, ${usedVolume / 1000}/${maxVolume / 1000} m³")
-
-								ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
-								ImGui.text("${cargo.name}")
-							}
-
-							ImGui.separator();
-							
-							if (ImGui.beginCombo("", addResource.name)) { // The second parameter is the label previewed before opening the combo.
-								for (resource in Resource.values()) {
-									val isSelected = addResource == resource
-
-									if (ImGui.selectable(resource.name, isSelected)) {
-										addResource = resource
+										if (arrayIndex >= 60) {
+											arrayIndex = 0
+										}
 									}
 
-									if (isSelected) { // Set the initial focus when opening the combo (scrolling + for keyboard navigation support in the upcoming navigation branch)
-										ImGui.setItemDefaultFocus()
+									ImGui.plotLines("AvailiablePower", { powerAvailiableValues[(arrayIndex + it) % 60] }, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
+									ImGui.plotLines("RequestedPower", { powerRequestedValues[(arrayIndex + it) % 60] }, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
+									ImGui.plotLines("UsedPower", { powerUsedValues[(arrayIndex + it) % 60] }, 60, 0, "", 0f, 1f, Vec2(0, 50))
+
+									if (ImGui.treeNode("Producers")) {
+										powerComponent.poweringParts.forEach({
+											val part = it
+											val poweringState = shipComponent.getPartState(part)[PoweringPartState::class]
+
+											val power = if (poweringState.availiablePower == 0) 0f else poweringState.producedPower / poweringState.availiablePower.toFloat()
+											
+											ImGui.progressBar(power, Vec2(), "${poweringState.producedPower}/${poweringState.availiablePower} W")
+
+											ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
+											ImGui.text("${part.name}")
+											
+											if (part is FueledPart && part is PoweringPart) {
+												
+												val fueledState = shipComponent.getPartState(part)[FueledPartState::class]
+												val fuelRemaining = TimeUnits.secondsToString(fueledState.fuelEnergyRemaining / part.power)
+												val totalFuelRemaining = TimeUnits.secondsToString(fueledState.totalFuelEnergyRemaining  / part.power)
+											
+												ImGui.text("Fuel $fuelRemaining/$totalFuelRemaining W")	
+												
+											}
+										})
+
+										ImGui.treePop()
+									}
+
+									if (ImGui.treeNode("Consumers")) {
+										powerComponent.poweredParts.forEach({
+											val part = it
+											val poweredState = shipComponent.getPartState(part)[PoweredPartState::class]
+
+											val power = if (poweredState.requestedPower == 0) 1f else poweredState.givenPower / poweredState.requestedPower.toFloat()
+											ImGui.progressBar(power, Vec2(), "${poweredState.givenPower}/${poweredState.requestedPower} W")
+
+											ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
+											ImGui.text("${part.name}")
+										})
+
+										ImGui.treePop()
 									}
 								}
-								ImGui.endCombo()
 							}
 
-							ImGui.inputScalarEx("kg", imgui.internal.DataType.Int, addResourceAmount, 10, 100, "%d", 0)
+							if (ImGui.collapsingHeader("Cargo", TreeNodeFlags.DefaultOpen.i)) {
 
-							if (ImGui.button("Add")) {
-								if (!shipComponent.addCargo(addResource, addResourceAmount[0])) {
-									println("Cargo does not fit")
-								}
-							}
+								CargoType.values().forEach {
+									val cargo = it
 
-							ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
-
-							if (ImGui.button("Remove")) {
-								val retreived = shipComponent.retrieveCargo(addResource, addResourceAmount[0])
-								if (retreived != addResourceAmount[0]) {
-									println("Does not have enough of specified cargo")
-								}
-							}
-
-							if (ImGui.treeNode("Each resource")) {
-								Resource.values().forEach {
-									val resource = it
-
-									val usedVolume = shipComponent.getUsedCargoVolume(resource)
-									val maxVolume = shipComponent.getMaxCargoVolume(resource)
-									val usedMass = shipComponent.getUsedCargoMass(resource)
+									val usedVolume = shipComponent.getUsedCargoVolume(cargo)
+									val maxVolume = shipComponent.getMaxCargoVolume(cargo)
+									val usedMass = shipComponent.getUsedCargoMass(cargo)
 									val usage = if (maxVolume == 0) 0f else usedVolume / maxVolume.toFloat()
 									ImGui.progressBar(usage, Vec2(), "$usedMass kg, ${usedVolume / 1000}/${maxVolume / 1000} m³")
 
 									ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
-									ImGui.text("${resource.name}")
+									ImGui.text("${cargo.name}")
 								}
-								
-								ImGui.treePop()
+
+								ImGui.separator();
+
+								if (ImGui.beginCombo("", addResource.name)) { // The second parameter is the label previewed before opening the combo.
+									for (resource in Resource.values()) {
+										val isSelected = addResource == resource
+
+										if (ImGui.selectable(resource.name, isSelected)) {
+											addResource = resource
+										}
+
+										if (isSelected) { // Set the initial focus when opening the combo (scrolling + for keyboard navigation support in the upcoming navigation branch)
+											ImGui.setItemDefaultFocus()
+										}
+									}
+									ImGui.endCombo()
+								}
+
+								ImGui.inputScalarEx("kg", imgui.internal.DataType.Int, addResourceAmount, 10, 100, "%d", 0)
+
+								if (ImGui.button("Add")) {
+									system.lock.write {
+										if (!shipComponent.addCargo(addResource, addResourceAmount[0])) {
+											println("Cargo does not fit")
+										}
+									}
+								}
+
+								ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
+
+								if (ImGui.button("Remove")) {
+									system.lock.write {
+										if (shipComponent.retrieveCargo(addResource, addResourceAmount[0]) != addResourceAmount[0]) {
+											println("Does not have enough of specified cargo")
+										}
+									}
+								}
+
+								if (ImGui.treeNode("Each resource")) {
+									Resource.values().forEach {
+										val resource = it
+
+										val usedVolume = shipComponent.getUsedCargoVolume(resource)
+										val maxVolume = shipComponent.getMaxCargoVolume(resource)
+										val usedMass = shipComponent.getUsedCargoMass(resource)
+										val usage = if (maxVolume == 0) 0f else usedVolume / maxVolume.toFloat()
+										ImGui.progressBar(usage, Vec2(), "$usedMass kg, ${usedVolume / 1000}/${maxVolume / 1000} m³")
+
+										ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
+										ImGui.text("${resource.name}")
+									}
+
+									ImGui.treePop()
+								}
 							}
 						}
 
@@ -380,12 +406,17 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 
 	// Seems to read mouse state every frame
 	override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
+		if (ctx.navWindow != null && ctx.hoveredWindow == null) {
+			//TODO fix, gives errors when drawing tree nodes
+//			ctx.navWindow = null
+		}
+
 		return ctx.hoveredWindow != null
 	}
 
 	// Seems to read mouse state every frame
 	override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
-		if (mainDebugVisible) {
+		if (ctx.hoveredWindow != null) {
 //			LwjglGL3.mouseButtonCallback(button, GLFW.GLFW_PRESS, 0)
 		}
 
@@ -397,11 +428,16 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 	}
 
 	override fun scrolled(amount: Int): Boolean {
-//		if (mainDebugVisible) {
-		LwjglGL3.scrollCallback(Vec2d(0, -amount))
+//		if (ctx.navWindow != null && ctx.hoveredWindow == null) {
+//			ctx.navWindow = null
 //		}
+		
+		if (ctx.hoveredWindow != null) {
+			LwjglGL3.scrollCallback(Vec2d(0, -amount))
+			return true
+		}
 
-		return ctx.hoveredWindow != null
+		return false
 	}
 
 	// Seems to read mouse pos every frame

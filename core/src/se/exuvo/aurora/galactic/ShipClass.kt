@@ -12,7 +12,7 @@ class ShipClass {
 	var powerScheme: PowerScheme = PowerScheme.SOLAR_BATTERY_REACTOR
 	//TODO default weapon assignments
 
-	operator fun <T : Any> get(partClass: Class<T>) = parts.filterIsInstance(partClass)
+	operator fun <T> get(partClass: Class<T>) : List<T> = parts.filterIsInstance(partClass)
 
 	fun put(part: Part) {
 		parts.add(part)

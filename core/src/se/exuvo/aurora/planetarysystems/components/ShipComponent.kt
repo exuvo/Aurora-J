@@ -84,6 +84,8 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 		}
 	}
 	
+	//TODO replace shipClass.parts.indexOf(part) with map
+	
 	fun getPartState(part: Part): PartState {
 		val index = shipClass.parts.indexOf(part)
 
@@ -348,7 +350,9 @@ class PartState {
 	}
 }
 
-data class FueledPartState(var fuelTimeRemaining: Int = 0)
+data class FueledPartState(var fuelEnergyRemaining: Long = 0,
+													 var totalFuelEnergyRemaining: Long = 0
+)
 
 data class PoweringPartState(var availiablePower: Int = 0,
 														 var producedPower: Int = 0

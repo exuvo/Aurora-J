@@ -7,6 +7,9 @@ import se.exuvo.aurora.galactic.Reactor
 import se.exuvo.aurora.galactic.SolarPanel
 import kotlin.reflect.KClass
 import java.security.InvalidParameterException
+import se.exuvo.aurora.galactic.PoweringPart
+import se.exuvo.aurora.galactic.ChargedPart
+import se.exuvo.aurora.galactic.PoweredPart
 
 class PowerComponent(var powerScheme: PowerScheme) : Component {
 	var stateChanged = true

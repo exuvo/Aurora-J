@@ -30,8 +30,8 @@ class NuclearContainerPart(capacity: Int) : ContainerPart(capacity, CargoType.NU
 
 interface FueledPart {
 	val fuel: Resource
-	val fuelConsumption: Int // kg per second usage
-	val fuelTime: Int // seconds of usage for each kg
+	val fuelConsumption: Int // kg per fuelTime
+	val fuelTime: Int // seconds of full usage for each kg
 }
 
 interface FuelWastePart {
