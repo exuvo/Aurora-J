@@ -13,9 +13,10 @@ import se.exuvo.aurora.galactic.PoweredPart
 
 class PowerComponent(var powerScheme: PowerScheme) : Component {
 	var stateChanged = true
-	var totalAvailiablePower = 0
-	var totalRequestedPower = 0
-	var totalUsedPower = 0
+	var totalAvailiablePower = 0L
+	var totalAvailiableSolarPower = 0L
+	var totalRequestedPower = 0L
+	var totalUsedPower = 0L
 	val poweringParts = ArrayList<Part>()
 	val poweredParts = ArrayList<Part>()
 	val chargedParts = ArrayList<Part>()

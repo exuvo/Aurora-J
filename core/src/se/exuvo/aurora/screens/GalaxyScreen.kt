@@ -18,7 +18,7 @@ import se.exuvo.aurora.planetarysystems.components.GalacticPositionComponent
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.utils.CircleL
 import se.exuvo.aurora.utils.GameServices
-import se.exuvo.aurora.utils.TimeUnits
+import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.settings.Settings
 import kotlin.concurrent.read
@@ -99,7 +99,7 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 	private fun drawUI() {
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
-		Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, day ${galaxy.day}, time ${secondsToString(galaxy.time)}, speed ${TimeUnits.NANO_SECOND / galaxy.speed}", 8f, 32f)
+		Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, day ${galaxy.day}, time ${secondsToString(galaxy.time)}, speed ${Units.NANO_SECOND / galaxy.speed}", 8f, 32f)
 		spriteBatch.end()
 	}
 
@@ -121,8 +121,8 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 			//TODO something smarter here
 			var speed = galaxy.speed / 4
 
-			if (speed < TimeUnits.NANO_MILLI / 60) {
-				speed = TimeUnits.NANO_MILLI / 60
+			if (speed < Units.NANO_MILLI / 60) {
+				speed = Units.NANO_MILLI / 60
 			}
 
 			galaxy.speed = speed
@@ -137,8 +137,8 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 
 			var speed = galaxy.speed * 4
 
-			if (speed > 1 * TimeUnits.NANO_SECOND) {
-				speed = 1 * TimeUnits.NANO_SECOND
+			if (speed > 1 * Units.NANO_SECOND) {
+				speed = 1 * Units.NANO_SECOND
 			}
 
 			galaxy.speed = speed

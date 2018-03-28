@@ -354,20 +354,20 @@ data class FueledPartState(var fuelEnergyRemaining: Long = 0,
 													 var totalFuelEnergyRemaining: Long = 0
 )
 
-data class PoweringPartState(var availiablePower: Int = 0,
-														 var producedPower: Int = 0
+data class PoweringPartState(var availiablePower: Long = 0,
+														 var producedPower: Long = 0
 )
 
-data class PoweredPartState(var requestedPower: Int = 0,
-														var givenPower: Int = 0
+data class PoweredPartState(var requestedPower: Long = 0,
+														var givenPower: Long = 0
 )
 
-data class ChargedPartState(var charge: Int = 0)
+data class ChargedPartState(var charge: Long = 0)
 
 data class AmmunitionPartState(var ammunition: Queue<Part>)
 
-data class WeaponPartState(var requestedPower: Int = 0,
-													 var givenPower: Int = 0
+//TODO
+data class WeaponPartState(var todo: Int = 0
 )
 
 data class ReloadablePartState(var loaded: Boolean = true,

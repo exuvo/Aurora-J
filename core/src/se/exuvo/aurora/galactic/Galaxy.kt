@@ -10,7 +10,7 @@ import se.exuvo.aurora.planetarysystems.PlanetarySystem
 import se.exuvo.aurora.planetarysystems.components.PlanetarySystemComponent
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.utils.GameServices
-import se.exuvo.aurora.utils.TimeUnits
+import se.exuvo.aurora.utils.Units
 import se.exuvo.settings.Settings
 import se.unlogic.standardutils.threads.SimpleTaskGroup
 import se.unlogic.standardutils.threads.ThreadPoolTaskGroupHandler
@@ -31,7 +31,7 @@ class Galaxy(val empires: MutableList<Empire>, val systems: MutableList<Planetar
 	var sleeping = false
 
 	var day: Int = updateDay()
-	var speed: Long = 1 * TimeUnits.NANO_SECOND
+	var speed: Long = 1 * Units.NANO_SECOND
 	var paused = false
 
 	val engineLock = ReentrantReadWriteLock()
@@ -121,7 +121,7 @@ class Galaxy(val empires: MutableList<Empire>, val systems: MutableList<Planetar
 
 						accumulator -= speed;
 
-						var tickSize: Int = if (speed >= 1 * TimeUnits.NANO_MILLI) 1 else (TimeUnits.NANO_MILLI / speed).toInt()
+						var tickSize: Int = if (speed >= 1 * Units.NANO_MILLI) 1 else (Units.NANO_MILLI / speed).toInt()
 
 						// max sensible tick size is 1 minute
 						if (tickSize > 60) {
@@ -168,7 +168,7 @@ class Galaxy(val empires: MutableList<Empire>, val systems: MutableList<Planetar
 
 					if (accumulator < speed) {
 
-						var sleepTime = (speed - accumulator) / TimeUnits.NANO_MILLI
+						var sleepTime = (speed - accumulator) / Units.NANO_MILLI
 
 						if (sleepTime > 0) {
 							sleeping = true

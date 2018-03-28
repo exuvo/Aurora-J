@@ -35,9 +35,11 @@ import kotlin.concurrent.read
 import kotlin.concurrent.write
 import se.exuvo.aurora.galactic.FueledPart
 import se.exuvo.aurora.planetarysystems.components.FueledPartState
-import se.exuvo.aurora.utils.TimeUnits
+import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.galactic.PoweredPart
 import se.exuvo.aurora.galactic.PoweringPart
+import se.exuvo.aurora.galactic.Battery
+import se.exuvo.aurora.planetarysystems.components.ChargedPartState
 
 class DebugScreen : GameScreenImpl(), InputProcessor {
 
@@ -253,9 +255,9 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 											val part = it
 											val poweringState = shipComponent.getPartState(part)[PoweringPartState::class]
 
-											val power = if (poweringState.availiablePower == 0) 0f else poweringState.producedPower / poweringState.availiablePower.toFloat()
+											val power = if (poweringState.availiablePower == 0L) 0f else poweringState.producedPower / poweringState.availiablePower.toFloat()
 											
-											ImGui.progressBar(power, Vec2(), "${poweringState.producedPower}/${poweringState.availiablePower} W")
+											ImGui.progressBar(power, Vec2(), "${Units.powerToString(poweringState.producedPower)}/${Units.powerToString(poweringState.availiablePower)}")
 
 											ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
 											ImGui.text("${part.name}")
@@ -263,11 +265,26 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 											if (part is FueledPart && part is PoweringPart) {
 												
 												val fueledState = shipComponent.getPartState(part)[FueledPartState::class]
-												val fuelRemaining = TimeUnits.secondsToString(fueledState.fuelEnergyRemaining / part.power)
-												val totalFuelRemaining = TimeUnits.secondsToString(fueledState.totalFuelEnergyRemaining  / part.power)
+												val fuelRemaining = Units.secondsToString(fueledState.fuelEnergyRemaining / part.power)
+												val totalFuelRemaining = Units.secondsToString(fueledState.totalFuelEnergyRemaining  / part.power)
 											
 												ImGui.text("Fuel $fuelRemaining/$totalFuelRemaining W")	
+											}
+											
+											if (part is Battery) {
 												
+												val chargedState = shipComponent.getPartState(part)[ChargedPartState::class]
+												val charge = chargedState.charge
+												val maxCharge = part.capacitor
+												val charged = if (maxCharge == 0L) 0f else charge / maxCharge.toFloat()
+												
+												ImGui.progressBar(charged, Vec2(), "${Units.powerToString(charge)}/${Units.powerToString(maxCharge)}s")
+												
+												if (poweringState.producedPower > 0L) {
+													
+													ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
+													ImGui.text("${Units.secondsToString(charge / poweringState.producedPower)}")
+												}
 											}
 										})
 
@@ -279,8 +296,8 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 											val part = it
 											val poweredState = shipComponent.getPartState(part)[PoweredPartState::class]
 
-											val power = if (poweredState.requestedPower == 0) 1f else poweredState.givenPower / poweredState.requestedPower.toFloat()
-											ImGui.progressBar(power, Vec2(), "${poweredState.givenPower}/${poweredState.requestedPower} W")
+											val power = if (poweredState.requestedPower == 0L) 1f else poweredState.givenPower / poweredState.requestedPower.toFloat()
+											ImGui.progressBar(power, Vec2(), "${Units.powerToString(poweredState.givenPower)}/${Units.powerToString(poweredState.requestedPower)}")
 
 											ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
 											ImGui.text("${part.name}")
@@ -291,7 +308,7 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 								}
 							}
 
-							if (ImGui.collapsingHeader("Cargo", TreeNodeFlags.DefaultOpen.i)) {
+							if (ImGui.collapsingHeader("Cargo", 0)) { //TreeNodeFlags.DefaultOpen.i
 
 								CargoType.values().forEach {
 									val cargo = it

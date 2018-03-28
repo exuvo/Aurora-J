@@ -39,15 +39,15 @@ interface FuelWastePart {
 }
 
 interface PoweringPart {
-	val power: Int // W/s
+	val power: Long // W/s
 }
 
 interface PoweredPart {
-	val powerConsumption: Int // W/s
+	val powerConsumption: Long // W/s
 }
 
 interface ChargedPart {
-	val capacitor: Int // Ws
+	val capacitor: Long // Ws
 }
 
 interface AmmunitionPart {
@@ -66,18 +66,18 @@ interface ThrustingPart {
 
 class FueledPartImpl(override val fuel: Resource, override val fuelConsumption: Int, override val fuelTime: Int) : FueledPart
 class FuelWastePartImpl(override val waste: Resource) : FuelWastePart
-class PoweringPartImpl(override val power: Int) : PoweringPart
-class PoweredPartImpl(override val powerConsumption: Int) : PoweredPart
-class ChargedPartImpl(override val capacitor: Int) : ChargedPart
+class PoweringPartImpl(override val power: Long) : PoweringPart
+class PoweredPartImpl(override val powerConsumption: Long) : PoweredPart
+class ChargedPartImpl(override val capacitor: Long) : ChargedPart
 class AmmunitionPartImpl(override val ammunitionAmount: Int, override val ammunitionType: Resource) : AmmunitionPart
 class ReloadablePartImpl(override val reloadTime: Int) : ReloadablePart
 class ThrustingPartImpl(override val thrust: Float) : ThrustingPart
 
 
-class Battery(powerConsumption: Int = 0,
-							power: Int = 0,
+class Battery(powerConsumption: Long = 0,
+							power: Long = 0,
 							val efficiency: Float = 1f,
-							capacity: Int // Ws
+							capacity: Long // Ws
 ) : Part(),
 		PoweredPart by PoweredPartImpl(powerConsumption),
 		PoweringPart by PoweringPartImpl(power),
@@ -88,14 +88,14 @@ class SolarPanel(val efficiency: Float = 0.46f
 		PoweringPart by PoweringPartImpl(0)
 
 // power in W/s
-abstract class Reactor(power: Int = 1000000,
+abstract class Reactor(power: Long = 1000000,
 							fuel: Resource,
 							fuelTime: Int 
 ) : Part(),
 		PoweringPart by PoweringPartImpl(power),
 		FueledPart by FueledPartImpl(fuel, 1, fuelTime)
 
-class FissionReactor(power: Int = 1000000, // Min 1MW
+class FissionReactor(power: Long = 1000000, // Min 1MW
 							val efficiency: Float = 0.33f, // Heat to energy 33%
 							fuelTime: Int = ((86400000000000L / power) * efficiency.toDouble()).toInt()
 							// 1 gram of fissile material yields about 1 megawatt-day (MWd) of heat energy.  https://www.nuclear-power.net/nuclear-power-plant/nuclear-fuel/fuel-consumption-of-conventional-reactor/
@@ -103,7 +103,7 @@ class FissionReactor(power: Int = 1000000, // Min 1MW
 ) : Reactor(power, Resource.NUCLEAR_FISSION, fuelTime),
 		FuelWastePart by FuelWastePartImpl(Resource.NUCLEAR_WASTE)
 
-class FusionReactor(power: Int = 1000000, // Min 1MW
+class FusionReactor(power: Long = 1000000, // Min 1MW
 										val efficiency: Float = 0.33f, // Heat to energy 33%
 										fuelTime: Int = ((86400000000000L / power) * efficiency.toDouble()).toInt()
 ) : Reactor(power, Resource.NUCLEAR_FUSION, fuelTime)
@@ -111,7 +111,7 @@ class FusionReactor(power: Int = 1000000, // Min 1MW
 
 // Electrical https://en.wikipedia.org/wiki/Electrically_powered_spacecraft_propulsion#Types
 class ElectricalThruster(thrust: Float,
-												 powerConsumption: Int
+												 powerConsumption: Long
 ) : Part(),
 		ThrustingPart by ThrustingPartImpl(thrust),
 		PoweredPart by PoweredPartImpl(powerConsumption)
@@ -126,7 +126,7 @@ class FueledThruster(thrust: Float,
 		FueledPart by FueledPartImpl(fuel, fuelConsumption, 1)
 
 //TODO refresh rate, accuracy (results in fixed offset for each entity id, scaled by distance)
-class PassiveSensor(powerConsumption: Int = 0,
+class PassiveSensor(powerConsumption: Long = 0,
 										val spectrum: Spectrum,
 										val sensitivity: Double,
 										val arcSegments: Int,
@@ -149,24 +149,24 @@ enum class BeamWaveLength(val short: String) {
 	}
 }
 
-class BeamWeapon(powerConsumption: Int = 0,
+class BeamWeapon(powerConsumption: Long = 0,
 								 val waveLength: BeamWaveLength,
 								 val divergence: Double,
-								 capacitor: Int
+								 capacitor: Long
 ) : Part(),
 		PoweredPart by PoweredPartImpl(powerConsumption),
 		ChargedPart by ChargedPartImpl(capacitor)
 
-class Railgun(powerConsumption: Int = 0,
-								 val barrelSize: Int,
-								 capacitor: Int,
-								 ammunitionAmount: Int
+class Railgun(powerConsumption: Long = 0,
+							val barrelSize: Int,
+							capacitor: Long,
+							ammunitionAmount: Int
 ) : Part(),
 		PoweredPart by PoweredPartImpl(powerConsumption),
 		ChargedPart by ChargedPartImpl(capacitor),
 		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.SABOTS)
 
-class MissileLauncher(powerConsumption: Int = 0,
+class MissileLauncher(powerConsumption: Long = 0,
 								 			val launchTubeSize: Int,
 								 			ammunitionAmount: Int,
 											reloadTime: Int
