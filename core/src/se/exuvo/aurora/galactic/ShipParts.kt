@@ -1,6 +1,7 @@
 package se.exuvo.aurora.galactic
 
 import se.exuvo.aurora.planetarysystems.components.Spectrum
+import java.util.Objects
 
 abstract class Part {
 	var name: String = ""
@@ -19,6 +20,21 @@ abstract class Part {
 		
 		return volume
 	}
+	
+	private val hashcode: Int by lazy {calculateHashCode()}
+	
+	// https://stackoverflow.com/questions/113511/best-implementation-for-hashcode-method
+	open fun calculateHashCode() : Int {
+		var hash = 1;
+		hash = 37 * hash + name.hashCode()
+		hash = 37 * hash + designDay!!
+		hash = 37 * hash + getVolume()
+		hash = 37 * hash + maxHealth
+		hash = 37 * hash + crewRequirement
+		return hash
+	}
+	
+	override fun hashCode(): Int = hashcode
 }
 
 abstract class ContainerPart(val capacity: Int, val cargoType: CargoType) : Part();
@@ -125,7 +141,6 @@ class FueledThruster(thrust: Float,
 		ThrustingPart by ThrustingPartImpl(thrust),
 		FueledPart by FueledPartImpl(fuel, fuelConsumption, 1)
 
-//TODO refresh rate, accuracy (results in fixed offset for each entity id, scaled by distance)
 class PassiveSensor(powerConsumption: Long = 0,
 										val spectrum: Spectrum,
 										val sensitivity: Double,
@@ -135,7 +150,20 @@ class PassiveSensor(powerConsumption: Long = 0,
 										val accuracy: Double, // 1 = 100% error
 										val refreshDelay: Int // cooldown in seconds
 ) : Part(),
-		PoweredPart by PoweredPartImpl(powerConsumption)
+		PoweredPart by PoweredPartImpl(powerConsumption) {
+
+	override fun calculateHashCode() : Int {
+		var hash = super.calculateHashCode()
+		hash = 37 * hash + spectrum.ordinal
+		hash = 37 * hash + (sensitivity.toBits() xor (sensitivity.toBits() shr 32)).toInt()
+		hash = 37 * hash + arcSegments
+		hash = 37 * hash + (distanceResolution.toBits() xor (distanceResolution.toBits() shr 32)).toInt()
+		hash = 37 * hash + angleOffset
+		hash = 37 * hash + (accuracy.toBits() xor (accuracy.toBits() shr 32)).toInt()
+		hash = 37 * hash + refreshDelay
+		return hash
+	}
+}
 
 enum class BeamWaveLength(val short: String) {
 	Visible_Light("L"),

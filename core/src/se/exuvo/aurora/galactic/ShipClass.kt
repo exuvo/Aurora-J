@@ -14,10 +14,6 @@ class ShipClass {
 
 	operator fun <T> get(partClass: Class<T>) : List<T> = parts.filterIsInstance(partClass)
 
-	fun put(part: Part) {
-		parts.add(part)
-	}
-
 	fun getCrewRequirement(): Int {
 		return parts.sumBy { it.crewRequirement }
 	}
@@ -40,5 +36,16 @@ class ShipClass {
 
 		return surface.toInt()
 	}
+	
+	private val hashcode: Int by lazy {
+		var hash = 1;
+		hash = 37 * hash + name.hashCode()
+		hash = 37 * hash + designDay!!
+		hash = 37 * hash + armorLayers
+		hash = 37 * hash + powerScheme.ordinal
+		hash
+	}
+
+	override fun hashCode(): Int = hashcode
 }
 

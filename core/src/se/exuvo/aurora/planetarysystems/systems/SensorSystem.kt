@@ -21,6 +21,8 @@ import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.PoweredPartState
 import se.exuvo.aurora.planetarysystems.components.PassiveSensorState
 import jdk.nashorn.internal.ir.annotations.Ignore
+import se.exuvo.aurora.planetarysystems.components.UUIDComponent
+import se.exuvo.aurora.planetarysystems.components.NameComponent
 
 class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 	companion object {
@@ -38,6 +40,7 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 	private val detectionMapper = ComponentMapper.getFor(DetectionComponent::class.java)
 	private val ownerMapper = ComponentMapper.getFor(OwnerComponent::class.java)
 	private val shipMapper = ComponentMapper.getFor(ShipComponent::class.java)
+	private val uuidMapper = ComponentMapper.getFor(UUIDComponent::class.java)
 
 	override fun addedToEngine(engine: Engine) {
 		super.addedToEngine(engine)
@@ -166,8 +169,24 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 						if (signalStrength * powerRatio >= sensor.sensitivity) {
 
 							if (sensor.accuracy != 1.0) {
-								val temp = emitterPosition.cpy().sub(sensorPosition).scl(Math.random() * (1 - sensor.accuracy))
-								temp.rotateRad(2 * Math.PI * Math.random())
+								val temp = emitterPosition.cpy().sub(sensorPosition)
+								temp.set(temp.len().toLong(), 0).scl(Math.random() * (1 - sensor.accuracy))
+
+								if (shipMapper.has(emitter.entity)){
+									val hash = 37 * shipMapper.get(emitter.entity).shipClass.hashCode() + sensor.hashCode()
+//									println("hash $hash, uuid ${uuidMapper.get(emitter.entity).uuid.dispersedHash}, sensor ${sensor.hashCode()}")
+									temp.rotate((hash % 360).toFloat())
+									
+								} else if (uuidMapper.has(emitter.entity)) {
+									val hash = 37 * uuidMapper.get(emitter.entity).uuid.dispersedHash + sensor.hashCode()
+//									println("hash $hash, uuid ${uuidMapper.get(emitter.entity).uuid.dispersedHash}, sensor ${sensor.hashCode()}")
+									temp.rotate((hash % 360).toFloat())
+									
+
+								} else {
+									temp.rotateRad(2 * Math.PI * Math.random())
+								}
+								
 								emitterPosition = emitterPosition.cpy().add(temp)
 							}
 

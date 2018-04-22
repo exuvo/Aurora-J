@@ -40,6 +40,8 @@ import se.exuvo.aurora.galactic.PoweredPart
 import se.exuvo.aurora.galactic.PoweringPart
 import se.exuvo.aurora.galactic.Battery
 import se.exuvo.aurora.planetarysystems.components.ChargedPartState
+import imgui.WindowFlag
+import imgui.TreeNodeFlag
 
 class DebugScreen : GameScreenImpl(), InputProcessor {
 
@@ -105,7 +107,7 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 
 	private var demoVisible = false
 	private var mainDebugVisible = false
-	private var shipDebugVisible = true
+	private var shipDebugVisible = false
 
 	var slider = FloatArray(1)
 	var stringbuf = CharArray(10)
@@ -118,8 +120,6 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 		// https://github.com/kotlin-graphics/imgui/wiki/Using-libGDX
 		// https://github.com/ocornut/imgui
 
-		//TODO use kotlin 1.2
-		
 		try {
 			LwjglGL3.newFrame()
 
@@ -129,7 +129,7 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 
 			if (mainDebugVisible) {
 
-				if (ImGui._begin("Debug window", ::mainDebugVisible, WindowFlags.MenuBar.i)) {
+				if (ImGui._begin("Debug window", ::mainDebugVisible, WindowFlag.MenuBar.i)) {
 
 					if (ImGui.beginMenuBar()) {
 						if (ImGui.beginMenu("Windows")) {
@@ -192,7 +192,7 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 
 		if (shipDebugVisible) {
 
-			if (ImGui._begin("Ship debug", ::shipDebugVisible, WindowFlags.AlwaysAutoResize.i)) {
+			if (ImGui._begin("Ship debug", ::shipDebugVisible, WindowFlag.AlwaysAutoResize.i)) {
 
 				val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED)
 
@@ -212,7 +212,7 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 
 						if (shipComponent != null) {
 
-							if (ImGui.collapsingHeader("Power", TreeNodeFlags.DefaultOpen.i)) {
+							if (ImGui.collapsingHeader("Power", TreeNodeFlag.DefaultOpen.i)) {
 
 								val solarIrradiance = irradianceMapper.get(entity)
 
