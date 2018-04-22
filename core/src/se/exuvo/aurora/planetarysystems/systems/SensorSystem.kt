@@ -19,6 +19,8 @@ import com.badlogic.ashley.core.Engine
 import com.badlogic.ashley.core.EntityListener
 import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.PoweredPartState
+import se.exuvo.aurora.planetarysystems.components.PassiveSensorState
+import jdk.nashorn.internal.ir.annotations.Ignore
 
 class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 	companion object {
@@ -66,11 +68,11 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 			if (sensors.isNotEmpty()) {
 				sensorComponent = PassiveSensorsComponent(sensors)
 				entity.add(sensorComponent)
-				
+
 				sensors.forEach({
-						val sensor = it
-						val poweredState = ship.getPartState(sensor)[PoweredPartState::class]
-								poweredState.requestedPower = sensor.powerConsumption
+					val sensor = it
+					val poweredState = ship.getPartState(sensor)[PoweredPartState::class]
+					poweredState.requestedPower = sensor.powerConsumption
 				})
 			}
 		}
@@ -116,86 +118,106 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 		val owner = ownerMapper.get(entity)
 
 		val sensors = sensorsMapper.get(entity).sensors
+		var detectionComponent = detectionMapper.get(entity)
 
 		val detections = HashMap<PassiveSensor, HashMap<Int, HashMap<Int, DetectionHit>>>()
 
 		for (sensor in sensors) {
 
-			if(!ship.isPartEnabled(sensor)) {
+			if (!ship.isPartEnabled(sensor)) {
 				continue
 			}
-			
+
 			val poweredState = ship.getPartState(sensor)[PoweredPartState::class]
-			val powerRatio = poweredState.givenPower / poweredState.requestedPower.toDouble() 
-			
-			//TODO use refreshDelay
 
-			val arcWidth = 360.0 / sensor.arcSegments
+			if (poweredState.givenPower == 0L) {
+				continue
+			}
 
-			for (emitter in emitters) {
+			val powerRatio = poweredState.givenPower / poweredState.requestedPower.toDouble()
 
-				if (emitter.entity == entity) {
-					continue
+			val sensorState = ship.getPartState(sensor)[PassiveSensorState::class]
+
+			if (galaxy.time >= sensorState.lastScan + sensor.refreshDelay) {
+				sensorState.lastScan = galaxy.time
+
+				val arcWidth = 360.0 / sensor.arcSegments
+
+				for (emitter in emitters) {
+
+					if (emitter.entity == entity) {
+						continue
+					}
+
+					if (owner != null && ownerMapper.has(emitter.entity) && owner.empire == ownerMapper.get(emitter.entity).empire) {
+						continue
+					}
+
+					var emitterPosition = emitter.position
+					val emission = emitter.emissions.emissions[sensor.spectrum];
+
+					if (emission != null) {
+
+						val trueDistanceInKM: Double = sensorPosition.dst(emitterPosition) / 1000
+
+						// https://en.wikipedia.org/wiki/Inverse-square_law
+						val signalStrength = emission / (4 * Math.PI * Math.pow(trueDistanceInKM / 2, 2.0))
+
+						if (signalStrength * powerRatio >= sensor.sensitivity) {
+
+							if (sensor.accuracy != 1.0) {
+								val temp = emitterPosition.cpy().sub(sensorPosition).scl(Math.random() * (1 - sensor.accuracy))
+								temp.rotateRad(2 * Math.PI * Math.random())
+								emitterPosition = emitterPosition.cpy().add(temp)
+							}
+
+							val distanceInKM: Double = sensorPosition.dst(emitterPosition) / 1000
+							val targetAngle = sensorPosition.angleTo(emitterPosition)
+
+							val arcAngleStep = Math.floor((targetAngle - sensor.angleOffset) / arcWidth).toInt()
+							val distanceStep = Math.floor(distanceInKM / sensor.distanceResolution).toInt()
+
+							var angleSteps: HashMap<Int, HashMap<Int, DetectionHit>>? = detections[sensor]
+
+							if (angleSteps == null) {
+								angleSteps = HashMap<Int, HashMap<Int, DetectionHit>>()
+								detections[sensor] = angleSteps
+							}
+
+							var distanceSteps: HashMap<Int, DetectionHit>? = angleSteps[arcAngleStep]
+
+							if (distanceSteps == null) {
+								distanceSteps = HashMap<Int, DetectionHit>()
+								angleSteps[arcAngleStep] = distanceSteps
+							}
+
+							var detectionHit: DetectionHit? = distanceSteps[distanceStep]
+
+							if (detectionHit == null) {
+								detectionHit = DetectionHit(0.0, ArrayList<Entity>(), ArrayList<Vector2L>())
+								distanceSteps[distanceStep] = detectionHit
+							}
+
+							detectionHit.signalStrength += signalStrength
+							detectionHit.entities.add(emitter.entity)
+							detectionHit.hitPositions.add(emitterPosition)
+						}
+					}
 				}
 
-				if (owner != null && ownerMapper.has(emitter.entity) && owner.empire == ownerMapper.get(emitter.entity).empire) {
-					continue
-				}
+			} else {
 
-				var emitterPosition = emitter.position
-				val emission = emitter.emissions.emissions[sensor.spectrum];
+				if (detectionComponent != null) {
 
-				if (emission != null) {
+					val previousDetection = detectionComponent.detections[sensor]
 
-					val trueDistanceInKM: Double = sensorPosition.dst(emitterPosition) / 1000
-
-					// https://en.wikipedia.org/wiki/Inverse-square_law
-					val signalStrength = emission / (4 * Math.PI * Math.pow(trueDistanceInKM / 2, 2.0))
-
-					if (signalStrength >= sensor.sensitivity * powerRatio) {
-
-						if (sensor.accuracy != 1.0) {
-							val temp = emitterPosition.cpy().sub(sensorPosition).scl(Math.random() * (1 - sensor.accuracy))
-							temp.rotateRad(2 * Math.PI * Math.random())
-							emitterPosition = emitterPosition.cpy().add(temp)
-						}
-
-						val distanceInKM: Double = sensorPosition.dst(emitterPosition) / 1000
-						val targetAngle = sensorPosition.angleTo(emitterPosition)
-
-						val arcAngleStep = Math.floor((targetAngle - sensor.angleOffset) / arcWidth).toInt()
-						val distanceStep = Math.floor(distanceInKM / sensor.distanceResolution).toInt()
-
-						var angleSteps: HashMap<Int, HashMap<Int, DetectionHit>>? = detections[sensor]
-
-						if (angleSteps == null) {
-							angleSteps = HashMap<Int, HashMap<Int, DetectionHit>>()
-							detections[sensor] = angleSteps
-						}
-
-						var distanceSteps: HashMap<Int, DetectionHit>? = angleSteps[arcAngleStep]
-
-						if (distanceSteps == null) {
-							distanceSteps = HashMap<Int, DetectionHit>()
-							angleSteps[arcAngleStep] = distanceSteps
-						}
-
-						var detectionHit: DetectionHit? = distanceSteps[distanceStep]
-
-						if (detectionHit == null) {
-							detectionHit = DetectionHit(0.0, ArrayList<Entity>(), ArrayList<Vector2L>())
-							distanceSteps[distanceStep] = detectionHit
-						}
-
-						detectionHit.signalStrength += signalStrength
-						detectionHit.entities.add(emitter.entity)
-						detectionHit.hitPositions.add(emitterPosition)
+					if (previousDetection != null) {
+						@Suppress("UNCHECKED_CAST")
+						detections[sensor] = previousDetection as HashMap<Int, HashMap<Int, DetectionHit>>
 					}
 				}
 			}
 		}
-
-		var detectionComponent = detectionMapper.get(entity)
 
 		if (detections.isEmpty()) {
 

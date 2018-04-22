@@ -17,6 +17,7 @@ import se.exuvo.aurora.galactic.ReloadablePart
 import se.exuvo.aurora.galactic.FueledPart
 import se.exuvo.aurora.galactic.PoweringPart
 import kotlin.reflect.KClass
+import se.exuvo.aurora.galactic.PassiveSensor
 
 class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Component {
 	var commissionDay: Int? = null
@@ -68,6 +69,10 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 			
 			if (part is ChargedPart) {
 				state.put(ChargedPartState())
+			}
+			
+			if (part is PassiveSensor) {
+				state.put(PassiveSensorState())
 			}
 			
 			if (part is AmmunitionPart) {
@@ -361,6 +366,10 @@ data class PoweringPartState(var availiablePower: Long = 0,
 data class PoweredPartState(var requestedPower: Long = 0,
 														var givenPower: Long = 0
 )
+
+data class PassiveSensorState(var lastScan: Long = 0
+)
+
 
 data class ChargedPartState(var charge: Long = 0)
 

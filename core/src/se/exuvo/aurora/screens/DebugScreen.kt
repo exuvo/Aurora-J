@@ -118,19 +118,18 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 		// https://github.com/kotlin-graphics/imgui/wiki/Using-libGDX
 		// https://github.com/ocornut/imgui
 
+		//TODO use kotlin 1.2
+		
 		try {
 			LwjglGL3.newFrame()
 
 			if (demoVisible) {
-				var windowClose = booleanArrayOf(demoVisible)
-				ImGui.showDemoWindow(windowClose)
-				demoVisible = windowClose[0]
+				ImGui.showDemoWindow(::demoVisible)
 			}
 
 			if (mainDebugVisible) {
-				var windowClose = booleanArrayOf(mainDebugVisible)
 
-				if (ImGui.begin("Debug window", windowClose, WindowFlags.MenuBar.i)) {
+				if (ImGui._begin("Debug window", ::mainDebugVisible, WindowFlags.MenuBar.i)) {
 
 					if (ImGui.beginMenuBar()) {
 						if (ImGui.beginMenu("Windows")) {
@@ -168,8 +167,6 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 					ImGui.image(img.getTexture().textureObjectHandle, Vec2(64, 64))
 				}
 				ImGui.end()
-
-				mainDebugVisible = windowClose[0]
 			}
 
 			shipDebug()
@@ -194,9 +191,8 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 	private fun shipDebug() {
 
 		if (shipDebugVisible) {
-			var windowClose = booleanArrayOf(shipDebugVisible)
 
-			if (ImGui.begin("Ship debug", windowClose, WindowFlags.AlwaysAutoResize.i)) {
+			if (ImGui._begin("Ship debug", ::shipDebugVisible, WindowFlags.AlwaysAutoResize.i)) {
 
 				val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED)
 
@@ -384,8 +380,6 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 
 			}
 			ImGui.end()
-
-			shipDebugVisible = windowClose[0]
 		}
 	}
 

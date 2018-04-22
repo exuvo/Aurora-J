@@ -136,23 +136,20 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 
 			} else if (part is Reactor) {
 
-				if (part is FueledPart) { // Running out of fuel
+				val fueledState = ship.getPartState(part)[FueledPartState::class]
 
-					val fueledState = ship.getPartState(part)[FueledPartState::class]
-
-					val remainingFuel = ship.getCargoAmount(part.fuel)
-					fueledState.totalFuelEnergyRemaining = fueledState.fuelEnergyRemaining + part.power.toLong() * part.fuelTime * remainingFuel
-					val availiablePower = Math.min(part.power.toLong(), fueledState.totalFuelEnergyRemaining)
+				val remainingFuel = ship.getCargoAmount(part.fuel)
+				fueledState.totalFuelEnergyRemaining = fueledState.fuelEnergyRemaining + part.power * part.fuelTime * remainingFuel
+				val availiablePower = Math.min(part.power, fueledState.totalFuelEnergyRemaining)
 
 //					println("remainingFuel ${remainingFuel} g, max power ${part.power} W, remaining power ${remainingFuel / part.fuelConsumption} Ws")
 
-					if (powerWasStable && availiablePower < poweringState.producedPower) {
-						powerComponent.stateChanged = true
-					}
-
-					powerComponent.totalAvailiablePower += availiablePower - poweringState.availiablePower
-					poweringState.availiablePower = availiablePower
+				if (powerWasStable && availiablePower < poweringState.producedPower) {
+					powerComponent.stateChanged = true
 				}
+
+				powerComponent.totalAvailiablePower += availiablePower - poweringState.availiablePower
+				poweringState.availiablePower = availiablePower
 
 			} else if (part is Battery) { // Charge empty or full
 
@@ -165,7 +162,7 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 				}
 
 				// Charge full
-				if (poweredState.givenPower > 0 && chargedState.charge + poweredState.givenPower > part.capacitor) {
+				if (poweredState.givenPower > 0 && chargedState.charge + (poweredState.givenPower * part.efficiency.toDouble()).toLong() > part.capacitor) {
 					powerComponent.stateChanged = true
 				}
 
@@ -177,11 +174,11 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 		})
 
 		if (!powerComponent.stateChanged) {
-			
+
 			if (powerWasSolarStable && powerComponent.totalAvailiableSolarPower < powerComponent.totalRequestedPower) {
 				powerComponent.stateChanged = true
 			}
-			
+
 			if (powerWasStable) {
 				if (powerComponent.totalAvailiablePower < powerComponent.totalUsedPower) {
 					powerComponent.stateChanged = true
@@ -211,7 +208,7 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 					if (part is SolarPanel) {
 						powerComponent.totalAvailiableSolarPower += poweringState.availiablePower
 					}
-					
+
 					if (part is SolarPanel || (part is Reactor && powerComponent.powerScheme.chargeBatteryFromReactor)) {
 						availiableChargingPower += poweringState.availiablePower
 					}
@@ -266,7 +263,7 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 						val chargedState = ship.getPartState(part)[ChargedPartState::class]
 						val leftToCharge = part.capacitor - chargedState.charge
 
-						poweredState.requestedPower = Math.min(leftToCharge, part.powerConsumption)
+						poweredState.requestedPower = Math.min((leftToCharge / part.efficiency.toDouble()).toLong(), part.powerConsumption)
 
 						if (powerComponent.totalRequestedPower + poweredState.requestedPower <= availiableChargingPower) {
 
@@ -323,41 +320,63 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 
 				if (poweringState.producedPower > 0) {
 
-					if (part is FueledPart) {
+					val fueledState = ship.getPartState(part)[FueledPartState::class]
 
-						val fueledState = ship.getPartState(part)[FueledPartState::class]
+					var fuelEnergyConsumed = deltaGameTime * poweringState.producedPower.toLong()
+//					println("fuelEnergyConsumed $fuelEnergyConsumed, fuelTime ${TimeUnits.secondsToString(part.fuelTime.toLong())}, power ${poweringState.producedPower.toDouble() / part.power}%")
 
-						var fuelEnergyConsumed = deltaGameTime * poweringState.producedPower.toLong()
-//						println("fuelEnergyConsumed $fuelEnergyConsumed, fuelTime ${TimeUnits.secondsToString(part.fuelTime.toLong())}, power ${poweringState.producedPower.toDouble() / part.power}%")
+					if (fuelEnergyConsumed > fueledState.fuelEnergyRemaining) {
 
-						if (fuelEnergyConsumed > fueledState.fuelEnergyRemaining) {
+						fuelEnergyConsumed -= fueledState.fuelEnergyRemaining
+						
+						var fuelRequired = part.fuelConsumption
 
-							fuelEnergyConsumed -= fueledState.fuelEnergyRemaining
+						if (fuelEnergyConsumed > part.power * part.fuelTime) {
 
-							var fuelConsumed = part.fuelConsumption
-
-							if (fuelEnergyConsumed > part.power * part.fuelTime.toLong()) {
-
-								fuelConsumed *= (1 + fuelEnergyConsumed / (part.power * part.fuelTime.toLong())).toInt()
-							}
-
-							fueledState.fuelEnergyRemaining = part.power.toLong() * part.fuelTime * fuelConsumed - fuelEnergyConsumed
-
-							val removedFuel = ship.retrieveCargo(part.fuel, fuelConsumed)
-
-							if (removedFuel != fuelConsumed) {
-								log.warn("Entity ${entity.printID()} was expected to consume $fuelConsumed but only had $removedFuel left")
-							}
-
-							if (part is FuelWastePart) {
-								//TODO delay initial waste
-								ship.addCargo(part.waste, removedFuel)
-							}
-
-						} else {
-
-							fueledState.fuelEnergyRemaining -= fuelEnergyConsumed
+							fuelRequired *= (1 + fuelEnergyConsumed / (part.power * part.fuelTime)).toInt()
 						}
+						
+						val remainingFuel = ship.getCargoAmount(part.fuel)
+						fuelRequired = Math.min(fuelRequired, remainingFuel)
+
+						if (part is FuelWastePart) {
+
+							var fuelConsumed = Math.ceil((part.fuelConsumption * fueledState.fuelEnergyRemaining).toDouble() / (part.power * part.fuelTime)).toInt()
+
+							if (fuelEnergyConsumed > part.power * part.fuelTime) {
+
+								fuelConsumed += fuelRequired / part.fuelConsumption - 1
+							}
+
+//							println("fuelConsumed $fuelConsumed")
+
+							ship.addCargo(part.waste, fuelConsumed)
+						}
+
+						fueledState.fuelEnergyRemaining = Math.max(part.power * part.fuelTime * fuelRequired - fuelEnergyConsumed, 0)
+
+						val removedFuel = ship.retrieveCargo(part.fuel, fuelRequired)
+
+						if (removedFuel != fuelRequired) {
+							log.warn("Entity ${entity.printID()} was expected to consume $fuelRequired but only had $removedFuel left")
+						}
+
+					} else {
+
+						if (part is FuelWastePart) {
+
+							val fuelRemainingPre = Math.ceil((part.fuelConsumption * fueledState.fuelEnergyRemaining).toDouble() / (part.power * part.fuelTime)).toInt()
+							val fuelRemainingPost = Math.ceil((part.fuelConsumption * (fueledState.fuelEnergyRemaining - fuelEnergyConsumed)).toDouble() / (part.power * part.fuelTime)).toInt()
+							val fuelConsumed = fuelRemainingPre - fuelRemainingPost;
+
+//							println("fuelRemainingPre $fuelRemainingPre, fuelRemainingPost $fuelRemainingPost, fuelConsumed $fuelConsumed")
+
+							if (fuelConsumed > 0) {
+								ship.addCargo(part.waste, fuelConsumed)
+							}
+						}
+
+						fueledState.fuelEnergyRemaining -= fuelEnergyConsumed
 					}
 				}
 
@@ -382,13 +401,17 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 
 				if (poweredState.givenPower > 0) {
 
-					if (part is Battery) {
+					var chargeToAdd = deltaGameTime * poweredState.givenPower
 
-						chargedState.charge += (deltaGameTime * poweredState.givenPower * part.efficiency.toDouble()).toInt()
+					if (part is Battery) {
+						chargeToAdd = (chargeToAdd * part.efficiency.toDouble()).toLong();
+					}
+
+					if (chargedState.charge + chargeToAdd <= part.capacitor) {
+						chargedState.charge += chargeToAdd
 
 					} else {
-
-						chargedState.charge += deltaGameTime * poweredState.givenPower
+						chargedState.charge = part.capacitor
 					}
 				}
 			}

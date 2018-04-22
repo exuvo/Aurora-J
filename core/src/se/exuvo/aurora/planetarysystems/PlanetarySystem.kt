@@ -147,9 +147,9 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 //		entity4.add(MoveToEntityComponent(entity1, ApproachType.BRACHISTOCHRONE))
 		entity4.add(TintComponent(Color.RED))
 		val sensor1 = PassiveSensor(300000, Spectrum.Electromagnetic, 1e-7, 14, OrbitSystem.AU * 0.3, 20, 0.97, 1);
-		sensor1.name = "1e-4"
+		sensor1.name = "EM 1e-4"
 		val sensor2 = PassiveSensor(800000, Spectrum.Thermal, 1e-8, 8, OrbitSystem.AU * 1, 0, 0.9, 5);
-		sensor2.name = "1e-10"
+		sensor2.name = "TH 1e-10"
 		entity4.add(StrategicIconComponent(Assets.textures.findRegion("strategic/ship")))
 		entity4.add(EmissionsComponent(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10)))
 		
@@ -175,7 +175,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		nuclearStorage.cost[Resource.GENERIC] = 100
 		shipClass.parts.add(nuclearStorage)
 		
-		val battery = Battery(50 * Units.KILOWATT, 250 * Units.KILOWATT, 0.8f, 100 * Units.GIGAWATT)
+		val battery = Battery(200 * Units.KILOWATT, 500 * Units.KILOWATT, 0.8f, 100 * Units.GIGAWATT)
 		battery.name = "Battery"
 		shipClass.parts.add(battery)
 		
