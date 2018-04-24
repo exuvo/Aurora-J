@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.2.30'
+    ext.kotlin_version = '1.2.40'
 
     repositories {
         mavenLocal()
@@ -28,6 +28,7 @@ allprojects {
         ashleyVersion = '1.7.3'
         kryoVersion = '4.0.1'
         lwjglVersion = '3.1.6'
+        jasyptVersion = '1.9.2'
     }
 
     repositories {
@@ -85,6 +86,7 @@ project(":core") {
         compile "com.esotericsoftware:jsonbeans:0.7"
         compile "org.xerial:sqlite-jdbc:3.21.0"
         // compile files("lib/sqlite-jdbc-3.21.0.jar")
+        compile "org.jasypt:jasypt:$jasyptVersion"
         
         compile "org.lwjgl:lwjgl:$lwjglVersion"
         compile "org.lwjgl:lwjgl-glfw:$lwjglVersion"
@@ -98,6 +100,7 @@ project(":core") {
 					exclude group: 'org.jogamp.gluegen'
 					exclude group: 'org.jogamp.jogl'
 					exclude group: 'org.lwjgl'
+					exclude group: 'org.jetbrains.kotlin'
         }
     }
 }

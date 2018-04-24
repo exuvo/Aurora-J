@@ -379,7 +379,7 @@ data class AmmunitionPartState(var ammunition: Queue<Part>)
 data class WeaponPartState(var todo: Int = 0
 )
 
-data class ReloadablePartState(var loaded: Boolean = true,
-															 var reloadedAt: Int = 0
+data class ReloadablePartState(var loaded: Boolean = false,
+															 var reloadCompletionAt: Int = 0
 )
 

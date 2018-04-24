@@ -165,7 +165,7 @@ class PassiveSensor(powerConsumption: Long = 0,
 	}
 }
 
-enum class BeamWaveLength(val short: String) {
+enum class BeamWavelength(val short: String) {
 	Visible_Light("L"),
 	Infrared("IR"),
 	Ultraviolet("UV"),
@@ -178,7 +178,7 @@ enum class BeamWaveLength(val short: String) {
 }
 
 class BeamWeapon(powerConsumption: Long = 0,
-								 val waveLength: BeamWaveLength,
+								 val waveLength: BeamWavelength,
 								 val divergence: Double,
 								 capacitor: Long
 ) : Part(),
