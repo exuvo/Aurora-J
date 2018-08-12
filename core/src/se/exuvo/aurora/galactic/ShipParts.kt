@@ -166,7 +166,7 @@ class PassiveSensor(powerConsumption: Long = 0,
 }
 
 enum class BeamWavelength(val short: String) {
-	Visible_Light("L"),
+	VisibleLight("L"),
 	Infrared("IR"),
 	Ultraviolet("UV"),
 	Microwaves("MW"),

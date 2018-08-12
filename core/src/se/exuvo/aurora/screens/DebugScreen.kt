@@ -9,39 +9,36 @@ import glm_.vec2.Vec2
 import glm_.vec2.Vec2d
 import imgui.Context
 import imgui.ImGui
-import imgui.WindowFlags
+import imgui.TreeNodeFlag
+import imgui.WindowFlag
 import imgui.impl.LwjglGL3
 import org.apache.log4j.Logger
 import org.lwjgl.glfw.GLFW
 import se.exuvo.aurora.Assets
+import se.exuvo.aurora.galactic.Battery
+import se.exuvo.aurora.galactic.CargoType
+import se.exuvo.aurora.galactic.FueledPart
 import se.exuvo.aurora.galactic.Galaxy
+import se.exuvo.aurora.galactic.PoweringPart
+import se.exuvo.aurora.galactic.Resource
+import se.exuvo.aurora.planetarysystems.components.ChargedPartState
+import se.exuvo.aurora.planetarysystems.components.FueledPartState
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.OrbitComponent
+import se.exuvo.aurora.planetarysystems.components.PowerComponent
+import se.exuvo.aurora.planetarysystems.components.PoweredPartState
+import se.exuvo.aurora.planetarysystems.components.PoweringPartState
+import se.exuvo.aurora.planetarysystems.components.ShipComponent
+import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
-import se.exuvo.aurora.utils.GameServices
-import uno.glfw.GlfwWindow
-import se.exuvo.aurora.planetarysystems.components.ShipComponent
-import se.exuvo.aurora.planetarysystems.components.PowerComponent
-import se.exuvo.aurora.utils.printID
 import se.exuvo.aurora.planetarysystems.systems.RenderSystem
-import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
-import se.exuvo.aurora.planetarysystems.components.PoweringPartState
-import se.exuvo.aurora.planetarysystems.components.PoweredPartState
-import imgui.TreeNodeFlags
-import se.exuvo.aurora.galactic.Resource
-import se.exuvo.aurora.galactic.CargoType
+import se.exuvo.aurora.utils.GameServices
+import se.exuvo.aurora.utils.Units
+import se.exuvo.aurora.utils.printID
+import uno.glfw.GlfwWindow
 import kotlin.concurrent.read
 import kotlin.concurrent.write
-import se.exuvo.aurora.galactic.FueledPart
-import se.exuvo.aurora.planetarysystems.components.FueledPartState
-import se.exuvo.aurora.utils.Units
-import se.exuvo.aurora.galactic.PoweredPart
-import se.exuvo.aurora.galactic.PoweringPart
-import se.exuvo.aurora.galactic.Battery
-import se.exuvo.aurora.planetarysystems.components.ChargedPartState
-import imgui.WindowFlag
-import imgui.TreeNodeFlag
 
 class DebugScreen : GameScreenImpl(), InputProcessor {
 
@@ -119,8 +116,10 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 
 		// https://github.com/kotlin-graphics/imgui/wiki/Using-libGDX
 		// https://github.com/ocornut/imgui
+		// https://github.com/kotlin-graphics/imgui/blob/4b052ea00bae762a4ac5f62b5bf7939f33b7895a/src/test/kotlin/imgui/gl/test%20lwjgl.kt
 
 		try {
+			// LwjglGL3 > LwjglGlfw
 			LwjglGL3.newFrame()
 
 			if (demoVisible) {
@@ -156,6 +155,8 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 					ImGui.text("Hello, world %d", 4)
 					ImGui.text("ctx.hoveredWindow ${ctx.hoveredWindow}")
 					ImGui.text("ctx.navWindow ${ctx.navWindow}")
+					ImGui.text("ctx.io.wantCaptureMouse ${ctx.io.wantCaptureMouse}")
+					ImGui.text("ctx.io.wantCaptureKeyboard ${ctx.io.wantCaptureKeyboard}")
 					ImGui.plotLines("plot", graphValues)
 
 					if (ImGui.button("OK")) {
@@ -174,6 +175,7 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 			ImGui.render()
 
 			if (ImGui.drawData != null) {
+//				ImplGL3.renderDrawData(ImGui.drawData!!)
 				LwjglGL3.renderDrawData(ImGui.drawData!!)
 			}
 		} catch (e: Throwable) {

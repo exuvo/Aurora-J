@@ -223,6 +223,7 @@ class Technology(val code: String, // Image is mapped from name
 			Technology("G Suits 1", ResearchCategory.G_LIMITS, 10, emptyList(), "", "") // Military only
 
 			// Propulsion
+			// http://www.projectrho.com/public_html/rocket/enginelist.php
 			// https://en.wikipedia.org/wiki/Nuclear_pulse_propulsion
 			Technology("Electrostatic Thruster 1", ResearchCategory.ELECTRICAL_THRUSTERS, 10, emptyList(), "Gridded Ion Thruster", "")
 			Technology("Electrostatic Thruster 2", ResearchCategory.ELECTRICAL_THRUSTERS, 10, emptyList(), "Hall Effect Thruster", "")
