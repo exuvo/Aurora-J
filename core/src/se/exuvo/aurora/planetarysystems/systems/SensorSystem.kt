@@ -23,6 +23,7 @@ import se.exuvo.aurora.planetarysystems.components.PassiveSensorState
 import jdk.nashorn.internal.ir.annotations.Ignore
 import se.exuvo.aurora.planetarysystems.components.UUIDComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
+import se.exuvo.aurora.galactic.PartRef
 
 class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 	companion object {
@@ -75,7 +76,7 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 				sensors.forEach({
 					val sensor = it
 					val poweredState = ship.getPartState(sensor)[PoweredPartState::class]
-					poweredState.requestedPower = sensor.powerConsumption
+					poweredState.requestedPower = sensor.part.powerConsumption
 				})
 			}
 		}
@@ -123,7 +124,7 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 		val sensors = sensorsMapper.get(entity).sensors
 		var detectionComponent = detectionMapper.get(entity)
 
-		val detections = HashMap<PassiveSensor, HashMap<Int, HashMap<Int, DetectionHit>>>()
+		val detections = HashMap<PartRef<PassiveSensor>, HashMap<Int, HashMap<Int, DetectionHit>>>()
 
 		for (sensor in sensors) {
 
@@ -141,10 +142,10 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 
 			val sensorState = ship.getPartState(sensor)[PassiveSensorState::class]
 
-			if (galaxy.time >= sensorState.lastScan + sensor.refreshDelay) {
+			if (galaxy.time >= sensorState.lastScan + sensor.part.refreshDelay) {
 				sensorState.lastScan = galaxy.time
 
-				val arcWidth = 360.0 / sensor.arcSegments
+				val arcWidth = 360.0 / sensor.part.arcSegments
 
 				for (emitter in emitters) {
 
@@ -157,7 +158,7 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 					}
 
 					var emitterPosition = emitter.position
-					val emission = emitter.emissions.emissions[sensor.spectrum];
+					val emission = emitter.emissions.emissions[sensor.part.spectrum];
 
 					if (emission != null) {
 
@@ -166,11 +167,11 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 						// https://en.wikipedia.org/wiki/Inverse-square_law
 						val signalStrength = emission / (4 * Math.PI * Math.pow(trueDistanceInKM / 2, 2.0))
 
-						if (signalStrength * powerRatio >= sensor.sensitivity) {
+						if (signalStrength * powerRatio >= sensor.part.sensitivity) {
 
-							if (sensor.accuracy != 1.0) {
+							if (sensor.part.accuracy != 1.0) {
 								val temp = emitterPosition.cpy().sub(sensorPosition)
-								temp.set(temp.len().toLong(), 0).scl(Math.random() * (1 - sensor.accuracy))
+								temp.set(temp.len().toLong(), 0).scl(Math.random() * (1 - sensor.part.accuracy))
 
 								if (shipMapper.has(emitter.entity)){
 									val hash = 37 * shipMapper.get(emitter.entity).shipClass.hashCode() + sensor.hashCode()
@@ -193,8 +194,8 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 							val distanceInKM: Double = sensorPosition.dst(emitterPosition) / 1000
 							val targetAngle = sensorPosition.angleTo(emitterPosition)
 
-							val arcAngleStep = Math.floor((targetAngle - sensor.angleOffset) / arcWidth).toInt()
-							val distanceStep = Math.floor(distanceInKM / sensor.distanceResolution).toInt()
+							val arcAngleStep = Math.floor((targetAngle - sensor.part.angleOffset) / arcWidth).toInt()
+							val distanceStep = Math.floor(distanceInKM / sensor.part.distanceResolution).toInt()
 
 							var angleSteps: HashMap<Int, HashMap<Int, DetectionHit>>? = detections[sensor]
 

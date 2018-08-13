@@ -18,28 +18,32 @@ import se.exuvo.aurora.galactic.FueledPart
 import se.exuvo.aurora.galactic.PoweringPart
 import kotlin.reflect.KClass
 import se.exuvo.aurora.galactic.PassiveSensor
+import com.badlogic.ashley.core.Entity
+import se.exuvo.aurora.galactic.TargetingComputer
+import se.exuvo.aurora.galactic.PartRef
+import kotlin.Suppress
 
 class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Component {
 	var commissionDay: Int? = null
 	val armor = Array<Int>(shipClass.getSurfaceArea(), { shipClass.armorLayers })
-	val partHealth = Array<Int>(shipClass.parts.size, { shipClass.parts[it].maxHealth })
-	val partEnabled = Array<Boolean>(shipClass.parts.size, { true })
-	val partState = Array<PartState>(shipClass.parts.size, { PartState() })
+	val partHealth = Array<Int>(shipClass.getParts().size, { shipClass[it].part.maxHealth })
+	val partEnabled = Array<Boolean>(shipClass.getParts().size, { true })
+	val partState = Array<PartState>(shipClass.getParts().size, { PartState() })
 	var cargo: Map<Resource, ShipCargo> = emptyMap()
 	var partCargo: MutableList<Part> = ArrayList()
 	var mass: Long = 0
 
 	init {
-		var containerParts = shipClass[ContainerPart::class.java]
+		var containerPartRefs = shipClass[ContainerPart::class.java]
 
-		if (containerParts.isNotEmpty()) {
+		if (containerPartRefs.isNotEmpty()) {
 
 			val shipCargos = listOf(ShipCargo(CargoType.NORMAL), ShipCargo(CargoType.LIFE_SUPPORT), ShipCargo(CargoType.FUEL), ShipCargo(CargoType.NUCLEAR))
 
-			for (container in containerParts) {
+			for (containerRef in containerPartRefs) {
 				for (cargo in shipCargos) {
-					if (cargo.type.equals(container.cargoType)) {
-						cargo.maxVolume += container.capacity
+					if (cargo.type.equals(containerRef.part.cargoType)) {
+						cargo.maxVolume += containerRef.part.capacity
 						break
 					}
 				}
@@ -57,92 +61,74 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 		}
 		
 		partState.forEachIndexed { partIndex, state ->
-			val part = shipClass.parts[partIndex]
+			val partRef = shipClass[partIndex]
 			
-			if (part is PoweringPart) {
+			if (partRef.part is PoweringPart) {
 				state.put(PoweringPartState())
 			}
 			
-			if (part is PoweredPart) {
+			if (partRef.part is PoweredPart) {
 				state.put(PoweredPartState())
 			}
 			
-			if (part is ChargedPart) {
+			if (partRef.part is ChargedPart) {
 				state.put(ChargedPartState())
 			}
 			
-			if (part is PassiveSensor) {
+			if (partRef.part is PassiveSensor) {
 				state.put(PassiveSensorState())
 			}
 			
-			if (part is AmmunitionPart) {
-				state.put(AmmunitionPartState(Queue<Part>(part.ammunitionAmount)))
+			if (partRef.part is AmmunitionPart) {
+				state.put(AmmunitionPartState(Queue<Part>(partRef.part.ammunitionAmount)))
 			}
 			
-			if (part is ReloadablePart) {
+			if (partRef.part is ReloadablePart) {
 				state.put(ReloadablePartState())
 			}
 			
-			if (part is FueledPart) {
+			if (partRef.part is FueledPart) {
 				state.put(FueledPartState())
+			}
+			
+			if (partRef.part is TargetingComputer) {
+				
+				var tcs = TargetingComputerState()
+				
+				@Suppress("UNCHECKED_CAST")
+				var defaultAssignments: List<PartRef<Part>>? = shipClass.defaultWeaponAssignments[partRef as PartRef<TargetingComputer>]
+				
+				if (defaultAssignments != null) {
+					tcs.linkedWeapons = defaultAssignments.toMutableList()
+				}
+				
+				state.put(tcs)
 			}
 		}
 	}
 	
-	//TODO replace shipClass.parts.indexOf(part) with map
-	
-	fun getPartState(part: Part): PartState {
-		val index = shipClass.parts.indexOf(part)
-
-		if (index == -1) {
-			throw IllegalArgumentException()
-		}
-
-		return partState[index]
+	fun getPartState(partRef: PartRef<out Part>): PartState {
+		return partState[partRef.index]
 	}
 	
-	fun getPartHealth(part: Part): Int {
-		val index = shipClass.parts.indexOf(part)
-
-		if (index == -1) {
-			throw IllegalArgumentException()
-		}
-
-		return partHealth[index]
+	fun getPartHealth(partRef: PartRef<out Part>): Int {
+		return partHealth[partRef.index]
 	}
 	
-	fun setPartHealth(part: Part, health: Int) {
-		val index = shipClass.parts.indexOf(part)
-
-		if (index == -1) {
-			throw IllegalArgumentException()
-		}
-		
-		if (health < 0 || health > shipClass.parts[index].maxHealth){
+	fun setPartHealth(partRef: PartRef<out Part>, health: Int) {
+		if (health < 0 || health > partRef.part.maxHealth){
 			throw IllegalArgumentException()
 		}
 
-		partHealth[index] = health
+		partHealth[partRef.index] = health
 	}
 
-	fun isPartEnabled(part: Part): Boolean {
-		val index = shipClass.parts.indexOf(part)
-
-		if (index == -1) {
-			throw IllegalArgumentException()
-		}
-
-		return partEnabled[index]
+	fun isPartEnabled(partRef: PartRef<out Part>): Boolean {
+		return partEnabled[partRef.index]
 	}
 	
-	fun setPartEnabled(part: Part, enabled: Boolean) {
-		val index = shipClass.parts.indexOf(part)
-
-		if (index == -1) {
-			throw IllegalArgumentException()
-		}
-
-		partEnabled[index] = enabled
+	fun setPartEnabled(partRef: PartRef<out Part>, enabled: Boolean) {
+		partEnabled[partRef.index] = enabled
 	}
 	
 	fun getCargoAmount(resource: Resource): Int {
@@ -375,11 +361,12 @@ data class ChargedPartState(var charge: Long = 0)
 
 data class AmmunitionPartState(var ammunition: Queue<Part>)
 
-//TODO
-data class WeaponPartState(var todo: Int = 0
-)
-
 data class ReloadablePartState(var loaded: Boolean = false,
 															 var reloadCompletionAt: Int = 0
+)
+
+data class TargetingComputerState(var target: Entity? = null,
+															 		var lockCompletionAt: Int = 0,
+																	var linkedWeapons: MutableList<PartRef<Part>> = ArrayList()
 )
 

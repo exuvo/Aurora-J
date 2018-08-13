@@ -5,7 +5,7 @@ import java.util.Objects
 
 abstract class Part {
 	var name: String = ""
-	var designDay: Int? = null
+	var designDay: Int = -1
 	val cost: MutableMap<Resource, Int> = LinkedHashMap() 
 	var maxHealth = 1
 	var crewRequirement = 1
@@ -27,7 +27,7 @@ abstract class Part {
 	open fun calculateHashCode() : Int {
 		var hash = 1;
 		hash = 37 * hash + name.hashCode()
-		hash = 37 * hash + designDay!!
+		hash = 37 * hash + designDay
 		hash = 37 * hash + getVolume()
 		hash = 37 * hash + maxHealth
 		hash = 37 * hash + crewRequirement
@@ -203,3 +203,9 @@ class MissileLauncher(powerConsumption: Long = 0,
 		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.MISSILES),
 		ReloadablePart by ReloadablePartImpl(reloadTime)
 
+class TargetingComputer(val maxWeapons: Int,
+												val lockingTime: Int,
+												val prediction: Float,
+												powerConsumption: Long
+) : Part(),
+		PoweredPart by PoweredPartImpl(powerConsumption)

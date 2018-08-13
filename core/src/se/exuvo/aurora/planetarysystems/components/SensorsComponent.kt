@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.Component
 import se.exuvo.aurora.galactic.PassiveSensor
 import com.badlogic.ashley.core.Entity
 import se.exuvo.aurora.utils.Vector2L
+import se.exuvo.aurora.galactic.PartRef
 
 enum class Spectrum(val short: String) {
 	Visible_Light("L"),
@@ -15,11 +16,11 @@ enum class Spectrum(val short: String) {
 	}
 }
 
-data class PassiveSensorsComponent(var sensors: List<PassiveSensor>) : Component
+data class PassiveSensorsComponent(var sensors: List<PartRef<PassiveSensor>>) : Component
 
 data class EmissionsComponent(var emissions: Map<Spectrum, Double>) : Component
 
 // Sensor, AngleStep, DistanceStep
-data class DetectionComponent(var detections: Map<PassiveSensor, Map<Int, Map<Int, DetectionHit>>>) : Component
+data class DetectionComponent(var detections: Map<PartRef<PassiveSensor>, Map<Int, Map<Int, DetectionHit>>>) : Component
 
 data class DetectionHit(var signalStrength: Double, val entities: MutableList<Entity>, val hitPositions: MutableList<Vector2L>)

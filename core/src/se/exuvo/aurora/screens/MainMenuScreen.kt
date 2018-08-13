@@ -46,8 +46,8 @@ class MainMenuScreen() : GameScreenImpl() {
 
 		val systemView = PlanetarySystemScreen(system)
 		GameServices.put(GalaxyScreen(systemView))
-		GameServices[GameScreenService::class.java].add(DebugScreen())
-		GameServices[GameScreenService::class.java].add(UIScreen())
+		GameServices[GameScreenService::class.java].add(ImGuiScreen())
+//		GameServices[GameScreenService::class.java].add(Scene2DScreen())
 		GameServices[GameScreenService::class.java].add(systemView)
 //    }
 	}

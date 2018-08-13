@@ -10,6 +10,7 @@ import java.security.InvalidParameterException
 import se.exuvo.aurora.galactic.PoweringPart
 import se.exuvo.aurora.galactic.ChargedPart
 import se.exuvo.aurora.galactic.PoweredPart
+import se.exuvo.aurora.galactic.PartRef
 
 class PowerComponent(var powerScheme: PowerScheme) : Component {
 	var stateChanged = true
@@ -17,9 +18,9 @@ class PowerComponent(var powerScheme: PowerScheme) : Component {
 	var totalAvailiableSolarPower = 0L
 	var totalRequestedPower = 0L
 	var totalUsedPower = 0L
-	val poweringParts = ArrayList<Part>()
-	val poweredParts = ArrayList<Part>()
-	val chargedParts = ArrayList<Part>()
+	val poweringParts = ArrayList<PartRef<Part>>()
+	val poweredParts = ArrayList<PartRef<Part>>()
+	val chargedParts = ArrayList<PartRef<Part>>()
 }
 
 enum class PowerScheme(val chargeBatteryFromReactor: Boolean, private val powerTypeCompareMap: Map<KClass<out Part>, Int>) {

@@ -96,6 +96,7 @@ project(":core") {
 				compile "org.lwjgl:lwjgl-stb:$lwjglVersion"
 				compile "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-windows"
 				
+				// snapshot requires lwjgl 3.2 but libgdx is not yet updated to that
 				// compile ("com.github.kotlin-graphics:imgui:-SNAPSHOT") {
         compile ("com.github.kotlin-graphics:imgui:v1.60-beta-05") {
 					exclude group: 'org.jogamp.gluegen'

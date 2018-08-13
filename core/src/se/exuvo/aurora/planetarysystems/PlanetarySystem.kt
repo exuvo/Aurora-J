@@ -57,6 +57,7 @@ import se.exuvo.aurora.galactic.FissionReactor
 import se.exuvo.aurora.galactic.Battery
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.planetarysystems.components.PowerScheme
+import se.exuvo.aurora.galactic.TargetingComputer
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : Entity(), EntityListener {
 	companion object {
@@ -160,28 +161,32 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		shipClass.designDay = 1
 //		shipClass.powerScheme = PowerScheme.SOLAR_REACTOR_BATTERY
 		
-		shipClass.parts.add(sensor1)
-		shipClass.parts.add(sensor2)
+		shipClass.addPart(sensor1)
+		shipClass.addPart(sensor2)
 		
 		val solarPanel = SolarPanel()
 		solarPanel.name = "Solar Panel"
 		solarPanel.cost[Resource.SEMICONDUCTORS] = 250
-		shipClass.parts.add(solarPanel)
+		shipClass.addPart(solarPanel)
 		
 		val reactor = FissionReactor(1 * Units.MEGAWATT)
 		reactor.name = "Nuclear Reactor"
 		reactor.cost[Resource.GENERIC] = 1000
-		shipClass.parts.add(reactor)
+		shipClass.addPart(reactor)
 //		println("Reactor fuel consumption ${reactor.fuelConsumption} kg / ${reactor.fuelTime} s")
 		
 		val nuclearStorage = NuclearContainerPart(10000)
 		nuclearStorage.name = "Nuclear Cargo"
 		nuclearStorage.cost[Resource.GENERIC] = 100
-		shipClass.parts.add(nuclearStorage)
+		shipClass.addPart(nuclearStorage)
 		
 		val battery = Battery(200 * Units.KILOWATT, 500 * Units.KILOWATT, 0.8f, 100 * Units.GIGAWATT)
 		battery.name = "Battery"
-		shipClass.parts.add(battery)
+		shipClass.addPart(battery)
+		
+		val targetingComputer = TargetingComputer(2, 10, 0f, 10 * Units.KILOWATT)
+		targetingComputer.name = "TC 2-10"
+		shipClass.addPart(targetingComputer)
 		
 		val shipComponent = ShipComponent(shipClass, galaxy.time)
 		shipComponent.addCargo(Resource.NUCLEAR_FISSION, 10) 

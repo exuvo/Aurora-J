@@ -69,7 +69,7 @@ enum class ResearchCategory(val parent: ResearchCategory? = null) {
 	ELECTRO_MAGNETIC_SENSOR(ELECTRONICS),
 	THERMAL_SENSOR(ELECTRONICS),
 	OPTICAL_SENSOR(ELECTRONICS),
-	RADAR_SENSOR(ELECTRONICS),
+	ACTIVE_SENSORS(ELECTRONICS),
 	GRAVIMETRY_SENSOR(ELECTRONICS),
 	TARGETING_ALGORITHMS(ELECTRONICS),
 	PROCESSORS(ELECTRONICS),
@@ -96,7 +96,7 @@ enum class TheoreticalTheory(val applicableCategories: List<ResearchCategory>) {
 					ResearchCategory.MINING,
 					ResearchCategory.OPTICAL_SENSOR,
 					ResearchCategory.THERMAL_SENSOR,
-					ResearchCategory.RADAR_SENSOR)),
+					ResearchCategory.ACTIVE_SENSORS)),
 	BIOLOGY(listOf(
 					ResearchCategory.COLONISATION,
 					ResearchCategory.G_LIMITS)),
@@ -283,7 +283,27 @@ class Technology(val code: String, // Image is mapped from name
 			Technology("Grav Sensor 1", ResearchCategory.GRAVIMETRY_SENSOR, 10, emptyList(), "", "")
 			Technology("Thermal Sensor 1", ResearchCategory.THERMAL_SENSOR, 10, emptyList(), "", "")
 			Technology("Optical Sensor 1", ResearchCategory.OPTICAL_SENSOR, 10, emptyList(), "", "")
-			Technology("RADAR Sensor 1", ResearchCategory.RADAR_SENSOR, 10, emptyList(), "", "")
+			Technology("RADAR Sensor 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			Technology("LIDAR Sensor 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			
+			// ECM https://en.wikipedia.org/wiki/Electronic_countermeasure
+			// 	Jamming is accomplished by a friendly platform transmitting signals on the radar frequency to produce a noise level sufficient to hide echos.
+			// 	The jammer's continuous transmissions will provide a clear direction to the enemy radar, but no range information.
+			Technology("RADAR Range Jammer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			Technology("LIDAR Range Jammer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			// Deception may use a transponder to mimic the radar echo with a delay to indicate incorrect range.
+			Technology("RADAR Range Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			Technology("LIDAR Range Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			// Transponders may alternatively increase return echo strength to make a small decoy appear to be a larger target.
+			Technology("RADAR Strength Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			Technology("LIDAR Strength Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			Technology("EM Strength Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			Technology("Thermal Strength Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			// Target modifications include radar absorbing coatings and modifications of the surface shape to either "stealth" a high-value target or enhance reflections from a decoy.
+			Technology("RADAR Stealth 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			Technology("LIDAR Stealth 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			Technology("RADAR Enhanced Reflections 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			Technology("LIDAR Enhanced Reflections 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
 
 			// Computation
 			Technology("Targeting Computers 1", ResearchCategory.TARGETING_ALGORITHMS, 10, emptyList(), "", "")

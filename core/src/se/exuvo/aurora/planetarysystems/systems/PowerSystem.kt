@@ -70,26 +70,25 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 			powerComponent = PowerComponent(ship.shipClass.powerScheme)
 			entity.add(powerComponent)
 
-			ship.shipClass.parts.forEach {
-				val part = it
+			ship.shipClass.getPartRefs().forEach {
+				val partRef = it
 
-				if (part is PoweringPart) {
-					powerComponent.poweringParts.add(part)
+				if (partRef.part is PoweringPart) {
+					powerComponent.poweringParts.add(partRef)
 				}
 
-				if (part is PoweredPart) {
-					powerComponent.poweredParts.add(part)
+				if (partRef.part is PoweredPart) {
+					powerComponent.poweredParts.add(partRef)
 				}
 
-				if (part is ChargedPart) {
-					powerComponent.chargedParts.add(part)
+				if (partRef.part is ChargedPart) {
+					powerComponent.chargedParts.add(partRef)
 				}
 			}
 
-			powerComponent.poweringParts.sortWith(Comparator { a, b ->
-
-				val aInt = ship.shipClass.powerScheme.getPowerTypeValue(a)
-				val bInt = ship.shipClass.powerScheme.getPowerTypeValue(b)
+			powerComponent.poweringParts.sortWith(Comparator { aRef, bRef ->
+				val aInt = ship.shipClass.powerScheme.getPowerTypeValue(aRef.part)
+				val bInt = ship.shipClass.powerScheme.getPowerTypeValue(bRef.part)
 
 				aInt.compareTo(bInt)
 			})
@@ -111,8 +110,9 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 
 		// Pre checks
 		powerComponent.poweringParts.forEach({
-			val part = it
-			val poweringState = ship.getPartState(part)[PoweringPartState::class]
+			val partRef = it
+			val part = partRef.part
+			val poweringState = ship.getPartState(partRef)[PoweringPartState::class]
 
 			if (part is SolarPanel) { // Update solar power
 
@@ -136,7 +136,7 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 
 			} else if (part is Reactor) {
 
-				val fueledState = ship.getPartState(part)[FueledPartState::class]
+				val fueledState = ship.getPartState(partRef)[FueledPartState::class]
 
 				val remainingFuel = ship.getCargoAmount(part.fuel)
 				fueledState.totalFuelEnergyRemaining = fueledState.fuelEnergyRemaining + part.power * part.fuelTime * remainingFuel
@@ -153,8 +153,8 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 
 			} else if (part is Battery) { // Charge empty or full
 
-				val poweredState = ship.getPartState(part)[PoweredPartState::class]
-				val chargedState = ship.getPartState(part)[ChargedPartState::class]
+				val poweredState = ship.getPartState(partRef)[PoweredPartState::class]
+				val chargedState = ship.getPartState(partRef)[ChargedPartState::class]
 
 				// Charge empty
 				if (poweringState.producedPower > chargedState.charge) {
@@ -198,10 +198,11 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 			var availiableChargingPower = 0L
 
 			powerComponent.poweringParts.forEach({
-				val part = it
+				val partRef = it
+				val part = partRef.part
 
-				if (ship.isPartEnabled(part)) {
-					val poweringState = ship.getPartState(part)[PoweringPartState::class]
+				if (ship.isPartEnabled(partRef)) {
+					val poweringState = ship.getPartState(partRef)[PoweringPartState::class]
 
 					powerComponent.totalAvailiablePower += poweringState.availiablePower
 
@@ -216,15 +217,14 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 			})
 
 			// Sort powered parts batteries last then lowest to highest
-			powerComponent.poweredParts.sortWith(Comparator { a, b ->
-
-				val aBattery = if (a is Battery) 1 else 0
-				val bBattery = if (b is Battery) 1 else 0
+			powerComponent.poweredParts.sortWith(Comparator { aRef, bRef ->
+				val aBattery = if (aRef.part is Battery) 1 else 0
+				val bBattery = if (bRef.part is Battery) 1 else 0
 
 				if (aBattery == bBattery) {
 
-					val poweredStateA = ship.getPartState(a).get(PoweredPartState::class)
-					val poweredStateB = ship.getPartState(b).get(PoweredPartState::class)
+					val poweredStateA = ship.getPartState(aRef).get(PoweredPartState::class)
+					val poweredStateB = ship.getPartState(bRef).get(PoweredPartState::class)
 
 					poweredStateA.requestedPower.compareTo(poweredStateB.requestedPower)
 
@@ -239,10 +239,11 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 
 			// Allocate power
 			powerComponent.poweredParts.forEach({
-				val part = it
-				val poweredState = ship.getPartState(part)[PoweredPartState::class]
+				val partRef = it
+				val part = partRef.part
+				val poweredState = ship.getPartState(partRef)[PoweredPartState::class]
 
-				if (ship.isPartEnabled(part)) {
+				if (ship.isPartEnabled(partRef)) {
 
 					if (part !is Battery) {
 
@@ -260,7 +261,7 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 
 					} else {
 
-						val chargedState = ship.getPartState(part)[ChargedPartState::class]
+						val chargedState = ship.getPartState(partRef)[ChargedPartState::class]
 						val leftToCharge = part.capacitor - chargedState.charge
 
 						poweredState.requestedPower = Math.min((leftToCharge / part.efficiency.toDouble()).toLong(), part.powerConsumption)
@@ -313,14 +314,15 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 
 		// Consume fuel, consume batteries
 		powerComponent.poweringParts.forEach({
-			val part = it
-			val poweringState = ship.getPartState(part)[PoweringPartState::class]
+			val partRef = it
+			val part = partRef.part
+			val poweringState = ship.getPartState(partRef)[PoweringPartState::class]
 
 			if (part is Reactor) {
 
 				if (poweringState.producedPower > 0) {
 
-					val fueledState = ship.getPartState(part)[FueledPartState::class]
+					val fueledState = ship.getPartState(partRef)[FueledPartState::class]
 
 					var fuelEnergyConsumed = deltaGameTime * poweringState.producedPower.toLong()
 //					println("fuelEnergyConsumed $fuelEnergyConsumed, fuelTime ${TimeUnits.secondsToString(part.fuelTime.toLong())}, power ${poweringState.producedPower.toDouble() / part.power}%")
@@ -382,7 +384,7 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 
 			} else if (part is Battery) {
 
-				val chargedState = ship.getPartState(part)[ChargedPartState::class]
+				val chargedState = ship.getPartState(partRef)[ChargedPartState::class]
 
 				if (poweringState.producedPower > 0) {
 					chargedState.charge -= Math.min(deltaGameTime * poweringState.producedPower, chargedState.charge)
@@ -392,12 +394,13 @@ class PowerSystem : IteratingSystem(FAMILY), EntityListener {
 
 		// Charge capacitors and batteries
 		powerComponent.poweredParts.forEach({
-			val part = it
-			val poweredState = ship.getPartState(part)[PoweredPartState::class]
+			val partRef = it
+			val part = partRef.part
+			val poweredState = ship.getPartState(partRef)[PoweredPartState::class]
 
 			if (part is ChargedPart) {
 
-				val chargedState = ship.getPartState(part)[ChargedPartState::class]
+				val chargedState = ship.getPartState(partRef)[ChargedPartState::class]
 
 				if (poweredState.givenPower > 0) {
 

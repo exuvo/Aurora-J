@@ -318,11 +318,11 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 				for (sensorEntry in detection.detections.entries) {
 
 					val sensor = sensorEntry.key
-					val arcWidth = 360.0 / sensor.arcSegments
+					val arcWidth = 360.0 / sensor.part.arcSegments
 
 					if (shapeRenderer.getCurrentType() == ShapeRenderer.ShapeType.Line) {
 
-						when (sensor.spectrum) {
+						when (sensor.part.spectrum) {
 
 							Spectrum.Thermal -> {
 								shapeRenderer.color = Color.CORAL
@@ -339,7 +339,7 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 					} else {
 
-						when (sensor.spectrum) {
+						when (sensor.part.spectrum) {
 
 							Spectrum.Thermal -> {
 								shapeRenderer.color = Color.CORAL.cpy()
@@ -363,14 +363,14 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 					for (angleEntry in angleSteps.entries) {
 
 						val angleStep = angleEntry.key
-						val arcAngle = sensor.angleOffset + angleStep * arcWidth
+						val arcAngle = sensor.part.angleOffset + angleStep * arcWidth
 
 						for (distanceEntry in angleEntry.value) {
 
 							val distanceStep = distanceEntry.key
 
-							val minRadius = distanceStep * sensor.distanceResolution
-							val maxRadius = minRadius + sensor.distanceResolution
+							val minRadius = distanceStep * sensor.part.distanceResolution
+							val maxRadius = minRadius + sensor.part.distanceResolution
 							val segments = Math.min(100, Math.max(3, getCircleSegments(maxRadius.toFloat(), zoom) / 4))
 
 							shapeRenderer.scanCircleSector(x, y, maxRadius, minRadius, arcAngle, arcWidth, segments)
@@ -441,7 +441,7 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 			for (sensor in sensors.sensors) {
 
-				when (sensor.spectrum) {
+				when (sensor.part.spectrum) {
 
 					Spectrum.Thermal -> {
 						shapeRenderer.color = Color.CORAL.cpy()
@@ -459,15 +459,15 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 					}
 				}
 
-				val arcWidth = 360.0 / sensor.arcSegments
-				val minRadius = sensor.distanceResolution
-				val maxRadius = minRadius + sensor.distanceResolution
+				val arcWidth = 360.0 / sensor.part.arcSegments
+				val minRadius = sensor.part.distanceResolution
+				val maxRadius = minRadius + sensor.part.distanceResolution
 				val segments = Math.min(100, Math.max(3, getCircleSegments(maxRadius.toFloat(), zoom) / 4))
 
 				var i = 0;
-				while (i < sensor.arcSegments) {
+				while (i < sensor.part.arcSegments) {
 
-					val arcAngle = i * arcWidth + sensor.angleOffset
+					val arcAngle = i * arcWidth + sensor.part.angleOffset
 
 					shapeRenderer.scanCircleSector(x, y, maxRadius, minRadius, arcAngle, arcWidth, segments)
 					i++
@@ -499,25 +499,25 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 			for (sensorEntry in detection.detections.entries) {
 
 				val sensor = sensorEntry.key
-				val arcWidth = 360.0 / sensor.arcSegments
+				val arcWidth = 360.0 / sensor.part.arcSegments
 
 				val angleSteps = sensorEntry.value
 
 				for (angleEntry in angleSteps.entries) {
 
 					val angleStep = angleEntry.key
-					val angle = sensor.angleOffset + angleStep * arcWidth + 0.5 * arcWidth
+					val angle = sensor.part.angleOffset + angleStep * arcWidth + 0.5 * arcWidth
 
 					for (distanceEntry in angleEntry.value) {
 
 						val distanceStep = distanceEntry.key
 						val hit = distanceEntry.value
 
-						val minRadius = distanceStep * sensor.distanceResolution
-						val maxRadius = minRadius + sensor.distanceResolution
+						val minRadius = distanceStep * sensor.part.distanceResolution
+						val maxRadius = minRadius + sensor.part.distanceResolution
 						val radius = (minRadius + maxRadius) / 2
 
-						val text = "${sensor.spectrum} ${String.format("%.2e", hit.signalStrength)} - ${sensor.name}"
+						val text = "${sensor.part.spectrum} ${String.format("%.2e", hit.signalStrength)} - ${sensor.part.name}"
 
 						val angleRad = Math.toRadians(angle)
 						val x = (sensorX + radius * Math.cos(angleRad)).toFloat()

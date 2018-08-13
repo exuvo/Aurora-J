@@ -17,7 +17,7 @@ import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.planetarysystems.systems.TagSystem
 import se.exuvo.aurora.utils.GameServices
 
-class UIScreen : GameScreenImpl(), InputProcessor {
+class Scene2DScreen : GameScreenImpl(), InputProcessor {
 
 	private val spriteBatch by lazy { GameServices[SpriteBatch::class.java] }
 	private val galaxy by lazy { GameServices[Galaxy::class.java] }

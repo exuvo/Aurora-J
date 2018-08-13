@@ -40,7 +40,7 @@ import uno.glfw.GlfwWindow
 import kotlin.concurrent.read
 import kotlin.concurrent.write
 
-class DebugScreen : GameScreenImpl(), InputProcessor {
+class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 	val log = Logger.getLogger(this.javaClass)
 
@@ -250,30 +250,30 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 
 									if (ImGui.treeNode("Producers")) {
 										powerComponent.poweringParts.forEach({
-											val part = it
-											val poweringState = shipComponent.getPartState(part)[PoweringPartState::class]
+											val partRef = it
+											val poweringState = shipComponent.getPartState(partRef)[PoweringPartState::class]
 
 											val power = if (poweringState.availiablePower == 0L) 0f else poweringState.producedPower / poweringState.availiablePower.toFloat()
 											
 											ImGui.progressBar(power, Vec2(), "${Units.powerToString(poweringState.producedPower)}/${Units.powerToString(poweringState.availiablePower)}")
 
 											ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
-											ImGui.text("${part.name}")
+											ImGui.text("${partRef.part.name}")
 											
-											if (part is FueledPart && part is PoweringPart) {
+											if (partRef is FueledPart && partRef is PoweringPart) {
 												
-												val fueledState = shipComponent.getPartState(part)[FueledPartState::class]
-												val fuelRemaining = Units.secondsToString(fueledState.fuelEnergyRemaining / part.power)
-												val totalFuelRemaining = Units.secondsToString(fueledState.totalFuelEnergyRemaining  / part.power)
+												val fueledState = shipComponent.getPartState(partRef)[FueledPartState::class]
+												val fuelRemaining = Units.secondsToString(fueledState.fuelEnergyRemaining / partRef.power)
+												val totalFuelRemaining = Units.secondsToString(fueledState.totalFuelEnergyRemaining  / partRef.power)
 											
 												ImGui.text("Fuel $fuelRemaining/$totalFuelRemaining W")	
 											}
 											
-											if (part is Battery) {
+											if (partRef.part is Battery) {
 												
-												val chargedState = shipComponent.getPartState(part)[ChargedPartState::class]
+												val chargedState = shipComponent.getPartState(partRef)[ChargedPartState::class]
 												val charge = chargedState.charge
-												val maxCharge = part.capacitor
+												val maxCharge = partRef.part.capacitor
 												val charged = if (maxCharge == 0L) 0f else charge / maxCharge.toFloat()
 												
 												ImGui.progressBar(charged, Vec2(), "${Units.powerToString(charge)}/${Units.powerToString(maxCharge)}s")
@@ -298,7 +298,7 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 											ImGui.progressBar(power, Vec2(), "${Units.powerToString(poweredState.givenPower)}/${Units.powerToString(poweredState.requestedPower)}")
 
 											ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
-											ImGui.text("${part.name}")
+											ImGui.text("${part.part.name}")
 										})
 
 										ImGui.treePop()
@@ -396,56 +396,50 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 			return true;
 		}
 
-		gdxGLFWKeyMap[keycode]?.apply {
-			LwjglGL3.keyCallback(this, 0, GLFW.GLFW_PRESS, 0)
+		if (ctx.io.wantCaptureKeyboard) {
+			gdxGLFWKeyMap[keycode]?.apply {
+				LwjglGL3.keyCallback(this, 0, GLFW.GLFW_PRESS, 0)
+			}
+			return true
 		}
 
-		return ctx.navWindow != null
+		return false
 	}
 
 	override fun keyUp(keycode: Int): Boolean {
-		gdxGLFWKeyMap[keycode]?.apply {
-			LwjglGL3.keyCallback(this, 0, GLFW.GLFW_RELEASE, 0)
+		if (ctx.io.wantCaptureKeyboard) {
+			gdxGLFWKeyMap[keycode]?.apply {
+				LwjglGL3.keyCallback(this, 0, GLFW.GLFW_RELEASE, 0)
+			}
+			return true
 		}
 
-		return ctx.navWindow != null
+		return false
 	}
 
 	override fun keyTyped(character: Char): Boolean {
-		LwjglGL3.charCallback(character.toInt())
+		if (ctx.io.wantCaptureKeyboard) {
+			LwjglGL3.charCallback(character.toInt())
+			return true
+		}
 
-		return ctx.navWindow != null
+		return false
 	}
 
-	// Seems to read mouse state every frame
 	override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
-		if (ctx.navWindow != null && ctx.hoveredWindow == null) {
-			//TODO fix, gives errors when drawing tree nodes
-//			ctx.navWindow = null
-		}
-
-		return ctx.hoveredWindow != null
+		return ctx.io.wantCaptureMouse
 	}
 
-	// Seems to read mouse state every frame
 	override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
-		if (ctx.hoveredWindow != null) {
-//			LwjglGL3.mouseButtonCallback(button, GLFW.GLFW_PRESS, 0)
-		}
-
-		return ctx.hoveredWindow != null
+		return ctx.io.wantCaptureMouse
 	}
 
 	override fun touchDragged(screenX: Int, screenY: Int, pointer: Int): Boolean {
-		return ctx.hoveredWindow != null
+		return ctx.io.wantCaptureMouse
 	}
 
 	override fun scrolled(amount: Int): Boolean {
-//		if (ctx.navWindow != null && ctx.hoveredWindow == null) {
-//			ctx.navWindow = null
-//		}
-		
-		if (ctx.hoveredWindow != null) {
+		if (ctx.io.wantCaptureMouse) {
 			LwjglGL3.scrollCallback(Vec2d(0, -amount))
 			return true
 		}
@@ -453,7 +447,6 @@ class DebugScreen : GameScreenImpl(), InputProcessor {
 		return false
 	}
 
-	// Seems to read mouse pos every frame
 	override fun mouseMoved(screenX: Int, screenY: Int): Boolean {
 		return false
 	}

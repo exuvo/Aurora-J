@@ -1,18 +1,41 @@
 package se.exuvo.aurora.galactic
 
 import se.exuvo.aurora.planetarysystems.components.PowerScheme
+import java.lang.IllegalArgumentException
 
 class ShipClass {
 	var name: String = ""
 	var designDay: Int? = null
-	val parts: MutableList<Part> = ArrayList()
+	private val parts: MutableList<Part> = ArrayList()
+	private val partRefs: MutableList<PartRef<Part>> = ArrayList()
 	var armorLayers = 1
 	var preferredCargo: Map<Resource, Int> = LinkedHashMap()
 	var preferredItemCargo: MutableList<Part> = ArrayList()
 	var powerScheme: PowerScheme = PowerScheme.SOLAR_BATTERY_REACTOR
-	//TODO default weapon assignments
+	var defaultWeaponAssignments: Map<PartRef<TargetingComputer>, List<PartRef<Part>>> = LinkedHashMap()
 
-	operator fun <T> get(partClass: Class<T>) : List<T> = parts.filterIsInstance(partClass)
+	@Suppress("UNCHECKED_CAST")
+	operator fun <T: Part> get(partClass: Class<T>) : List<PartRef<T>> = partRefs.filter { partClass.isInstance(it.part) } as List<PartRef<T>>
+	operator fun get(partIndex: Int) = partRefs[partIndex]
+	
+	fun getParts() = parts as List<Part>
+	fun getPartRefs() = partRefs as List<PartRef<Part>>
+	
+	fun addPart(part: Part) {
+		parts.add(part)
+		partRefs.add(PartRef(part, parts.size - 1))
+	}
+	
+	fun removePart(part: Part) {
+		val index = parts.indexOf(part)
+		
+		if (index == -1) {
+			throw IllegalArgumentException()
+		}
+		
+		parts.removeAt(index)
+		partRefs.removeAt(index)
+	}
 
 	fun getCrewRequirement(): Int {
 		return parts.sumBy { it.crewRequirement }
@@ -48,4 +71,6 @@ class ShipClass {
 
 	override fun hashCode(): Int = hashcode
 }
+
+data class PartRef<T: Part>(val part: T, val index: Int)
 
