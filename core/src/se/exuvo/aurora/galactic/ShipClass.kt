@@ -9,6 +9,7 @@ class ShipClass {
 	private val parts: MutableList<Part> = ArrayList()
 	private val partRefs: MutableList<PartRef<Part>> = ArrayList()
 	var armorLayers = 1
+	var armorBlockHP = 100
 	var preferredCargo: Map<Resource, Int> = LinkedHashMap()
 	var preferredItemCargo: MutableList<Part> = ArrayList()
 	var powerScheme: PowerScheme = PowerScheme.SOLAR_BATTERY_REACTOR

@@ -73,5 +73,11 @@ class WeaponSystem : IteratingSystem(FAMILY), EntityListener {
 	override fun processEntity(entity: Entity, deltaGameTime: Float) {
 		
 		val weaponsComponent = weaponsComponentMapper.get(entity)
+		
+		/* Determine closest approach
+ 		 * https://math.stackexchange.com/questions/1256660/shortest-distance-between-two-moving-points
+ 		 * https://stackoverflow.com/questions/32218356/how-to-calculate-shortest-distance-between-two-moving-objects
+  	 */
+		
 	}
 }
