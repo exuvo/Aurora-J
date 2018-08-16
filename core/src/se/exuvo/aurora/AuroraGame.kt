@@ -19,8 +19,13 @@ import se.exuvo.aurora.screens.LoadingScreen
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.settings.Settings
 import java.util.concurrent.locks.ReentrantReadWriteLock
+import se.exuvo.aurora.utils.keys.KeyMappings
+import se.exuvo.aurora.utils.keys.KeyMapping
 
 class AuroraGame(val assetsRoot: String) : ApplicationAdapter() {
+	companion object {
+		var disposed = false
+	}
 
 	val log = Logger.getLogger(this.javaClass)
 	val screenService = GameScreenService()
@@ -28,6 +33,8 @@ class AuroraGame(val assetsRoot: String) : ApplicationAdapter() {
 	override fun create() {
 		com.esotericsoftware.minlog.Log.setLogger(MinlogTolog4j())
 		com.esotericsoftware.minlog.Log.set(com.esotericsoftware.minlog.Log.LEVEL_WARN)
+		
+		KeyMappings.load()
 		
 		GameServices.put(GLProfiler(Gdx.graphics))
 		GameServices.put(AssetManager(AuroraAssetsResolver(assetsRoot)))
@@ -61,9 +68,9 @@ class AuroraGame(val assetsRoot: String) : ApplicationAdapter() {
 	override fun dispose() {
 		Assets.dispose()
 		GameServices.dispose()
+		KeyMappings.save()
 		Settings.save()
 	}
-
 }
 
 class AuroraAssetsResolver(val assetsRoot: String) : FileHandleResolver {

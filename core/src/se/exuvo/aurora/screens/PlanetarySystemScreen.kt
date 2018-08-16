@@ -67,7 +67,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	private val planetarySystemMapper = ComponentMapper.getFor(PlanetarySystemComponent::class.java)
 
 	var zoomLevel = 0
-	var zoomSensitivity = Settings.getFloat("UI.zoomSensitivity").toDouble()
+	var zoomSensitivity = Settings.getFloat("UI/zoomSensitivity").toDouble()
 	val maxZoom = 1E8f
 
 	init {
@@ -142,6 +142,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	}
 
 	override fun keyDown(keycode: Int): Boolean {
+		// Input.Keys. is in US layout
 
 		if (keycode == Input.Keys.G) {
 			PlanetarySystemGeneration(system).generateRandomSystem()
@@ -196,7 +197,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 			return true
 		}
-
+		
 		return false;
 	}
 

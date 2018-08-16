@@ -9,6 +9,7 @@ import com.badlogic.gdx.utils.Disposable
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.utils.GameServices
 import java.util.LinkedList
+import com.badlogic.gdx.Input
 
 class GameScreenService : Disposable, InputProcessor {
 	private val inputMultiplexer = InputMultiplexer()
@@ -96,6 +97,8 @@ class GameScreenService : Disposable, InputProcessor {
 	}
 
 	override fun keyDown(keycode: Int): Boolean {
+//		println("keyDown $keycode ${Input.Keys.toString(keycode)}")
+		
 		return inputMultiplexer.keyDown(keycode)
 	}
 
@@ -104,6 +107,8 @@ class GameScreenService : Disposable, InputProcessor {
 	}
 
 	override fun keyTyped(character: Char): Boolean {
+//		println("keyTyped $character")
+		
 		return inputMultiplexer.keyTyped(character)
 	}
 

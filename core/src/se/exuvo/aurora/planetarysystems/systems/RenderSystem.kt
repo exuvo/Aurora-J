@@ -44,9 +44,9 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 		val FAMILY = Family.all(TimedMovementComponent::class.java, RenderComponent::class.java, CircleComponent::class.java).get()
 		val STRATEGIC_ICON_SIZE = 24f
 		
-		var debugPassiveSensors = false
-		var debugDisableStrategicView = false
-		var debugDrawPassiveSensors = true
+		var debugPassiveSensors = Settings.getBol("System/Render/debugPassiveSensors", false)
+		var debugDisableStrategicView = Settings.getBol("System/Render/debugDisableStrategicView", false)
+		var debugDrawPassiveSensors = Settings.getBol("System/Render/debugDrawPassiveSensors", true)
 	}
 
 	private val circleMapper = ComponentMapper.getFor(CircleComponent::class.java)

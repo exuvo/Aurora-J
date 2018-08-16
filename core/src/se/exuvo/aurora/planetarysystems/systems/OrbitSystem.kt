@@ -76,7 +76,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60), EntityLis
 		val orbitPoints = Array<Vector2D>(points, { Vector2D() })
 
 		// If set more dots represent higher speed, else the time between dots is constant
-		val invert = if (Settings.getBol("Orbits.DotsRepresentSpeed")) MathUtils.PI else 0f
+		val invert = if (Settings.getBol("Systems/Orbit/dotsRepresentSpeed", true)) MathUtils.PI else 0f
 
 		for (i in 0..points - 1) {
 			val M_meanAnomaly = orbit.M_meanAnomaly + (360.0 * i) / points

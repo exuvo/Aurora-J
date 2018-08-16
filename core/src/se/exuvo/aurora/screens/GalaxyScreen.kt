@@ -40,7 +40,7 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 	private val positionMapper = ComponentMapper.getFor(GalacticPositionComponent::class.java)
 
 	var zoomLevel = 0
-	var zoomSensitivity = Settings.getFloat("UI.zoomSensitivity").toDouble()
+	var zoomSensitivity = Settings.getFloat("UI/zoomSensitivity", 1.25f).toDouble()
 	val maxZoom = 1.5E1f
 
 	init {

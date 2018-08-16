@@ -26,7 +26,7 @@ class Galaxy(val empires: MutableList<Empire>, val systems: MutableList<Planetar
 
 	private val planetarySystemMapper = ComponentMapper.getFor(PlanetarySystemComponent::class.java)
 	private val groupSystem by lazy { GameServices[GroupSystem::class.java] }
-	private val threadPool = ThreadPoolTaskGroupHandler<SimpleTaskGroup>("Galaxy", Settings.getInt("Galaxy.Threads"), true) //
+	private val threadPool = ThreadPoolTaskGroupHandler<SimpleTaskGroup>("Galaxy", Settings.getInt("Galaxy/threads", Runtime.getRuntime().availableProcessors()), true) //
 	var thread: Thread? = null
 	var sleeping = false
 
@@ -38,16 +38,17 @@ class Galaxy(val empires: MutableList<Empire>, val systems: MutableList<Planetar
 	val engine = Engine()
 
 	fun init() {
+		GameServices.put(this)
+		
 		empires.add(Empire.GAIA)
 		
-		GameServices.put(this)
+		engine.addSystem(GalacticRenderSystem())
+		
 		systems.forEach {
 			engine.addEntity(it)
 			it.init()
 			it.engine.addEntityListener(this)
 		}
-
-		engine.addSystem(GalacticRenderSystem())
 		
 		val thread = Thread(this, "Galaxy");
 		thread.setDaemon(true);

@@ -12,7 +12,6 @@ import com.badlogic.gdx.Graphics.DisplayMode;
 import com.badlogic.gdx.Graphics.Monitor;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.martiansoftware.jsap.JSAP;
 import com.martiansoftware.jsap.JSAPException;
 import com.martiansoftware.jsap.JSAPResult;
@@ -55,19 +54,25 @@ public class DesktopLauncher {
 			System.exit(1);
 		}
 
-		loadSettings(jsapConfig);
+		if (!Settings.start("Aurora", jsap, jsapConfig)) {
+			System.out.println("Failed to read settings from file, please fix. Exiting.");
+			System.exit(2);
+		}
 
-		Level level = Level.toLevel(Settings.getStr("loglvl"));
+		Level level = Level.toLevel(Settings.getStr("loglevel", "INFO"));
 		Logger.getLogger("se.exuvo").setLevel(level);
 		log.info("Changed log level to " + level);
 
 		Lwjgl3ApplicationConfiguration windowConfig = new Lwjgl3ApplicationConfiguration();
 		windowConfig.setTitle("Aurora J");
+		
+		final int defaultWidth = 1024;
+		final int defaultHeight = 768;
 
-		if (Settings.getBol("G.Fullscreen")) {
+		if (Settings.getBol("Window/fullscreen", false)) {
 
 			Monitor monitor;
-			Integer monitorIndex = Settings.getInt("G.MonitorIndex");
+			Integer monitorIndex = Settings.getInt("Window/monitorIndex", 0);
 
 			if (monitorIndex == null) {
 				monitor = Lwjgl3ApplicationConfiguration.getPrimaryMonitor();
@@ -78,7 +83,7 @@ public class DesktopLauncher {
 
 			DisplayMode displayMode = null;
 
-			if (Settings.getInt("G.Width") == null && Settings.getInt("G.Height") == null) {
+			if (Settings.getInt("Window/width", defaultWidth) == null && Settings.getInt("Window/height", defaultHeight) == null) {
 
 				displayMode = Lwjgl3ApplicationConfiguration.getDisplayMode(monitor);
 
@@ -86,11 +91,11 @@ public class DesktopLauncher {
 
 				DisplayMode[] displayModes = Lwjgl3ApplicationConfiguration.getDisplayModes(monitor);
 
-				Integer refreshRate = Settings.getInt("G.RefreshRate");
+				Integer refreshRate = Settings.getInt("Window/refreshRate", 60);
 
 				for (DisplayMode dm : displayModes) {
 
-					if (dm.width == Settings.getInt("G.Width") && dm.height == Settings.getInt("G.Height") && (refreshRate == null || dm.refreshRate == refreshRate)) {
+					if (dm.width == Settings.getInt("Window/width", defaultWidth) && dm.height == Settings.getInt("Window/height", defaultHeight) && (refreshRate == null || dm.refreshRate == refreshRate)) {
 						displayMode = dm;
 						break;
 					}
@@ -106,13 +111,13 @@ public class DesktopLauncher {
 
 		} else {
 
-			windowConfig.setWindowedMode(Settings.getInt("G.Width"), Settings.getInt("G.Height"));
+			windowConfig.setWindowedMode(Settings.getInt("Window/width", defaultWidth), Settings.getInt("Window/height", defaultHeight));
 		}
 
-//		windowConfig.foregroundFPS = Settings.getInt("G.FrameLimit");
-		windowConfig.setIdleFPS(Settings.getInt("G.IdleFrameLimit"));
-		windowConfig.useVsync(Settings.getBol("G.VSync"));
-		windowConfig.setResizable(Settings.getBol("G.Resizable"));
+//		windowConfig.foregroundFPS = Settings.getInt("G.FrameLimit", 60);
+		windowConfig.setIdleFPS(Settings.getInt("Window/idleFrameLimit", 20));
+		windowConfig.useVsync(Settings.getBol("Window/vSync", false));
+		windowConfig.setResizable(Settings.getBol("Window/resizable", true));
 		windowConfig.setPreferencesConfig(Paths.get("").toAbsolutePath().toString(), FileType.Absolute);
 
 		String assetsURI = FileUtils.fileExists("assets") ? "assets/" : "../core/assets/";
@@ -120,46 +125,20 @@ public class DesktopLauncher {
 		try {
 			new Lwjgl3Application(new AuroraGame(assetsURI), windowConfig);
 			
-		} catch (GdxRuntimeException e) {
+		} catch (Throwable e) {
 			log.error("", e);
 			System.exit(1);
 		}
 	}
 
 	private static final void arguments(JSAP jsap) {
-		Switch fscreen = new Switch("G.Fullscreen").setShortFlag('f').setLongFlag("fullscreen");
+		Switch fscreen = new Switch("Window/fullscreen").setShortFlag('f').setLongFlag("fullscreen");
 		fscreen.setHelp("Run in fullscreen.");
 
 		try {
 			jsap.registerParameter(fscreen);
 		} catch (JSAPException e) {
 			System.out.println("JSAP: Failed to register parameters due to: " + e);
-		}
-	}
-
-	private static final void loadSettings(JSAPResult conf) {
-		Settings.add("loglvl", "INFO");
-
-//		Settings.add("G.FrameLimit", 60);
-		Settings.add("G.IdleFrameLimit", 20);
-		Settings.add("G.Width", 1024);
-		Settings.add("G.Height", 768);
-		Settings.add("G.Fullscreen", false);
-		Settings.add("G.RefreshRate", 60);
-		Settings.add("G.MonitorIndex", 0);
-		Settings.add("G.VSync", false);
-		Settings.add("G.Resizable", true);
-		Settings.add("G.ShowFPS", true);
-
-		Settings.add("UI.zoomSensitivity", 1.25f);
-
-		Settings.add("Orbits.DotsRepresentSpeed", true);
-		Settings.add("Render.DebugPassiveSensors", false);
-		Settings.add("Galaxy.Threads", Runtime.getRuntime().availableProcessors());
-
-		if (!Settings.start(conf, "AuroraJ")) {
-			System.out.println("Failed to read settings from file, please fix. Exiting.");
-			System.exit(2);
 		}
 	}
 
