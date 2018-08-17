@@ -218,8 +218,7 @@ class TimedMovementComponent(val initialPosition: Vector2L = Vector2L(), val ini
 				velocity.set(1f, 0f).rotateRad(angle.toFloat()).scl((acceleration * traveledTime).toFloat()).add(startVelocity)
 			}
 			ApproachType.BRACHISTOCHRONE -> {
-
-
+				//TODO implement
 			}
 			else -> {
 				throw RuntimeException("Unknown approach type: " + approach)

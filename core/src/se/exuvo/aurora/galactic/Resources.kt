@@ -12,7 +12,6 @@ enum class Resource(val specificVolume: Int) {
 	MAINTENANCE_SUPPLIES(densityToVolume(1f)),
 	MISSILES(0),
 	SABOTS(0),
-	ITEMS(0),
 	// Requires radiation shielding
 	NUCLEAR_FISSION(densityToVolume(15f)), // Uranium(19.1 g/cm³), Thorium(11.7 g/cm³)
 	NUCLEAR_WASTE(densityToVolume(10f)),
@@ -30,7 +29,7 @@ fun densityToVolume(density: Float): Int {
 }
 
 enum class CargoType(val resources: List<Resource>) {
-	NORMAL(listOf(Resource.MAINTENANCE_SUPPLIES, Resource.GENERIC, Resource.METAL_LIGHT, Resource.METAL_CONDUCTIVE, Resource.SEMICONDUCTORS, Resource.RARE_EARTH, Resource.ITEMS)),
+	NORMAL(listOf(Resource.MAINTENANCE_SUPPLIES, Resource.GENERIC, Resource.METAL_LIGHT, Resource.METAL_CONDUCTIVE, Resource.SEMICONDUCTORS, Resource.RARE_EARTH)),
 	AMMUNITION(listOf(Resource.MISSILES, Resource.SABOTS)),
 	FUEL(listOf(Resource.ROCKET_FUEL)),
 	LIFE_SUPPORT(listOf(Resource.LIFE_SUPPORT)),

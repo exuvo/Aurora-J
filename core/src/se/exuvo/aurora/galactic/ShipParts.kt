@@ -10,6 +10,9 @@ abstract class Part {
 	var maxHealth = 1
 	var crewRequirement = 1
 	
+	// In kg
+	fun getMass() = cost.values.sum()
+	
 	// In cm3
 	fun getVolume() : Int {
 		var volume = 0
@@ -35,6 +38,14 @@ abstract class Part {
 	}
 	
 	override fun hashCode(): Int = hashcode
+	override fun toString(): String {
+		
+		if (name.length > 0) {
+			return "${this::class.simpleName} $name"
+		}
+		
+		return "${this::class.simpleName}"
+	} 
 }
 
 abstract class ContainerPart(val capacity: Int, val cargoType: CargoType) : Part();
@@ -42,6 +53,7 @@ abstract class ContainerPart(val capacity: Int, val cargoType: CargoType) : Part
 class CargoContainerPart(capacity: Int) : ContainerPart(capacity, CargoType.NORMAL);
 class FuelContainerPart(capacity: Int) : ContainerPart(capacity, CargoType.FUEL);
 class LifeSupportContainerPart(capacity: Int) : ContainerPart(capacity, CargoType.LIFE_SUPPORT);
+class AmmoContainerPart(capacity: Int) : ContainerPart(capacity, CargoType.AMMUNITION);
 class NuclearContainerPart(capacity: Int) : ContainerPart(capacity, CargoType.NUCLEAR);
 
 interface FueledPart {
@@ -69,6 +81,7 @@ interface ChargedPart {
 interface AmmunitionPart {
 	val ammunitionAmount: Int
 	val ammunitionType: Resource
+	val ammunitionSize: Int // In cm radius
 }
 
 interface ReloadablePart {
@@ -80,12 +93,14 @@ interface ThrustingPart {
 	val thrust: Float
 }
 
+interface WeaponPart
+
 class FueledPartImpl(override val fuel: Resource, override val fuelConsumption: Int, override val fuelTime: Int) : FueledPart
 class FuelWastePartImpl(override val waste: Resource) : FuelWastePart
 class PoweringPartImpl(override val power: Long) : PoweringPart
 class PoweredPartImpl(override val powerConsumption: Long) : PoweredPart
 class ChargedPartImpl(override val capacitor: Long) : ChargedPart
-class AmmunitionPartImpl(override val ammunitionAmount: Int, override val ammunitionType: Resource) : AmmunitionPart
+class AmmunitionPartImpl(override val ammunitionAmount: Int, override val ammunitionType: Resource, override val ammunitionSize: Int) : AmmunitionPart
 class ReloadablePartImpl(override val reloadTime: Int) : ReloadablePart
 class ThrustingPartImpl(override val thrust: Float) : ThrustingPart
 
@@ -182,25 +197,28 @@ class BeamWeapon(powerConsumption: Long = 0,
 								 val divergence: Double,
 								 capacitor: Long
 ) : Part(),
+		WeaponPart,
 		PoweredPart by PoweredPartImpl(powerConsumption),
 		ChargedPart by ChargedPartImpl(capacitor)
 
 class Railgun(powerConsumption: Long = 0,
-							val barrelSize: Int,
+							ammunitionSize: Int,
 							capacitor: Long,
 							ammunitionAmount: Int
 ) : Part(),
+		WeaponPart,
 		PoweredPart by PoweredPartImpl(powerConsumption),
 		ChargedPart by ChargedPartImpl(capacitor),
-		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.SABOTS)
+		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.SABOTS, ammunitionSize)
 
 class MissileLauncher(powerConsumption: Long = 0,
-								 			val launchTubeSize: Int,
+								 			ammunitionSize: Int,
 								 			ammunitionAmount: Int,
 											reloadTime: Int
 ) : Part(),
+		WeaponPart,
 		PoweredPart by PoweredPartImpl(powerConsumption),
-		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.MISSILES),
+		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.MISSILES, ammunitionSize),
 		ReloadablePart by ReloadablePartImpl(reloadTime)
 
 class TargetingComputer(val maxWeapons: Int,

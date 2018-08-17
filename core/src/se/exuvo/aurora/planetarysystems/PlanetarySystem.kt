@@ -58,6 +58,18 @@ import se.exuvo.aurora.galactic.Battery
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.planetarysystems.components.PowerScheme
 import se.exuvo.aurora.galactic.TargetingComputer
+import se.exuvo.aurora.galactic.Railgun
+import se.exuvo.aurora.galactic.MissileLauncher
+import se.exuvo.aurora.galactic.BeamWavelength
+import se.exuvo.aurora.galactic.BeamWeapon
+import se.exuvo.aurora.planetarysystems.systems.WeaponSystem
+import se.exuvo.aurora.galactic.WeaponPart
+import se.exuvo.aurora.galactic.PartRef
+import se.exuvo.aurora.galactic.Part
+import se.exuvo.aurora.galactic.MunitionClass
+import se.exuvo.aurora.planetarysystems.components.AmmunitionPartState
+import se.exuvo.aurora.galactic.CargoContainerPart
+import se.exuvo.aurora.galactic.AmmoContainerPart
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : Entity(), EntityListener {
 	companion object {
@@ -95,6 +107,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		engine.addSystem(ShipSystem())
 		engine.addSystem(PassiveSensorSystem())
 		engine.addSystem(PowerSystem())
+		engine.addSystem(WeaponSystem())
 		engine.addSystem(RenderSystem())
 
 		val empire1 = galaxy.getEmpire(1)
@@ -143,7 +156,6 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		entity4.add(SolarIrradianceComponent())
 		entity4.add(CircleComponent().apply { radius = 10f })
 		entity4.add(NameComponent().apply { name = "Ship" })
-		entity4.add(MassComponent().apply { mass = 1000.0 })
 		entity4.add(ThrustComponent().apply { thrust = 10f * 9.82f * 1000f })
 //		entity4.add(MoveToEntityComponent(entity1, ApproachType.BRACHISTOCHRONE))
 		entity4.add(TintComponent(Color.RED))
@@ -166,10 +178,10 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		
 		val solarPanel = SolarPanel()
 		solarPanel.name = "Solar Panel"
-		solarPanel.cost[Resource.SEMICONDUCTORS] = 250
+		solarPanel.cost[Resource.SEMICONDUCTORS] = 300
 		shipClass.addPart(solarPanel)
 		
-		val reactor = FissionReactor(1 * Units.MEGAWATT)
+		val reactor = FissionReactor(5 * Units.MEGAWATT)
 		reactor.name = "Nuclear Reactor"
 		reactor.cost[Resource.GENERIC] = 1000
 		shipClass.addPart(reactor)
@@ -180,6 +192,11 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		nuclearStorage.cost[Resource.GENERIC] = 100
 		shipClass.addPart(nuclearStorage)
 		
+		val ammoStorage = AmmoContainerPart(1000000)
+		ammoStorage.name = "Munitions Cargo"
+		ammoStorage.cost[Resource.GENERIC] = 100
+		shipClass.addPart(ammoStorage)
+		
 		val battery = Battery(200 * Units.KILOWATT, 500 * Units.KILOWATT, 0.8f, 100 * Units.GIGAWATT)
 		battery.name = "Battery"
 		shipClass.addPart(battery)
@@ -188,9 +205,47 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		targetingComputer.name = "TC 2-10"
 		shipClass.addPart(targetingComputer)
 		
+		val dummyMass1 = Battery(10 * Units.KILOWATT, 50 * Units.KILOWATT, 0.8f, 1 * Units.GIGAWATT)
+		dummyMass1.cost[Resource.GENERIC] = 10
+		
+		val dummyMass2 = Battery(10 * Units.KILOWATT, 50 * Units.KILOWATT, 0.8f, 1 * Units.GIGAWATT)
+		dummyMass2.cost[Resource.GENERIC] = 100
+		
+		val sabot = MunitionClass(Resource.SABOTS)
+		sabot.name = "A sabot"
+		sabot.addPart(dummyMass1)
+		
+		val missile = MunitionClass(Resource.MISSILES)
+		missile.name = "A missile"
+		missile.addPart(dummyMass2)
+		
+		val railgun = Railgun(2 * Units.MEGAWATT, 7, 5 * Units.MEGAWATT, 5)
+		shipClass.addPart(railgun)
+		val railgunRef = shipClass[Railgun::class][0]
+		shipClass.preferredMunitions[railgunRef] = sabot
+		
+		val missileLauncher = MissileLauncher(200 * Units.KILOWATT, 13, 3, 10)
+		shipClass.addPart(missileLauncher)
+		val missileLauncherRef = shipClass[MissileLauncher::class][0]
+		shipClass.preferredMunitions[missileLauncherRef] = missile
+		
+		val beam = BeamWeapon(1 * Units.MEGAWATT, BeamWavelength.Microwaves, 0.0, 10 * Units.MEGAWATT)
+		shipClass.addPart(beam)
+		
+		val tcRef: PartRef<TargetingComputer> = shipClass[TargetingComputer::class][0]
+		shipClass.defaultWeaponAssignments[tcRef] = shipClass.getPartRefs().filter({it.part is WeaponPart})
+		 
 		val shipComponent = ShipComponent(shipClass, galaxy.time)
-		shipComponent.addCargo(Resource.NUCLEAR_FISSION, 10) 
+		shipComponent.addCargo(Resource.NUCLEAR_FISSION, 100)
+		if (!shipComponent.addCargo(sabot, 10)) {
+			println("Failed to add sabots")
+		}
+		if (!shipComponent.addCargo(missile, 10)) {
+			println("Failed to add missiles")
+		}
 		entity4.add(shipComponent)
+		
+		entity4.add(MassComponent().apply { mass = shipComponent.getMass().toDouble() })
 
 		engine.addEntity(entity4)
 	}

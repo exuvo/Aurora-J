@@ -109,10 +109,12 @@ object KeyMappings {
 				}
 			}
 
-			println("Loaded $loadedKeys key bindings")
+			log.info("Loaded $loadedKeys key bindings")
 
 		} else {
 
+			log.info("Found no saved key bindings, using default")
+			
 			for (entry in keyActions.entries) {
 				val inputProcessor = entry.key
 
@@ -132,7 +134,15 @@ object KeyMappings {
 	fun save() {
 		log.info("Saving keybinds")
 
-		Settings.remove("Keybinds")
+		val keysElement = Settings.getNode("Keybinds")
+
+		if (keysElement != null) {
+			val children = keysElement.getChildNodes()
+			
+			for (a in 0..children.length - 1) {
+				keysElement.removeChild(children.item(0))
+			}
+		}
 
 		for (entry in keyRawMaps.entries) {
 			for (mappings in entry.value) {
@@ -195,6 +205,7 @@ enum class KeyActions_PlanetarySystemScreen(override val defaultKey: Int? = null
 	GENERATE_SYSTEM('G'),
 	PAUSE(Input.Keys.SPACE),
 	MAP('M'),
+	ATTACK('A'),
 	;
 	
 	constructor (char: Char): this(char.toInt(), KeyPressType.TRANSLATED)

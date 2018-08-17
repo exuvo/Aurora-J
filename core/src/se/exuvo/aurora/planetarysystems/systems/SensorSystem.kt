@@ -67,7 +67,7 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 		if (sensorComponent == null) {
 
 			val ship = shipMapper.get(entity)
-			val sensors = ship.shipClass[PassiveSensor::class.java]
+			val sensors = ship.shipClass[PassiveSensor::class]
 
 			if (sensors.isNotEmpty()) {
 				sensorComponent = PassiveSensorsComponent(sensors)
@@ -75,8 +75,10 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 
 				sensors.forEach({
 					val sensor = it
-					val poweredState = ship.getPartState(sensor)[PoweredPartState::class]
-					poweredState.requestedPower = sensor.part.powerConsumption
+					if (ship.isPartEnabled(sensor)) {
+						val poweredState = ship.getPartState(sensor)[PoweredPartState::class]
+						poweredState.requestedPower = sensor.part.powerConsumption
+					}
 				})
 			}
 		}
@@ -173,21 +175,21 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 								val temp = emitterPosition.cpy().sub(sensorPosition)
 								temp.set(temp.len().toLong(), 0).scl(Math.random() * (1 - sensor.part.accuracy))
 
-								if (shipMapper.has(emitter.entity)){
+								if (shipMapper.has(emitter.entity)) {
 									val hash = 37 * shipMapper.get(emitter.entity).shipClass.hashCode() + sensor.hashCode()
 //									println("hash $hash, uuid ${uuidMapper.get(emitter.entity).uuid.dispersedHash}, sensor ${sensor.hashCode()}")
 									temp.rotate((hash % 360).toFloat())
-									
+
 								} else if (uuidMapper.has(emitter.entity)) {
 									val hash = 37 * uuidMapper.get(emitter.entity).uuid.dispersedHash + sensor.hashCode()
 //									println("hash $hash, uuid ${uuidMapper.get(emitter.entity).uuid.dispersedHash}, sensor ${sensor.hashCode()}")
 									temp.rotate((hash % 360).toFloat())
-									
+
 
 								} else {
 									temp.rotateRad(2 * Math.PI * Math.random())
 								}
-								
+
 								emitterPosition = emitterPosition.cpy().add(temp)
 							}
 

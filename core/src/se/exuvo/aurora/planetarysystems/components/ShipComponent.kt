@@ -22,6 +22,7 @@ import com.badlogic.ashley.core.Entity
 import se.exuvo.aurora.galactic.TargetingComputer
 import se.exuvo.aurora.galactic.PartRef
 import kotlin.Suppress
+import se.exuvo.aurora.galactic.MunitionClass
 
 class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Component {
 	var commissionDay: Int? = null
@@ -30,15 +31,15 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 	val partEnabled = Array<Boolean>(shipClass.getParts().size, { true })
 	val partState = Array<PartState>(shipClass.getParts().size, { PartState() })
 	var cargo: Map<Resource, ShipCargo> = emptyMap()
-	var partCargo: MutableList<Part> = ArrayList()
+	var munitionCargo: MutableMap<MunitionClass, Int> = LinkedHashMap()
 	var mass: Long = 0
 
 	init {
-		var containerPartRefs = shipClass[ContainerPart::class.java]
+		var containerPartRefs = shipClass[ContainerPart::class]
 
 		if (containerPartRefs.isNotEmpty()) {
 
-			val shipCargos = listOf(ShipCargo(CargoType.NORMAL), ShipCargo(CargoType.LIFE_SUPPORT), ShipCargo(CargoType.FUEL), ShipCargo(CargoType.NUCLEAR))
+			val shipCargos = listOf(ShipCargo(CargoType.NORMAL), ShipCargo(CargoType.LIFE_SUPPORT), ShipCargo(CargoType.FUEL), ShipCargo(CargoType.AMMUNITION), ShipCargo(CargoType.NUCLEAR))
 
 			for (containerRef in containerPartRefs) {
 				for (cargo in shipCargos) {
@@ -59,64 +60,74 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 
 			cargo = mutableCargo
 		}
-		
+
 		partState.forEachIndexed { partIndex, state ->
 			val partRef = shipClass[partIndex]
-			
+
 			if (partRef.part is PoweringPart) {
 				state.put(PoweringPartState())
 			}
-			
+
 			if (partRef.part is PoweredPart) {
 				state.put(PoweredPartState())
 			}
-			
+
 			if (partRef.part is ChargedPart) {
 				state.put(ChargedPartState())
 			}
-			
+
 			if (partRef.part is PassiveSensor) {
 				state.put(PassiveSensorState())
 			}
-			
+
 			if (partRef.part is AmmunitionPart) {
-				state.put(AmmunitionPartState(Queue<Part>(partRef.part.ammunitionAmount)))
+				val ammoState = AmmunitionPartState()
+				ammoState.type = shipClass.preferredMunitions[partRef]
+				state.put(ammoState)
 			}
-			
+
 			if (partRef.part is ReloadablePart) {
 				state.put(ReloadablePartState())
 			}
-			
+
 			if (partRef.part is FueledPart) {
 				state.put(FueledPartState())
 			}
-			
+
 			if (partRef.part is TargetingComputer) {
-				
+
 				var tcs = TargetingComputerState()
-				
+
 				@Suppress("UNCHECKED_CAST")
 				var defaultAssignments: List<PartRef<Part>>? = shipClass.defaultWeaponAssignments[partRef as PartRef<TargetingComputer>]
-				
+
 				if (defaultAssignments != null) {
 					tcs.linkedWeapons = defaultAssignments.toMutableList()
 				}
-				
+
 				state.put(tcs)
 			}
 		}
 	}
 	
+	fun getMass(): Int {
+		var mass = shipClass.getMass()
+		
+		//TODO add cargo
+		
+		return mass
+	}
+
 	fun getPartState(partRef: PartRef<out Part>): PartState {
 		return partState[partRef.index]
 	}
-	
+
 	fun getPartHealth(partRef: PartRef<out Part>): Int {
 		return partHealth[partRef.index]
 	}
-	
+
 	fun setPartHealth(partRef: PartRef<out Part>, health: Int) {
-		if (health < 0 || health > partRef.part.maxHealth){
+		if (health < 0 || health > partRef.part.maxHealth) {
 			throw IllegalArgumentException()
 		}
 
@@ -126,11 +137,11 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 	fun isPartEnabled(partRef: PartRef<out Part>): Boolean {
 		return partEnabled[partRef.index]
 	}
-	
+
 	fun setPartEnabled(partRef: PartRef<out Part>, enabled: Boolean) {
 		partEnabled[partRef.index] = enabled
 	}
-	
+
 	fun getCargoAmount(resource: Resource): Int {
 
 		val shipCargo = cargo[resource]
@@ -147,6 +158,22 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 		return 0
 	}
 	
+	fun getCargoAmount(munitionClass: MunitionClass): Int {
+
+		val shipCargo = cargo[munitionClass.storageType]
+
+		if (shipCargo != null) {
+
+			var available = munitionCargo[munitionClass]
+
+			if (available != null) {
+				return available
+			}
+		}
+
+		return 0
+	}
+
 	fun getUsedCargoVolume(resource: Resource): Int {
 
 		val shipCargo = cargo[resource]
@@ -182,7 +209,7 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 
 		return 0
 	}
-	
+
 	fun getMaxCargoVolume(type: CargoType): Int {
 
 		val shipCargo = cargo[type.resources[0]]
@@ -194,7 +221,7 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 
 		return 0
 	}
-	
+
 	fun getUsedCargoMass(resource: Resource): Int {
 
 		val shipCargo = cargo[resource]
@@ -202,7 +229,7 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 		if (shipCargo != null) {
 
 			val amount = shipCargo.contents[resource]
-			
+
 			if (amount != null) {
 				return amount
 			}
@@ -210,7 +237,7 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 
 		return 0
 	}
-	
+
 	fun getUsedCargoMass(type: CargoType): Int {
 
 		val shipCargo = cargo[type.resources[0]]
@@ -241,6 +268,36 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 
 			shipCargo.usedVolume += volumeToBeStored
 			shipCargo.contents[resource] = shipCargo.contents[resource]!! + amount
+
+			return true
+		}
+
+		return false
+	}
+
+	fun addCargo(munitionClass: MunitionClass, amount: Int): Boolean {
+
+		val shipCargo = cargo[munitionClass.storageType]
+
+		if (shipCargo != null) {
+
+			val volumeToBeStored = amount * munitionClass.getVolume()
+
+			if (shipCargo.usedVolume + volumeToBeStored > shipCargo.maxVolume) {
+				return false;
+			}
+			
+			shipCargo.usedVolume += volumeToBeStored
+			val storedMass = shipCargo.contents[munitionClass.storageType]!!
+			shipCargo.contents[munitionClass.storageType] = storedMass + munitionClass.getMass() * amount
+			
+			var stored = munitionCargo[munitionClass]
+
+			if (stored == null) {
+				stored = 0
+			}
+			
+			munitionCargo[munitionClass] = stored + amount
 
 			return true
 		}
@@ -279,37 +336,29 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 		return 0
 	}
 
-	fun addCargo(part: Part): Boolean {
+	fun retrieveCargo(munitionClass: MunitionClass, amount: Int): Int {
 
-		val shipCargo = cargo[Resource.ITEMS]
+		var available = munitionCargo[munitionClass]
 
-		if (shipCargo != null) {
-
-			val volumeToBeStored = part.getVolume()
-
-			if (shipCargo.usedVolume + volumeToBeStored > shipCargo.maxVolume) {
-				return false;
-			}
-
-			shipCargo.usedVolume += volumeToBeStored
-			partCargo.add(part)
-
-			return true
+		if (available == null || available == 0) {
+			return 0
 		}
 
-		return false
-	}
+		var retrievedAmount = amount
 
-	fun retrieveCargo(part: Part): Boolean {
-
-		if (!partCargo.remove(part)) {
-			return false
+		if (available < amount) {
+			retrievedAmount = available
 		}
 
-		val shipCargo = cargo[Resource.ITEMS]
-		shipCargo!!.usedVolume -= part.getVolume()
+		munitionCargo[munitionClass] = available - retrievedAmount
+		
+		val shipCargo = cargo[munitionClass.storageType]!!
+		val storedMass = shipCargo.contents[munitionClass.storageType]!!
+		
+		shipCargo.contents[munitionClass.storageType] = storedMass - retrievedAmount * munitionClass.getMass()
+		shipCargo.usedVolume -= retrievedAmount * munitionClass.getVolume()
 
-		return true
+		return retrievedAmount
 	}
 }
 
@@ -359,14 +408,16 @@ data class PassiveSensorState(var lastScan: Long = 0
 
 data class ChargedPartState(var charge: Long = 0)
 
-data class AmmunitionPartState(var ammunition: Queue<Part>)
+data class AmmunitionPartState(var type: MunitionClass? = null,
+															 var amount: Int = 0
+)
 
 data class ReloadablePartState(var loaded: Boolean = false,
-															 var reloadCompletionAt: Int = 0
+															 var reloadPowerRemaining: Long = 0
 )
 
 data class TargetingComputerState(var target: Entity? = null,
-															 		var lockCompletionAt: Int = 0,
+																	var lockCompletionAt: Long = 0,
 																	var linkedWeapons: MutableList<PartRef<Part>> = ArrayList()
 )
 

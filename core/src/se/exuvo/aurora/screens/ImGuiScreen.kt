@@ -15,32 +15,43 @@ import imgui.impl.LwjglGL3
 import org.apache.log4j.Logger
 import org.lwjgl.glfw.GLFW
 import se.exuvo.aurora.Assets
+import se.exuvo.aurora.galactic.AmmunitionPart
 import se.exuvo.aurora.galactic.Battery
 import se.exuvo.aurora.galactic.CargoType
+import se.exuvo.aurora.galactic.ChargedPart
 import se.exuvo.aurora.galactic.FueledPart
 import se.exuvo.aurora.galactic.Galaxy
+import se.exuvo.aurora.galactic.PassiveSensor
+import se.exuvo.aurora.galactic.PoweredPart
 import se.exuvo.aurora.galactic.PoweringPart
+import se.exuvo.aurora.galactic.ReloadablePart
 import se.exuvo.aurora.galactic.Resource
+import se.exuvo.aurora.galactic.TargetingComputer
+import se.exuvo.aurora.planetarysystems.components.AmmunitionPartState
 import se.exuvo.aurora.planetarysystems.components.ChargedPartState
 import se.exuvo.aurora.planetarysystems.components.FueledPartState
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.OrbitComponent
+import se.exuvo.aurora.planetarysystems.components.PassiveSensorState
 import se.exuvo.aurora.planetarysystems.components.PowerComponent
 import se.exuvo.aurora.planetarysystems.components.PoweredPartState
 import se.exuvo.aurora.planetarysystems.components.PoweringPartState
+import se.exuvo.aurora.planetarysystems.components.ReloadablePartState
 import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
+import se.exuvo.aurora.planetarysystems.components.TargetingComputerState
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.planetarysystems.systems.RenderSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
+import se.exuvo.aurora.utils.keys.KeyActions_ImGuiScreen
+import se.exuvo.aurora.utils.keys.KeyMappings
 import se.exuvo.aurora.utils.printID
+import se.unlogic.standardutils.reflection.ReflectionUtils
 import uno.glfw.GlfwWindow
 import kotlin.concurrent.read
 import kotlin.concurrent.write
-import se.exuvo.aurora.utils.keys.KeyMappings
-import se.exuvo.aurora.utils.keys.KeyActions_ImGuiScreen
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
@@ -106,7 +117,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 	private var demoVisible = false
 	private var mainDebugVisible = false
-	private var shipDebugVisible = false
+	private var shipDebugVisible = true
 
 	var slider = FloatArray(1)
 	var stringbuf = CharArray(10)
@@ -214,9 +225,89 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 						ImGui.text("Entity ${entity.printID()}")
 
+						if (ImGui.collapsingHeader("Components", 0)) {
+
+							for (component in entity.components) {
+
+								if (ImGui.treeNode("${component::class.java.simpleName}")) {
+
+									val fields = ReflectionUtils.getFields(component::class.java)
+									for (field in fields) {
+										ReflectionUtils.fixFieldAccess(field)
+										ImGui.text("${field.name}: ${field.get(component)}")
+									}
+
+									ImGui.treePop()
+								}
+							}
+						}
+
 						if (shipComponent != null) {
 
-							if (ImGui.collapsingHeader("Power", TreeNodeFlag.DefaultOpen.i)) {
+							if (ImGui.collapsingHeader("Parts", TreeNodeFlag.DefaultOpen.i)) {
+
+								for (partRef in shipComponent.shipClass.getPartRefs()) {
+									if (ImGui.treeNode("${partRef.part::class.simpleName} ${partRef.part.name}")) {
+
+										if (partRef.part is PoweringPart) {
+											val state = shipComponent.getPartState(partRef)[PoweringPartState::class]
+											ImGui.text("availiablePower ${Units.powerToString(state.availiablePower)}")
+											ImGui.text("producedPower ${Units.powerToString(state.producedPower)}")
+										}
+
+										if (partRef.part is PoweredPart) {
+											val state = shipComponent.getPartState(partRef)[PoweredPartState::class]
+											ImGui.text("requestedPower ${Units.powerToString(state.requestedPower)}")
+											ImGui.text("givenPower ${Units.powerToString(state.givenPower)}")
+										}
+
+										if (partRef.part is ChargedPart) {
+											val state = shipComponent.getPartState(partRef)[ChargedPartState::class]
+											ImGui.text("charge ${Units.powerToString(state.charge)}")
+										}
+
+										if (partRef.part is PassiveSensor) {
+											val state = shipComponent.getPartState(partRef)[PassiveSensorState::class]
+											ImGui.text("lastScan ${state.lastScan}")
+										}
+
+										if (partRef.part is AmmunitionPart) {
+											val state = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
+											ImGui.text("amount ${state.amount}")
+											ImGui.text("type ${state.type?.name}")
+										}
+
+										if (partRef.part is ReloadablePart) {
+											val state = shipComponent.getPartState(partRef)[ReloadablePartState::class]
+											ImGui.text("loaded ${state.loaded}")
+											ImGui.text("reloadPowerRemaining ${Units.powerToString(state.reloadPowerRemaining)}")
+										}
+
+										if (partRef.part is FueledPart) {
+											val state = shipComponent.getPartState(partRef)[FueledPartState::class]
+											ImGui.text("fuelEnergyRemaining ${state.fuelEnergyRemaining}")
+											ImGui.text("totalFuelEnergyRemaining ${state.totalFuelEnergyRemaining}")
+										}
+
+										if (partRef.part is TargetingComputer) {
+											val state = shipComponent.getPartState(partRef)[TargetingComputerState::class]
+											ImGui.text("target ${state.target?.printID()}")
+											ImGui.text("lockCompletionAt ${state.lockCompletionAt}")
+											
+											if (ImGui.treeNode("linkedWeapons ${state.linkedWeapons.size}")) {
+												for(linked in state.linkedWeapons) {
+													ImGui.text("$linked")
+												}
+												ImGui.treePop()
+											}
+										}
+
+										ImGui.treePop()
+									}
+								}
+							}
+
+							if (ImGui.collapsingHeader("Power", 0)) {
 
 								val solarIrradiance = irradianceMapper.get(entity)
 
@@ -256,32 +347,32 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 											val poweringState = shipComponent.getPartState(partRef)[PoweringPartState::class]
 
 											val power = if (poweringState.availiablePower == 0L) 0f else poweringState.producedPower / poweringState.availiablePower.toFloat()
-											
+
 											ImGui.progressBar(power, Vec2(), "${Units.powerToString(poweringState.producedPower)}/${Units.powerToString(poweringState.availiablePower)}")
 
 											ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
-											ImGui.text("${partRef.part.name}")
-											
+											ImGui.text("${partRef.part}")
+
 											if (partRef is FueledPart && partRef is PoweringPart) {
-												
+
 												val fueledState = shipComponent.getPartState(partRef)[FueledPartState::class]
 												val fuelRemaining = Units.secondsToString(fueledState.fuelEnergyRemaining / partRef.power)
-												val totalFuelRemaining = Units.secondsToString(fueledState.totalFuelEnergyRemaining  / partRef.power)
-											
-												ImGui.text("Fuel $fuelRemaining/$totalFuelRemaining W")	
+												val totalFuelRemaining = Units.secondsToString(fueledState.totalFuelEnergyRemaining / partRef.power)
+
+												ImGui.text("Fuel $fuelRemaining/$totalFuelRemaining W")
 											}
-											
+
 											if (partRef.part is Battery) {
-												
+
 												val chargedState = shipComponent.getPartState(partRef)[ChargedPartState::class]
 												val charge = chargedState.charge
 												val maxCharge = partRef.part.capacitor
 												val charged = if (maxCharge == 0L) 0f else charge / maxCharge.toFloat()
-												
+
 												ImGui.progressBar(charged, Vec2(), "${Units.powerToString(charge)}/${Units.powerToString(maxCharge)}s")
-												
+
 												if (poweringState.producedPower > 0L) {
-													
+
 													ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
 													ImGui.text("${Units.secondsToString(charge / poweringState.producedPower)}")
 												}
@@ -300,7 +391,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 											ImGui.progressBar(power, Vec2(), "${Units.powerToString(poweredState.givenPower)}/${Units.powerToString(poweredState.requestedPower)}")
 
 											ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
-											ImGui.text("${part.part.name}")
+											ImGui.text("${part.part}")
 										})
 
 										ImGui.treePop()
@@ -321,6 +412,12 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 									ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
 									ImGui.text("${cargo.name}")
+
+									if (cargo == CargoType.AMMUNITION) {
+										for (entry in shipComponent.munitionCargo.entries) {
+											ImGui.text("${entry.value} ${entry.key}")
+										}
+									}
 								}
 
 								ImGui.separator();
@@ -392,15 +489,15 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	override fun update(deltaRealTime: Float) {}
 
 	fun keyAction(action: KeyActions_ImGuiScreen): Boolean {
-		
+
 		if (action == KeyActions_ImGuiScreen.DEBUG) {
 			mainDebugVisible = !mainDebugVisible;
 			return true;
 		}
-		
+
 		return false
 	}
-	
+
 	override fun keyDown(keycode: Int): Boolean {
 
 		if (ctx.io.wantCaptureKeyboard) {
@@ -409,9 +506,9 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 			}
 			return true
 		}
-		
-		val action = KeyMappings.getRaw(keycode, GalaxyScreen::class)
-		
+
+		val action = KeyMappings.getRaw(keycode, ImGuiScreen::class)
+
 		if (action != null) {
 			return keyAction(action as KeyActions_ImGuiScreen)
 		}
@@ -435,9 +532,9 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 			LwjglGL3.charCallback(character.toInt())
 			return true
 		}
-		
-		val action = KeyMappings.getTranslated(character, GalaxyScreen::class)
-		
+
+		val action = KeyMappings.getTranslated(character, ImGuiScreen::class)
+
 		if (action != null) {
 			return keyAction(action as KeyActions_ImGuiScreen)
 		}

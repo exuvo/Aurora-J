@@ -167,7 +167,7 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 
 	override fun keyDown(keycode: Int): Boolean {
 
-		val action = KeyMappings.getRaw(keycode, PlanetarySystemScreen::class)
+		val action = KeyMappings.getRaw(keycode, GalaxyScreen::class)
 		
 		if (action != null) {
 			return keyAction(action as KeyActions_GalaxyScreen)
@@ -182,7 +182,7 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 
 	override fun keyTyped(character: Char): Boolean {
 		
-		val action = KeyMappings.getTranslated(character, PlanetarySystemScreen::class)
+		val action = KeyMappings.getTranslated(character, GalaxyScreen::class)
 		
 		if (action != null) {
 			return keyAction(action as KeyActions_GalaxyScreen)

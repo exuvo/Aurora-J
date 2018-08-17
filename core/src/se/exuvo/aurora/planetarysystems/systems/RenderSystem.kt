@@ -36,14 +36,19 @@ import se.exuvo.aurora.screens.PlanetarySystemScreen
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.scanCircleSector
+import se.exuvo.aurora.utils.printID
 import java.util.Comparator
 import se.exuvo.settings.Settings
+import se.exuvo.aurora.planetarysystems.components.ShipComponent
+import se.exuvo.aurora.galactic.TargetingComputer
+import se.exuvo.aurora.empires.components.WeaponsComponent
+import se.exuvo.aurora.planetarysystems.components.TargetingComputerState
 
 class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 	companion object {
 		val FAMILY = Family.all(TimedMovementComponent::class.java, RenderComponent::class.java, CircleComponent::class.java).get()
 		val STRATEGIC_ICON_SIZE = 24f
-		
+
 		var debugPassiveSensors = Settings.getBol("System/Render/debugPassiveSensors", false)
 		var debugDisableStrategicView = Settings.getBol("System/Render/debugDisableStrategicView", false)
 		var debugDrawPassiveSensors = Settings.getBol("System/Render/debugDrawPassiveSensors", true)
@@ -61,6 +66,8 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 	private val thrustMapper = ComponentMapper.getFor(ThrustComponent::class.java)
 	private val detectionMapper = ComponentMapper.getFor(DetectionComponent::class.java)
 	private val sensorsMapper = ComponentMapper.getFor(PassiveSensorsComponent::class.java)
+	private val shipMapper = ComponentMapper.getFor(ShipComponent::class.java)
+	private val weaponsComponentMapper = ComponentMapper.getFor(WeaponsComponent::class.java)
 
 	private val shapeRenderer = GameServices[ShapeRenderer::class.java]
 	private val spriteBatch = GameServices[SpriteBatch::class.java]
@@ -128,7 +135,7 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 		if (debugDisableStrategicView) {
 			return false
 		}
-		
+
 		val radius = circleMapper.get(entity).radius
 		return radius / zoom < 5f
 	}
@@ -293,6 +300,43 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 				val x2 = (getXinKM(targetPosition) - cameraOffset.x).toFloat()
 				val y2 = (getYinKM(targetPosition) - cameraOffset.y).toFloat()
 				shapeRenderer.line(x, y, x2, y2)
+			}
+		}
+
+		shapeRenderer.end()
+	}
+
+	fun drawAttackTargets(entities: Iterable<Entity>, cameraOffset: Vector2L) {
+
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+		shapeRenderer.color = Color(0.8f, 0f, 0f, 0.5f)
+
+		val usedTargets = HashSet<Entity>()
+
+		for (entity in entities) {
+			if (weaponsComponentMapper.has(entity)) {
+
+				val movement = movementMapper.get(entity).get(galaxy.time).value
+				val x = (movement.getXinKM() - cameraOffset.x).toFloat()
+				val y = (movement.getYinKM() - cameraOffset.y).toFloat()
+
+				val ship = shipMapper.get(entity)
+				val tcs = ship.shipClass[TargetingComputer::class]
+
+				usedTargets.clear()
+
+				for (tc in tcs) {
+					val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+					val target = tcState.target
+					
+					if (target != null && usedTargets.add(target)) {
+
+						val targetMovement = movementMapper.get(target).get(galaxy.time).value
+						val x2 = (targetMovement.getXinKM() - cameraOffset.x).toFloat()
+						val y2 = (targetMovement.getYinKM() - cameraOffset.y).toFloat()
+						shapeRenderer.line(x, y, x2, y2)
+					}
+				}
 			}
 		}
 
@@ -648,6 +692,7 @@ class RenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 		drawSelections(sortedAndSelectedEntities, viewport, cameraOffset)
 		drawSelectionMoveTargets(sortedAndSelectedEntities, cameraOffset)
+		drawAttackTargets(sortedAndSelectedEntities, cameraOffset)
 
 		spriteBatch.projectionMatrix = viewport.camera.combined
 

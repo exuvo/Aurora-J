@@ -33,15 +33,21 @@ import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.RectangleL
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.Vector2L
+import se.exuvo.aurora.utils.printID
 import se.exuvo.settings.Settings
 import kotlin.concurrent.read
+import kotlin.concurrent.write
 import kotlin.properties.Delegates
 import se.exuvo.aurora.utils.keys.KeyActions_PlanetarySystemScreen
 import se.exuvo.aurora.utils.keys.KeyMappings
+import se.exuvo.aurora.planetarysystems.systems.WeaponSystem
+import se.exuvo.aurora.empires.components.WeaponsComponent
+import se.exuvo.aurora.planetarysystems.components.TargetingComputerState
+import se.exuvo.aurora.planetarysystems.components.ShipComponent
 
 class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), InputProcessor {
 	companion object {
-		
+
 		fun secondsToString(time: Long): String {
 			val hours = (time / 3600) % 24
 			val minutes = (time / 60) % 60
@@ -67,10 +73,13 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	private val moveToEntityMapper = ComponentMapper.getFor(MoveToEntityComponent::class.java)
 	private val moveToPositionMapper = ComponentMapper.getFor(MoveToPositionComponent::class.java)
 	private val planetarySystemMapper = ComponentMapper.getFor(PlanetarySystemComponent::class.java)
+	private val weaponsComponentMapper = ComponentMapper.getFor(WeaponsComponent::class.java)
+	private val shipMapper = ComponentMapper.getFor(ShipComponent::class.java)
 
 	var zoomLevel = 0
 	var zoomSensitivity = Settings.getFloat("UI/zoomSensitivity").toDouble()
 	val maxZoom = 1E8f
+	var selectedAction: KeyActions_PlanetarySystemScreen? = null
 
 	init {
 		viewport = ScreenViewport()
@@ -142,13 +151,13 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 		Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, day ${galaxy.day}, time ${secondsToString(galaxy.time)}, speed ${Units.NANO_SECOND / galaxy.speed}", 8f, 32f)
 		spriteBatch.end()
 	}
-	
+
 	fun keyAction(action: KeyActions_PlanetarySystemScreen): Boolean {
-		
+
 		if (action == KeyActions_PlanetarySystemScreen.GENERATE_SYSTEM) {
-			
+
 			PlanetarySystemGeneration(system).generateRandomSystem()
-			
+
 		} else if (action == KeyActions_PlanetarySystemScreen.SPEED_UP) {
 			//TODO something smarter here
 			var speed = galaxy.speed / 4
@@ -164,9 +173,9 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 			}
 
 			return true
-			
+
 		} else if (action == KeyActions_PlanetarySystemScreen.SPEED_DOWN) {
-			
+
 			var speed = galaxy.speed * 4
 
 			if (speed > 1 * Units.NANO_SECOND) {
@@ -180,9 +189,9 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 			}
 
 			return true
-			
+
 		} else if (action == KeyActions_PlanetarySystemScreen.PAUSE) {
-			
+
 			galaxy.paused = !galaxy.paused
 
 			if (galaxy.sleeping) {
@@ -190,25 +199,36 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 			}
 
 			return true
-			
+
 		} else if (action == KeyActions_PlanetarySystemScreen.MAP) {
-			
+
 			val galaxyScreen = GameServices[GalaxyScreen::class.java]
 			galaxyScreen.centerOnPlanetarySystem(system)
 			GameServices[GameScreenService::class.java].add(galaxyScreen)
+
+		} else if (action == KeyActions_PlanetarySystemScreen.ATTACK) {
+
+			system.lock.read {
+				if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
+					selectedAction = KeyActions_PlanetarySystemScreen.ATTACK
+					println("Prep action " + action)
+				} else {
+					println("Unable to prep action " + action + ", no selection")
+				}
+			}
 		}
-		
+
 		return false
 	}
 
 	override fun keyDown(keycode: Int): Boolean {
 
 		val action = KeyMappings.getRaw(keycode, PlanetarySystemScreen::class)
-		
+
 		if (action != null) {
 			return keyAction(action as KeyActions_PlanetarySystemScreen)
 		}
-		
+
 		return false;
 	}
 
@@ -217,13 +237,13 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	}
 
 	override fun keyTyped(character: Char): Boolean {
-		
+
 		val action = KeyMappings.getTranslated(character, PlanetarySystemScreen::class)
-		
+
 		if (action != null) {
 			return keyAction(action as KeyActions_PlanetarySystemScreen)
 		}
-		
+
 		return false;
 	}
 
@@ -302,36 +322,75 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 //							println("strict selected ${entitiesUnderMouse.size} entities")
 						}
 
-						if (entitiesUnderMouse.isNotEmpty()) {
+						if (selectedAction == null) {
 
-							dragSelectPotentialStart = false;
+							if (entitiesUnderMouse.isNotEmpty()) {
 
-							if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-								galaxyGroupSystem.clear(GroupSystem.SELECTED)
+								dragSelectPotentialStart = false;
+
+								if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+									galaxyGroupSystem.clear(GroupSystem.SELECTED)
 //								println("cleared selection")
-							}
+								}
 
-							galaxyGroupSystem.add(entitiesUnderMouse, GroupSystem.SELECTED)
+								galaxyGroupSystem.add(entitiesUnderMouse, GroupSystem.SELECTED)
 
-						} else {
+							} else {
 
-							dragSelectPotentialStart = true;
-							dragX = screenX;
-							dragY = screenY;
+								dragSelectPotentialStart = true;
+								dragX = screenX;
+								dragY = screenY;
 
 //						println("drag select potential dragX $dragX, dragY $dragY")
+							}
+
+						} else if (selectedAction == KeyActions_PlanetarySystemScreen.ATTACK) {
+							selectedAction = null
+
+							if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
+								val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED).filter {
+
+									val planetarySystem = planetarySystemMapper.get(it)
+									system == planetarySystem?.system && WeaponSystem.FAMILY.matches(it)
+								}
+
+								var target: Entity? = null
+								
+								if (entitiesUnderMouse.isNotEmpty()) {
+									target = entitiesUnderMouse[0]
+									println("Attacking ${target.printID()}")
+									
+								} else {
+									println("Clearing attack target")
+								}
+
+								system.lock.write {
+									for (entity in selectedEntities) {
+										val ship = shipMapper.get(entity)
+										var weaponsComponent = weaponsComponentMapper.get(entity)
+
+										for (tc in weaponsComponent.targetingComputers) {
+											val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+
+											tcState.target = target
+										}
+									}
+								}
+							}
 						}
 
 						return true;
 					}
 				}
 				Input.Buttons.MIDDLE -> {
-					moveWindow = true;
-					dragX = screenX;
-					dragY = screenY;
-					return true;
+					selectedAction = null
+					moveWindow = true
+					dragX = screenX
+					dragY = screenY
+					return true
 				}
 				Input.Buttons.RIGHT -> {
+					selectedAction = null
 
 					if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
 

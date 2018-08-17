@@ -38,9 +38,6 @@ public class DesktopLauncher {
 		// check whether the command line was valid, and if it wasn't, display usage information and exit.
 		if (!jsapConfig.success()) {
 			System.err.println();
-			// print out specific error messages describing the problems
-			// with the command line, THEN print usage, THEN print full
-			// help. This is called "beating the user with a clue stick."
 			for (Iterator<?> errs = jsapConfig.getErrorMessageIterator(); errs.hasNext();) {
 				System.err.println("Error: " + errs.next());
 			}
@@ -115,7 +112,7 @@ public class DesktopLauncher {
 			windowConfig.setWindowedMode(Settings.getInt("Window/width", defaultWidth), Settings.getInt("Window/height", defaultHeight));
 		}
 
-//		windowConfig.foregroundFPS = Settings.getInt("G.FrameLimit", 60);
+//		windowConfig.foregroundFPS = Settings.getInt("Window/FrameLimit", 60);
 		windowConfig.setIdleFPS(Settings.getInt("Window/idleFrameLimit", 20));
 		windowConfig.useVsync(Settings.getBol("Window/vSync", false));
 		windowConfig.setResizable(Settings.getBol("Window/resizable", true));
