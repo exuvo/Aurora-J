@@ -23,6 +23,8 @@ import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.settings.Settings
 import kotlin.concurrent.read
 import kotlin.properties.Delegates
+import se.exuvo.aurora.utils.keys.KeyMappings
+import se.exuvo.aurora.utils.keys.KeyActions_GalaxyScreen
 
 class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl(), InputProcessor {
 
@@ -109,15 +111,10 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 		val seconds = time % 60
 		return String.format("%02d:%02d:%02d", hours, minutes, seconds)
 	}
-
-	override fun keyDown(keycode: Int): Boolean {
-
-		if (keycode == Input.Keys.M) {
-			GameServices[GameScreenService::class.java].add(lastSystemScreen)
-		}
-
-		if (keycode == Input.Keys.PLUS) {
-
+	
+	fun keyAction(action: KeyActions_GalaxyScreen): Boolean {
+		
+		if (action == KeyActions_GalaxyScreen.SPEED_UP) {
 			//TODO something smarter here
 			var speed = galaxy.speed / 4
 
@@ -132,9 +129,9 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 			}
 
 			return true
-
-		} else if (keycode == Input.Keys.MINUS) {
-
+			
+		} else if (action == KeyActions_GalaxyScreen.SPEED_DOWN) {
+			
 			var speed = galaxy.speed * 4
 
 			if (speed > 1 * Units.NANO_SECOND) {
@@ -148,9 +145,9 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 			}
 
 			return true
-
-		} else if (keycode == Input.Keys.SPACE) {
-
+			
+		} else if (action == KeyActions_GalaxyScreen.PAUSE) {
+			
 			galaxy.paused = !galaxy.paused
 
 			if (galaxy.sleeping) {
@@ -158,8 +155,24 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 			}
 
 			return true
+			
+		} else if (action == KeyActions_GalaxyScreen.MAP) {
+			
+			GameServices[GameScreenService::class.java].add(lastSystemScreen)
+			
 		}
+		
+		return false
+	}
 
+	override fun keyDown(keycode: Int): Boolean {
+
+		val action = KeyMappings.getRaw(keycode, PlanetarySystemScreen::class)
+		
+		if (action != null) {
+			return keyAction(action as KeyActions_GalaxyScreen)
+		}
+		
 		return false;
 	}
 
@@ -168,6 +181,13 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 	}
 
 	override fun keyTyped(character: Char): Boolean {
+		
+		val action = KeyMappings.getTranslated(character, PlanetarySystemScreen::class)
+		
+		if (action != null) {
+			return keyAction(action as KeyActions_GalaxyScreen)
+		}
+		
 		return false;
 	}
 

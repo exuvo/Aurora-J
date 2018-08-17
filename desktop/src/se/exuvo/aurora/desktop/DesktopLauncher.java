@@ -18,6 +18,7 @@ import com.martiansoftware.jsap.JSAPResult;
 import com.martiansoftware.jsap.Switch;
 
 import se.exuvo.aurora.AuroraGame;
+import se.exuvo.aurora.utils.keys.KeyMappings;
 import se.exuvo.settings.Settings;
 import se.unlogic.standardutils.io.FileUtils;
 
@@ -127,6 +128,13 @@ public class DesktopLauncher {
 			
 		} catch (Throwable e) {
 			log.error("", e);
+			
+			if (KeyMappings.loaded) {
+				KeyMappings.save();
+			}
+			
+			Settings.save();
+			
 			System.exit(1);
 		}
 	}

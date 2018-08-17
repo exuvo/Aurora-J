@@ -9,38 +9,47 @@ import org.w3c.dom.Element
 import org.apache.log4j.Logger
 import se.exuvo.aurora.screens.PlanetarySystemScreen
 import se.unlogic.standardutils.reflection.ReflectionUtils
+import com.badlogic.gdx.Input
+import se.exuvo.aurora.screens.ImGuiScreen
+import se.exuvo.aurora.screens.GalaxyScreen
 
 @Suppress("UNCHECKED_CAST")
 object KeyMappings {
 	val log = Logger.getLogger(this.javaClass)
+	@JvmField
+	var loaded = false
+	
 	private val keyActions = HashMap<KClass<out InputProcessor>, Array<out KeyAction>>()
-	private val keyRawMaps = HashMap<KClass<InputProcessor>, MutableMap<Char, KeyMapping>>()
+	private val keyRawMaps = HashMap<KClass<InputProcessor>, MutableMap<Int, KeyMapping>>()
 	private val keyTranslatedMaps = HashMap<KClass<InputProcessor>, MutableMap<Char, KeyMapping>>()
 
-	fun getRaw(char: Char, inputProcessor: KClass<InputProcessor>) = keyRawMaps[inputProcessor]?.get(char)
-	fun getTranslated(char: Char, inputProcessor: KClass<InputProcessor>) = keyTranslatedMaps[inputProcessor]?.get(char)
+	fun getRaw(keycode: Int, inputProcessor: KClass<out InputProcessor>) = keyRawMaps[inputProcessor]?.get(keycode)?.action
+	fun getTranslated(char: Char, inputProcessor: KClass<out InputProcessor>) = keyTranslatedMaps[inputProcessor]?.get(char.toUpperCase())?.action
 
 	fun put(inputProcessor: KClass<InputProcessor>, mapping: KeyMapping) {
 
-		var map: MutableMap<Char, KeyMapping>?
-
 		if (mapping.type == KeyPressType.RAW) {
-			map = keyRawMaps[inputProcessor]
-		} else {
-			map = keyTranslatedMaps[inputProcessor]
-		}
+			
+			var map = keyRawMaps[inputProcessor]
 
-		if (map == null) {
-			map = HashMap<Char, KeyMapping>();
-
-			if (mapping.type == KeyPressType.RAW) {
+			if (map == null) {
+				map = HashMap<Int, KeyMapping>();
 				keyRawMaps[inputProcessor] = map
-			} else {
+			}
+			
+			map[mapping.key] = mapping
+
+		} else {
+			
+			var map = keyTranslatedMaps[inputProcessor]
+
+			if (map == null) {
+				map = HashMap<Char, KeyMapping>();
 				keyTranslatedMaps[inputProcessor] = map
 			}
+			
+			map[mapping.key.toChar()] = mapping
 		}
-
-		map[mapping.key] = mapping
 	}
 
 	fun load() {
@@ -86,18 +95,24 @@ object KeyMappings {
 
 //								println(" Parsed $inputProcessor, $enumClass, $keyType, $enum")
 
-								put(inputProcessor.kotlin as KClass<InputProcessor>, KeyMapping(enum as KeyAction, key[0], keyType))
+								if (keyType == KeyPressType.RAW) {
+									put(inputProcessor.kotlin as KClass<InputProcessor>, KeyMapping(enum as KeyAction, Input.Keys.valueOf(key), KeyPressType.RAW))
+									
+								} else {
+									put(inputProcessor.kotlin as KClass<InputProcessor>, KeyMapping(enum as KeyAction, key[0].toInt(), KeyPressType.TRANSLATED))
+								}
+								
 								loadedKeys++
 							}
 						}
 					}
 				}
 			}
-			
+
 			println("Loaded $loadedKeys key bindings")
-			
+
 		} else {
-			
+
 			for (entry in keyActions.entries) {
 				val inputProcessor = entry.key
 
@@ -109,53 +124,92 @@ object KeyMappings {
 				}
 			}
 		}
+		
+		loaded = true
 	}
 
-	private fun saveKeyMap(keyMap: HashMap<KClass<InputProcessor>, MutableMap<Char, KeyMapping>>) {
-		for (entry in keyMap.entries) {
+	@JvmStatic
+	fun save() {
+		log.info("Saving keybinds")
+
+		Settings.remove("Keybinds")
+
+		for (entry in keyRawMaps.entries) {
 			for (mappings in entry.value) {
 				val processor = entry.key
 				val key = mappings.key
 				val mapping = mappings.value
 				val enumClass = mapping.action::class.simpleName
 
-				Settings.set("Keybinds/${processor.java.name}/$enumClass/${mapping.type.name}/${mapping.action.name}", key.toString())
+				Settings.set("Keybinds/${processor.java.name}/$enumClass/${mapping.type.name}/${mapping.action.name}", Input.Keys.toString(key))
+			}
+		}
+		
+		for (entry in keyTranslatedMaps.entries) {
+			for (mappings in entry.value) {
+				val processor = entry.key
+				val key = mappings.key
+				val mapping = mappings.value
+				val enumClass = mapping.action::class.simpleName
+
+				Settings.set("Keybinds/${processor.java.name}/$enumClass/${mapping.type.name}/${mapping.action.name}", key.toChar().toString())
 			}
 		}
 	}
 
-	fun save() {
-		log.info("Saving keybinds")
-
-		Settings.remove("Keybinds")
-
-		saveKeyMap(keyRawMaps)
-		saveKeyMap(keyTranslatedMaps)
-	}
-
 	init {
-		keyActions[PlanetarySystemScreen::class] = KeyActions_PlanetarySystem.values()
+		keyActions[PlanetarySystemScreen::class] = KeyActions_PlanetarySystemScreen.values()
+		keyActions[ImGuiScreen::class] = KeyActions_ImGuiScreen.values()
+		keyActions[GalaxyScreen::class] = KeyActions_GalaxyScreen.values()
 	}
 }
 
-class KeyMapping(val action: KeyAction, val key: Char, val type: KeyPressType)
+class KeyMapping(val action: KeyAction, val key: Int, val type: KeyPressType)
 
 enum class KeyPressType {
-	RAW,
-	TRANSLATED
+	RAW, //keycode
+	TRANSLATED //char
 }
 
 interface KeyAction {
-	val defaultKey: Char?
+	val defaultKey: Int?
 	val defaultType: KeyPressType
 	val name: String
 }
 
-enum class KeyActions_PlanetarySystem(override val defaultKey: Char? = null,
-																			override val defaultType: KeyPressType = KeyPressType.TRANSLATED
+enum class KeyActions_ImGuiScreen(override val defaultKey: Int? = null,
+																			override val defaultType: KeyPressType
 ) : KeyAction {
-	ZOOM_IN('+'),
-	ZOOM_OUT('-'),
-	DEBUG('§', KeyPressType.RAW)
+	DEBUG(Input.Keys.GRAVE),
 	;
+	
+	constructor (char: Char): this(char.toInt(), KeyPressType.TRANSLATED)
+	constructor (keyCode: Int): this(keyCode, KeyPressType.RAW)
+}
+
+enum class KeyActions_PlanetarySystemScreen(override val defaultKey: Int? = null,
+																			override val defaultType: KeyPressType
+) : KeyAction {
+	SPEED_UP('+'),
+	SPEED_DOWN('-'),
+	GENERATE_SYSTEM('G'),
+	PAUSE(Input.Keys.SPACE),
+	MAP('M'),
+	;
+	
+	constructor (char: Char): this(char.toInt(), KeyPressType.TRANSLATED)
+	constructor (keyCode: Int): this(keyCode, KeyPressType.RAW)
+}
+
+enum class KeyActions_GalaxyScreen(override val defaultKey: Int? = null,
+																			override val defaultType: KeyPressType
+) : KeyAction {
+	SPEED_UP('+'),
+	SPEED_DOWN('-'),
+	PAUSE(Input.Keys.SPACE),
+	MAP('M'),
+	;
+	
+	constructor (char: Char): this(char.toInt(), KeyPressType.TRANSLATED)
+	constructor (keyCode: Int): this(keyCode, KeyPressType.RAW)
 }

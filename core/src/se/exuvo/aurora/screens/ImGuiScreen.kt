@@ -39,6 +39,8 @@ import se.exuvo.aurora.utils.printID
 import uno.glfw.GlfwWindow
 import kotlin.concurrent.read
 import kotlin.concurrent.write
+import se.exuvo.aurora.utils.keys.KeyMappings
+import se.exuvo.aurora.utils.keys.KeyActions_ImGuiScreen
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
@@ -389,18 +391,29 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 	override fun update(deltaRealTime: Float) {}
 
-	override fun keyDown(keycode: Int): Boolean {
-
-		if (keycode == Input.Keys.GRAVE) {
+	fun keyAction(action: KeyActions_ImGuiScreen): Boolean {
+		
+		if (action == KeyActions_ImGuiScreen.DEBUG) {
 			mainDebugVisible = !mainDebugVisible;
 			return true;
 		}
+		
+		return false
+	}
+	
+	override fun keyDown(keycode: Int): Boolean {
 
 		if (ctx.io.wantCaptureKeyboard) {
 			gdxGLFWKeyMap[keycode]?.apply {
 				LwjglGL3.keyCallback(this, 0, GLFW.GLFW_PRESS, 0)
 			}
 			return true
+		}
+		
+		val action = KeyMappings.getRaw(keycode, GalaxyScreen::class)
+		
+		if (action != null) {
+			return keyAction(action as KeyActions_ImGuiScreen)
 		}
 
 		return false
@@ -421,6 +434,12 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 		if (ctx.io.wantCaptureKeyboard) {
 			LwjglGL3.charCallback(character.toInt())
 			return true
+		}
+		
+		val action = KeyMappings.getTranslated(character, GalaxyScreen::class)
+		
+		if (action != null) {
+			return keyAction(action as KeyActions_ImGuiScreen)
 		}
 
 		return false

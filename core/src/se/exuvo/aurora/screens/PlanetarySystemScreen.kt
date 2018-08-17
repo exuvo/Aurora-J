@@ -36,6 +36,8 @@ import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.settings.Settings
 import kotlin.concurrent.read
 import kotlin.properties.Delegates
+import se.exuvo.aurora.utils.keys.KeyActions_PlanetarySystemScreen
+import se.exuvo.aurora.utils.keys.KeyMappings
 
 class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), InputProcessor {
 	companion object {
@@ -140,22 +142,14 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 		Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, day ${galaxy.day}, time ${secondsToString(galaxy.time)}, speed ${Units.NANO_SECOND / galaxy.speed}", 8f, 32f)
 		spriteBatch.end()
 	}
-
-	override fun keyDown(keycode: Int): Boolean {
-		// Input.Keys. is in US layout
-
-		if (keycode == Input.Keys.G) {
+	
+	fun keyAction(action: KeyActions_PlanetarySystemScreen): Boolean {
+		
+		if (action == KeyActions_PlanetarySystemScreen.GENERATE_SYSTEM) {
+			
 			PlanetarySystemGeneration(system).generateRandomSystem()
-		}
-
-		if (keycode == Input.Keys.M) {
-			val galaxyScreen = GameServices[GalaxyScreen::class.java]
-			galaxyScreen.centerOnPlanetarySystem(system)
-			GameServices[GameScreenService::class.java].add(galaxyScreen)
-		}
-
-		if (keycode == Input.Keys.PLUS) {
-
+			
+		} else if (action == KeyActions_PlanetarySystemScreen.SPEED_UP) {
 			//TODO something smarter here
 			var speed = galaxy.speed / 4
 
@@ -170,9 +164,9 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 			}
 
 			return true
-
-		} else if (keycode == Input.Keys.MINUS) {
-
+			
+		} else if (action == KeyActions_PlanetarySystemScreen.SPEED_DOWN) {
+			
 			var speed = galaxy.speed * 4
 
 			if (speed > 1 * Units.NANO_SECOND) {
@@ -186,9 +180,9 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 			}
 
 			return true
-
-		} else if (keycode == Input.Keys.SPACE) {
-
+			
+		} else if (action == KeyActions_PlanetarySystemScreen.PAUSE) {
+			
 			galaxy.paused = !galaxy.paused
 
 			if (galaxy.sleeping) {
@@ -196,6 +190,23 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 			}
 
 			return true
+			
+		} else if (action == KeyActions_PlanetarySystemScreen.MAP) {
+			
+			val galaxyScreen = GameServices[GalaxyScreen::class.java]
+			galaxyScreen.centerOnPlanetarySystem(system)
+			GameServices[GameScreenService::class.java].add(galaxyScreen)
+		}
+		
+		return false
+	}
+
+	override fun keyDown(keycode: Int): Boolean {
+
+		val action = KeyMappings.getRaw(keycode, PlanetarySystemScreen::class)
+		
+		if (action != null) {
+			return keyAction(action as KeyActions_PlanetarySystemScreen)
 		}
 		
 		return false;
@@ -206,6 +217,13 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	}
 
 	override fun keyTyped(character: Char): Boolean {
+		
+		val action = KeyMappings.getTranslated(character, PlanetarySystemScreen::class)
+		
+		if (action != null) {
+			return keyAction(action as KeyActions_PlanetarySystemScreen)
+		}
+		
 		return false;
 	}
 
