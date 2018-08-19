@@ -7,6 +7,8 @@ import com.badlogic.ashley.systems.IteratingSystem
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.utils.GameServices
 
+//TODO add preProcessEntity
+
 abstract class DailyIteratingSystem(family: Family) : IteratingSystem(family) {
 
 	val galaxy = GameServices[Galaxy::class.java]

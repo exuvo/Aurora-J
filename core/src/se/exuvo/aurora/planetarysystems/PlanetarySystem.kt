@@ -106,8 +106,8 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		engine.addSystem(SolarIrradianceSystem())
 		engine.addSystem(ShipSystem())
 		engine.addSystem(PassiveSensorSystem())
-		engine.addSystem(PowerSystem())
 		engine.addSystem(WeaponSystem())
+		engine.addSystem(PowerSystem())
 		engine.addSystem(RenderSystem())
 
 		val empire1 = galaxy.getEmpire(1)
