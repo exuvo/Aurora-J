@@ -1,5 +1,13 @@
 package se.exuvo.aurora.empires.components
 
-import com.badlogic.ashley.core.Component
+import com.artemis.Component
 
-data class ColonyComponent(var population: Int = 0) : Component
+
+class ColonyComponent() : Component() {
+	var population: Int = 0
+	
+	fun set(population: Int): ColonyComponent {
+		this.population = population
+		return this
+	}
+}

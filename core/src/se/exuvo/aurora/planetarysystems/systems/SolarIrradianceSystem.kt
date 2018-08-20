@@ -1,59 +1,56 @@
 package se.exuvo.aurora.planetarysystems.systems
 
-import com.badlogic.ashley.core.ComponentMapper
-import com.badlogic.ashley.core.Engine
-import com.badlogic.ashley.core.Entity
-import com.badlogic.ashley.core.EntityListener
-import com.badlogic.ashley.core.Family
+import com.artemis.Aspect
+import com.artemis.ComponentMapper
+import com.artemis.Entity
+import com.artemis.EntitySubscription.SubscriptionListener
+import com.artemis.utils.IntBag
+import com.sun.xml.internal.ws.api.pipe.Engine
 import org.apache.log4j.Logger
-import se.exuvo.aurora.galactic.ChargedPart
-import se.exuvo.aurora.galactic.PoweredPart
-import se.exuvo.aurora.galactic.PoweringPart
-import se.exuvo.aurora.planetarysystems.components.PowerComponent
+import se.exuvo.aurora.galactic.TargetingComputer
+import se.exuvo.aurora.planetarysystems.components.PoweredPartState
 import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
 import se.exuvo.aurora.planetarysystems.components.SunComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
-import se.exuvo.aurora.utils.Vector2L
+import se.exuvo.aurora.utils.*
+import com.artemis.EntitySubscription
 
-class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60), EntityListener {
+class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 	companion object {
-		val FAMILY = Family.all(SolarIrradianceComponent::class.java, TimedMovementComponent::class.java).get()
-		val SUNS_FAMILY = Family.all(SunComponent::class.java, TimedMovementComponent::class.java).get()
+		val FAMILY = Aspect.all(SolarIrradianceComponent::class.java, TimedMovementComponent::class.java)
+		val SUNS_FAMILY = Aspect.all(SunComponent::class.java, TimedMovementComponent::class.java)
 	}
 
 	val log = Logger.getLogger(this.javaClass)
 
-	private val movementMapper = ComponentMapper.getFor(TimedMovementComponent::class.java)
-	private val irradianceMapper = ComponentMapper.getFor(SolarIrradianceComponent::class.java)
-	private val sunIrradianceMapper = ComponentMapper.getFor(SunComponent::class.java)
+	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>
+	lateinit private var irradianceMapper: ComponentMapper<SolarIrradianceComponent>
+	lateinit private var sunIrradianceMapper: ComponentMapper<SunComponent>
 
-	
-	override fun addedToEngine(engine: Engine) {
-		super.addedToEngine(engine)
+	lateinit private var sunsSubscription: EntitySubscription
 
-		engine.addEntityListener(SUNS_FAMILY, this)
+	override fun initialize() {
+		super.initialize()
+
+		sunsSubscription = world.getAspectSubscriptionManager().get(SUNS_FAMILY)
+		sunsSubscription.addSubscriptionListener(object : SubscriptionListener {
+			override fun inserted(entities: IntBag) {
+				cacheSuns()
+				runOnNextUpdate()
+			}
+
+			override fun removed(entities: IntBag) {
+				cacheSuns()
+				runOnNextUpdate()
+			}
+		})
 	}
 
-	override fun removedFromEngine(engine: Engine) {
-		super.removedFromEngine(engine)
-
-		engine.removeEntityListener(this)
-	}
-	
-	override fun entityAdded(entity: Entity) {
-		cacheSuns()
-		runOnNextUpdate()
-	}
-
-	override fun entityRemoved(entity: Entity) {
-		cacheSuns()
-		runOnNextUpdate()
-	}
 
 	var suns: List<Sun> = emptyList()
 
 	fun cacheSuns() {
-		val sunEntites = engine.getEntitiesFor(SUNS_FAMILY)
+		val sunEntites = sunsSubscription.getEntities()
 
 		if (sunEntites.size() == 0) {
 
@@ -65,10 +62,10 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60),
 
 			val mutableSuns = ArrayList<Sun>(sunEntites.size())
 
-			for (sun in sunEntites) {
+			sunEntites.forEach { entityID ->
 
-				var solarConstant = sunIrradianceMapper.get(sun).solarConstant
-				var position = movementMapper.get(sun).get(galaxy.time).value.position
+				var solarConstant = sunIrradianceMapper.get(entityID).solarConstant
+				var position = movementMapper.get(entityID).get(galaxy.time).value.position
 
 				mutableSuns.add(Sun(position, solarConstant))
 			}
@@ -77,14 +74,10 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60),
 			log.info("Cached solar irradiance for ${suns.size} suns")
 		}
 	}
-	
-	override fun update(deltaTime: Float) {
-		super.update(deltaTime)
-	}
-	
-	override fun processEntity(entity: Entity) {
 
-		val position = movementMapper.get(entity).get(galaxy.time).value.position
+	override fun process(entityID: Int) {
+
+		val position = movementMapper.get(entityID).get(galaxy.time).value.position
 
 		var totalIrradiance = 0.0
 
@@ -95,11 +88,11 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60),
 			val irradiance = sun.solarConstant * Math.pow(OrbitSystem.AU, 2.0) / Math.pow(distance, 2.0)
 			totalIrradiance += irradiance
 //			println("distance ${distance / OrbitSystem.AU} AU, irradiance $irradiance ${(100 * irradiance / sun.solarConstant).toInt()}%")
-			
+
 			//TODO calculate correct irradiance if we are inside the sun 
 		}
 
-		irradianceMapper.get(entity).irradiance = totalIrradiance.toInt()
+		irradianceMapper.get(entityID).irradiance = totalIrradiance.toInt()
 	}
 
 	data class Sun(val position: Vector2L, val solarConstant: Int)

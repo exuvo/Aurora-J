@@ -1,8 +1,7 @@
 package se.exuvo.aurora.screens
 
-import com.badlogic.ashley.core.ComponentMapper
-import com.badlogic.ashley.core.Entity
-import com.badlogic.ashley.core.Family
+import com.artemis.ComponentMapper
+import com.artemis.Entity
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputProcessor
@@ -14,6 +13,7 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.badlogic.gdx.utils.viewport.Viewport
 import se.exuvo.aurora.Assets
+import se.exuvo.aurora.empires.components.WeaponsComponent
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.planetarysystems.PlanetarySystem
 import se.exuvo.aurora.planetarysystems.PlanetarySystemGeneration
@@ -22,28 +22,22 @@ import se.exuvo.aurora.planetarysystems.components.CircleComponent
 import se.exuvo.aurora.planetarysystems.components.MoveToEntityComponent
 import se.exuvo.aurora.planetarysystems.components.MoveToPositionComponent
 import se.exuvo.aurora.planetarysystems.components.PlanetarySystemComponent
-import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.RenderComponent
+import se.exuvo.aurora.planetarysystems.components.ShipComponent
+import se.exuvo.aurora.planetarysystems.components.TargetingComputerState
+import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.planetarysystems.systems.MovementSystem
-import se.exuvo.aurora.planetarysystems.systems.OrbitSystem
 import se.exuvo.aurora.planetarysystems.systems.RenderSystem
-import se.exuvo.aurora.utils.CircleL
-import se.exuvo.aurora.utils.GameServices
-import se.exuvo.aurora.utils.RectangleL
-import se.exuvo.aurora.utils.Units
-import se.exuvo.aurora.utils.Vector2L
-import se.exuvo.aurora.utils.printID
+import se.exuvo.aurora.planetarysystems.systems.WeaponSystem
+import se.exuvo.aurora.utils.*
+import se.exuvo.aurora.utils.keys.KeyActions_PlanetarySystemScreen
+import se.exuvo.aurora.utils.keys.KeyMappings
 import se.exuvo.settings.Settings
 import kotlin.concurrent.read
 import kotlin.concurrent.write
 import kotlin.properties.Delegates
-import se.exuvo.aurora.utils.keys.KeyActions_PlanetarySystemScreen
-import se.exuvo.aurora.utils.keys.KeyMappings
-import se.exuvo.aurora.planetarysystems.systems.WeaponSystem
-import se.exuvo.aurora.empires.components.WeaponsComponent
-import se.exuvo.aurora.planetarysystems.components.TargetingComputerState
-import se.exuvo.aurora.planetarysystems.components.ShipComponent
+import com.artemis.Aspect
 
 class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), InputProcessor {
 	companion object {
@@ -56,28 +50,27 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 		}
 	}
 
-	private val spriteBatch = GameServices[SpriteBatch::class.java]
-	private val shapeRenderer = GameServices[ShapeRenderer::class.java]
-	private val galaxy by lazy { GameServices[Galaxy::class.java] }
-	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class.java] }
-	private val systemGroupSystem by lazy { system.engine.getSystem(GroupSystem::class.java) }
-	private val renderSystem by lazy { system.engine.getSystem(RenderSystem::class.java) }
+	private val spriteBatch = GameServices[SpriteBatch::class]
+	private val shapeRenderer = GameServices[ShapeRenderer::class]
+	private val galaxy by lazy { GameServices[Galaxy::class] }
+	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class] }
+	private val systemGroupSystem by lazy { system.world.getSystem(GroupSystem::class.java) }
+	private val renderSystem by lazy { system.world.getSystem(RenderSystem::class.java) }
+	private val movementSystem by lazy { system.world.getSystem(MovementSystem::class.java) }
 
-	private val uiCamera = GameServices[GameScreenService::class.java].uiCamera
+	private val uiCamera = GameServices[GameScreenService::class].uiCamera
 	private var viewport by Delegates.notNull<Viewport>()
 	private var camera by Delegates.notNull<OrthographicCamera>()
 	private val cameraOffset = Vector2L()
 
-	private val circleMapper = ComponentMapper.getFor(CircleComponent::class.java)
-	private val movementMapper = ComponentMapper.getFor(TimedMovementComponent::class.java)
-	private val moveToEntityMapper = ComponentMapper.getFor(MoveToEntityComponent::class.java)
-	private val moveToPositionMapper = ComponentMapper.getFor(MoveToPositionComponent::class.java)
-	private val planetarySystemMapper = ComponentMapper.getFor(PlanetarySystemComponent::class.java)
-	private val weaponsComponentMapper = ComponentMapper.getFor(WeaponsComponent::class.java)
-	private val shipMapper = ComponentMapper.getFor(ShipComponent::class.java)
+	private val circleMapper = ComponentMapper.getFor(CircleComponent::class.java, system.world)
+	private val movementMapper = ComponentMapper.getFor(TimedMovementComponent::class.java, system.world)
+	private val planetarySystemMapper = ComponentMapper.getFor(PlanetarySystemComponent::class.java, system.world)
+	private val weaponsComponentMapper = ComponentMapper.getFor(WeaponsComponent::class.java, system.world)
+	private val shipMapper = ComponentMapper.getFor(ShipComponent::class.java, system.world)
 
 	var zoomLevel = 0
-	var zoomSensitivity = Settings.getFloat("UI/zoomSensitivity").toDouble()
+	var zoomSensitivity = Settings.getFloat("UI/zoomSensitivity", 1.25f).toDouble()
 	val maxZoom = 1E8f
 	var selectedAction: KeyActions_PlanetarySystemScreen? = null
 
@@ -202,18 +195,18 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 		} else if (action == KeyActions_PlanetarySystemScreen.MAP) {
 
-			val galaxyScreen = GameServices[GalaxyScreen::class.java]
+			val galaxyScreen = GameServices[GalaxyScreen::class]
 			galaxyScreen.centerOnPlanetarySystem(system)
-			GameServices[GameScreenService::class.java].add(galaxyScreen)
+			GameServices[GameScreenService::class].add(galaxyScreen)
 
 		} else if (action == KeyActions_PlanetarySystemScreen.ATTACK) {
 
 			system.lock.read {
 				if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
 					selectedAction = KeyActions_PlanetarySystemScreen.ATTACK
-					println("Prep action " + action)
+					println("Selected action " + action)
 				} else {
-					println("Unable to prep action " + action + ", no selection")
+					println("Unable to select action " + action + ", no selection")
 				}
 			}
 		}
@@ -251,7 +244,9 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 	var dragSelectPotentialStart = false
 	var dragSelect = false
-	val selectionFamily = Family.all(TimedMovementComponent::class.java, RenderComponent::class.java).one(CircleComponent::class.java).get()
+	val selectionFamily = system.world.getAspectSubscriptionManager().get(Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java).one(CircleComponent::class.java))
+	val weaponFamily = WeaponSystem.FAMILY.build(system.world)
+	val movementFamily = MovementSystem.CAN_ACCELERATE_FAMILY.build(system.world)
 
 	var dragX = 0
 	var dragY = 0
@@ -267,50 +262,50 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 						val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
 						val entitiesUnderMouse = ArrayList<Entity>()
-						val entities = system.engine.getEntitiesFor(selectionFamily)
+						val entityIDs = selectionFamily.entities
 						val testCircle = CircleL()
 						val zoom = camera.zoom
 
 						// Exact check first
-						for (entity in entities) {
-							val position = movementMapper.get(entity).get(galaxy.time).value.position
+						entityIDs.forEach { entityID ->
+							val position = movementMapper.get(entityID).get(galaxy.time).value.position
 							val radius: Float
 
-							if (renderSystem.inStrategicView(entity, zoom)) {
+							if (renderSystem.inStrategicView(entityID, zoom)) {
 
 								radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
 
 							} else {
 
-								radius = circleMapper.get(entity).radius
+								radius = circleMapper.get(entityID).radius
 							}
 
 							testCircle.set(position, radius * 1000)
 
 							if (testCircle.contains(mouseInGameCoordinates)) {
-								entitiesUnderMouse.add(entity)
+								entitiesUnderMouse.add(system.world.getEntity(entityID))
 							}
 						}
 
 						// Lenient check if empty
 						if (entitiesUnderMouse.isEmpty()) {
-							for (entity in entities) {
-								val position = movementMapper.get(entity).get(galaxy.time).value.position
+							entityIDs.forEach { entityID ->
+								val position = movementMapper.get(entityID).get(galaxy.time).value.position
 								val radius: Float
 
-								if (renderSystem.inStrategicView(entity, zoom)) {
+								if (renderSystem.inStrategicView(entityID, zoom)) {
 
 									radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
 
 								} else {
 
-									radius = circleMapper.get(entity).radius * 1.1f + 2 * camera.zoom
+									radius = circleMapper.get(entityID).radius * 1.1f + 2 * camera.zoom
 								}
 
 								testCircle.set(position, radius * 1000)
 
 								if (testCircle.contains(mouseInGameCoordinates)) {
-									entitiesUnderMouse.add(entity)
+									entitiesUnderMouse.add(system.world.getEntity(entityID))
 								}
 							}
 
@@ -351,7 +346,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 								val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED).filter {
 
 									val planetarySystem = planetarySystemMapper.get(it)
-									system == planetarySystem?.system && WeaponSystem.FAMILY.matches(it)
+									system == planetarySystem?.system && weaponFamily.isInterested(it)
 								}
 
 								var target: Entity? = null
@@ -397,7 +392,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 						val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED).filter {
 
 							val planetarySystem = planetarySystemMapper.get(it)
-							system == planetarySystem?.system && MovementSystem.CAN_ACCELERATE_FAMILY.matches(it)
+							system == planetarySystem?.system && movementFamily.isInterested(it)
 						}
 
 						if (selectedEntities.isNotEmpty()) {
@@ -406,50 +401,50 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 								val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
 								val entitiesUnderMouse = ArrayList<Entity>()
-								val entities = system.engine.getEntitiesFor(selectionFamily)
+								val entityIDs = selectionFamily.entities
 								val testCircle = CircleL()
 								val zoom = camera.zoom
 
 								// Exact check first
-								for (entity in entities) {
-									val position = movementMapper.get(entity).get(galaxy.time).value.position
+								entityIDs.forEach { entityID ->
+									val position = movementMapper.get(entityID).get(galaxy.time).value.position
 									val radius: Float
 
-									if (renderSystem.inStrategicView(entity, zoom)) {
+									if (renderSystem.inStrategicView(entityID, zoom)) {
 
 										radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
 
 									} else {
 
-										radius = circleMapper.get(entity).radius
+										radius = circleMapper.get(entityID).radius
 									}
 
 									testCircle.set(position, radius * 1000)
 
 									if (testCircle.contains(mouseInGameCoordinates)) {
-										entitiesUnderMouse.add(entity)
+										entitiesUnderMouse.add(system.world.getEntity(entityID))
 									}
 								}
 
 								// Lenient check if empty
 								if (entitiesUnderMouse.isEmpty()) {
-									for (entity in entities) {
-										val position = movementMapper.get(entity).get(galaxy.time).value.position
+									entityIDs.forEach { entityID ->
+										val position = movementMapper.get(entityID).get(galaxy.time).value.position
 										val radius: Float
 
-										if (renderSystem.inStrategicView(entity, zoom)) {
+										if (renderSystem.inStrategicView(entityID, zoom)) {
 
 											radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
 
 										} else {
 
-											radius = circleMapper.get(entity).radius * 1.1f + 2 * camera.zoom
+											radius = circleMapper.get(entityID).radius * 1.1f + 2 * camera.zoom
 										}
 
 										testCircle.set(position, radius * 1000)
 
 										if (testCircle.contains(mouseInGameCoordinates)) {
-											entitiesUnderMouse.add(entity)
+											entitiesUnderMouse.add(system.world.getEntity(entityID))
 										}
 									}
 								}
@@ -467,21 +462,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 									for (entity in selectedEntities) {
 
-										var moveToPositionComponent = moveToPositionMapper.get(entity)
-
-										if (moveToPositionComponent != null) {
-											entity.remove(moveToPositionComponent::class.java)
-										}
-
-										var moveToEntityComponent = moveToEntityMapper.get(entity)
-
-										if (moveToEntityComponent != null) {
-											moveToEntityComponent.apply { target = targetEntity; approach = approachType }
-
-										} else {
-											moveToEntityComponent = MoveToEntityComponent(targetEntity, approachType)
-											entity.add(moveToEntityComponent)
-										}
+										movementSystem.moveToEntity(entity.id, targetEntity.id, approachType)
 									}
 
 								} else {
@@ -497,21 +478,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 									for (entity in selectedEntities) {
 
-										var moveToEntityComponent = moveToEntityMapper.get(entity)
-
-										if (moveToEntityComponent != null) {
-											entity.remove(moveToEntityComponent::class.java)
-										}
-
-										var moveToPositionComponent = moveToPositionMapper.get(entity)
-
-										if (moveToPositionComponent != null) {
-											moveToPositionComponent.apply { target = targetPosition; approach = approachType }
-
-										} else {
-											moveToPositionComponent = MoveToPositionComponent(targetPosition, approachType)
-											entity.add(moveToPositionComponent)
-										}
+										movementSystem.moveToPosition(entity.id, targetPosition, approachType)
 									}
 								}
 
@@ -560,16 +527,16 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 //			println("p1GameCoordinates $p1GameCoordinates, p2GameCoordinates $p2GameCoordinates")
 
 			val entitiesInSelection = ArrayList<Entity>()
-			val entities = system.engine.getEntitiesFor(selectionFamily)
+			val entityIDs = selectionFamily.entities
 			val testRectangle = RectangleL(p1GameCoordinates.x, p1GameCoordinates.y, p2GameCoordinates.x - p1GameCoordinates.x, p2GameCoordinates.y - p1GameCoordinates.y)
 //			println("testRectangle $testRectangle")
 
 			// Exact check first
-			for (entity in entities) {
-				val position = movementMapper.get(entity).get(galaxy.time).value.position
+			entityIDs.forEach { entityID ->
+				val position = movementMapper.get(entityID).get(galaxy.time).value.position
 
 				if (testRectangle.contains(position)) {
-					entitiesInSelection.add(entity)
+					entitiesInSelection.add(system.world.getEntity(entityID))
 				}
 			}
 

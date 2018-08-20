@@ -1,7 +1,5 @@
 package se.exuvo.aurora.history
 
-import com.badlogic.ashley.core.ComponentMapper
-import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.utils.Disposable
 import com.badlogic.gdx.utils.Pool.Poolable
 import org.apache.log4j.Logger
@@ -25,6 +23,9 @@ import java.sql.SQLException
 import java.sql.Statement
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import com.artemis.Entity
+import com.artemis.ComponentMapper
+import com.artemis.World
 
 class History : Disposable {
 
@@ -38,8 +39,7 @@ class History : Disposable {
 
 	private val executorService = Executors.newSingleThreadExecutor()
 
-	private val galaxy by lazy { GameServices[Galaxy::class.java] }
-	private val uuidMapper = ComponentMapper.getFor(UUIDComponent::class.java)
+	private val galaxy by lazy { GameServices[Galaxy::class] }
 
 	init {
 		log.info("Opening history DB")
@@ -120,15 +120,15 @@ class History : Disposable {
 		})
 	}
 
-	fun entityCreated(entity: Entity) {
+	fun entityCreated(entityID: Int, world: World) {
 		execute({
-			historyEntityEventDAO.add(HistoryEntityEvent(galaxy.time, uuidMapper.get(entity).uuid, if (entity is Poolable) EntityEvent.CREATE_POOLED else EntityEvent.CREATE))
+			historyEntityEventDAO.add(HistoryEntityEvent(galaxy.time, ComponentMapper.getFor(UUIDComponent::class.java, world).get(entityID).uuid, EntityEvent.CREATE))
 		})
 	}
 
-	fun entityDestroyed(entity: Entity) {
+	fun entityDestroyed(entityID: Int, world: World) {
 		execute({
-			historyEntityEventDAO.add(HistoryEntityEvent(galaxy.time, uuidMapper.get(entity).uuid, if (entity is Poolable) EntityEvent.DESTROY_POOLED else EntityEvent.DESTROY))
+			historyEntityEventDAO.add(HistoryEntityEvent(galaxy.time, ComponentMapper.getFor(UUIDComponent::class.java, world).get(entityID).uuid, EntityEvent.DESTROY))
 		})
 	}
 }
@@ -162,14 +162,12 @@ class HistoryEntityEvent() : HistoryEvent() {
 		this.time = time
 		planetarySystemID = uuid.planetarySystemID
 		empireID = uuid.empireID
-		shipID = uuid.shipID
+		shipID = uuid.entityUID
 		this.eventType = eventType
 	}
 }
 
 enum class EntityEvent {
 	CREATE,
-	CREATE_POOLED,
 	DESTROY,
-	DESTROY_POOLED
 }

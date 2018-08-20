@@ -46,13 +46,13 @@ fun getFontWidth(font: BitmapFont, text: String): Float {
 
 class LoadingScreen() : GameScreenImpl() {
 
-	private val assetManager = GameServices[AssetManager::class.java]
-	private val batch by lazy { GameServices[SpriteBatch::class.java] }
+	private val assetManager = GameServices[AssetManager::class]
+	private val batch by lazy { GameServices[SpriteBatch::class] }
 	private val uiCamera = OrthographicCamera()
 	private var texturePackerTask = TexturePackerTask(assetManager)
 
 	override fun show() {
-		val profiler = GameServices[GLProfiler::class.java]
+		val profiler = GameServices[GLProfiler::class]
 		profiler.enable()
 
 		/* TODO fix throws GL_INVALID_ENUM
@@ -92,7 +92,7 @@ class LoadingScreen() : GameScreenImpl() {
 		} else if (texturePackerTask.done && assetManager.update()) {
 			Assets.finishLoad()
 			Technology.initTech()
-			GameServices[GameScreenService::class.java].add(MainMenuScreen())
+			GameServices[GameScreenService::class].add(MainMenuScreen())
 		}
 	}
 

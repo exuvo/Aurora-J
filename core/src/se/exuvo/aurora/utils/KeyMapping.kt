@@ -53,7 +53,7 @@ object KeyMappings {
 	}
 
 	fun load() {
-		log.info("Loading keybinds")
+		log.debug("Loading keybinds")
 
 		val keysElement = Settings.getNode("Keybinds")
 

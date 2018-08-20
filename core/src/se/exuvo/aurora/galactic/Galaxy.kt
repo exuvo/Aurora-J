@@ -1,16 +1,28 @@
 package se.exuvo.aurora.galactic
 
-import com.badlogic.ashley.core.ComponentMapper
-import com.badlogic.ashley.core.Engine
-import com.badlogic.ashley.core.Entity
-import com.badlogic.ashley.core.EntityListener
+import com.artemis.ComponentMapper
+import com.artemis.Entity
+import com.artemis.EntitySubscription
+import com.artemis.World
+import com.artemis.WorldConfigurationBuilder
 import org.apache.log4j.Logger
 import se.exuvo.aurora.galactic.systems.GalacticRenderSystem
 import se.exuvo.aurora.planetarysystems.PlanetarySystem
+import se.exuvo.aurora.planetarysystems.components.ChangingWorldComponent
+import se.exuvo.aurora.planetarysystems.components.MovementValues
 import se.exuvo.aurora.planetarysystems.components.PlanetarySystemComponent
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
+import se.exuvo.aurora.planetarysystems.systems.MovementSystem
+import se.exuvo.aurora.planetarysystems.systems.OrbitSystem
+import se.exuvo.aurora.planetarysystems.systems.PassiveSensorSystem
+import se.exuvo.aurora.planetarysystems.systems.PowerSystem
+import se.exuvo.aurora.planetarysystems.systems.RenderSystem
+import se.exuvo.aurora.planetarysystems.systems.ShipSystem
+import se.exuvo.aurora.planetarysystems.systems.SolarIrradianceSystem
+import se.exuvo.aurora.planetarysystems.systems.WeaponSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
+import se.exuvo.aurora.utils.forEach
 import se.exuvo.settings.Settings
 import se.unlogic.standardutils.threads.SimpleTaskGroup
 import se.unlogic.standardutils.threads.ThreadPoolTaskGroupHandler
@@ -18,14 +30,18 @@ import se.unlogic.standardutils.threads.ThreadUtils
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
-import java.lang.IllegalArgumentException
+import com.artemis.Aspect
+import com.artemis.EntitySubscription.SubscriptionListener
+import com.artemis.utils.IntBag
+import net.mostlyoriginal.api.event.common.EventSystem
+import net.mostlyoriginal.plugin.ProfilerPlugin
+import se.exuvo.aurora.planetarysystems.systems.CustomSystemInvocationStrategy
 
-class Galaxy(val empires: MutableList<Empire>, val systems: MutableList<PlanetarySystem>, var time: Long = 0) : Runnable, EntityListener {
-
+class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 	val log = Logger.getLogger(this.javaClass)
 
-	private val planetarySystemMapper = ComponentMapper.getFor(PlanetarySystemComponent::class.java)
-	private val groupSystem by lazy { GameServices[GroupSystem::class.java] }
+	lateinit var systems: MutableList<PlanetarySystem>
+	private val groupSystem by lazy { GameServices[GroupSystem::class] }
 	private val threadPool = ThreadPoolTaskGroupHandler<SimpleTaskGroup>("Galaxy", Settings.getInt("Galaxy/threads", Runtime.getRuntime().availableProcessors()), true) //
 	var thread: Thread? = null
 	var sleeping = false
@@ -34,20 +50,44 @@ class Galaxy(val empires: MutableList<Empire>, val systems: MutableList<Planetar
 	var speed: Long = 1 * Units.NANO_SECOND
 	var paused = false
 
-	val engineLock = ReentrantReadWriteLock()
-	val engine = Engine()
-
-	fun init() {
+	val worldLock = ReentrantReadWriteLock()
+	val world: World
+	
+	init {
 		GameServices.put(this)
 		
 		empires.add(Empire.GAIA)
 		
-		engine.addSystem(GalacticRenderSystem())
+		val worldBuilder = WorldConfigurationBuilder()
+//		worldBuilder.dependsOn(ProfilerPlugin::class.java)
+		worldBuilder.with(EventSystem())
+		worldBuilder.with(GroupSystem())
+		worldBuilder.with(GalacticRenderSystem())
+		worldBuilder.register(CustomSystemInvocationStrategy())
+		
+		world = World(worldBuilder.build())
+		world.inject(this)
+		
+		world.getAspectSubscriptionManager().get(Aspect.all()).addSubscriptionListener(object: SubscriptionListener {
+			override fun inserted(entityIDs: IntBag) {
+				entityIDs.forEach { entityID ->
+					entityAdded(world, entityID)
+				}
+			}
+
+			override fun removed(entityIDs: IntBag) {
+				entityIDs.forEach { entityID ->
+					entityRemoved(world, entityID)
+				}
+			}
+		})
+	}
+
+	fun init(systems: MutableList<PlanetarySystem>) {
+		this.systems = systems
 		
 		systems.forEach {
-			engine.addEntity(it)
 			it.init()
-			it.engine.addEntityListener(this)
 		}
 		
 		val thread = Thread(this, "Galaxy");
@@ -66,32 +106,51 @@ class Galaxy(val empires: MutableList<Empire>, val systems: MutableList<Planetar
 		throw IllegalArgumentException("$id")
 	}
 	
-	fun getPlanetarySystem(id: Int): PlanetarySystem {
+	fun getPlanetarySystemBySID(sid: Int): PlanetarySystem {
 		for (system in systems) {
-			if (system.id == id) {
+			if (system.sid == sid) {
+				return system;
+			}
+		}
+		throw IllegalArgumentException("$sid")
+	}
+	
+	fun getPlanetarySystemByGalacticEntityID(id: Int): PlanetarySystem {
+		for (system in systems) {
+			if (system.galacticEntityID == id) {
 				return system;
 			}
 		}
 		throw IllegalArgumentException("$id")
 	}
-
-	override fun entityAdded(entity: Entity) {
-		groupSystem.entityAdded(entity)
+	
+	fun getPlanetarySystemByEntity(entity: Entity): PlanetarySystem {
+		return ComponentMapper.getFor(PlanetarySystemComponent::class.java, entity.world).get(entity).system
+	}
+	
+	fun entityAdded(world: World, entityID: Int) {
+		groupSystem.inserted(world.getEntity(entityID))
 	}
 
-	override fun entityRemoved(entity: Entity) {
-		groupSystem.entityRemoved(entity)
+	fun entityRemoved(world: World, entityID: Int) {
+		if (!ComponentMapper.getFor(ChangingWorldComponent::class.java, world).has(entityID)) {
+			groupSystem.removed(world.getEntity(entityID))
+		}
 	}
-
-	fun getPlanetarySystem(entity: Entity): PlanetarySystem {
-		return planetarySystemMapper.get(entity).system!!
+	
+	fun moveEntity(targetSystem: PlanetarySystem, entity: Entity, targetPosition: MovementValues) {
+		val sourceWorld = entity.world
+		
+		ComponentMapper.getFor(ChangingWorldComponent::class.java, sourceWorld).create(entity)
+		
+		//TODO serialize entity, add to target system, remove from old system
 	}
 
 	private fun updateDay(): Int {
 		day = (time / (24L * 60L * 60L)).toInt()
 		return day
 	}
-
+	
 	override fun run() {
 
 		try {
@@ -150,8 +209,9 @@ class Galaxy(val empires: MutableList<Empire>, val systems: MutableList<Planetar
 							}
 						}
 
-						engineLock.write {
-							engine.update(tickSize.toFloat())
+						worldLock.write {
+							world.setDelta(tickSize.toFloat())
+							world.process()
 						}
 
 						val systemUpdateDuration = (System.nanoTime() - systemUpdateStart)

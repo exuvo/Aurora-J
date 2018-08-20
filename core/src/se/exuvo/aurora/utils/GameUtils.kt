@@ -1,7 +1,5 @@
 package se.exuvo.aurora.utils
 
-import com.badlogic.ashley.core.ComponentMapper
-import com.badlogic.ashley.core.Entity
 import org.apache.log4j.Logger
 import org.jasypt.digest.StandardStringDigester
 import se.exuvo.aurora.galactic.FuelWastePart
@@ -12,27 +10,27 @@ import se.exuvo.aurora.planetarysystems.components.FueledPartState
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.UUIDComponent
+import com.artemis.Entity
+import com.artemis.ComponentMapper
+import com.artemis.utils.IntBag
 
 
-private val uuidMapper = ComponentMapper.getFor(UUIDComponent::class.java)
-private val nameMapper = ComponentMapper.getFor(NameComponent::class.java)
 private val log = Logger.getLogger("se.exuvo.aurora.utils")
 
-fun Entity.printUUID(): String {
-
-	val uuid = uuidMapper.get(this)
-
-	if (uuid != null) {
-		return uuid.uuid.toString();
+inline fun IntBag.forEach(action: (entityID: Int) -> Unit) {
+	for (i in 0 .. size() - 1) {
+		action(data[i])
 	}
-
-	return this.toString();
 }
 
+fun Entity.getUUID(): String {
+
+	return world.getMapper(UUIDComponent::class.java).get(this)?.uuid.toString();
+}
 
 fun Entity.printName(): String {
 
-	val nameComponent = nameMapper.get(this)
+	val nameComponent = world.getMapper(NameComponent::class.java).get(this)
 
 	if (nameComponent != null) {
 		return nameComponent.name
@@ -43,7 +41,7 @@ fun Entity.printName(): String {
 
 fun Entity.printID(): String {
 
-	return "${this.printName()} (${this.printUUID()})"
+	return "${this.printName()} (${this.getUUID()})"
 }
 
 fun consumeFuel(deltaGameTime: Int, entity: Entity, ship: ShipComponent, partRef: PartRef<Part>, energyConsumed: Long, fuelEnergy: Long) {

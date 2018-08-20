@@ -1,26 +1,18 @@
 package se.exuvo.aurora.screens
 
-import com.badlogic.ashley.core.ComponentMapper
 import com.badlogic.gdx.InputProcessor
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.scenes.scene2d.Stage
-import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Window
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.Galaxy
-import se.exuvo.aurora.planetarysystems.PlanetarySystem
-import se.exuvo.aurora.planetarysystems.components.NameComponent
-import se.exuvo.aurora.planetarysystems.components.OrbitComponent
-import se.exuvo.aurora.planetarysystems.components.ThrustComponent
-import se.exuvo.aurora.planetarysystems.systems.GroupSystem
-import se.exuvo.aurora.planetarysystems.systems.TagSystem
 import se.exuvo.aurora.utils.GameServices
 
 class ResearchScreen : GameScreenImpl(), InputProcessor {
 
-	private val spriteBatch by lazy { GameServices[SpriteBatch::class.java] }
-	private val galaxy by lazy { GameServices[Galaxy::class.java] }
+	private val spriteBatch by lazy { GameServices[SpriteBatch::class] }
+	private val galaxy by lazy { GameServices[Galaxy::class] }
 
 	private val stage = Stage(ScreenViewport())
 	private val selectionWindow: Window

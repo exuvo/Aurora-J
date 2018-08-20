@@ -1,98 +1,104 @@
 package se.exuvo.aurora.planetarysystems.systems
 
-import com.badlogic.ashley.core.ComponentMapper
-import com.badlogic.ashley.core.Entity
-import com.badlogic.ashley.core.Family
-import com.badlogic.ashley.systems.IteratingSystem
+import com.artemis.Aspect
+import com.artemis.ComponentMapper
+import com.artemis.EntitySubscription
+import com.artemis.EntitySubscription.SubscriptionListener
+import com.artemis.systems.IteratingSystem
+import com.artemis.utils.IntBag
+import net.mostlyoriginal.api.event.common.EventSystem
 import org.apache.log4j.Logger
 import se.exuvo.aurora.galactic.Galaxy
+import se.exuvo.aurora.galactic.PartRef
+import se.exuvo.aurora.galactic.PassiveSensor
 import se.exuvo.aurora.planetarysystems.components.DetectionComponent
+import se.exuvo.aurora.planetarysystems.components.DetectionHit
 import se.exuvo.aurora.planetarysystems.components.EmissionsComponent
+import se.exuvo.aurora.planetarysystems.components.OwnerComponent
+import se.exuvo.aurora.planetarysystems.components.PassiveSensorState
 import se.exuvo.aurora.planetarysystems.components.PassiveSensorsComponent
+import se.exuvo.aurora.planetarysystems.components.PoweredPartState
+import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
+import se.exuvo.aurora.planetarysystems.components.UUIDComponent
+import se.exuvo.aurora.planetarysystems.events.PowerEvent
+import se.exuvo.aurora.planetarysystems.events.getEvent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
-import se.exuvo.aurora.planetarysystems.components.DetectionHit
-import se.exuvo.aurora.galactic.PassiveSensor
-import se.exuvo.aurora.planetarysystems.components.OwnerComponent
-import com.badlogic.ashley.core.Engine
-import com.badlogic.ashley.core.EntityListener
-import se.exuvo.aurora.planetarysystems.components.ShipComponent
-import se.exuvo.aurora.planetarysystems.components.PoweredPartState
-import se.exuvo.aurora.planetarysystems.components.PassiveSensorState
-import jdk.nashorn.internal.ir.annotations.Ignore
-import se.exuvo.aurora.planetarysystems.components.UUIDComponent
-import se.exuvo.aurora.planetarysystems.components.NameComponent
-import se.exuvo.aurora.galactic.PartRef
+import se.exuvo.aurora.utils.forEach
 
-class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
+class PassiveSensorSystem : IteratingSystem(FAMILY) {
 	companion object {
-		val FAMILY = Family.all(PassiveSensorsComponent::class.java).get()
-		val EMISSION_FAMILY = Family.all(EmissionsComponent::class.java).get()
-		val SHIP_FAMILY = Family.all(ShipComponent::class.java).get()
+		val FAMILY = Aspect.all(PassiveSensorsComponent::class.java)
+		val SHIP_ASPECT = Aspect.all(ShipComponent::class.java)
+		val EMISSION_FAMILY = Aspect.all(EmissionsComponent::class.java)
 	}
 
 	val log = Logger.getLogger(this.javaClass)
-	private val galaxy = GameServices[Galaxy::class.java]
+	private val galaxy = GameServices[Galaxy::class]
 
-	private val movementMapper = ComponentMapper.getFor(TimedMovementComponent::class.java)
-	private val sensorsMapper = ComponentMapper.getFor(PassiveSensorsComponent::class.java)
-	private val emissionsMapper = ComponentMapper.getFor(EmissionsComponent::class.java)
-	private val detectionMapper = ComponentMapper.getFor(DetectionComponent::class.java)
-	private val ownerMapper = ComponentMapper.getFor(OwnerComponent::class.java)
-	private val shipMapper = ComponentMapper.getFor(ShipComponent::class.java)
-	private val uuidMapper = ComponentMapper.getFor(UUIDComponent::class.java)
+	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>
+	lateinit private var sensorsMapper: ComponentMapper<PassiveSensorsComponent>
+	lateinit private var emissionsMapper: ComponentMapper<EmissionsComponent>
+	lateinit private var detectionMapper: ComponentMapper<DetectionComponent>
+	lateinit private var ownerMapper: ComponentMapper<OwnerComponent>
+	lateinit private var shipMapper: ComponentMapper<ShipComponent>
+	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
+	lateinit private var emissionsSubscription: EntitySubscription
+	lateinit private var events: EventSystem
 
-	override fun addedToEngine(engine: Engine) {
-		super.addedToEngine(engine)
-		engine.addEntityListener(SHIP_FAMILY, this)
-
-		engine.addEntityListener(EMISSION_FAMILY, object : EntityListener {
-			override fun entityRemoved(entity: Entity) {
+	var emitters: List<Emitter> = emptyList()
+	var emissionFamilyChanged = true
+	
+	override fun initialize() {
+		emissionsSubscription = world.getAspectSubscriptionManager().get(EMISSION_FAMILY)
+		emissionsSubscription.addSubscriptionListener(object : SubscriptionListener {
+			override fun inserted(entities: IntBag) {
 				emissionFamilyChanged = true
 			}
 
-			override fun entityAdded(entity: Entity) {
+			override fun removed(entities: IntBag) {
 				emissionFamilyChanged = true
+			}
+		})
+		world.getAspectSubscriptionManager().get(SHIP_ASPECT).addSubscriptionListener(object : SubscriptionListener {
+			override fun inserted(entities: IntBag) {
+				entities.forEach { entityID ->
+					var sensorComponent = sensorsMapper.get(entityID)
+
+					if (sensorComponent == null) {
+
+						val ship = shipMapper.get(entityID)
+						val sensors = ship.shipClass[PassiveSensor::class]
+
+						if (sensors.isNotEmpty()) {
+
+							sensorComponent = sensorsMapper.create(entityID)
+							sensorComponent.sensors = sensors
+
+							sensors.forEach({
+								val sensor = it
+								if (ship.isPartEnabled(sensor)) {
+									val poweredState = ship.getPartState(sensor)[PoweredPartState::class]
+									poweredState.requestedPower = sensor.part.powerConsumption
+								}
+							})
+						}
+					}
+				}
+			}
+
+			override fun removed(entities: IntBag) {
 			}
 		})
 	}
 
-	var emitters: List<Emitter> = emptyList()
-	var emissionFamilyChanged = true
-
-	override fun entityAdded(entity: Entity) {
-		var sensorComponent = sensorsMapper.get(entity)
-
-		if (sensorComponent == null) {
-
-			val ship = shipMapper.get(entity)
-			val sensors = ship.shipClass[PassiveSensor::class]
-
-			if (sensors.isNotEmpty()) {
-				sensorComponent = PassiveSensorsComponent(sensors)
-				entity.add(sensorComponent)
-
-				sensors.forEach({
-					val sensor = it
-					if (ship.isPartEnabled(sensor)) {
-						val poweredState = ship.getPartState(sensor)[PoweredPartState::class]
-						poweredState.requestedPower = sensor.part.powerConsumption
-					}
-				})
-			}
-		}
-	}
-
-	override fun entityRemoved(entity: Entity) {
-	}
-
-	override fun update(deltaTime: Float) {
+	override fun begin() {
 
 		if (emissionFamilyChanged) {
 			emissionFamilyChanged = false
 
-			val emissionEntities = engine.getEntitiesFor(EMISSION_FAMILY)
+			val emissionEntities = emissionsSubscription.getEntities()
 
 			if (emissionEntities.size() == 0) {
 
@@ -102,29 +108,27 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 
 				val tempEmitters = ArrayList<Emitter>(emissionEntities.size())
 
-				for (entity in emissionEntities) {
-					var emissions = emissionsMapper.get(entity)
-					var position = movementMapper.get(entity).get(galaxy.time).value.position
+				emissionEntities.forEach { entityID ->
+					var emissions = emissionsMapper.get(entityID)
+					var position = movementMapper.get(entityID).get(galaxy.time).value.position
 
-					tempEmitters.add(Emitter(entity, position, emissions))
+					tempEmitters.add(Emitter(entityID, position, emissions))
 				}
 
 				emitters = tempEmitters
 			}
 		}
-
-		super.update(deltaTime)
 	}
 
-	override fun processEntity(entity: Entity, deltaGameTime: Float) {
+	override fun process(entityID: Int) {
 
-		val ship = shipMapper.get(entity)
-		val movement = movementMapper.get(entity)
+		val ship = shipMapper.get(entityID)
+		val movement = movementMapper.get(entityID)
 		val sensorPosition = movement.get(galaxy.time).value.position
-		val owner = ownerMapper.get(entity)
+		val owner = ownerMapper.get(entityID)
 
-		val sensors = sensorsMapper.get(entity).sensors
-		var detectionComponent = detectionMapper.get(entity)
+		val sensors = sensorsMapper.get(entityID).sensors
+		var detectionComponent = detectionMapper.get(entityID)
 
 		val detections = HashMap<PartRef<PassiveSensor>, HashMap<Int, HashMap<Int, DetectionHit>>>()
 
@@ -151,11 +155,11 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 
 				for (emitter in emitters) {
 
-					if (emitter.entity == entity) {
+					if (emitter.entityID == entityID) {
 						continue
 					}
 
-					if (owner != null && ownerMapper.has(emitter.entity) && owner.empire == ownerMapper.get(emitter.entity).empire) {
+					if (owner != null && ownerMapper.has(emitter.entityID) && owner.empire == ownerMapper.get(emitter.entityID).empire) {
 						continue
 					}
 
@@ -175,13 +179,13 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 								val temp = emitterPosition.cpy().sub(sensorPosition)
 								temp.set(temp.len().toLong(), 0).scl(Math.random() * (1 - sensor.part.accuracy))
 
-								if (shipMapper.has(emitter.entity)) {
-									val hash = 37 * shipMapper.get(emitter.entity).shipClass.hashCode() + sensor.hashCode()
+								if (shipMapper.has(emitter.entityID)) {
+									val hash = 37 * shipMapper.get(emitter.entityID).shipClass.hashCode() + sensor.hashCode()
 //									println("hash $hash, uuid ${uuidMapper.get(emitter.entity).uuid.dispersedHash}, sensor ${sensor.hashCode()}")
 									temp.rotate((hash % 360).toFloat())
 
-								} else if (uuidMapper.has(emitter.entity)) {
-									val hash = 37 * uuidMapper.get(emitter.entity).uuid.dispersedHash + sensor.hashCode()
+								} else if (uuidMapper.has(emitter.entityID)) {
+									val hash = 37 * uuidMapper.get(emitter.entityID).uuid.dispersedHash + sensor.hashCode()
 //									println("hash $hash, uuid ${uuidMapper.get(emitter.entity).uuid.dispersedHash}, sensor ${sensor.hashCode()}")
 									temp.rotate((hash % 360).toFloat())
 
@@ -216,12 +220,12 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 							var detectionHit: DetectionHit? = distanceSteps[distanceStep]
 
 							if (detectionHit == null) {
-								detectionHit = DetectionHit(0.0, ArrayList<Entity>(), ArrayList<Vector2L>())
+								detectionHit = DetectionHit(0.0, ArrayList<Int>(), ArrayList<Vector2L>())
 								distanceSteps[distanceStep] = detectionHit
 							}
 
 							detectionHit.signalStrength += signalStrength
-							detectionHit.entities.add(emitter.entity)
+							detectionHit.entities.add(emitter.entityID)
 							detectionHit.hitPositions.add(emitterPosition)
 						}
 					}
@@ -244,21 +248,18 @@ class PassiveSensorSystem : IteratingSystem(FAMILY), EntityListener {
 		if (detections.isEmpty()) {
 
 			if (detectionComponent != null) {
-				entity.remove(DetectionComponent::class.java)
+				detectionMapper.remove(entityID)
 			}
 
 		} else {
 
-			if (detectionComponent != null) {
-
-				detectionComponent.detections = detections
-
-			} else {
-
-				entity.add(DetectionComponent(detections))
+			if (detectionComponent == null) {
+				detectionComponent = detectionMapper.create(entityID)
 			}
+
+			detectionComponent.detections = detections
 		}
 	}
 
-	data class Emitter(val entity: Entity, val position: Vector2L, val emissions: EmissionsComponent)
+	data class Emitter(val entityID: Int, val position: Vector2L, val emissions: EmissionsComponent)
 }

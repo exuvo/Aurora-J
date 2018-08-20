@@ -1,6 +1,5 @@
 package se.exuvo.aurora.planetarysystems.components
 
-import com.badlogic.ashley.core.Component
 import se.exuvo.aurora.galactic.CargoType
 import se.exuvo.aurora.galactic.ContainerPart
 import se.exuvo.aurora.galactic.Part
@@ -18,20 +17,30 @@ import se.exuvo.aurora.galactic.FueledPart
 import se.exuvo.aurora.galactic.PoweringPart
 import kotlin.reflect.KClass
 import se.exuvo.aurora.galactic.PassiveSensor
-import com.badlogic.ashley.core.Entity
 import se.exuvo.aurora.galactic.TargetingComputer
 import se.exuvo.aurora.galactic.PartRef
 import kotlin.Suppress
 import se.exuvo.aurora.galactic.MunitionClass
+import com.artemis.Component
 
-class MunitionComponent(var munitionClass: MunitionClass, val constructionTime: Long) : Component {
+class MunitionComponent() : Component() {
+	lateinit var munitionClass: MunitionClass
+	var constructionTime: Long = -1
 	var commissionDay: Int? = null
-	val armor = Array<Int>(munitionClass.getSurfaceArea(), { munitionClass.armorLayers })
-	val partEnabled = Array<Boolean>(munitionClass.getParts().size, { true })
-	val partState = Array<PartState>(munitionClass.getParts().size, { PartState() })
+	lateinit var armor: Array<Int>
+	lateinit var partEnabled: Array<Boolean>
+	lateinit var partState: Array<PartState>
 	var mass: Long = 0
 
-	init {
+	fun set(munitionClass: MunitionClass,
+					constructionTime: Long
+	) {
+		this.munitionClass = munitionClass
+		this.constructionTime = constructionTime
+		
+		armor = Array<Int>(munitionClass.getSurfaceArea(), { munitionClass.armorLayers })
+		partEnabled = Array<Boolean>(munitionClass.getParts().size, { true })
+		partState = Array<PartState>(munitionClass.getParts().size, { PartState() })
 		
 		partState.forEachIndexed { partIndex, state ->
 			val partRef = munitionClass[partIndex]

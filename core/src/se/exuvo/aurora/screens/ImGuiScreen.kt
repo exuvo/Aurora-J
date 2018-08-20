@@ -1,6 +1,6 @@
 package se.exuvo.aurora.screens
 
-import com.badlogic.ashley.core.ComponentMapper
+import com.artemis.ComponentMapper
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputProcessor
@@ -52,22 +52,16 @@ import se.unlogic.standardutils.reflection.ReflectionUtils
 import uno.glfw.GlfwWindow
 import kotlin.concurrent.read
 import kotlin.concurrent.write
+import com.artemis.utils.Bag
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 	val log = Logger.getLogger(this.javaClass)
 
-	private val galaxy by lazy { GameServices[Galaxy::class.java] }
-	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class.java] }
+	private val galaxy by lazy { GameServices[Galaxy::class] }
+	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class] }
 
-	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java)
-	private val shipMapper = ComponentMapper.getFor(ShipComponent::class.java)
-	private val powerMapper = ComponentMapper.getFor(PowerComponent::class.java)
-	private val orbitMapper = ComponentMapper.getFor(OrbitComponent::class.java)
-	private val thrustMapper = ComponentMapper.getFor(ThrustComponent::class.java)
-	private val irradianceMapper = ComponentMapper.getFor(SolarIrradianceComponent::class.java)
-
-	private val uiCamera = GameServices[GameScreenService::class.java].uiCamera
+	private val uiCamera = GameServices[GameScreenService::class].uiCamera
 
 	override val overlay = true
 	private val ctx: Context
@@ -216,8 +210,12 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 				} else {
 
-					val entity = selectedEntities.iterator().next()
-					val system = galaxy.getPlanetarySystem(entity)
+					val entity = selectedEntities.first()
+					val system = galaxy.getPlanetarySystemByEntity(entity)
+
+					val shipMapper = ComponentMapper.getFor(ShipComponent::class.java, entity.world)
+					val powerMapper = ComponentMapper.getFor(PowerComponent::class.java, entity.world)
+					val irradianceMapper = ComponentMapper.getFor(SolarIrradianceComponent::class.java, entity.world)
 
 					system.lock.read {
 
@@ -227,7 +225,9 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 						if (ImGui.collapsingHeader("Components", 0)) {
 
-							for (component in entity.components) {
+							val components = entity.getComponents(Bag())
+							
+							for (component in components) {
 
 								if (ImGui.treeNode("${component::class.java.simpleName}")) {
 
@@ -387,7 +387,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 											val part = it
 											val poweredState = shipComponent.getPartState(part)[PoweredPartState::class]
 
-											val power = if (poweredState.requestedPower == 0L) 1f else poweredState.givenPower / poweredState.requestedPower.toFloat()
+											val power = if (poweredState.requestedPower == 0L) 0f else poweredState.givenPower / poweredState.requestedPower.toFloat()
 											ImGui.progressBar(power, Vec2(), "${Units.powerToString(poweredState.givenPower)}/${Units.powerToString(poweredState.requestedPower)}")
 
 											ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)

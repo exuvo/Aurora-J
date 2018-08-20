@@ -1,217 +1,225 @@
 package se.exuvo.aurora.planetarysystems.systems
 
-import com.badlogic.ashley.core.ComponentMapper
-import com.badlogic.ashley.core.Engine
-import com.badlogic.ashley.core.Entity
-import com.badlogic.ashley.core.EntityListener
-import com.badlogic.ashley.core.Family
-import com.badlogic.ashley.systems.IteratingSystem
+import com.artemis.Aspect
+import com.artemis.ComponentMapper
+import com.artemis.EntitySubscription.SubscriptionListener
+import com.artemis.systems.IteratingSystem
+import com.artemis.utils.IntBag
+import net.mostlyoriginal.api.event.common.EventSystem
 import org.apache.log4j.Logger
 import se.exuvo.aurora.empires.components.WeaponsComponent
 import se.exuvo.aurora.galactic.AmmunitionPart
 import se.exuvo.aurora.galactic.BeamWeapon
+import se.exuvo.aurora.galactic.ChargedPart
+import se.exuvo.aurora.galactic.ElectricalThruster
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.galactic.MissileLauncher
+import se.exuvo.aurora.galactic.PoweredPart
 import se.exuvo.aurora.galactic.Railgun
 import se.exuvo.aurora.galactic.ReloadablePart
 import se.exuvo.aurora.galactic.TargetingComputer
+import se.exuvo.aurora.galactic.ThrustingPart
 import se.exuvo.aurora.planetarysystems.components.AmmunitionPartState
+import se.exuvo.aurora.planetarysystems.components.ChargedPartState
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.PoweredPartState
 import se.exuvo.aurora.planetarysystems.components.ReloadablePartState
 import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.TargetingComputerState
 import se.exuvo.aurora.planetarysystems.components.UUIDComponent
+import se.exuvo.aurora.planetarysystems.events.PowerEvent
+import se.exuvo.aurora.planetarysystems.events.getEvent
 import se.exuvo.aurora.utils.GameServices
-import se.exuvo.aurora.planetarysystems.components.ChargedPartState
-import se.exuvo.aurora.galactic.ChargedPart
-import se.exuvo.aurora.galactic.PoweredPart
-import se.exuvo.aurora.planetarysystems.components.PowerComponent
+import se.exuvo.aurora.utils.forEach
 
-class WeaponSystem : IteratingSystem(FAMILY), EntityListener {
+class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
-		val FAMILY = Family.all(WeaponsComponent::class.java).get()
-		val SHIP_FAMILY = Family.all(ShipComponent::class.java).get()
+		val FAMILY = Aspect.all(WeaponsComponent::class.java)
+		val SHIP_FAMILY = Aspect.all(ShipComponent::class.java)
 	}
 
 	val log = Logger.getLogger(this.javaClass)
 
-	private val weaponsComponentMapper = ComponentMapper.getFor(WeaponsComponent::class.java)
-	private val powerMapper = ComponentMapper.getFor(PowerComponent::class.java)
-	private val shipMapper = ComponentMapper.getFor(ShipComponent::class.java)
-	private val uuidMapper = ComponentMapper.getFor(UUIDComponent::class.java)
-	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java)
+	lateinit private var weaponsComponentMapper: ComponentMapper<WeaponsComponent>
+	lateinit private var shipMapper: ComponentMapper<ShipComponent>
+	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
+	lateinit private var nameMapper: ComponentMapper<NameComponent>
+	lateinit private var events: EventSystem
 
-	private val galaxy = GameServices[Galaxy::class.java]
+	private val galaxy = GameServices[Galaxy::class]
 
-	override fun addedToEngine(engine: Engine) {
-		super.addedToEngine(engine)
+	override fun initialize() {
+		super.initialize()
 
-		engine.addEntityListener(SHIP_FAMILY, this)
-	}
+		world.getAspectSubscriptionManager().get(SHIP_FAMILY).addSubscriptionListener(object : SubscriptionListener {
+			override fun inserted(entities: IntBag) {
+				entities.forEach { entityID ->
+					var weaponsComponent = weaponsComponentMapper.get(entityID)
 
-	override fun removedFromEngine(engine: Engine) {
-		super.removedFromEngine(engine)
+					if (weaponsComponent == null) {
 
-		engine.removeEntityListener(this)
-	}
+						val ship = shipMapper.get(entityID)
+						val targetingComputers = ship.shipClass[TargetingComputer::class]
 
-	override fun entityAdded(entity: Entity) {
+						if (targetingComputers.isNotEmpty()) {
+							weaponsComponent = weaponsComponentMapper.create(entityID)
+							weaponsComponent.targetingComputers = targetingComputers
 
-		var weaponsComponent = weaponsComponentMapper.get(entity)
-
-		if (weaponsComponent == null) {
-
-			val ship = shipMapper.get(entity)
-			val targetingComputers = ship.shipClass[TargetingComputer::class]
-
-			if (targetingComputers.isNotEmpty()) {
-				weaponsComponent = WeaponsComponent(targetingComputers)
-				entity.add(weaponsComponent)
-
-				targetingComputers.forEach({
-					val tc = it
-					if (ship.isPartEnabled(tc)) {
-						val poweredState = ship.getPartState(tc)[PoweredPartState::class]
-						poweredState.requestedPower = tc.part.powerConsumption
-					}
-				})
-			}
-		}
-	}
-
-	override fun entityRemoved(entity: Entity) {
-
-	}
-
-	override fun processEntity(entity: Entity, deltaGameTime: Float) {
-
-		val ship = shipMapper.get(entity)
-		val weaponsComponent = weaponsComponentMapper.get(entity)
-		val powerComponent = powerMapper.get(entity)
-
-		val tcs = weaponsComponent.targetingComputers
-
-		for (tc in tcs) {
-			val tcState = ship.getPartState(tc)[TargetingComputerState::class]
-
-			if (tcState.target != null && tcState.lockCompletionAt == 0L) { // Start targeting
-				tcState.lockCompletionAt = galaxy.time + tc.part.lockingTime
-
-			} else if (tcState.target == null && tcState.lockCompletionAt != 0L) { // Stop targeting
-				tcState.lockCompletionAt = 0
-			}
-
-			// Reload ammo weapons
-			for (weapon in tcState.linkedWeapons) {
-				if (ship.isPartEnabled(weapon) && weapon.part is PoweredPart) {
-					val part = weapon.part
-					val poweredState = ship.getPartState(weapon)[PoweredPartState::class]
-					var powerWanted = tcState.target != null
-
-					if (part is AmmunitionPart) {
-						val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
-
-						if (ammoState.type != null) {
-							
-							if (ammoState.type!!.getRadius() != part.ammunitionSize) {
-								println("Wrong ammo size for $part: ${ammoState.type!!.getRadius()} != ${part.ammunitionSize}")
-							}
-
-							val freeSpace = part.ammunitionAmount - ammoState.amount
-
-							if (freeSpace > 0) {
-								val removedAmmo = ship.retrieveCargo(ammoState.type!!, freeSpace)
-								
-								if (removedAmmo > 0) {
-									ammoState.amount += removedAmmo
-									
-								} else if (ammoState.amount == 0 && (!(part is ReloadablePart) || !ship.getPartState(weapon)[ReloadablePartState::class].loaded)) {
-									
-									powerWanted = false
-									
-									if (poweredState.requestedPower != 0L) {
-										println("Unpowering $part due to no more ammo")
-									}
+							targetingComputers.forEach({
+								val tc = it
+								if (ship.isPartEnabled(tc)) {
+									val poweredState = ship.getPartState(tc)[PoweredPartState::class]
+									poweredState.requestedPower = tc.part.powerConsumption
 								}
-							}
+							})
+						}
+					}
+				}
+			}
 
-							if (part is ReloadablePart) {
+			override fun removed(entities: IntBag) {}
+		})
+	}
 
-								val reloadState = ship.getPartState(weapon)[ReloadablePartState::class]
+	override fun preProcessSystem() {
+		subscription.getEntities().forEach { entityID ->
+			val ship = shipMapper.get(entityID)
+			val weaponsComponent = weaponsComponentMapper.get(entityID)
+			val tcs = weaponsComponent.targetingComputers
 
-								if (!reloadState.loaded && ammoState.amount > 0) {
-									
-									if (reloadState.reloadPowerRemaining == -1L) {
-										reloadState.reloadPowerRemaining = part.reloadTime * part.powerConsumption
+			for (tc in tcs) {
+				val tcState = ship.getPartState(tc)[TargetingComputerState::class]
 
-									} else if (reloadState.reloadPowerRemaining >= 0L) {
+				if (tcState.target != null && tcState.lockCompletionAt == 0L) { // Start targeting
+					tcState.lockCompletionAt = galaxy.time + tc.part.lockingTime
 
-										reloadState.reloadPowerRemaining -= Math.min(poweredState.givenPower, reloadState.reloadPowerRemaining)
+				} else if (tcState.target == null && tcState.lockCompletionAt != 0L) { // Stop targeting
+					tcState.lockCompletionAt = 0
+				}
 
-										if (reloadState.reloadPowerRemaining == 0L) {
-											reloadState.loaded = true
-											reloadState.reloadPowerRemaining = -1
-											ammoState.amount -= 1
+				// Reload ammo weapons
+				for (weapon in tcState.linkedWeapons) {
+					if (ship.isPartEnabled(weapon) && weapon.part is PoweredPart) {
+						val part = weapon.part
+						val poweredState = ship.getPartState(weapon)[PoweredPartState::class]
+						var powerWanted = tcState.target != null
+
+						if (part is AmmunitionPart) {
+							val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
+
+							if (ammoState.type != null) {
+
+								if (ammoState.type!!.getRadius() != part.ammunitionSize) {
+									log.warn("Wrong ammo size for $part: ${ammoState.type!!.getRadius()} != ${part.ammunitionSize}")
+								}
+
+								val freeSpace = part.ammunitionAmount - ammoState.amount
+
+								if (freeSpace > 0) {
+									val removedAmmo = ship.retrieveCargo(ammoState.type!!, freeSpace)
+
+									if (removedAmmo > 0) {
+										ammoState.amount += removedAmmo
+
+									} else if (ammoState.amount == 0 && (!(part is ReloadablePart) || !ship.getPartState(weapon)[ReloadablePartState::class].loaded)) {
+
+										powerWanted = false
+
+										if (poweredState.requestedPower != 0L) {
+											println("Unpowering $part due to no more ammo")
 										}
 									}
 								}
-							}
-						} else {
-							powerWanted = false
-						}
-					}
-					
-					if (powerWanted) {
-						
-						val idlePower = (0.1 * part.powerConsumption).toLong()
 
-						if (part is ChargedPart) {
-							val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
+								if (part is ReloadablePart) {
 
-							if (chargedState.charge < part.capacitor) {
-								val wantedPower = Math.min(part.powerConsumption, part.capacitor - chargedState.charge)
-								if (poweredState.requestedPower != wantedPower) {
-									poweredState.requestedPower = wantedPower
-									powerComponent.stateChanged = true
+									val reloadState = ship.getPartState(weapon)[ReloadablePartState::class]
+
+									if (!reloadState.loaded && ammoState.amount > 0) {
+
+										if (reloadState.reloadPowerRemaining == -1L) {
+											reloadState.reloadPowerRemaining = part.reloadTime * part.powerConsumption
+
+										} else if (reloadState.reloadPowerRemaining >= 0L) {
+
+											reloadState.reloadPowerRemaining -= Math.min(poweredState.givenPower, reloadState.reloadPowerRemaining)
+
+											if (reloadState.reloadPowerRemaining == 0L) {
+												reloadState.loaded = true
+												reloadState.reloadPowerRemaining = -1
+												ammoState.amount -= 1
+											}
+										}
+									}
 								}
 							} else {
-								if (poweredState.requestedPower != idlePower) {
-									poweredState.requestedPower = idlePower
-									powerComponent.stateChanged = true
-								}
-							}
-
-						} else if (part is ReloadablePart) {
-							val reloadState = ship.getPartState(weapon)[ReloadablePartState::class]
-							
-							if (!reloadState.loaded) {
-								if (poweredState.requestedPower != part.powerConsumption) {
-									poweredState.requestedPower = part.powerConsumption
-									powerComponent.stateChanged = true
-								}
-							} else {
-								if (poweredState.requestedPower != idlePower) {
-									poweredState.requestedPower = idlePower
-									powerComponent.stateChanged = true
-								}
+								powerWanted = false
 							}
 						}
-						
-					} else {
-						
-						if (poweredState.requestedPower != 0L) {
-							poweredState.requestedPower = 0
-							powerComponent.stateChanged = true
+
+						if (powerWanted) {
+
+							val idlePower = (0.1 * part.powerConsumption).toLong()
 
 							if (part is ChargedPart) {
 								val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
-								chargedState.charge = 0
+
+								if (chargedState.charge < part.capacitor) {
+									val wantedPower = Math.min(part.powerConsumption, part.capacitor - chargedState.charge)
+									if (poweredState.requestedPower != wantedPower) {
+										poweredState.requestedPower = wantedPower
+										events.dispatch(getEvent(PowerEvent::class).set(entityID))
+									}
+								} else {
+									if (poweredState.requestedPower != idlePower) {
+										poweredState.requestedPower = idlePower
+										events.dispatch(getEvent(PowerEvent::class).set(entityID))
+									}
+								}
+
+							} else if (part is ReloadablePart) {
+								val reloadState = ship.getPartState(weapon)[ReloadablePartState::class]
+
+								if (!reloadState.loaded) {
+									if (poweredState.requestedPower != part.powerConsumption) {
+										poweredState.requestedPower = part.powerConsumption
+										events.dispatch(getEvent(PowerEvent::class).set(entityID))
+									}
+								} else {
+									if (poweredState.requestedPower != idlePower) {
+										poweredState.requestedPower = idlePower
+										events.dispatch(getEvent(PowerEvent::class).set(entityID))
+									}
+								}
+							}
+
+						} else {
+
+							if (poweredState.requestedPower != 0L) {
+								poweredState.requestedPower = 0
+								events.dispatch(getEvent(PowerEvent::class).set(entityID))
+
+								if (part is ChargedPart) {
+									val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
+									chargedState.charge = 0
+								}
 							}
 						}
 					}
 				}
 			}
+		}
+	}
+
+	override fun process(entityID: Int) {
+
+		val ship = shipMapper.get(entityID)
+		val weaponsComponent = weaponsComponentMapper.get(entityID)
+
+		val tcs = weaponsComponent.targetingComputers
+
+		for (tc in tcs) {
+			val tcState = ship.getPartState(tc)[TargetingComputerState::class]
 
 			// Fire
 			if (tcState.target != null && galaxy.time > tcState.lockCompletionAt) {

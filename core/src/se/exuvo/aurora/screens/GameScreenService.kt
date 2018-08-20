@@ -13,7 +13,7 @@ import com.badlogic.gdx.Input
 
 class GameScreenService : Disposable, InputProcessor {
 	private val inputMultiplexer = InputMultiplexer()
-	private val spriteBatch by lazy { GameServices[SpriteBatch::class.java] }
+	private val spriteBatch by lazy { GameServices[SpriteBatch::class] }
 	val uiCamera = OrthographicCamera()
 	private val screens = LinkedList<GameScreen>()
 	private val addQueue = LinkedList<GameScreen>()

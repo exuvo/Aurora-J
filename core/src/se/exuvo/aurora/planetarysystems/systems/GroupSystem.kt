@@ -1,16 +1,16 @@
 package se.exuvo.aurora.planetarysystems.systems
 
-import com.badlogic.ashley.core.Engine
-import com.badlogic.ashley.core.Entity
-import com.badlogic.ashley.core.EntityListener
-import com.badlogic.ashley.core.EntitySystem
 import java.util.Collections
 import java.util.HashMap
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
+import se.exuvo.aurora.utils.DummyReentrantReadWriteLock
+import com.artemis.Entity
+import com.artemis.EntitySystem
+import com.artemis.Aspect
 
-class GroupSystem(val lock: ReentrantReadWriteLock) : EntitySystem(), EntityListener {
+class GroupSystem(val lock: ReentrantReadWriteLock = DummyReentrantReadWriteLock.INSTANCE) : EntitySystem(Aspect.all()) {
 	companion object {
 		// Galaxy only
 		val SELECTED = "selected"
@@ -23,18 +23,7 @@ class GroupSystem(val lock: ReentrantReadWriteLock) : EntitySystem(), EntityList
 	private val entityToGroupModificationCountpMap = HashMap<Entity, Int?>()
 
 	override fun checkProcessing() = false
-
-	override fun addedToEngine(engine: Engine?) {
-		engine?.addEntityListener(this)
-	}
-
-	override fun removedFromEngine(engine: Engine) {
-		engine.removeEntityListener(this)
-		lock.write {
-			groupToEntityMap.clear()
-			entityToGroupMap.clear()
-		}
-	}
+	override fun processSystem() {}
 
 	operator fun get(group: String): Set<Entity> {
 		lock.read {
@@ -183,10 +172,9 @@ class GroupSystem(val lock: ReentrantReadWriteLock) : EntitySystem(), EntityList
 		}
 	}
 
-	override fun entityAdded(entity: Entity) {
-	}
+	override fun inserted(entity: Entity) {}
 
-	override fun entityRemoved(entity: Entity) {
+	override fun removed(entity: Entity) {
 		lock.write {
 			var groupSet = entityToGroupMap[entity]
 

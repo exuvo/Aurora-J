@@ -1,7 +1,6 @@
 package se.exuvo.aurora.planetarysystems.components
 
-import com.badlogic.ashley.core.Component
-import com.badlogic.ashley.core.Entity
+import com.artemis.Component
 import com.badlogic.gdx.math.Vector2
 import se.exuvo.aurora.utils.Vector2L
 import java.lang.RuntimeException
@@ -9,7 +8,7 @@ import java.lang.RuntimeException
 data class TimedValue<T>(val value: T, var time: Long) {
 }
 
-abstract class TimedComponent<T>() : Component {
+abstract class TimedComponent<T>() : Component() {
 	abstract fun get(time: Long): TimedValue<T>
 }
 
@@ -28,12 +27,12 @@ abstract class TimedComponent<T>() : Component {
 //}
 
 //TODO save all old points
-abstract class InterpolatedComponent<T>(val initial: TimedValue<T>) : TimedComponent<T>() {
+abstract class InterpolatedComponent<T>(initial: TimedValue<T>) : TimedComponent<T>() {
 	var previous: TimedValue<T> = initial
 	var interpolated: TimedValue<T>? = null
 	var next: TimedValue<T>? = null
 
-	abstract fun setValue(timedValue: TimedValue<T>, newValue: T)
+	protected abstract fun setValue(timedValue: TimedValue<T>, newValue: T)
 
 	fun set(value: T, time: Long) {
 
@@ -110,20 +109,38 @@ data class MovementValues(val position: Vector2L, val velocity: Vector2) {
 	}
 }
 
-class TimedMovementComponent(val initialPosition: Vector2L = Vector2L(), val initialVelocity: Vector2 = Vector2(), val initialTime: Long = 0) : InterpolatedComponent<MovementValues>(TimedValue(MovementValues(initialPosition, initialVelocity), initialTime)) {
+class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValue(MovementValues(Vector2L(), Vector2()), 0L)) {
 	var approach: ApproachType? = null
 	var startAcceleration: Double? = null
 	var finalAcceleration: Double? = null
 
-	override fun setValue(timedValue: TimedValue<MovementValues>, newValue: MovementValues) {
+	override protected fun setValue(timedValue: TimedValue<MovementValues>, newValue: MovementValues) {
 		timedValue.value.position.set(newValue.position)
 		timedValue.value.velocity.set(newValue.velocity)
 	}
-
-	fun set(position: Vector2L, velocity: Vector2, time: Long) {
+	
+	fun set(x: Long, y: Long, vx: Float, vy: Float, time: Long): TimedMovementComponent {
 
 		if (previous.time > time) {
-			return
+			return this
+		}
+
+		val next2 = next
+
+		if (next2 != null && time >= next2.time) {
+			next = null
+		}
+
+		previous.value.position.set(x, y)
+		previous.value.velocity.set(vx, vy)
+		previous.time = time
+		return this
+	}
+	
+	fun set(position: Vector2L, velocity: Vector2, time: Long): TimedMovementComponent {
+
+		if (previous.time > time) {
+			return this
 		}
 
 		val next2 = next
@@ -135,6 +152,8 @@ class TimedMovementComponent(val initialPosition: Vector2L = Vector2L(), val ini
 		previous.value.position.set(position)
 		previous.value.velocity.set(velocity)
 		previous.time = time
+		
+		return this
 	}
 
 	override fun setPrediction(value: MovementValues, time: Long): Boolean {

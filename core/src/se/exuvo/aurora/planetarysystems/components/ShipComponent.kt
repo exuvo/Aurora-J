@@ -1,6 +1,6 @@
 package se.exuvo.aurora.planetarysystems.components
 
-import com.badlogic.ashley.core.Component
+import com.artemis.Component
 import se.exuvo.aurora.galactic.CargoType
 import se.exuvo.aurora.galactic.ContainerPart
 import se.exuvo.aurora.galactic.Part
@@ -18,23 +18,37 @@ import se.exuvo.aurora.galactic.FueledPart
 import se.exuvo.aurora.galactic.PoweringPart
 import kotlin.reflect.KClass
 import se.exuvo.aurora.galactic.PassiveSensor
-import com.badlogic.ashley.core.Entity
 import se.exuvo.aurora.galactic.TargetingComputer
 import se.exuvo.aurora.galactic.PartRef
 import kotlin.Suppress
 import se.exuvo.aurora.galactic.MunitionClass
+import com.artemis.Entity
 
-class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Component {
+class ShipComponent() : Component() {
+	lateinit var shipClass: ShipClass
+	var constructionTime: Long = -1
 	var commissionDay: Int? = null
-	val armor = Array<Int>(shipClass.getSurfaceArea(), { shipClass.armorLayers })
-	val partHealth = Array<Int>(shipClass.getParts().size, { shipClass[it].part.maxHealth })
-	val partEnabled = Array<Boolean>(shipClass.getParts().size, { true })
-	val partState = Array<PartState>(shipClass.getParts().size, { PartState() })
-	var cargo: Map<Resource, ShipCargo> = emptyMap()
-	var munitionCargo: MutableMap<MunitionClass, Int> = LinkedHashMap()
+	lateinit var armor: Array<Int>
+	lateinit var partHealth: Array<Int>
+	lateinit var partEnabled: Array<Boolean>
+	lateinit var partState: Array<PartState>
+	lateinit var cargo: Map<Resource, ShipCargo>
+	lateinit var munitionCargo: MutableMap<MunitionClass, Int>
 	var mass: Long = 0
 
-	init {
+	fun set(shipClass: ShipClass,
+					constructionTime: Long
+	): ShipComponent {
+		this.shipClass = shipClass
+		this.constructionTime = constructionTime
+
+		armor = Array<Int>(shipClass.getSurfaceArea(), { shipClass.armorLayers })
+		partHealth = Array<Int>(shipClass.getParts().size, { shipClass[it].part.maxHealth })
+		partEnabled = Array<Boolean>(shipClass.getParts().size, { true })
+		partState = Array<PartState>(shipClass.getParts().size, { PartState() })
+		cargo = emptyMap()
+		munitionCargo = LinkedHashMap()
+		
 		var containerPartRefs = shipClass[ContainerPart::class]
 
 		if (containerPartRefs.isNotEmpty()) {
@@ -108,8 +122,10 @@ class ShipComponent(var shipClass: ShipClass, val constructionTime: Long) : Comp
 				state.put(tcs)
 			}
 		}
+
+		return this
 	}
-	
+
 	fun getMass(): Int {
 		var mass = shipClass.getMass()
 		

@@ -1,9 +1,9 @@
 package se.exuvo.aurora.galactic
 
-import com.badlogic.ashley.core.Entity
 import org.apache.log4j.Logger
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantReadWriteLock
+import com.artemis.Entity
 
 
 class Empire(var name: String) {

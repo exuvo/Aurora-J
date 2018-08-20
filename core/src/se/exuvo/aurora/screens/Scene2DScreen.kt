@@ -1,6 +1,6 @@
 package se.exuvo.aurora.screens
 
-import com.badlogic.ashley.core.ComponentMapper
+import com.artemis.ComponentMapper
 import com.badlogic.gdx.InputProcessor
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.scenes.scene2d.Stage
@@ -14,20 +14,19 @@ import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.OrbitComponent
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
-import se.exuvo.aurora.planetarysystems.systems.TagSystem
 import se.exuvo.aurora.utils.GameServices
 
 class Scene2DScreen : GameScreenImpl(), InputProcessor {
 
-	private val spriteBatch by lazy { GameServices[SpriteBatch::class.java] }
-	private val galaxy by lazy { GameServices[Galaxy::class.java] }
-	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class.java] }
+	private val spriteBatch by lazy { GameServices[SpriteBatch::class] }
+	private val galaxy by lazy { GameServices[Galaxy::class] }
+	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class] }
 
-	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java)
-	private val orbitMapper = ComponentMapper.getFor(OrbitComponent::class.java)
-	private val thrustMapper = ComponentMapper.getFor(ThrustComponent::class.java)
+	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java, galaxy.world)
+	private val orbitMapper = ComponentMapper.getFor(OrbitComponent::class.java, galaxy.world)
+	private val thrustMapper = ComponentMapper.getFor(ThrustComponent::class.java, galaxy.world)
 
-	private val uiCamera = GameServices[GameScreenService::class.java].uiCamera
+	private val uiCamera = GameServices[GameScreenService::class].uiCamera
 	private val stage = Stage(ScreenViewport())
 	private val selectionWindow: Window
 	private val skin = Assets.skinUI
@@ -79,11 +78,8 @@ class Scene2DScreen : GameScreenImpl(), InputProcessor {
 						if (orbitMapper.has(entity)) {
 
 							val orbitComponent = orbitMapper.get(entity)
-							val planetarySystem: PlanetarySystem = galaxy.getPlanetarySystem(entity)
-							val tagSystem = planetarySystem.engine.getSystem(TagSystem::class.java)
-							val sun = tagSystem[TagSystem.SUN]
 
-							if (orbitComponent.parent == sun) {
+							if (!orbitMapper.has(orbitComponent.parent)) {
 								type = "Planet"
 							} else {
 								type = "Moon"

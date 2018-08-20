@@ -1,10 +1,10 @@
 package se.exuvo.aurora.planetarysystems.components
 
-import com.badlogic.ashley.core.Component
+import com.artemis.Component
 import se.exuvo.aurora.galactic.PassiveSensor
-import com.badlogic.ashley.core.Entity
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.galactic.PartRef
+import com.artemis.Entity
 
 enum class Spectrum(val short: String) {
 	Visible_Light("L"),
@@ -16,11 +16,32 @@ enum class Spectrum(val short: String) {
 	}
 }
 
-data class PassiveSensorsComponent(var sensors: List<PartRef<PassiveSensor>>) : Component
+class PassiveSensorsComponent() : Component() {
+	lateinit var sensors: List<PartRef<PassiveSensor>>
+	
+	fun set(sensors: List<PartRef<PassiveSensor>>): PassiveSensorsComponent {
+		this.sensors = sensors
+		return this
+	}
+}
 
-data class EmissionsComponent(var emissions: Map<Spectrum, Double>) : Component
+class EmissionsComponent() : Component() {
+	lateinit var emissions: Map<Spectrum, Double>
+	
+	fun set(emissions: Map<Spectrum, Double>): EmissionsComponent {
+		this.emissions = emissions
+		return this
+	}
+}
 
 // Sensor, AngleStep, DistanceStep
-data class DetectionComponent(var detections: Map<PartRef<PassiveSensor>, Map<Int, Map<Int, DetectionHit>>>) : Component
+class DetectionComponent() : Component() {
+	lateinit var detections: Map<PartRef<PassiveSensor>, Map<Int, Map<Int, DetectionHit>>>
+	
+	fun set(detections: Map<PartRef<PassiveSensor>, Map<Int, Map<Int, DetectionHit>>>): DetectionComponent {
+		this.detections = detections
+		return this
+	}
+}
 
-data class DetectionHit(var signalStrength: Double, val entities: MutableList<Entity>, val hitPositions: MutableList<Vector2L>)
+data class DetectionHit(var signalStrength: Double, val entities: MutableList<Int>, val hitPositions: MutableList<Vector2L>)

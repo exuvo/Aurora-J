@@ -1,6 +1,6 @@
 package se.exuvo.aurora.screens
 
-import com.badlogic.ashley.core.ComponentMapper
+import com.artemis.ComponentMapper
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputProcessor
@@ -20,29 +20,30 @@ import se.exuvo.aurora.utils.CircleL
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.Vector2L
+import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.keys.KeyActions_GalaxyScreen
+import se.exuvo.aurora.utils.keys.KeyMappings
 import se.exuvo.settings.Settings
 import kotlin.concurrent.read
 import kotlin.properties.Delegates
-import se.exuvo.aurora.utils.keys.KeyMappings
-import se.exuvo.aurora.utils.keys.KeyActions_GalaxyScreen
 
 class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl(), InputProcessor {
 
-	private val spriteBatch = GameServices[SpriteBatch::class.java]
-	private val shapeRenderer = GameServices[ShapeRenderer::class.java]
-	private val galaxy by lazy { GameServices[Galaxy::class.java] }
-	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class.java] }
-	private val renderSystem by lazy { galaxy.engine.getSystem(GalacticRenderSystem::class.java) }
+	private val spriteBatch = GameServices[SpriteBatch::class]
+	private val shapeRenderer = GameServices[ShapeRenderer::class]
+	private val galaxy by lazy { GameServices[Galaxy::class] }
+	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class] }
+	private val renderSystem by lazy { galaxy.world.getSystem(GalacticRenderSystem::class.java) }
 
-	private val uiCamera = GameServices[GameScreenService::class.java].uiCamera
+	private val uiCamera = GameServices[GameScreenService::class].uiCamera
 	private var viewport by Delegates.notNull<Viewport>()
 	private var camera by Delegates.notNull<OrthographicCamera>()
 	private val cameraOffset = Vector2L()
 
-	private val positionMapper = ComponentMapper.getFor(GalacticPositionComponent::class.java)
+	private val positionMapper = ComponentMapper.getFor(GalacticPositionComponent::class.java, galaxy.world)
 
 	var zoomLevel = 0
-	var zoomSensitivity = Settings.getFloat("UI/zoomSensitivity", 1.25f).toDouble()
+	var zoomSensitivity = Settings.getFloat("UI/zoomSensitivity").toDouble()
 	val maxZoom = 1.5E1f
 
 	init {
@@ -91,7 +92,7 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 	override fun draw() {
 		super.draw()
 
-		galaxy.engineLock.read {
+		galaxy.worldLock.read {
 			renderSystem.render(viewport, cameraOffset)
 		}
 
@@ -158,7 +159,7 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 			
 		} else if (action == KeyActions_GalaxyScreen.MAP) {
 			
-			GameServices[GameScreenService::class.java].add(lastSystemScreen)
+			GameServices[GameScreenService::class].add(lastSystemScreen)
 			
 		}
 		
@@ -195,7 +196,7 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 	var dragX = 0
 	var dragY = 0
 
-	val selectionFamily = GalacticRenderSystem.FAMILY
+	val selectionFamily = galaxy.world.getAspectSubscriptionManager().get(GalacticRenderSystem.FAMILY)
 
 	override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
 
@@ -204,23 +205,23 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 			when (button) {
 				Input.Buttons.LEFT -> {
 
-					galaxy.engineLock.read {
+					galaxy.worldLock.read {
 
 						val mouseInGalacticCoordinates = toGalacticWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
-						val entities = galaxy.engine.getEntitiesFor(selectionFamily)
+						val entityIDs = selectionFamily.entities
 						val testCircle = CircleL()
 						val radius = GalacticRenderSystem.RENDER_SCALE * camera.zoom * GalacticRenderSystem.STRATEGIC_ICON_SIZE / 2
 						
-						for (entity in entities) {
-							val position = positionMapper.get(entity).position
+						entityIDs.forEach { entityID ->
+							val position = positionMapper.get(entityID).position
 
 							testCircle.set(position, radius)
 
 							if (testCircle.contains(mouseInGalacticCoordinates)) {
 								
-								val system = entity as PlanetarySystem
+								val system = galaxy.getPlanetarySystemByGalacticEntityID(entityID)
 								lastSystemScreen = PlanetarySystemScreen(system)
-								GameServices[GameScreenService::class.java].add(lastSystemScreen)
+								GameServices[GameScreenService::class].add(lastSystemScreen)
 	
 								return true;
 							}

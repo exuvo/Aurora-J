@@ -1,6 +1,6 @@
 package se.exuvo.aurora.planetarysystems.components
 
-import com.badlogic.ashley.core.Component
+import com.artemis.Component
 import se.exuvo.aurora.galactic.Battery
 import se.exuvo.aurora.galactic.Part
 import se.exuvo.aurora.galactic.Reactor
@@ -12,7 +12,8 @@ import se.exuvo.aurora.galactic.ChargedPart
 import se.exuvo.aurora.galactic.PoweredPart
 import se.exuvo.aurora.galactic.PartRef
 
-class PowerComponent(var powerScheme: PowerScheme) : Component {
+class PowerComponent() : Component() {
+	lateinit var powerScheme: PowerScheme
 	var stateChanged = true
 	var totalAvailiablePower = 0L
 	var totalAvailiableSolarPower = 0L
@@ -21,6 +22,12 @@ class PowerComponent(var powerScheme: PowerScheme) : Component {
 	val poweringParts = ArrayList<PartRef<Part>>()
 	val poweredParts = ArrayList<PartRef<Part>>()
 	val chargedParts = ArrayList<PartRef<Part>>()
+	
+	fun set(powerScheme: PowerScheme): PowerComponent {
+		this.powerScheme = powerScheme
+		stateChanged = true
+		return this
+	}
 }
 
 enum class PowerScheme(val chargeBatteryFromReactor: Boolean, private val powerTypeCompareMap: Map<KClass<out Part>, Int>) {

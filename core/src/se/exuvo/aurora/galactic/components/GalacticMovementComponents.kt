@@ -1,13 +1,20 @@
 package se.exuvo.aurora.planetarysystems.components
 
-import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Vector2
 import se.exuvo.aurora.galactic.systems.GalacticRenderSystem
 import se.exuvo.aurora.planetarysystems.PlanetarySystem
 import se.exuvo.aurora.utils.Vector2L
+import com.artemis.Component
 
 // In milli light years
-data class GalacticPositionComponent(val position: Vector2L = Vector2L()) : Component {
+class GalacticPositionComponent() : Component() {
+	val position: Vector2L = Vector2L()
+	
+	fun set(position: Vector2L): GalacticPositionComponent {
+		this.position.set(position)
+		return this
+	}
+	
 	fun getXinRender(): Float {
 		return position.x / GalacticRenderSystem.RENDER_SCALE.toFloat()
 	}
@@ -18,6 +25,4 @@ data class GalacticPositionComponent(val position: Vector2L = Vector2L()) : Comp
 }
 
 // In light years/s
-data class GalacticVelocityComponent(var velocity: Vector2 = Vector2(), var thrustAngle: Float = 0f) : Component
-
-data class WarpToPlanetarySystemComponent(var target: PlanetarySystem) : Component
+data class GalacticVelocityComponent(var velocity: Vector2 = Vector2(), var thrustAngle: Float = 0f) : Component()

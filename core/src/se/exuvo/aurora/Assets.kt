@@ -19,7 +19,7 @@ import kotlin.properties.Delegates
 object Assets : Disposable {
 
 	val log = Logger.getLogger(this.javaClass)
-	private val manager by lazy { GameServices[AssetManager::class.java] }
+	private val manager by lazy { GameServices[AssetManager::class] }
 
 	var fontMap by Delegates.notNull<BitmapFont>()
 	var fontMapSmall by Delegates.notNull<BitmapFont>()

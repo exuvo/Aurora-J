@@ -150,8 +150,8 @@ class ElectricalThruster(thrust: Float,
 // Chemical: Hybrid, Bipropellant, Tripropellant. https://en.wikipedia.org/wiki/Rocket_engine#Chemically_powered
 // Nuclear https://en.wikipedia.org/wiki/Nuclear_pulse_propulsion
 class FueledThruster(thrust: Float,
-										 fuel: Resource,
-										 fuelConsumption: Int
+										 fuelConsumption: Int,
+										 fuel: Resource = Resource.ROCKET_FUEL
 ) : Part(),
 		ThrustingPart by ThrustingPartImpl(thrust),
 		FueledPart by FueledPartImpl(fuel, fuelConsumption, 1)

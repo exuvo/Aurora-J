@@ -1,56 +1,87 @@
 package se.exuvo.aurora.planetarysystems.systems
 
-import com.badlogic.ashley.core.ComponentMapper
-import com.badlogic.ashley.core.Entity
-import com.badlogic.ashley.core.Family
-import com.badlogic.ashley.systems.IteratingSystem
+import com.artemis.Aspect
+import com.artemis.ComponentMapper
+import com.artemis.systems.IteratingSystem
+import net.mostlyoriginal.api.event.common.EventSystem
 import org.apache.log4j.Logger
 import se.exuvo.aurora.galactic.ElectricalThruster
 import se.exuvo.aurora.galactic.FueledThruster
 import se.exuvo.aurora.galactic.ThrustingPart
+import se.exuvo.aurora.planetarysystems.components.FueledPartState
 import se.exuvo.aurora.planetarysystems.components.MassComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
+import se.exuvo.aurora.planetarysystems.components.PoweredPartState
 import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
-import se.exuvo.aurora.planetarysystems.components.PoweredPartState
-import se.exuvo.aurora.planetarysystems.components.FueledPartState
-import se.exuvo.aurora.utils.consumeFuel
+import se.exuvo.aurora.planetarysystems.events.PowerEvent
+import se.exuvo.aurora.planetarysystems.events.getEvent
+import se.exuvo.aurora.utils.*
 
-class ShipSystem : IteratingSystem(FAMILY) {
+class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
-		val FAMILY = Family.all(ShipComponent::class.java).get()
+		val FAMILY = Aspect.all(ShipComponent::class.java)
 	}
 
 	val log = Logger.getLogger(this.javaClass)
 
-	private val massMapper = ComponentMapper.getFor(MassComponent::class.java)
-	private val shipMapper = ComponentMapper.getFor(ShipComponent::class.java)
-	private val thrustMapper = ComponentMapper.getFor(ThrustComponent::class.java)
-	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java)
-	
-	override fun processEntity(entity: Entity, deltaGameTime: Float) {
+	lateinit private var massMapper: ComponentMapper<MassComponent>
+	lateinit private var shipMapper: ComponentMapper<ShipComponent>
+	lateinit private var thrustMapper: ComponentMapper<ThrustComponent>
+	lateinit private var nameMapper: ComponentMapper<NameComponent>
+	lateinit private var events: EventSystem
 
-		val ship = shipMapper.get(entity)
-		
+	override fun preProcessSystem() {
+		subscription.getEntities().forEach { entityID ->
+			val ship = shipMapper.get(entityID)
+			val thrusters = ship.shipClass.getPartRefs().filter({ it.part is ThrustingPart })
+			val thrustComponent = thrustMapper.get(entityID)
+			
+			for (thruster in thrusters) {
+				val part = thruster.part
+
+				if (part is ElectricalThruster && ship.isPartEnabled(thruster)) {
+					val poweredState = ship.getPartState(thruster)[PoweredPartState::class]
+
+					if (thrustComponent != null && thrustComponent.thrusting) {
+						if (poweredState.requestedPower != part.powerConsumption) {
+							poweredState.requestedPower = part.powerConsumption
+							events.dispatch(getEvent(PowerEvent::class).set(entityID))
+						}
+					} else {
+						if (poweredState.requestedPower > 0) {
+							poweredState.requestedPower = 0
+							events.dispatch(getEvent(PowerEvent::class).set(entityID))
+						}
+					}
+				}
+			}
+		}
+	}
+
+	override fun process(entityID: Int) {
+		val deltaGameTime = world.getDelta().toInt()
+
+		val ship = shipMapper.get(entityID)
+
 		var thrust = 0f
 		var maxThrust = 0f
-		val thrusters = ship.shipClass.getPartRefs().filter({it.part is ThrustingPart})
+		val thrusters = ship.shipClass.getPartRefs().filter({ it.part is ThrustingPart })
 
 		if (thrusters.isNotEmpty()) {
-			val thrustComponent = thrustMapper.get(entity)
-			
+			val thrustComponent = thrustMapper.get(entityID)
+
 			for (thruster in thrusters) {
 				if (ship.isPartEnabled(thruster)) {
 					val part = thruster.part
-					
+
 					if (part is ElectricalThruster) {
 						val poweredState = ship.getPartState(thruster)[PoweredPartState::class]
 
 						maxThrust += part.thrust
-						thrust += part.thrust * poweredState.givenPower / poweredState.requestedPower
-						
-						if (thrustComponent != null && thrustComponent.thrusting) {
-							poweredState.requestedPower = part.powerConsumption
+
+						if (poweredState.requestedPower > 0) {
+							thrust += part.thrust * poweredState.givenPower / poweredState.requestedPower
 						}
 
 					} else if (part is FueledThruster) {
@@ -63,32 +94,39 @@ class ShipSystem : IteratingSystem(FAMILY) {
 							maxThrust += part.thrust
 							thrust += part.thrust
 						}
-						
+
 						if (thrustComponent != null && thrustComponent.thrusting) {
-							consumeFuel(deltaGameTime.toInt(), entity, ship, thruster, part.thrust.toLong(), part.thrust.toLong())
+							consumeFuel(deltaGameTime, world.getEntity(entityID), ship, thruster, part.thrust.toLong(), part.thrust.toLong())
 						}
 					}
 				}
 			}
 		}
-		
-		if (thrust == 0f) {
-			
-			if (thrustMapper.has(entity)) {
-				entity.remove(ThrustComponent::class.java)
-			}
-			
-		} else {
-			
-			if (!thrustMapper.has(entity)) {
-				entity.add(ThrustComponent())
+
+		if (maxThrust == 0f) {
+
+			if (thrustMapper.has(entityID)) {
+				thrustMapper.remove(entityID)
 			}
 
-			val thrustComponent = thrustMapper.get(entity)			
+		} else {
+
+			val thrustComponent: ThrustComponent
+
+			if (!thrustMapper.has(entityID)) {
+				thrustComponent = thrustMapper.create(entityID)
+
+			} else {
+				thrustComponent = thrustMapper.get(entityID)
+			}
+
 			thrustComponent.thrust = thrust
+			thrustComponent.maxThrust = maxThrust
 		}
-				
-		val massComponent = massMapper.get(entity)
+
+		if (!massMapper.has(entityID)) {
+			massMapper.create(entityID).set(ship.getMass().toDouble())
+		}
 
 	}
 }

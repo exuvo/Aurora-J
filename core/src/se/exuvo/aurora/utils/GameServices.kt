@@ -6,16 +6,16 @@ import kotlin.reflect.KClass
 
 @Suppress("UNCHECKED_CAST")
 object GameServices : Disposable {
-	private val services = HashMap<Class<*>, Any>()
+	private val services = HashMap<KClass<*>, Any>()
 
-	operator fun <T : Any> get(serviceClass: Class<T>) = services[serviceClass] as T
-	fun <T : Any> tryGet(serviceClass: Class<T>) = services[serviceClass] as? T
+	operator fun <T : Any> get(serviceClass: KClass<T>) = services[serviceClass] as T
+	fun <T : Any> tryGet(serviceClass: KClass<T>) = services[serviceClass] as? T
 
 	fun put(service: Any) {
-		services[service.javaClass] = service
+		services[service::class] = service
 	}
 
-	fun put(service: Any, savedClass: Class<*>) {
+	fun put(service: Any, savedClass: KClass<*>) {
 		services[savedClass] = service
 	}
 

@@ -1,10 +1,5 @@
 package se.exuvo.aurora.galactic.systems
 
-import com.badlogic.ashley.core.ComponentMapper
-import com.badlogic.ashley.core.Entity
-import com.badlogic.ashley.core.Family
-import com.badlogic.ashley.systems.SortedIteratingSystem
-import com.badlogic.ashley.utils.ImmutableArray
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
@@ -16,7 +11,6 @@ import se.exuvo.aurora.planetarysystems.components.GalacticPositionComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.RenderComponent
 import se.exuvo.aurora.planetarysystems.components.StrategicIconComponent
-import se.exuvo.aurora.planetarysystems.components.TagComponent
 import se.exuvo.aurora.planetarysystems.components.TextComponent
 import se.exuvo.aurora.planetarysystems.components.TintComponent
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
@@ -24,43 +18,46 @@ import se.exuvo.aurora.screens.GameScreenService
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
 import java.util.Comparator
+import com.artemis.Aspect
+import com.artemis.systems.IteratingSystem
+import com.artemis.ComponentMapper
+import com.artemis.BaseEntitySystem
 
-class GalacticRenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
+class GalacticRenderSystem : BaseEntitySystem(FAMILY) {
+
 	companion object {
-		val FAMILY = Family.all(GalacticPositionComponent::class.java, RenderComponent::class.java, StrategicIconComponent::class.java).get()
+		val FAMILY = Aspect.all(GalacticPositionComponent::class.java, RenderComponent::class.java, StrategicIconComponent::class.java)
 		val STRATEGIC_ICON_SIZE = 24f
 		val RENDER_SCALE = 10
 	}
 
-	private val tintMapper = ComponentMapper.getFor(TintComponent::class.java)
-	private val positionMapper = ComponentMapper.getFor(GalacticPositionComponent::class.java)
-	private val tagMapper = ComponentMapper.getFor(TagComponent::class.java)
-	private val textMapper = ComponentMapper.getFor(TextComponent::class.java)
-	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java)
-	private val strategicIconMapper = ComponentMapper.getFor(StrategicIconComponent::class.java)
+	lateinit private var tintMapper: ComponentMapper<TintComponent>
+	lateinit private var positionMapper: ComponentMapper<GalacticPositionComponent>
+	lateinit private var textMapper: ComponentMapper<TextComponent>
+	lateinit private var nameMapper: ComponentMapper<NameComponent>
+	lateinit private var strategicIconMapper: ComponentMapper<StrategicIconComponent>
 
-	private val shapeRenderer = GameServices[ShapeRenderer::class.java]
-	private val spriteBatch = GameServices[SpriteBatch::class.java]
-	private val uiCamera = GameServices[GameScreenService::class.java].uiCamera
-	private val groupSystem by lazy { engine.getSystem(GroupSystem::class.java) }
+	private val shapeRenderer = GameServices[ShapeRenderer::class]
+	private val spriteBatch = GameServices[SpriteBatch::class]
+	private val uiCamera = GameServices[GameScreenService::class].uiCamera
+	lateinit private var groupSystem: GroupSystem
 
 	override fun checkProcessing() = false
+	override fun processSystem() {}
 
-	override fun processEntity(entity: Entity, renderDelta: Float) {}
-
-	fun drawStrategicEntities(entities: ImmutableArray<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
+	fun drawStrategicEntities(entityIDs: IntArray, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
 		spriteBatch.begin()
 
-		for (entity in entities) {
+		for (entityID in entityIDs) {
 
-				val position = positionMapper.get(entity)
-				val tintComponent = if (tintMapper.has(entity)) tintMapper.get(entity) else null
+				val position = positionMapper.get(entityID)
+				val tintComponent = if (tintMapper.has(entityID)) tintMapper.get(entityID) else null
 				var x = position.getXinRender() - cameraOffset.x
 				var y = position.getYinRender() - cameraOffset.y
-				val texture = strategicIconMapper.get(entity).texture
+				val texture = strategicIconMapper.get(entityID).texture
 
 				val color = Color(tintComponent?.color ?: Color.WHITE)
 
@@ -78,7 +75,7 @@ class GalacticRenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 		spriteBatch.end()
 	}
 	
-	fun drawWormholeConnections(entities: ImmutableArray<Entity>, viewport: Viewport, cameraOffset: Vector2L) {
+	fun drawWormholeConnections(entityIDs: IntArray, viewport: Viewport, cameraOffset: Vector2L) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
 
@@ -110,16 +107,16 @@ class GalacticRenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 
 	fun render(viewport: Viewport, cameraOffset: Vector2L) {
 
-		val sortedEntities = getEntities()
+		val entityIDs: IntArray = subscription.getEntities().getData();
 
 		viewport.apply()
 		shapeRenderer.projectionMatrix = viewport.camera.combined
 		
-		drawWormholeConnections(sortedEntities, viewport, cameraOffset)
+		drawWormholeConnections(entityIDs, viewport, cameraOffset)
 
 		spriteBatch.projectionMatrix = viewport.camera.combined
 
-		drawStrategicEntities(sortedEntities, viewport, cameraOffset)
+		drawStrategicEntities(entityIDs, viewport, cameraOffset)
 
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
@@ -129,9 +126,9 @@ class GalacticRenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 		val screenPosition = Vector3()
 
-		entities.filter { nameMapper.has(it) }.forEach {
+		entityIDs.filter { nameMapper.has(it) }.forEach {
 			val position = positionMapper.get(it)
-			val name = nameMapper.get(it).name!!
+			val name = nameMapper.get(it).name
 
 			var radius = zoom * STRATEGIC_ICON_SIZE / 2
 
@@ -163,14 +160,3 @@ class GalacticRenderSystem : SortedIteratingSystem(FAMILY, ZOrderComparator()) {
 //	}
 }
 
-class ZOrderComparator : Comparator<Entity> {
-
-	private val renderMapper = ComponentMapper.getFor(RenderComponent::class.java)
-
-	override fun compare(o1: Entity, o2: Entity): Int {
-		val r1 = renderMapper.get(o1)
-		val r2 = renderMapper.get(o2)
-
-		return r1.zOrder.compareTo(r2.zOrder)
-	}
-}

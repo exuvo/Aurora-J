@@ -1,9 +1,7 @@
 package se.exuvo.aurora.planetarysystems
 
-import com.badlogic.ashley.core.ComponentMapper
-import com.badlogic.ashley.core.Engine
-import com.badlogic.ashley.core.Entity
-import com.badlogic.ashley.core.Family
+import com.artemis.Aspect
+import com.artemis.ComponentMapper
 import org.apache.log4j.Logger
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.Empire
@@ -12,32 +10,46 @@ import se.exuvo.aurora.planetarysystems.components.MassComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.OrbitComponent
 import se.exuvo.aurora.planetarysystems.components.RenderComponent
+import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
 import se.exuvo.aurora.planetarysystems.components.StrategicIconComponent
+import se.exuvo.aurora.planetarysystems.components.SunComponent
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
+import se.exuvo.aurora.planetarysystems.components.TintComponent
 import se.exuvo.aurora.planetarysystems.systems.OrbitSystem
+import se.exuvo.aurora.utils.*
 import java.util.Random
 import kotlin.concurrent.write
-import se.exuvo.aurora.planetarysystems.components.SunComponent
 
 class PlanetarySystemGeneration(val system: PlanetarySystem) {
 	companion object {
-		val FAMILY = Family.exclude(ThrustComponent::class.java).get()
+		val FAMILY = Aspect.exclude(ThrustComponent::class.java)
 	}
 
 	val log = Logger.getLogger(this.javaClass)
-	val engine: Engine
-
+	val world = system.world
+	
+	lateinit private var timedMovementMapper: ComponentMapper<TimedMovementComponent>
+	lateinit private var renderMapper: ComponentMapper<RenderComponent>
+	lateinit private var circleMapper: ComponentMapper<CircleComponent>
+	lateinit private var massMapper: ComponentMapper<MassComponent>
+	lateinit private var nameMapper: ComponentMapper<NameComponent>
+	lateinit private var orbitMapper: ComponentMapper<OrbitComponent>
+	lateinit private var sunMapper: ComponentMapper<SunComponent>
+	lateinit private var solarIrradianceMapper: ComponentMapper<SolarIrradianceComponent>
+	lateinit private var tintMapper: ComponentMapper<TintComponent>
+	lateinit private var strategicIconMapper: ComponentMapper<StrategicIconComponent>
+	
 	init {
-		engine = system.engine
+		world.inject(this)
 	}
 
 	fun generateRandomSystem() {
 
 		system.lock.write {
 			
-			for (entity in engine.getEntitiesFor(FAMILY).toArray<Entity>(Entity::class.java)) {
-				system.destroyEntity(entity)
+			world.getAspectSubscriptionManager().get(FAMILY).entities.forEach { entityID ->
+				system.destroyEntity(entityID)
 			}
 
 			// Mass range of stellar objects in kg
@@ -72,11 +84,11 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 				i++
 			}
 
-			engine.getSystem(OrbitSystem::class.java).update(0f)
+			world.getSystem(OrbitSystem::class.java).process()
 		}
 	}
 
-	fun addRandomStar(randomNumbersClass: Random): Entity {
+	fun addRandomStar(randomNumbersClass: Random): Int {
 		var radius: Double
 		var density: Double
 		var mass: Double
@@ -148,41 +160,38 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 		return addStar(mass, radius.toFloat(), "Sun")
 	}
 
-	fun addStar(starMass: Double, starRadius: Float, starName: String): Entity {
+	fun addStar(starMass: Double, starRadius: Float, starName: String): Int {
 
 		val entity = system.createEntity(Empire.GAIA)
-		entity.add(TimedMovementComponent().apply { previous.value.position.set(0, 0) })
-		entity.add(RenderComponent())
-		entity.add(CircleComponent().apply { radius = starRadius })
-		entity.add(MassComponent().apply { mass = starMass })
-		entity.add(NameComponent().apply { name = starName })
-		entity.add(StrategicIconComponent(Assets.textures.findRegion("strategic/sun")))
+		timedMovementMapper.create(entity).apply { previous.value.position.set(0, 0) }
+		renderMapper.create(entity)
+		circleMapper.create(entity).apply { radius = starRadius }
+		massMapper.create(entity).apply { mass = starMass }
+		nameMapper.create(entity).apply { name = starName }
+		strategicIconMapper.create(entity).set(Assets.textures.findRegion("strategic/sun"))
 		// Always gives the same value
 //		val luminosity = Math.random() * 10000.0 * 3.839e26 // https://en.wikipedia.org/wiki/Solar_luminosity, https://en.wikipedia.org/wiki/List_of_most_luminous_stars
 //		val sunComponent = SunComponent((luminosity / (4 * Math.PI * starRadius.toDouble() * starRadius.toDouble())).toInt()) // Our sun is 1361 W/m2
 //		println("luminosity $luminosity solarConstant ${sunComponent.solarConstant}") 
-		val sunComponent = SunComponent((Math.random() * 3000).toInt()) // Our sun is 1361 W/m2
-		entity.add(sunComponent)
+		sunMapper.create(entity).set((Math.random() * 3000).toInt()) // Our sun is 1361 W/m2
 		
-		engine.addEntity(entity)
-
 		return entity
 	}
 
-	fun addRandomPlanet(randomNumbersClass: Random, parentEntity: Entity): Entity? {
-		val parentMass = ComponentMapper.getFor(MassComponent::class.java).get(parentEntity).mass
+	fun addRandomPlanet(randomNumbersClass: Random, parentEntity: Int): Int? {
+		val parentMass = massMapper.get(parentEntity).mass
 		var semiMajorAxis = Math.sqrt(parentMass) * (0.8 + 29.2 * randomNumbersClass.nextDouble()) * 1 / (1e16)
 		var eccentricity = 0 + (0.85 - (0.85 / (1 + semiMajorAxis / 30))) * randomNumbersClass.nextDouble()
 		var argumentOfPeriapsis = 360 * randomNumbersClass.nextDouble()
 		val meanAnomaly = 360 * randomNumbersClass.nextDouble()
 
-		val orbitals = engine.getSystem(OrbitSystem::class.java).getMoons(parentEntity)
+		val orbitals = world.getSystem(OrbitSystem::class.java).getMoons(parentEntity)
 		var breakCounter = 0
 		var i = 0
 		while (i < orbitals.count()) {
-			val otherPlanetEccentricity = ComponentMapper.getFor(OrbitComponent::class.java).get(orbitals.elementAt(i)).e_eccentricity
-			val otherPlanetSemiMajorAxis = ComponentMapper.getFor(OrbitComponent::class.java).get(orbitals.elementAt(i)).a_semiMajorAxis
-			val otherPlanetArgumentOfPeriapsis = ComponentMapper.getFor(OrbitComponent::class.java).get(orbitals.elementAt(i)).w_argumentOfPeriapsis
+			val otherPlanetEccentricity = orbitMapper.get(orbitals.elementAt(i)).e_eccentricity
+			val otherPlanetSemiMajorAxis = orbitMapper.get(orbitals.elementAt(i)).a_semiMajorAxis
+			val otherPlanetArgumentOfPeriapsis = orbitMapper.get(orbitals.elementAt(i)).w_argumentOfPeriapsis
 			val otherPlanetPeriapsis = otherPlanetSemiMajorAxis * (1 - otherPlanetEccentricity)
 			val otherPlanetApoapsis = otherPlanetSemiMajorAxis * (1 + otherPlanetEccentricity)
 			val periapsis = semiMajorAxis * (1 - eccentricity)
@@ -245,49 +254,43 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 		return planet
 	}
 
-	fun addPlanet(planetParent: Entity, planetMass: Double, planetRadius: Float, planetName: String, semiMajorAxis: Float, eccentricity: Float, argumentOfPeriapsis: Float, meanAnomaly: Float): Entity {
+	fun addPlanet(planetParent: Int, planetMass: Double, planetRadius: Float, planetName: String, semiMajorAxis: Float, eccentricity: Float, argumentOfPeriapsis: Float, meanAnomaly: Float): Int {
 
 		val entity = system.createEntity(Empire.GAIA)
-		entity.add(TimedMovementComponent())
-		entity.add(RenderComponent())
-		entity.add(CircleComponent().apply { radius = planetRadius })
-		entity.add(NameComponent().apply { name = planetName })
-		entity.add(MassComponent().apply { mass = planetMass })
-		entity.add(OrbitComponent().apply { parent = planetParent; a_semiMajorAxis = semiMajorAxis; e_eccentricity = eccentricity; w_argumentOfPeriapsis = argumentOfPeriapsis; M_meanAnomaly = meanAnomaly })
-		entity.add(StrategicIconComponent(Assets.textures.findRegion("strategic/world")))
-
-		engine.addEntity(entity)
+		timedMovementMapper.create(entity)
+		renderMapper.create(entity)
+		circleMapper.create(entity).apply { radius = planetRadius }
+		nameMapper.create(entity).apply { name = planetName }
+		massMapper.create(entity).apply { mass = planetMass }
+		orbitMapper.create(entity).apply { parent = planetParent; a_semiMajorAxis = semiMajorAxis; e_eccentricity = eccentricity; w_argumentOfPeriapsis = argumentOfPeriapsis; M_meanAnomaly = meanAnomaly }
+		strategicIconMapper.create(entity).set(Assets.textures.findRegion("strategic/world"))
 
 		return entity
 	}
 
-	fun addMoon(moonParent: Entity, moonMass: Double, moonRadius: Float, moonName: String, semiMajorAxis: Float, eccentricity: Float, argumentOfPeriapsis: Float, meanAnomaly: Float): Entity {
+	fun addMoon(moonParent: Int, moonMass: Double, moonRadius: Float, moonName: String, semiMajorAxis: Float, eccentricity: Float, argumentOfPeriapsis: Float, meanAnomaly: Float): Int {
 
 		val entity = system.createEntity(Empire.GAIA)
-		entity.add(TimedMovementComponent())
-		entity.add(RenderComponent())
-		entity.add(CircleComponent().apply { radius = moonRadius })
-		entity.add(NameComponent().apply { name = moonName })
-		entity.add(MassComponent().apply { mass = moonMass })
-		entity.add(OrbitComponent().apply { parent = moonParent; a_semiMajorAxis = semiMajorAxis; e_eccentricity = eccentricity; w_argumentOfPeriapsis = argumentOfPeriapsis; M_meanAnomaly = meanAnomaly })
-		entity.add(StrategicIconComponent(Assets.textures.findRegion("strategic/moon")))
-
-		engine.addEntity(entity)
+		timedMovementMapper.create(entity)
+		renderMapper.create(entity)
+		circleMapper.create(entity).apply { radius = moonRadius }
+		nameMapper.create(entity).apply { name = moonName }
+		massMapper.create(entity).apply { mass = moonMass }
+		orbitMapper.create(entity).apply { parent = moonParent; a_semiMajorAxis = semiMajorAxis; e_eccentricity = eccentricity; w_argumentOfPeriapsis = argumentOfPeriapsis; M_meanAnomaly = meanAnomaly }
+		strategicIconMapper.create(entity).set(Assets.textures.findRegion("strategic/moon"))
 
 		return entity
 	}
 
-	fun addAsteroid(asteroidParent: Entity, asteroidMass: Double, asteroidRadius: Float, asteroidName: String, semiMajorAxis: Float, eccentricity: Float, argumentOfPeriapsis: Float, meanAnomaly: Float): Entity {
+	fun addAsteroid(asteroidParent: Int, asteroidMass: Double, asteroidRadius: Float, asteroidName: String, semiMajorAxis: Float, eccentricity: Float, argumentOfPeriapsis: Float, meanAnomaly: Float): Int {
 
 		val entity = system.createEntity(Empire.GAIA)
-		entity.add(TimedMovementComponent())
-		entity.add(RenderComponent())
-		entity.add(CircleComponent().apply { radius = asteroidRadius })
-		entity.add(NameComponent().apply { name = asteroidName })
-		entity.add(MassComponent().apply { mass = asteroidMass })
-		entity.add(OrbitComponent().apply { parent = asteroidParent; a_semiMajorAxis = semiMajorAxis; e_eccentricity = eccentricity; w_argumentOfPeriapsis = argumentOfPeriapsis; M_meanAnomaly = meanAnomaly })
-
-		engine.addEntity(entity)
+		timedMovementMapper.create(entity)
+		renderMapper.create(entity)
+		circleMapper.create(entity).apply { radius = asteroidRadius }
+		nameMapper.create(entity).apply { name = asteroidName }
+		massMapper.create(entity).apply { mass = asteroidMass }
+		orbitMapper.create(entity).apply { parent = asteroidParent; a_semiMajorAxis = semiMajorAxis; e_eccentricity = eccentricity; w_argumentOfPeriapsis = argumentOfPeriapsis; M_meanAnomaly = meanAnomaly }
 
 		return entity
 	}

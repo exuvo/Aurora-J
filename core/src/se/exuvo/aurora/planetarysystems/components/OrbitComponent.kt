@@ -1,11 +1,27 @@
 package se.exuvo.aurora.planetarysystems.components
 
-import com.badlogic.ashley.core.Component
-import com.badlogic.ashley.core.Entity
+import com.artemis.Component
+import com.artemis.Entity
 
 // See https://en.wikipedia.org/wiki/Orbital_elements
-data class OrbitComponent(var parent: Entity? = null,
-													var e_eccentricity: Float = 0f, // 0 = circle, 0 < elliptic < 1
-													var a_semiMajorAxis: Float = 1f, // In AU
-													var w_argumentOfPeriapsis: Float = 0f, // In 360 degrees
-													var M_meanAnomaly: Float = 0f) : Component // In 360 degrees
+class OrbitComponent() : Component() {
+	var parent: Int = -1
+	var e_eccentricity: Float = 0f // 0 = circle, 0 < elliptic < 1
+	var a_semiMajorAxis: Float = 1f // In AU
+	var w_argumentOfPeriapsis: Float = 0f // In 360 degrees
+	var M_meanAnomaly: Float = 0f // In 360 degrees
+
+	fun set(parent: Int,
+					e_eccentricity: Float,
+					a_semiMajorAxis: Float,
+					w_argumentOfPeriapsis: Float,
+					M_meanAnomaly: Float
+	): OrbitComponent {
+		this.parent = parent
+		this.e_eccentricity = e_eccentricity
+		this.a_semiMajorAxis = a_semiMajorAxis
+		this.w_argumentOfPeriapsis = w_argumentOfPeriapsis
+		this.M_meanAnomaly = M_meanAnomaly
+		return this
+	}
+}
