@@ -90,8 +90,6 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 	}
 
 	override fun draw() {
-		super.draw()
-
 		galaxy.worldLock.read {
 			renderSystem.render(viewport, cameraOffset)
 		}

@@ -36,7 +36,7 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 			val ship = shipMapper.get(entityID)
 			val thrusters = ship.shipClass.getPartRefs().filter({ it.part is ThrustingPart })
 			val thrustComponent = thrustMapper.get(entityID)
-			
+
 			for (thruster in thrusters) {
 				val part = thruster.part
 
@@ -55,6 +55,11 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 						}
 					}
 				}
+			}
+
+			if (!massMapper.has(entityID) || ship.cargoChanged) {
+				massMapper.create(entityID).set(ship.getMass().toDouble())
+				ship.cargoChanged = false
 			}
 		}
 	}
@@ -123,10 +128,5 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 			thrustComponent.thrust = thrust
 			thrustComponent.maxThrust = maxThrust
 		}
-
-		if (!massMapper.has(entityID)) {
-			massMapper.create(entityID).set(ship.getMass().toDouble())
-		}
-
 	}
 }

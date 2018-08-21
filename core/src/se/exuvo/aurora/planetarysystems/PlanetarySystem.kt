@@ -6,17 +6,22 @@ import com.artemis.EntitySubscription
 import com.artemis.EntitySubscription.SubscriptionListener
 import com.artemis.World
 import com.artemis.WorldConfiguration
+import com.artemis.WorldConfigurationBuilder
 import com.artemis.annotations.EntityId
 import com.artemis.utils.IntBag
 import com.badlogic.gdx.graphics.Color
+import net.mostlyoriginal.api.event.common.EventSystem
 import org.apache.log4j.Logger
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.AmmoContainerPart
 import se.exuvo.aurora.galactic.Battery
 import se.exuvo.aurora.galactic.BeamWavelength
 import se.exuvo.aurora.galactic.BeamWeapon
+import se.exuvo.aurora.galactic.ElectricalThruster
 import se.exuvo.aurora.galactic.Empire
 import se.exuvo.aurora.galactic.FissionReactor
+import se.exuvo.aurora.galactic.FuelContainerPart
+import se.exuvo.aurora.galactic.FueledThruster
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.galactic.MissileLauncher
 import se.exuvo.aurora.galactic.MunitionClass
@@ -45,11 +50,19 @@ import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
 import se.exuvo.aurora.planetarysystems.components.Spectrum
 import se.exuvo.aurora.planetarysystems.components.StrategicIconComponent
 import se.exuvo.aurora.planetarysystems.components.SunComponent
-import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.TintComponent
 import se.exuvo.aurora.planetarysystems.components.UUIDComponent
+import se.exuvo.aurora.planetarysystems.systems.CustomSystemInvocationStrategy
+import se.exuvo.aurora.planetarysystems.systems.GroupSystem
+import se.exuvo.aurora.planetarysystems.systems.MovementSystem
 import se.exuvo.aurora.planetarysystems.systems.OrbitSystem
+import se.exuvo.aurora.planetarysystems.systems.PassiveSensorSystem
+import se.exuvo.aurora.planetarysystems.systems.PowerSystem
+import se.exuvo.aurora.planetarysystems.systems.RenderSystem
+import se.exuvo.aurora.planetarysystems.systems.ShipSystem
+import se.exuvo.aurora.planetarysystems.systems.SolarIrradianceSystem
+import se.exuvo.aurora.planetarysystems.systems.WeaponSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.Vector2L
@@ -58,16 +71,14 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
-import se.exuvo.aurora.galactic.ElectricalThruster
-import se.exuvo.aurora.galactic.FueledThruster
-import se.exuvo.aurora.galactic.FuelContainerPart
 
-class PlanetarySystem(val initialName: String, worldConfig: WorldConfiguration, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener {
+class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener {
 	companion object {
 		val planetarySystemIDGenerator = AtomicInteger()
 	}
 
 	val log = Logger.getLogger(this.javaClass)
+	var updateTime = 0L
 	val entityUIDGenerator = AtomicLong()
 
 	private val galaxy = GameServices[Galaxy::class]
@@ -77,7 +88,7 @@ class PlanetarySystem(val initialName: String, worldConfig: WorldConfiguration, 
 	val galacticEntityID: Int = galaxy.world.create()
 
 	val lock = ReentrantReadWriteLock()
-	val world: World = World(worldConfig)
+	lateinit var world: World
 
 	lateinit private var solarSystemMapper: ComponentMapper<PlanetarySystemComponent>
 	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
@@ -101,10 +112,27 @@ class PlanetarySystem(val initialName: String, worldConfig: WorldConfiguration, 
 		galaxy.world.getMapper(NameComponent::class.java).create(galacticEntityID).set(initialName)
 		galaxy.world.getMapper(StrategicIconComponent::class.java).create(galacticEntityID).set(Assets.textures.findRegion("galactic/system"))
 
+		val worldBuilder = WorldConfigurationBuilder()
+//		worldBuilder.dependsOn(ProfilerPlugin::class.java)
+		worldBuilder.with(EventSystem())
+		worldBuilder.with(GroupSystem())
+		worldBuilder.with(OrbitSystem())
+		worldBuilder.with(ShipSystem())
+		worldBuilder.with(MovementSystem())
+		worldBuilder.with(SolarIrradianceSystem())
+		worldBuilder.with(PassiveSensorSystem())
+		worldBuilder.with(WeaponSystem())
+		worldBuilder.with(PowerSystem())
+		worldBuilder.with(RenderSystem())
+		worldBuilder.register(CustomSystemInvocationStrategy())
+		//TODO add system to send changes over network
+
+		world = World(worldBuilder.build())
+
 		world.getAspectSubscriptionManager().get(Aspect.all()).addSubscriptionListener(this)
 		world.inject(this)
-		
-		world.getAspectSubscriptionManager().get(Aspect.all()).addSubscriptionListener(object: SubscriptionListener {
+
+		world.getAspectSubscriptionManager().get(Aspect.all()).addSubscriptionListener(object : SubscriptionListener {
 			override fun inserted(entityIDs: IntBag) {
 				entityIDs.forEach { entityID ->
 					galaxy.entityAdded(world, entityID)
@@ -126,8 +154,8 @@ class PlanetarySystem(val initialName: String, worldConfig: WorldConfiguration, 
 		timedMovementMapper.create(entity1).set(0, 0, 0f, 0f, 0)
 		renderMapper.create(entity1)
 		circleMapper.create(entity1).set(radius = 695700f)
-		massMapper.create(entity1).set( mass = 1.988e30)
-		nameMapper.create(entity1).set( name = "Sun")
+		massMapper.create(entity1).set(mass = 1.988e30)
+		nameMapper.create(entity1).set(name = "Sun")
 		sunMapper.create(entity1).set(solarConstant = 1361)
 		tintMapper.create(entity1).set(Color.YELLOW)
 		strategicIconMapper.create(entity1).set(Assets.textures.findRegion("strategic/sun"))
@@ -135,9 +163,9 @@ class PlanetarySystem(val initialName: String, worldConfig: WorldConfiguration, 
 		val entity2 = createEntity(empire1)
 		timedMovementMapper.create(entity2)
 		renderMapper.create(entity2)
-		circleMapper.create(entity2).set( radius = 6371f)
-		nameMapper.create(entity2).set( name = "Earth")
-		massMapper.create(entity2).set( mass = 5.972e24)
+		circleMapper.create(entity2).set(radius = 6371f)
+		nameMapper.create(entity2).set(name = "Earth")
+		massMapper.create(entity2).set(mass = 5.972e24)
 		orbitMapper.create(entity2).set(parent = entity1, a_semiMajorAxis = 1f, e_eccentricity = 0f, w_argumentOfPeriapsis = -45f, M_meanAnomaly = 0f)
 		tintMapper.create(entity2).set(Color.GREEN)
 		strategicIconMapper.create(entity2).set(Assets.textures.findRegion("strategic/world"))
@@ -146,19 +174,19 @@ class PlanetarySystem(val initialName: String, worldConfig: WorldConfiguration, 
 		val entity3 = createEntity(empire1)
 		timedMovementMapper.create(entity3)
 		renderMapper.create(entity3)
-		circleMapper.create(entity3).set( radius = 1737f)
-		nameMapper.create(entity3).set( name = "Moon")
+		circleMapper.create(entity3).set(radius = 1737f)
+		nameMapper.create(entity3).set(name = "Moon")
 		orbitMapper.create(entity3).set(parent = entity2, a_semiMajorAxis = (384400.0 / OrbitSystem.AU).toFloat(), e_eccentricity = 0.2f, w_argumentOfPeriapsis = 0f, M_meanAnomaly = 30f)
 		tintMapper.create(entity3).set(Color.GRAY)
 		strategicIconMapper.create(entity3).set(Assets.textures.findRegion("strategic/moon"))
 		emissionsMapper.create(entity3).set(mapOf(Spectrum.Electromagnetic to 5e9, Spectrum.Thermal to 5e9))
 
 		val entity4 = createEntity(empire1)
-		timedMovementMapper.create(entity4).apply{previous.value.position.set((OrbitSystem.AU * 1000L * 1L).toLong(), 0).rotate(45f)} //; previous.value.velocity.set(-1000000f, 0f)
+		timedMovementMapper.create(entity4).apply { previous.value.position.set((OrbitSystem.AU * 1000L * 1L).toLong(), 0).rotate(45f) } //; previous.value.velocity.set(-1000000f, 0f)
 		renderMapper.create(entity4)
 		solarIrradianceMapper.create(entity4)
-		circleMapper.create(entity4).set( radius = 10f)
-		nameMapper.create(entity4).set( name = "Ship")
+		circleMapper.create(entity4).set(radius = 10f)
+		nameMapper.create(entity4).set(name = "Ship")
 //		moveToEntityMapper.create(entity4).set(world.getEntity(entity1), ApproachType.BRACHISTOCHRONE))
 		tintMapper.create(entity4).set(Color.RED)
 		val sensor1 = PassiveSensor(300000, Spectrum.Electromagnetic, 1e-7, 14, OrbitSystem.AU * 0.3, 20, 0.97, 1);
@@ -198,7 +226,7 @@ class PlanetarySystem(val initialName: String, worldConfig: WorldConfiguration, 
 		ammoStorage.name = "Munitions Cargo"
 		ammoStorage.cost[Resource.GENERIC] = 100
 		shipClass.addPart(ammoStorage)
-		
+
 		val fuelStorage = FuelContainerPart(10000000)
 		fuelStorage.name = "Fuel Cargo"
 		fuelStorage.cost[Resource.GENERIC] = 100
@@ -241,10 +269,10 @@ class PlanetarySystem(val initialName: String, worldConfig: WorldConfiguration, 
 
 		val tcRef: PartRef<TargetingComputer> = shipClass[TargetingComputer::class][0]
 		shipClass.defaultWeaponAssignments[tcRef] = shipClass.getPartRefs().filter({ it.part is WeaponPart })
-		
+
 		val ionThruster = ElectricalThruster(1f * 9.82f * 1000f, 1 * Units.MEGAWATT)
 		shipClass.addPart(ionThruster)
-		
+
 		val chemicalThruster = FueledThruster(10f * 9.82f * 1000f, 1)
 		shipClass.addPart(chemicalThruster)
 
@@ -287,12 +315,19 @@ class PlanetarySystem(val initialName: String, worldConfig: WorldConfiguration, 
 		}
 	}
 
+	var delay = (Math.random() * 30).toLong()
 	fun update(deltaGameTime: Int) {
 
 		lock.write {
 			world.setDelta(deltaGameTime.toFloat())
 			world.process()
 		}
+		
+		if (Math.random() > 0.97) {
+			delay = (Math.random() * 30).toLong()
+		}
+		
+//		Thread.sleep(delay)
 	}
 
 	private fun getNewEnitityID(): Long {

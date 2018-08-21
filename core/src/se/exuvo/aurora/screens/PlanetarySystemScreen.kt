@@ -118,8 +118,6 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	}
 
 	override fun draw() {
-		super.draw()
-
 		system.lock.read {
 			renderSystem.render(viewport, cameraOffset)
 		}
@@ -141,7 +139,18 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	private fun drawUI() {
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
-		Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, day ${galaxy.day}, time ${secondsToString(galaxy.time)}, speed ${Units.NANO_SECOND / galaxy.speed}", 8f, 32f)
+		
+		val layout = Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, day ${galaxy.day}, time ${secondsToString(galaxy.time)}, ", 8f, 32f)
+		
+		if (galaxy.speedLimited) {
+			Assets.fontUI.color = Color.RED
+			Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / galaxy.speed}", 8f + layout.width, 32f)
+			Assets.fontUI.color = Color.WHITE
+			
+		}  else {
+			Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / galaxy.speed}", 8f + layout.width, 32f)
+		}
+		
 		spriteBatch.end()
 	}
 

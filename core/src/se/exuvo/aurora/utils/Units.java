@@ -2,8 +2,8 @@ package se.exuvo.aurora.utils;
 
 public class Units {
 
-	public static final long MICRO = 1000;
-	public static final long NANO_MILLI = 1000 * MICRO;
+	public static final long NANO_MICRO = 1000;
+	public static final long NANO_MILLI = 1000 * NANO_MICRO;
 	public static final long NANO_SECOND = 1000 * NANO_MILLI;
 	
 	public static final long KILOWATT = 1000;
@@ -11,10 +11,18 @@ public class Units {
 	public static final long GIGAWATT = 1000 * MEGAWATT;
 	public static final long TERAWATT = 1000 * GIGAWATT;
 
-	public static String nanoToString(long time) {
+	public static String nanoToString(long nanotime) {
 
-		int micros = (int) (time % 1000);
-		int seconds = (int) (time / NANO_MILLI);
+		int nanos = (int) (nanotime % NANO_MILLI);
+		int milli = (int) (nanotime / NANO_MILLI);
+		
+		return String.format("%d.%06dms", milli, nanos);
+	}
+	
+	public static String milliToString(long millitime) {
+
+		int micros = (int) (millitime % 1000);
+		int seconds = (int) (millitime / 1000);
 
 		return String.format("%d.%06ds", seconds, micros);
 	}

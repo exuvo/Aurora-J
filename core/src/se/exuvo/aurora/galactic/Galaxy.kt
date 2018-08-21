@@ -36,11 +36,15 @@ import com.artemis.utils.IntBag
 import net.mostlyoriginal.api.event.common.EventSystem
 import net.mostlyoriginal.plugin.ProfilerPlugin
 import se.exuvo.aurora.planetarysystems.systems.CustomSystemInvocationStrategy
+import com.artemis.utils.Sort
+import com.artemis.utils.Bag
+import se.unlogic.standardutils.arrays.ArrayUtils
+import se.unlogic.standardutils.string.StringUtils
 
 class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 	val log = Logger.getLogger(this.javaClass)
 
-	lateinit var systems: MutableList<PlanetarySystem>
+	lateinit var systems: Bag<PlanetarySystem>
 	private val groupSystem by lazy { GameServices[GroupSystem::class] }
 	private val threadPool = ThreadPoolTaskGroupHandler<SimpleTaskGroup>("Galaxy", Settings.getInt("Galaxy/threads", Runtime.getRuntime().availableProcessors()), true) //
 	var thread: Thread? = null
@@ -49,6 +53,8 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 	var day: Int = updateDay()
 	var speed: Long = 1 * Units.NANO_SECOND
 	var paused = false
+	var speedLimited = false
+	var tickSize: Int = 0
 
 	val worldLock = ReentrantReadWriteLock()
 	val world: World
@@ -83,7 +89,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 		})
 	}
 
-	fun init(systems: MutableList<PlanetarySystem>) {
+	fun init(systems: Bag<PlanetarySystem>) {
 		this.systems = systems
 		
 		systems.forEach {
@@ -158,7 +164,10 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 			var oldSpeed = speed
 			var oldPaused = paused
 			var lastSleep = System.nanoTime()
+			var lastProcess = System.nanoTime()
 
+			var tasks = systems.map { UpdateSystemTask(it, this) }
+			
 			while (true) {
 				var now = System.nanoTime()
 
@@ -176,26 +185,26 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 					} else {
 						accumulator += now - lastSleep;
 					}
-
+					
 					if (accumulator >= speed) {
 
-						accumulator -= speed;
+						tickSize = if (speed >= Units.NANO_MILLI) 1 else (Units.NANO_MILLI / speed).toInt()
 
-						var tickSize: Int = if (speed >= 1 * Units.NANO_MILLI) 1 else (Units.NANO_MILLI / speed).toInt()
-
-						// max sensible tick size is 1 minute
+						// max sensible tick size is 1 minute, unless there is combat..
 						if (tickSize > 60) {
 							tickSize = 60
 						}
+						
+						val tickSpeed = speed * tickSize
+						
+						accumulator -= tickSpeed
 
-//						println("tickSize $tickSize, speed $speed, accumulator $accumulator, diff ${now - lastSleep}")
+//						println("tickSize $tickSize, speed $speed, diff ${now - lastProcess}, accumulator $accumulator")
 
 						time += tickSize;
 						updateDay()
 
-						val queue = LinkedBlockingQueue<UpdateSystemTask>(systems.size)
-
-						systems.forEach { queue.add(UpdateSystemTask(it, tickSize, this)) }
+						val queue = LinkedBlockingQueue<UpdateSystemTask>(tasks)
 
 						val executionController = threadPool.execute(SimpleTaskGroup(queue))
 
@@ -215,25 +224,52 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 						}
 
 						val systemUpdateDuration = (System.nanoTime() - systemUpdateStart)
-//					log.debug("Galaxy update took " + NanoTimeUnits.nanoToString(systemUpdateDuration))
+						speedLimited = systemUpdateDuration > speed
+						
+						queue.clear()
+						
+						if (speedLimited) {
+//							log.warn("Galaxy update took ${Units.nanoToString(systemUpdateDuration)} which is more than the requested speed delay ${Units.nanoToString(speed)}")
+						}
 
-						//TODO handle tick abortion and tickSize lowering
-					}
-
-					// If we are more than 10 ticks behind stop counting
-					if (accumulator >= speed * 10) {
-						accumulator = speed * 10L
+//						systems.forEach {
+//							print("${it.sid} ${Units.nanoToString(it.updateTime)}, ")
+//						}
+//						println()
+						
+						//if one system took a noticable larger time to process than others, schedule it earlier
+						Sort.instance().sort(systems, object : Comparator<PlanetarySystem> {
+							val s = tickSpeed / 10
+							override fun compare(o1: PlanetarySystem, o2: PlanetarySystem): Int {
+								val diff = o1.updateTime - o2.updateTime
+								
+								if (diff > s) return -1
+								if (diff < -s) return 1
+								return 0
+							}
+						})
+						
+						lastProcess = now;
 					}
 
 					lastSleep = now;
-
-					if (accumulator < speed) {
+					
+					// If we are more than 10 ticks behind stop counting
+					if (accumulator >= speed * 10) {
+						accumulator = speed * 10L
+						
+					} else if (accumulator < speed) {
 
 						var sleepTime = (speed - accumulator) / Units.NANO_MILLI
 
-						if (sleepTime > 0) {
+						if (sleepTime > 1) {
 							sleeping = true
-							ThreadUtils.sleep(sleepTime)
+							ThreadUtils.sleep(sleepTime - 1)
+							sleeping = false
+							
+						} else {
+							sleeping = true
+							Thread.yield()
 							sleeping = false
 						}
 					}
@@ -249,13 +285,16 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 		}
 	}
 
-	class UpdateSystemTask(val system: PlanetarySystem, val deltaGameTime: Int, val galaxy: Galaxy) : Runnable {
+	class UpdateSystemTask(val system: PlanetarySystem, val galaxy: Galaxy) : Runnable {
 
 		val log by lazy { Logger.getLogger(this.javaClass) }
 
 		override fun run() {
 			try {
-				system.update(deltaGameTime)
+				val systemUpdateStart = System.nanoTime()
+				system.update(galaxy.tickSize)
+				system.updateTime = (System.nanoTime() - systemUpdateStart)
+				
 			} catch (t: Throwable) {
 				log.error("Exception in system update", t)
 				galaxy.paused = true

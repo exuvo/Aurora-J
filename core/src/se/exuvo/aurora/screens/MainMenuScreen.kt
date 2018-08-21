@@ -28,6 +28,7 @@ import se.exuvo.aurora.utils.Vector2L
 import net.mostlyoriginal.api.event.common.SubscribeAnnotationFinder
 import net.mostlyoriginal.api.event.dispatcher.PollingPooledEventDispatcher
 import se.exuvo.aurora.planetarysystems.systems.CustomSystemInvocationStrategy
+import com.artemis.utils.Bag
 
 class MainMenuScreen() : GameScreenImpl() {
 
@@ -54,29 +55,14 @@ class MainMenuScreen() : GameScreenImpl() {
 		val empires = mutableListOf(Empire("player1"), Empire("player2"))
 		val galaxy = Galaxy(empires, 0) //, system2, system3
 		
-		val worldBuilder = WorldConfigurationBuilder()
-//		worldBuilder.dependsOn(ProfilerPlugin::class.java)
-		worldBuilder.with(EventSystem())
-		worldBuilder.with(GroupSystem())
-		worldBuilder.with(OrbitSystem())
-		worldBuilder.with(ShipSystem())
-		worldBuilder.with(MovementSystem())
-		worldBuilder.with(SolarIrradianceSystem())
-		worldBuilder.with(PassiveSensorSystem())
-		worldBuilder.with(WeaponSystem())
-		worldBuilder.with(PowerSystem())
-		worldBuilder.with(RenderSystem())
-		worldBuilder.register(CustomSystemInvocationStrategy())
-		//TODO add system to send changes over network
+		val systems = Bag(PlanetarySystem::class.java)
+		systems.add(PlanetarySystem("s1", Vector2L(0, 0)))
+		systems.add(PlanetarySystem("s2", Vector2L(4367, 0)))
+		systems.add(PlanetarySystem("s3", Vector2L(-2000, -5000)))
 		
-		val worldConf = worldBuilder.build()
-		
-		val system = PlanetarySystem("s1", worldConf, Vector2L(0, 0))
-//		val system2 = PlanetarySystem("s2", Vector2L(4367, 0))
-//		val system3 = PlanetarySystem("s3", Vector2L(-2000, -5000))
-		galaxy.init(mutableListOf(system))
+		galaxy.init(systems)
 
-		val systemView = PlanetarySystemScreen(system)
+		val systemView = PlanetarySystemScreen(systems[0])
 		GameServices.put(GalaxyScreen(systemView))
 		GameServices[GameScreenService::class].add(ImGuiScreen())
 //		GameServices[GameScreenService::class.java].add(Scene2DScreen())
@@ -85,8 +71,6 @@ class MainMenuScreen() : GameScreenImpl() {
 	}
 
 	override fun draw() {
-		super.draw()
-
 		batch.projectionMatrix = uiCamera.combined
 		batch.begin()
 		Assets.fontUI.draw(batch, "Main Menu", 8f, 32f)

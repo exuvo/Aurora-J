@@ -10,7 +10,7 @@ import org.apache.log4j.xml.DOMConfigurator;
 import com.badlogic.gdx.Files.FileType;
 import com.badlogic.gdx.Graphics.DisplayMode;
 import com.badlogic.gdx.Graphics.Monitor;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
+import com.badlogic.gdx.backends.lwjgl3.CustomLwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.martiansoftware.jsap.JSAP;
 import com.martiansoftware.jsap.JSAPException;
@@ -121,7 +121,7 @@ public class DesktopLauncher {
 		String assetsURI = FileUtils.fileExists("assets") ? "assets/" : "../core/assets/";
 
 		try {
-			new Lwjgl3Application(new AuroraGame(assetsURI), windowConfig);
+			new CustomLwjgl3Application(new AuroraGame(assetsURI), windowConfig);
 			
 		} catch (Throwable e) {
 			log.error("", e);

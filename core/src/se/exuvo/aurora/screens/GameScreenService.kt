@@ -8,8 +8,12 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.utils.Disposable
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.utils.GameServices
+import se.exuvo.aurora.utils.Units
+import se.exuvo.settings.Settings
+import se.unlogic.standardutils.threads.ThreadUtils
 import java.util.LinkedList
-import com.badlogic.gdx.Input
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.GL20
 
 class GameScreenService : Disposable, InputProcessor {
 	private val inputMultiplexer = InputMultiplexer()
@@ -22,10 +26,16 @@ class GameScreenService : Disposable, InputProcessor {
 		addQueue.add(screen)
 	}
 
-	private fun update(deltaRealTime: Float) {
+	val frameDelay = Units.NANO_SECOND / Settings.getInt("Window/FrameLimit", 60)
+	var accumulator = 0L
+	var lastRun = System.nanoTime()
+	var lastDrawStart = System.nanoTime()
+	var frameStartTime = 0L
+	
+	fun update(deltaRealTime: Float): Boolean {
 
 		if (addQueue.isNotEmpty()) {
-			
+
 			for (screen in addQueue) {
 				screens.addFirst(screen)
 				screen.show()
@@ -35,7 +45,7 @@ class GameScreenService : Disposable, InputProcessor {
 					inputMultiplexer.addProcessor(screen)
 				}
 			}
-			
+
 			addQueue.clear()
 		}
 
@@ -63,15 +73,63 @@ class GameScreenService : Disposable, InputProcessor {
 		}
 
 		screens.forEach { it.update(deltaRealTime) }
-	}
+		
+		var shouldRender = false
+		val now = System.nanoTime()
+		accumulator += now - lastRun;
 
-	private fun draw() {
+		if (accumulator >= frameDelay) {
+			accumulator -= frameDelay
+
+			if (accumulator > frameDelay) {
+				accumulator = frameDelay
+			}
+
+//			println("frameDelay $frameDelay, diff $frameTime, accumulator $accumulator")
+
+			shouldRender = true
+			
+		} else if (accumulator < frameDelay && frameDelay > Units.NANO_MILLI) {
+
+			var sleepTime = (frameDelay - accumulator) / Units.NANO_MILLI
+
+			if (sleepTime > 1) {
+				ThreadUtils.sleep(sleepTime - 1)
+			} else {
+				Thread.yield()
+			}
+		}
+
+		lastRun = now;
+		
+		return shouldRender
+	}
+	
+	private val clearColor = Color.BLACK
+	
+	fun render() {
+		val now = System.nanoTime()
+		
+		frameStartTime = now - lastDrawStart
+		lastDrawStart = now
+		
+		Gdx.gl.glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a)
+    Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
+
 		screens.forEach { it.draw() }
 
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
-		Assets.fontUI.draw(spriteBatch, "" + Gdx.graphics.framesPerSecond, 2f, uiCamera.viewportHeight - 3f)
+
+		Assets.fontUI.draw(spriteBatch, "${Gdx.graphics.framesPerSecond} ${formatFrameTime(frameStartTime)}", 2f, uiCamera.viewportHeight - 3f)
 		spriteBatch.end()
+	}
+	
+	private fun formatFrameTime(nanotime: Long): String {
+		val centinanos = ((nanotime / 10000) % 100).toInt()
+		val milli = (nanotime / Units.NANO_MILLI).toInt()
+		
+		return String.format("%02d.%02dms", milli, centinanos)
 	}
 
 	fun pause() {
@@ -81,11 +139,6 @@ class GameScreenService : Disposable, InputProcessor {
 	fun resize(width: Int, height: Int) {
 		uiCamera.setToOrtho(false, width.toFloat(), height.toFloat())
 		screens.forEach { it.resize(width, height) }
-	}
-
-	fun render(deltaRealTime: Float) {
-		update(deltaRealTime)
-		draw()
 	}
 
 	fun resume() {
@@ -98,7 +151,7 @@ class GameScreenService : Disposable, InputProcessor {
 
 	override fun keyDown(keycode: Int): Boolean {
 //		println("keyDown $keycode ${Input.Keys.toString(keycode)}")
-		
+
 		return inputMultiplexer.keyDown(keycode)
 	}
 
@@ -108,7 +161,7 @@ class GameScreenService : Disposable, InputProcessor {
 
 	override fun keyTyped(character: Char): Boolean {
 //		println("keyTyped $character")
-		
+
 		return inputMultiplexer.keyTyped(character)
 	}
 

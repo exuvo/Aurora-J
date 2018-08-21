@@ -89,16 +89,22 @@ class LoadingScreen() : GameScreenImpl() {
 		} else if (texturePackerTask.exception != null) {
 			throw texturePackerTask.exception!!
 
-		} else if (texturePackerTask.done && assetManager.update()) {
-			Assets.finishLoad()
-			Technology.initTech()
-			GameServices[GameScreenService::class].add(MainMenuScreen())
+		} else if (texturePackerTask.done) {
+			
+			val startLoad = System.currentTimeMillis()
+			
+			while (System.currentTimeMillis() - startLoad < 15) {
+				if (assetManager.update()) {
+					Assets.finishLoad()
+					Technology.initTech()
+					GameServices[GameScreenService::class].add(MainMenuScreen())
+					break;
+				}
+			}
 		}
 	}
 
 	override fun draw() {
-		super.draw()
-
 		batch.projectionMatrix = uiCamera.combined
 		batch.begin()
 

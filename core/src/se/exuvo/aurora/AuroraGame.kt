@@ -21,12 +21,11 @@ import se.exuvo.settings.Settings
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import se.exuvo.aurora.utils.keys.KeyMappings
 import se.exuvo.aurora.utils.keys.KeyMapping
+import se.exuvo.aurora.utils.Units
+import se.unlogic.standardutils.threads.ThreadUtils
+import com.badlogic.gdx.ApplicationListener
 
-class AuroraGame(val assetsRoot: String) : ApplicationAdapter() {
-	companion object {
-		var disposed = false
-	}
-
+class AuroraGame(val assetsRoot: String) : ApplicationListener {
 	val log = Logger.getLogger(this.javaClass)
 	val screenService = GameScreenService()
 
@@ -52,9 +51,13 @@ class AuroraGame(val assetsRoot: String) : ApplicationAdapter() {
 	override fun resize(width: Int, height: Int) {
 		screenService.resize(width, height)
 	}
+	
+	fun update(): Boolean {
+		return screenService.update(Gdx.graphics.deltaTime)
+	}
 
 	override fun render() {
-		screenService.render(Gdx.graphics.deltaTime)
+		screenService.render()
 	}
 
 	override fun pause() {

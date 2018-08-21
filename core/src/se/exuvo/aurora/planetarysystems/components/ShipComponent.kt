@@ -35,6 +35,7 @@ class ShipComponent() : Component() {
 	lateinit var cargo: Map<Resource, ShipCargo>
 	lateinit var munitionCargo: MutableMap<MunitionClass, Int>
 	var mass: Long = 0
+	var cargoChanged = true
 
 	fun set(shipClass: ShipClass,
 					constructionTime: Long

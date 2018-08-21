@@ -202,17 +202,17 @@ public class Settings {
 				String nodeName;
 
 				if (lastPart == -1) {
-					
+
 					parentNode = rootElement;
 					nodeName = path;
-					
+
 				} else if (lastPart == 0) {
-					
+
 					parentNode = doc.getDocumentElement();
 					nodeName = path.substring(1);
-					
+
 				} else {
-					
+
 					String parentPath = path.substring(0, lastPart);
 					nodeName = path.substring(1 + parentPath.length());
 					parentNode = ensureNode(parentPath);
@@ -241,9 +241,9 @@ public class Settings {
 			int lastPart = path.lastIndexOf('/');
 
 			if (lastPart == -1) {
-				
+
 				return XMLUtils.appendNewElement(doc, rootElement, path);
-				
+
 			} else if (lastPart == 0) {
 
 				return XMLUtils.appendNewElement(doc, doc.getDocumentElement(), path.substring(1));
