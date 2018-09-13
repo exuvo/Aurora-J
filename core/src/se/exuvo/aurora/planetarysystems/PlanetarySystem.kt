@@ -5,12 +5,13 @@ import com.artemis.ComponentMapper
 import com.artemis.EntitySubscription
 import com.artemis.EntitySubscription.SubscriptionListener
 import com.artemis.World
-import com.artemis.WorldConfiguration
 import com.artemis.WorldConfigurationBuilder
 import com.artemis.annotations.EntityId
 import com.artemis.utils.IntBag
 import com.badlogic.gdx.graphics.Color
 import net.mostlyoriginal.api.event.common.EventSystem
+import net.mostlyoriginal.api.event.common.SubscribeAnnotationFinder
+import net.mostlyoriginal.api.event.dispatcher.FastEventDispatcher
 import org.apache.log4j.Logger
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.AmmoContainerPart
@@ -62,6 +63,7 @@ import se.exuvo.aurora.planetarysystems.systems.PowerSystem
 import se.exuvo.aurora.planetarysystems.systems.RenderSystem
 import se.exuvo.aurora.planetarysystems.systems.ShipSystem
 import se.exuvo.aurora.planetarysystems.systems.SolarIrradianceSystem
+import se.exuvo.aurora.planetarysystems.systems.TimedLifeSystem
 import se.exuvo.aurora.planetarysystems.systems.WeaponSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
@@ -71,6 +73,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
+import se.exuvo.aurora.planetarysystems.events.PooledFastEventDispatcher
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener {
 	companion object {
@@ -88,7 +91,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 	val galacticEntityID: Int = galaxy.world.create()
 
 	val lock = ReentrantReadWriteLock()
-	lateinit var world: World
+	val world: World
 
 	lateinit private var solarSystemMapper: ComponentMapper<PlanetarySystemComponent>
 	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
@@ -114,7 +117,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 
 		val worldBuilder = WorldConfigurationBuilder()
 //		worldBuilder.dependsOn(ProfilerPlugin::class.java)
-		worldBuilder.with(EventSystem())
+		worldBuilder.with(EventSystem(PooledFastEventDispatcher(), SubscribeAnnotationFinder()))
 		worldBuilder.with(GroupSystem())
 		worldBuilder.with(OrbitSystem())
 		worldBuilder.with(ShipSystem())
@@ -123,6 +126,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		worldBuilder.with(PassiveSensorSystem())
 		worldBuilder.with(WeaponSystem())
 		worldBuilder.with(PowerSystem())
+		worldBuilder.with(TimedLifeSystem())
 		worldBuilder.with(RenderSystem())
 		worldBuilder.register(CustomSystemInvocationStrategy())
 		//TODO add system to send changes over network

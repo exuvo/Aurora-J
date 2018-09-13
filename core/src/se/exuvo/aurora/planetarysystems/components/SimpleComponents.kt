@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Color
 import se.exuvo.aurora.galactic.Empire
 import se.exuvo.aurora.planetarysystems.PlanetarySystem
 import com.badlogic.gdx.graphics.g2d.TextureRegion
+import java.util.ArrayDeque
 
 class ChangingWorldComponent() : Component()
 
@@ -92,4 +93,8 @@ class SolarIrradianceComponent() : Component() {
 		this.irradiance = irradiance
 		return this
 	}
+}
+
+class TimedLifeComponent() : Component() {
+	var endTimes: Long = 0
 }
