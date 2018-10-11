@@ -47,14 +47,15 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 	lateinit var systems: Bag<PlanetarySystem>
 	private val groupSystem by lazy { GameServices[GroupSystem::class] }
 	private val threadPool = ThreadPoolTaskGroupHandler<SimpleTaskGroup>("Galaxy", Settings.getInt("Galaxy/threads", Runtime.getRuntime().availableProcessors()), true) //
-	var thread: Thread? = null
-	var sleeping = false
+	private var thread: Thread? = null
+	private var sleeping = false
 
 	var day: Int = updateDay()
 	var speed: Long = 1 * Units.NANO_SECOND
-	var paused = false
 	var speedLimited = false
 	var tickSize: Int = 0
+
+	val players = ArrayList<Player>()
 
 	val worldLock = ReentrantReadWriteLock()
 	val world: World
@@ -63,6 +64,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 		GameServices.put(this)
 		
 		empires.add(Empire.GAIA)
+		players.add(Player.current)
 		
 		val worldBuilder = WorldConfigurationBuilder()
 //		worldBuilder.dependsOn(ProfilerPlugin::class.java)
@@ -101,6 +103,21 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 		thread.start();
 
 		this.thread = thread
+	}
+	
+	fun updateSpeed() {
+		
+		var lowestRequestedSpeed = Long.MAX_VALUE;
+
+		for (player in players) {
+			lowestRequestedSpeed = Math.min(lowestRequestedSpeed, player.requestedSpeed)
+		}
+		
+		speed = lowestRequestedSpeed
+		
+		if (speed > 0 && sleeping) {
+			thread!!.interrupt()
+		}
 	}
 
 	fun getEmpire(id: Int): Empire {
@@ -162,7 +179,6 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 		try {
 			var accumulator = speed
 			var oldSpeed = speed
-			var oldPaused = paused
 			var lastSleep = System.nanoTime()
 			var lastProcess = System.nanoTime()
 
@@ -170,16 +186,10 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 			
 			while (true) {
 				var now = System.nanoTime()
-
-				if (paused != oldPaused) {
-					accumulator = 0
-					lastSleep = System.nanoTime()
-					oldPaused = paused
-				}
-
-				if (!paused) {
-
-					if (oldSpeed != speed) {
+		
+				if (speed > 0L) {
+					
+					if (speed != oldSpeed) {
 						accumulator = 0
 						oldSpeed = speed
 					} else {
@@ -275,6 +285,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 					}
 
 				} else {
+					oldSpeed = speed
 					sleeping = true
 					ThreadUtils.sleep(1000)
 					sleeping = false
@@ -297,7 +308,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 				
 			} catch (t: Throwable) {
 				log.error("Exception in system update", t)
-				galaxy.paused = true
+				galaxy.speed = 0
 			}
 		}
 	}

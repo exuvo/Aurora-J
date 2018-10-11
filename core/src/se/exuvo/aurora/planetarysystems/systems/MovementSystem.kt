@@ -23,16 +23,16 @@ import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEach
 import com.artemis.WorldConfigurationBuilder.Priority
+import com.artemis.World
 
 class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
 		val FAMILY = Aspect.all(TimedMovementComponent::class.java).exclude(OrbitComponent::class.java)
 		val CAN_ACCELERATE_FAMILY = Aspect.all(ThrustComponent::class.java, MassComponent::class.java)
 		val DESTINATION_FAMILY = Aspect.one(MoveToPositionComponent::class.java, MoveToEntityComponent::class.java)
+		lateinit var CAN_ACCELERATE_ASPECT: Aspect
+		lateinit var DESTINATION_ASPECT: Aspect
 	}
-
-	val canAccelerateFamily by lazy { CAN_ACCELERATE_FAMILY.build(world) }
-	val destionationFamily by lazy { DESTINATION_FAMILY.build(world) }
 
 	val log = Logger.getLogger(this.javaClass)
 
@@ -45,8 +45,12 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 
 	private val galaxy = GameServices[Galaxy::class]
 
-	private val tempPosition = Vector2L()
-	private val tempVelocity = Vector2()
+	override fun setWorld(world: World) {
+		super.setWorld(world)
+
+		CAN_ACCELERATE_ASPECT = CAN_ACCELERATE_FAMILY.build(world)
+		DESTINATION_ASPECT = DESTINATION_FAMILY.build(world)
+	}
 
 	fun moveToPosition(entityID: Int, target: Vector2L, approach: ApproachType = ApproachType.BRACHISTOCHRONE) {
 		if (moveToEntityMapper.has(entityID)) {
@@ -115,12 +119,12 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 	override fun preProcessSystem() {
 		subscription.getEntities().forEach { entityID ->
 
-			if (canAccelerateFamily.isInterested(world.getEntity(entityID))) {
+			if (CAN_ACCELERATE_ASPECT.isInterested(world.getEntity(entityID))) {
 				val movement = movementMapper.get(entityID)
 				val velocity = movement.previous.value.velocity
 				val thrustComponent = thrustMapper.get(entityID)
 
-				if (!destionationFamily.isInterested(world.getEntity(entityID))) {
+				if (!DESTINATION_ASPECT.isInterested(world.getEntity(entityID))) {
 					thrustComponent.thrusting = !velocity.isZero()
 
 				} else {
@@ -130,6 +134,9 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 		}
 	}
 
+	private val tempPosition = Vector2L()
+	private val tempVelocity = Vector2()
+
 	override fun process(entityID: Int) {
 		val deltaGameTime = world.getDelta()
 
@@ -138,7 +145,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 		val velocity = movement.previous.value.velocity
 		val position = movement.previous.value.position
 
-		if (!canAccelerateFamily.isInterested(world.getEntity(entityID))) {
+		if (!CAN_ACCELERATE_ASPECT.isInterested(world.getEntity(entityID))) {
 
 			position.add(velocity.x.toLong(), velocity.y.toLong())
 			movement.previous.time = galaxy.time
@@ -152,7 +159,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 		val tickAcceleration = acceleration * deltaGameTime
 		val maxTickAcceleration = maxAcceleration * deltaGameTime
 
-		if (!destionationFamily.isInterested(world.getEntity(entityID))) {
+		if (!DESTINATION_ASPECT.isInterested(world.getEntity(entityID))) {
 
 			if (!velocity.isZero()) {
 				val velocityMagnitute = velocity.len()

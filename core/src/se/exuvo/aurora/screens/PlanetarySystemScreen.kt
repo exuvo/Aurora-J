@@ -38,6 +38,7 @@ import kotlin.concurrent.read
 import kotlin.concurrent.write
 import kotlin.properties.Delegates
 import com.artemis.Aspect
+import se.exuvo.aurora.galactic.Player
 
 class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), InputProcessor {
 	companion object {
@@ -142,7 +143,17 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 		
 		val layout = Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, day ${galaxy.day}, time ${secondsToString(galaxy.time)}, ", 8f, 32f)
 		
-		if (galaxy.speedLimited) {
+		if (galaxy.speed == 0L) {
+			Assets.fontUI.color = Color.RED
+			Assets.fontUI.draw(spriteBatch, "System Error", 8f + layout.width, 32f)
+			Assets.fontUI.color = Color.WHITE
+			
+		} else if (galaxy.speed < 0L) {
+			Assets.fontUI.color = Color.GRAY
+			Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / -galaxy.speed}", 8f + layout.width, 32f)
+			Assets.fontUI.color = Color.WHITE
+			
+		} else if (galaxy.speedLimited) {
 			Assets.fontUI.color = Color.RED
 			Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / galaxy.speed}", 8f + layout.width, 32f)
 			Assets.fontUI.color = Color.WHITE
@@ -161,45 +172,18 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 			PlanetarySystemGeneration(system).generateRandomSystem()
 
 		} else if (action == KeyActions_PlanetarySystemScreen.SPEED_UP) {
-			//TODO something smarter here
-			var speed = galaxy.speed / 4
-
-			if (speed < Units.NANO_MILLI / 60) {
-				speed = Units.NANO_MILLI / 60
-			}
-
-			galaxy.speed = speed
-
-			if (galaxy.sleeping) {
-				galaxy.thread!!.interrupt()
-			}
-
+			
+			Player.current.increaseSpeed()
 			return true
 
 		} else if (action == KeyActions_PlanetarySystemScreen.SPEED_DOWN) {
 
-			var speed = galaxy.speed * 4
-
-			if (speed > 1 * Units.NANO_SECOND) {
-				speed = 1 * Units.NANO_SECOND
-			}
-
-			galaxy.speed = speed
-
-			if (galaxy.sleeping) {
-				galaxy.thread!!.interrupt()
-			}
-
+			Player.current.decreaseSpeed()
 			return true
 
 		} else if (action == KeyActions_PlanetarySystemScreen.PAUSE) {
 
-			galaxy.paused = !galaxy.paused
-
-			if (galaxy.sleeping) {
-				galaxy.thread!!.interrupt()
-			}
-
+			Player.current.pauseSpeed()
 			return true
 
 		} else if (action == KeyActions_PlanetarySystemScreen.MAP) {
