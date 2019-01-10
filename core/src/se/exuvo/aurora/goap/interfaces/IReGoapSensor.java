@@ -1,4 +1,4 @@
-﻿package se.exuvo.aurora.goap.interfaces;
+package se.exuvo.aurora.goap.interfaces;
 
 /*
  * this is not strictly needed for a goap AI, but can be userful if your memory has many states and you want to re-use different sensors in

@@ -1,6 +1,8 @@
-﻿package se.exuvo.aurora.goap.planner;
+package se.exuvo.aurora.goap.planner;
 
 import java.security.InvalidParameterException;
+
+import se.exuvo.aurora.goap.interfaces.INode;
 
 /// An implementation of a min-Priority Queue using a heap. Has O(1) .contains()!
 /// See https://github.com/BlueRaja/High-Speed-Priority-Queue-for-C-Sharp/wiki/Getting-Started for more information

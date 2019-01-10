@@ -1,4 +1,4 @@
-﻿package se.exuvo.aurora.goap.interfaces;
+package se.exuvo.aurora.goap.interfaces;
 
 public interface IReGoapMemory<T, W> {
 

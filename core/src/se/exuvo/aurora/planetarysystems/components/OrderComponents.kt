@@ -40,6 +40,7 @@ class ShipOrdersComponent<T, W> : Component(), IReGoapAgent<T, W> where T: ShipW
 	val actions = Bag<IReGoapAction<T, W>>()
 	val memory = ShipMemory<T, W>()
 	
+	@JvmField
 	var currentGoal: IReGoapGoal<T, W>? = null
 	val planValues = HashMap<T, W>()
 	
@@ -68,7 +69,7 @@ class ShipOrdersComponent<T, W> : Component(), IReGoapAgent<T, W> where T: ShipW
 		}
 	}
 	
-	override fun getCurrentGoal() = currentGoal
+	override fun getCurrentGoal(): IReGoapGoal<T, W>? = currentGoal
 
 	override fun isActive() = true
 
@@ -76,7 +77,7 @@ class ShipOrdersComponent<T, W> : Component(), IReGoapAgent<T, W> where T: ShipW
 		TODO()
 	}
 
-	override fun getMemory() = memory
+	override fun getMemory(): IReGoapMemory<T, W>? = memory
 
 	override fun hasPlanValue(target: T) = planValues.containsKey(target)
 

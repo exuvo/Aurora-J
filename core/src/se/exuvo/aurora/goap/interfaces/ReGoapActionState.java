@@ -1,4 +1,4 @@
-﻿package se.exuvo.aurora.goap.interfaces;
+package se.exuvo.aurora.goap.interfaces;
 
 public class ReGoapActionState<T, W> {
 

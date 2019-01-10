@@ -1,4 +1,4 @@
-﻿package se.exuvo.aurora.goap.planner;
+package se.exuvo.aurora.goap.planner;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -8,6 +8,7 @@ import java.util.Queue;
 
 import net.mostlyoriginal.api.utils.pooling.PoolsCollection;
 import se.exuvo.aurora.goap.interfaces.GoapActionStackData;
+import se.exuvo.aurora.goap.interfaces.INode;
 import se.exuvo.aurora.goap.interfaces.IReGoapAction;
 import se.exuvo.aurora.goap.interfaces.IReGoapAgent;
 import se.exuvo.aurora.goap.interfaces.ReGoapActionState;

@@ -1,4 +1,4 @@
-﻿package se.exuvo.aurora.goap.planner;
+package se.exuvo.aurora.goap.planner;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -8,10 +8,12 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import se.exuvo.aurora.goap.interfaces.INode;
+
 public class AStar<T> {
 
 	private static final Logger log = Logger.getLogger(AStar.class);
-	
+
 	private final FastPriorityQueue<INode<T>, T> frontier;
 	private final Map<T, INode<T>> stateToNode;
 	private final Map<T, INode<T>> explored;
@@ -143,43 +145,6 @@ public class AStar<T> {
 		endDebugPlan(null);
 		return null;
 	}
-}
-
-interface INode<T> {
-
-	T getState();
-
-	List<INode<T>> expand();
-
-	int compareTo(INode<T> other);
-
-	float getCost();
-
-	float getHeuristicCost();
-
-	float getPathCost();
-
-	INode<T> getParent();
-
-	boolean isGoal(T goal);
-
-	String getName();
-
-	T getGoal();
-
-	T getEffects();
-
-	T getPreconditions();
-
-	int getQueueIndex();
-
-	void setQueueIndex(int queueIndex);
-
-	float getPriority();
-
-	void setPriority(float priority);
-
-	void recycle();
 }
 
 class NodeComparer<T> implements Comparator<INode<T>> {

@@ -1,4 +1,4 @@
-﻿package se.exuvo.aurora.goap.planner;
+package se.exuvo.aurora.goap.planner;
 
 import java.util.Deque;
 import java.util.function.Consumer;

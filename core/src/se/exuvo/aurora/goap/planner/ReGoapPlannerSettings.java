@@ -1,7 +1,7 @@
-﻿package se.exuvo.aurora.goap.planner;
+package se.exuvo.aurora.goap.planner;
 
 public class ReGoapPlannerSettings {
-	
+
 	public boolean planningEarlyExit = false;
 	// increase both if your agent has a lot of actions
 	public int maxIterations = 1000;
