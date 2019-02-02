@@ -140,7 +140,7 @@ enum class PracticalTheory(val applicableCategories: List<ResearchCategory>) {
 	;
 }
 
-class Technology(val code: String, // Image is mapped from name
+class Technology(val code: String,
 								 val category: ResearchCategory,
 								 val researchPoints: Int,
 								 val requirementNames: List<String>,
