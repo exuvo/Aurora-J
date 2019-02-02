@@ -272,7 +272,7 @@ class Technology(val code: String,
 			Technology("Jump Drive 1", ResearchCategory.EXOTIC_PROPULSION, 10, listOf("Jump Gates 3"), "Jump Drive", "") // Charge time
 			Technology("Jump Drive 2", ResearchCategory.EXOTIC_PROPULSION, 10, emptyList(), "Blink Drive", "") // No charge time
 			// https://en.wikipedia.org/wiki/Jumpgate
-			Technology("Jump Gates 1", ResearchCategory.EXOTIC_PROPULSION, 10, emptyList(), "Small Jump Gate", "") // Fixed destionation
+			Technology("Jump Gates 1", ResearchCategory.EXOTIC_PROPULSION, 10, emptyList(), "Small Jump Gate", "") // Fixed destination
 			Technology("Jump Gates 2", ResearchCategory.EXOTIC_PROPULSION, 10, emptyList(), "Medium Jump Gate", "")
 			Technology("Jump Gates 3", ResearchCategory.EXOTIC_PROPULSION, 10, emptyList(), "Large Jump Gate", "")
 			Technology("Wormhole Gates 1", ResearchCategory.EXOTIC_PROPULSION, 10, listOf("Jump Gates 3"), "Stargate", "") // Can travel to any other known stargate
