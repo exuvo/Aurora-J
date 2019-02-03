@@ -50,15 +50,15 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 		val EMISSION_ASPECT = Aspect.all(MassComponent::class.java, TimedMovementComponent::class.java)
 		val SHIP_ASPECT = Aspect.all(ShipComponent::class.java)
 		
-		val MAX_AU = 10;
-		val SQUARES_PER_AU = 20
-		val H_SQUARE_SIZE_KM = Units.AU / SQUARES_PER_AU
-		val H_SQUARE_SIZE_KMf = H_SQUARE_SIZE_KM.toFloat()
-		val WATER_SIZE = (MAX_AU * SQUARES_PER_AU).toInt()
+		const val MAX_AU = 10;
+		const val SQUARES_PER_AU = 20
+		const val H_SQUARE_SIZE_KM = Units.AU / SQUARES_PER_AU
+		const val H_SQUARE_SIZE_KMf = H_SQUARE_SIZE_KM.toFloat()
+		const val WATER_SIZE = (MAX_AU * SQUARES_PER_AU).toInt()
 		
-		val WAVE_ATTENUATION = 0.999f //TODO lower if high SQUARES_PER_AU (Math.pow(0.999, SQUARES_PER_AU.toDouble()).toFloat())
-		val C_WAVE_SPEED = Units.C.toFloat()
-		val MAX_INTERVAL = 5 //(H_SQUARE_SIZE_KM / C_WAVE_SPEED).toInt()
+		const val WAVE_ATTENUATION = 0.999f //TODO lower if high SQUARES_PER_AU (Math.pow(0.999, SQUARES_PER_AU.toDouble()).toFloat())
+		const val C_WAVE_SPEED = Units.C.toFloat()
+		const val MAX_INTERVAL = 5 //(H_SQUARE_SIZE_KM / C_WAVE_SPEED).toInt()
 	}
 
 	val log = Logger.getLogger(this.javaClass)
@@ -76,8 +76,9 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 	lateinit private var sensorsSubscription: EntitySubscription
 	lateinit private var emissionsSubscription: EntitySubscription
 	
-	val waveHeight = Array<Array<Float>>(WATER_SIZE, {Array<Float>(WATER_SIZE, {0f})})
-	val waveVelocity = Array<Array<Float>>(WATER_SIZE, {Array<Float>(WATER_SIZE, {0f})})
+	//TODO single FloatArray>(WATER_SIZE * WATER_SIZE) and calculate x y index manually
+	val waveHeight = Array<FloatArray>(WATER_SIZE, {FloatArray(WATER_SIZE)})
+	val waveVelocity = Array<FloatArray>(WATER_SIZE, {FloatArray(WATER_SIZE)})
 	
 	// c² / h²
 	val stepSpeed = ((C_WAVE_SPEED * C_WAVE_SPEED) / (H_SQUARE_SIZE_KM * H_SQUARE_SIZE_KM)).toFloat()
@@ -129,6 +130,8 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 	 *  https://archive.org/details/GDC2008Fischer
 	 */
 	override fun processSystem() {
+		val start = System.nanoTime()
+		
 		var deltaGameTime = (galaxy.time - lastProcess).toInt()
 		lastProcess = galaxy.time
 		
@@ -198,6 +201,9 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 				waveHeight[x][y] *= 0.998f
 			}
 		}
+		
+		val time = System.nanoTime() - start
+		println("Took $time")
 	}
 	
 	private val shapeRenderer by lazy { GameServices[ShapeRenderer::class] }

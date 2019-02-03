@@ -26,7 +26,7 @@ import se.exuvo.aurora.utils.Units
 class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 	companion object {
 		val FAMILY = Aspect.all(OrbitComponent::class.java, TimedMovementComponent::class.java)
-		val gravitationalConstant = 6.67408e-11
+		const val gravitationalConstant = 6.67408e-11
 	}
 
 	val log = Logger.getLogger(this.javaClass)
