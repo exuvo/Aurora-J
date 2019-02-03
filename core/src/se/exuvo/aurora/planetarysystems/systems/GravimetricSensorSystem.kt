@@ -36,14 +36,6 @@ import se.exuvo.aurora.planetarysystems.PlanetarySystem
 import com.artemis.annotations.Wire
 import java.lang.RuntimeException
 
-//TODO hyperspace openings makes instant large push
-
-/* 
- * TODO Accelerate with GPU
- *  https://www.gamedevelopment.blog/glsl-shader-language-libgdx/
- *  https://github.com/libgdx/libgdx/wiki/Shaders
- *  https://www.gamefromscratch.com/post/2014/07/08/LibGDX-Tutorial-Part-12-Using-GLSL-Shaders-and-creating-a-Mesh.aspx
-**/
 class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Units.C).toLong()) { // 
 	companion object {
 		val SENSOR_ASPECT = Aspect.all(GravimetricSensorsComponent::class.java)
@@ -76,9 +68,8 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 	lateinit private var sensorsSubscription: EntitySubscription
 	lateinit private var emissionsSubscription: EntitySubscription
 	
-	//TODO single FloatArray>(WATER_SIZE * WATER_SIZE) and calculate x y index manually
-	val waveHeight = Array<FloatArray>(WATER_SIZE, {FloatArray(WATER_SIZE)})
-	val waveVelocity = Array<FloatArray>(WATER_SIZE, {FloatArray(WATER_SIZE)})
+	val waveHeight = FloatArray(WATER_SIZE * WATER_SIZE)
+	val waveVelocity = FloatArray(WATER_SIZE * WATER_SIZE)
 	
 	// c² / h²
 	val stepSpeed = ((C_WAVE_SPEED * C_WAVE_SPEED) / (H_SQUARE_SIZE_KM * H_SQUARE_SIZE_KM)).toFloat()
@@ -119,18 +110,23 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 		println("WATER_SIZE $WATER_SIZE, cells ${WATER_SIZE * WATER_SIZE}, stepSpeed $stepSpeed, H_SQUARE_SIZE_KM $H_SQUARE_SIZE_KM, interval $interval")
 	}
 
+	//TODO register mass movement. hyperspace openings makes instant large push
+	
 //	@Subscribe
 //	fun powerEvent(event: MovementEvent) {
 //		val powerComponent = movementMapper.get(event.entityID)
 //		powerComponent.stateChanged = true
 //	}
 
+	private fun index(x: Int, y: Int) = x * WATER_SIZE + y
+	
+	//TODO Accelerate with GPU
 	/* Water surface simulation using height fields
 	 *  https://gamedev.stackexchange.com/questions/79318/simple-water-surface-simulation-problems-gdc2008-matthias-muller-hello-world
 	 *  https://archive.org/details/GDC2008Fischer
 	 */
 	override fun processSystem() {
-		val start = System.nanoTime()
+//		val start = System.nanoTime()
 		
 		var deltaGameTime = (galaxy.time - lastProcess).toInt()
 		lastProcess = galaxy.time
@@ -147,15 +143,15 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 			
 			var attenuation = WAVE_ATTENUATION
 
-			//TODO attenuation should give same wave pattern irregardless of speed
+			//TODO attenuation should give same wave pattern regardless of speed
 //			for (i in 2..delta) {
 //				attenuation *= WAVE_ATTENUATION
 //			}
 	
 			for (x in 1..WATER_SIZE-2) {
 				for (y in 1..WATER_SIZE-2) {
-					var velocity = stepSpeed * ((waveHeight[x-1][y] + waveHeight[x+1][y] + waveHeight[x][y-1] + waveHeight[x][y+1]) - 4 * waveHeight[x][y])
-					waveVelocity[x][y] = (waveVelocity[x][y] + velocity * delta) * attenuation
+					var velocity = stepSpeed * ((waveHeight[index(x-1, y)] + waveHeight[index(x+1, y)] + waveHeight[index(x, y-1)] + waveHeight[index(x, y+1)]) - 4 * waveHeight[index(x, y)])
+					waveVelocity[index(x, y)] = (waveVelocity[index(x, y)] + velocity * delta) * attenuation
 				}
 			}
 			
@@ -165,32 +161,32 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 			for (x in 1..WATER_SIZE - 2) {
 				run {
 					val y = 0
-					val u = waveHeight[x][1]
-					waveHeight[x][y] = (waveSpeed * u + waveHeight[x][y] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
+					val u = waveHeight[index(x, 1)]
+					waveHeight[index(x, y)] = (waveSpeed * u + waveHeight[index(x, y)] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
 				}
 				run {
 					val y = WATER_SIZE - 1
-					val u = waveHeight[x][WATER_SIZE - 2]
-					waveHeight[x][y] = (waveSpeed * u + waveHeight[x][y] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
+					val u = waveHeight[index(x, WATER_SIZE - 2)]
+					waveHeight[index(x, y)] = (waveSpeed * u + waveHeight[index(x, y)] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
 				}
 			}
 			
 			for (y in 1..WATER_SIZE-2) {
 				run {
 					val x = 0
-					val u = waveHeight[1][y]
-					waveHeight[x][y] = (waveSpeed * u + waveHeight[x][y] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
+					val u = waveHeight[index(1, y)]
+					waveHeight[index(x, y)] = (waveSpeed * u + waveHeight[index(x, y)] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
 				}
 				run {
 					val x = WATER_SIZE - 1
-					val u = waveHeight[WATER_SIZE - 2][y]
-					waveHeight[x][y] = (waveSpeed * u + waveHeight[x][y] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
+					val u = waveHeight[index(WATER_SIZE - 2, y)]
+					waveHeight[index(x, y)] = (waveSpeed * u + waveHeight[index(x, y)] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
 				}
 			}
 			
 			for (x in 1..WATER_SIZE-2) {
 				for (y in 1..WATER_SIZE-2) {
-					waveHeight[x][y] += waveVelocity[x][y] * delta
+					waveHeight[index(x, y)] += waveVelocity[index(x, y)] * delta
 				}
 			}
 		}
@@ -198,12 +194,12 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 		// Avoid redshift
 		for (x in 1..WATER_SIZE - 2) {
 			for (y in 1..WATER_SIZE - 2) {
-				waveHeight[x][y] *= 0.998f
+				waveHeight[index(x, y)] *= 0.998f
 			}
 		}
 		
-		val time = System.nanoTime() - start
-		println("Took $time")
+//		val time = System.nanoTime() - start
+//		println("Took $time")
 	}
 	
 	private val shapeRenderer by lazy { GameServices[ShapeRenderer::class] }
@@ -213,24 +209,28 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 	private val middleColor = Color(0f, 0f, 0f, 0f)
 	private val color = Color()
 	
+	//TODO render with custom shader to add interpolation and smooth edges
+	// https://www.gamedevelopment.blog/glsl-shader-language-libgdx/
+	// https://github.com/libgdx/libgdx/wiki/Shaders
+	// https://www.gamefromscratch.com/post/2014/07/08/LibGDX-Tutorial-Part-12-Using-GLSL-Shaders-and-creating-a-Mesh.aspx
 	fun render(cameraOffset: Vector2L) {
 		val renderer = shapeRenderer
-		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+		renderer.begin(ShapeRenderer.ShapeType.Filled)
 
 		for (x in 0..WATER_SIZE - 1) {
 			for (y in 0..WATER_SIZE - 1) {
-				val height = waveHeight[x][y]
+				val height = waveHeight[index(x, y)]
 
 				lerpColors(height, lowColor, middleColor, highColor, color)
-				shapeRenderer.color = color
+				renderer.color = color
 
 				val x1 = ((x - WATER_SIZE / 2) * H_SQUARE_SIZE_KM - cameraOffset.x).toFloat()
 				val y1 = ((y - WATER_SIZE / 2) * H_SQUARE_SIZE_KM - cameraOffset.y).toFloat()
 				
-				shapeRenderer.rect(x1, y1, H_SQUARE_SIZE_KMf, H_SQUARE_SIZE_KMf)
+				renderer.rect(x1, y1, H_SQUARE_SIZE_KMf, H_SQUARE_SIZE_KMf)
 			}
 		}
-		shapeRenderer.end();
+		renderer.end();
 	}
 	
 }
