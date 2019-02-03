@@ -714,12 +714,18 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		spriteBatch.end()
 	}
 
-	fun aa(mouseInGameCoordinates: Vector2L) {
-		val x = GravimetricSensorSystem.WATER_SIZE / 2 + (mouseInGameCoordinates.x / 1000L) / GravimetricSensorSystem.H_SQUARE_SIZE_KM
-		val y = GravimetricSensorSystem.WATER_SIZE / 2 + (mouseInGameCoordinates.y / 1000L) / GravimetricSensorSystem.H_SQUARE_SIZE_KM
-		
-		if (x > 0 && x < GravimetricSensorSystem.WATER_SIZE-1 && y > 0 && y < GravimetricSensorSystem.WATER_SIZE-1 ){
-			gravSystem.waveHeight[x.toInt() * GravimetricSensorSystem.WATER_SIZE + y.toInt()] += 1f
+	var lastBump = 0L
+	fun waterBump(mouseInGameCoordinates: Vector2L) {
+		val now = System.currentTimeMillis()
+		if (now - lastBump > 100) {
+			lastBump = now
+			
+			val x = GravimetricSensorSystem.WATER_SIZE / 2 + (mouseInGameCoordinates.x / 1000L) / GravimetricSensorSystem.H_SQUARE_SIZE_KM
+			val y = GravimetricSensorSystem.WATER_SIZE / 2 + (mouseInGameCoordinates.y / 1000L) / GravimetricSensorSystem.H_SQUARE_SIZE_KM
+			
+			if (x > 0 && x < GravimetricSensorSystem.WATER_SIZE-1 && y > 0 && y < GravimetricSensorSystem.WATER_SIZE-1 ){
+				gravSystem.waveHeight[x.toInt() * GravimetricSensorSystem.WATER_SIZE + y.toInt()] += 10f
+			}
 		}
 	}
 

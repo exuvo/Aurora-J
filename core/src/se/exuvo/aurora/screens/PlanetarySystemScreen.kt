@@ -124,7 +124,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 			
 			if (Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
 				val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(Gdx.input.x, Gdx.input.y))
-				renderSystem.aa(mouseInGameCoordinates)
+				renderSystem.waterBump(mouseInGameCoordinates)
 			}
 		}
 
