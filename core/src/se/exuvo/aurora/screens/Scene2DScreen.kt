@@ -18,9 +18,9 @@ import se.exuvo.aurora.utils.GameServices
 
 class Scene2DScreen : GameScreenImpl(), InputProcessor {
 
-	private val spriteBatch by lazy { GameServices[SpriteBatch::class] }
-	private val galaxy by lazy { GameServices[Galaxy::class] }
-	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class] }
+	private val spriteBatch by lazy (LazyThreadSafetyMode.NONE) { GameServices[SpriteBatch::class] }
+	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
+	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 
 	private val nameMapper = ComponentMapper.getFor(NameComponent::class.java, galaxy.world)
 	private val orbitMapper = ComponentMapper.getFor(OrbitComponent::class.java, galaxy.world)

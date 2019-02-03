@@ -53,11 +53,11 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 	private val spriteBatch = GameServices[SpriteBatch::class]
 	private val shapeRenderer = GameServices[ShapeRenderer::class]
-	private val galaxy by lazy { GameServices[Galaxy::class] }
-	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class] }
-	private val systemGroupSystem by lazy { system.world.getSystem(GroupSystem::class.java) }
-	private val renderSystem by lazy { system.world.getSystem(RenderSystem::class.java) }
-	private val movementSystem by lazy { system.world.getSystem(MovementSystem::class.java) }
+	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
+	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
+	private val systemGroupSystem by lazy (LazyThreadSafetyMode.NONE) { system.world.getSystem(GroupSystem::class.java) }
+	private val renderSystem by lazy (LazyThreadSafetyMode.NONE) { system.world.getSystem(RenderSystem::class.java) }
+	private val movementSystem by lazy (LazyThreadSafetyMode.NONE) { system.world.getSystem(MovementSystem::class.java) }
 
 	private val uiCamera = GameServices[GameScreenService::class].uiCamera
 	private var viewport by Delegates.notNull<Viewport>()

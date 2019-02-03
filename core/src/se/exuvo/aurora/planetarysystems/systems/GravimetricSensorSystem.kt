@@ -202,7 +202,7 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 //		println("Took $time")
 	}
 	
-	private val shapeRenderer by lazy { GameServices[ShapeRenderer::class] }
+	private val shapeRenderer by lazy (LazyThreadSafetyMode.NONE) { GameServices[ShapeRenderer::class] }
 	
 	private val lowColor = Color.BLUE
 	private val highColor = Color.RED
@@ -214,6 +214,8 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 	// https://github.com/libgdx/libgdx/wiki/Shaders
 	// https://www.gamefromscratch.com/post/2014/07/08/LibGDX-Tutorial-Part-12-Using-GLSL-Shaders-and-creating-a-Mesh.aspx
 	fun render(cameraOffset: Vector2L) {
+//		val start = System.nanoTime()
+		
 		val renderer = shapeRenderer
 		renderer.begin(ShapeRenderer.ShapeType.Filled)
 
@@ -231,6 +233,9 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 			}
 		}
 		renderer.end();
+		
+//		val time = System.nanoTime() - start
+//		println("Took $time")
 	}
 	
 }

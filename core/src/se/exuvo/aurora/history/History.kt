@@ -39,7 +39,7 @@ class History : Disposable {
 
 	private val executorService = Executors.newSingleThreadExecutor()
 
-	private val galaxy by lazy { GameServices[Galaxy::class] }
+	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 
 	init {
 		log.info("Opening history DB")

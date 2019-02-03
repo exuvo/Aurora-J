@@ -176,7 +176,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 		movement.time = galaxy.time
 	}
 
-	private val shapeRenderer by lazy { GameServices[ShapeRenderer::class] }
+	private val shapeRenderer by lazy (LazyThreadSafetyMode.NONE) { GameServices[ShapeRenderer::class] }
 
 	fun render(cameraOffset: Vector2L) {
 		shapeRenderer.color = Color.GRAY

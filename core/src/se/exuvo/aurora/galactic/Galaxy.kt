@@ -45,7 +45,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 	val log = Logger.getLogger(this.javaClass)
 
 	lateinit var systems: Bag<PlanetarySystem>
-	private val groupSystem by lazy { GameServices[GroupSystem::class] }
+	private val groupSystem by lazy(LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	private val threadPool = ThreadPoolTaskGroupHandler<SimpleTaskGroup>("Galaxy", Settings.getInt("Galaxy/threads", Runtime.getRuntime().availableProcessors()), true) //
 	private var thread: Thread? = null
 	private var sleeping = false
@@ -300,7 +300,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 
 	class UpdateSystemTask(val system: PlanetarySystem, val galaxy: Galaxy) : Runnable {
 
-		val log by lazy { Logger.getLogger(this.javaClass) }
+		val log by lazy(LazyThreadSafetyMode.NONE) { Logger.getLogger(this.javaClass) }
 
 		override fun run() {
 			try {

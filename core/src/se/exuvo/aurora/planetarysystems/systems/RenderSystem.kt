@@ -65,7 +65,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	private val shapeRenderer = GameServices[ShapeRenderer::class]
 	private val spriteBatch = GameServices[SpriteBatch::class]
 	private val uiCamera = GameServices[GameScreenService::class].uiCamera
-	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class] }
+	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	private val galaxy = GameServices[Galaxy::class]
 	
 	lateinit private var groupSystem: GroupSystem

@@ -14,7 +14,7 @@ class Player(var name: String) {
 	}
 
 	private val log = Logger.getLogger(this.javaClass)
-	private val galaxy by lazy { GameServices[Galaxy::class] }
+	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 
 	val empire: Empire? = null
 	var speedSteps = listOf(1, 4, 10, 50, 200, 1000, 5000, 25000, 60000)

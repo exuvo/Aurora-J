@@ -32,9 +32,9 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 
 	private val spriteBatch = GameServices[SpriteBatch::class]
 	private val shapeRenderer = GameServices[ShapeRenderer::class]
-	private val galaxy by lazy { GameServices[Galaxy::class] }
-	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class] }
-	private val renderSystem by lazy { galaxy.world.getSystem(GalacticRenderSystem::class.java) }
+	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
+	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
+	private val renderSystem by lazy (LazyThreadSafetyMode.NONE) { galaxy.world.getSystem(GalacticRenderSystem::class.java) }
 
 	private val uiCamera = GameServices[GameScreenService::class].uiCamera
 	private var viewport by Delegates.notNull<Viewport>()

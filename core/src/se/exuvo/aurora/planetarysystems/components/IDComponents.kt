@@ -18,7 +18,7 @@ data class EntityUUID(val planetarySystemID: Int, val empireID: Int, val entityU
 	
 	override fun toString(): String = "$planetarySystemID:$empireID:$entityUID"
 
-	private val hashcode: Int by lazy {
+	private val hashcode: Int by lazy (LazyThreadSafetyMode.NONE) {
 		var hash = 1
 		hash = 37 * hash + planetarySystemID
 		hash = 37 * hash + empireID
@@ -28,7 +28,7 @@ data class EntityUUID(val planetarySystemID: Int, val empireID: Int, val entityU
 
 	override fun hashCode(): Int = hashcode
 	
-	val dispersedHash: Int by lazy { EncryptionUtils.stringDigester.digest(toString()).hashCode() }
+	val dispersedHash: Int by lazy (LazyThreadSafetyMode.NONE) { EncryptionUtils.stringDigester.digest(toString()).hashCode() }
 }
 
 class NameComponent() : Component() {

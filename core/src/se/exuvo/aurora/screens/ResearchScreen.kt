@@ -11,8 +11,8 @@ import se.exuvo.aurora.utils.GameServices
 
 class ResearchScreen : GameScreenImpl(), InputProcessor {
 
-	private val spriteBatch by lazy { GameServices[SpriteBatch::class] }
-	private val galaxy by lazy { GameServices[Galaxy::class] }
+	private val spriteBatch by lazy (LazyThreadSafetyMode.NONE) { GameServices[SpriteBatch::class] }
+	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 
 	private val stage = Stage(ScreenViewport())
 	private val selectionWindow: Window

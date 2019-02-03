@@ -61,8 +61,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 	val log = Logger.getLogger(this.javaClass)
 
-	private val galaxy by lazy { GameServices[Galaxy::class] }
-	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class] }
+	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
+	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 
 	private val uiCamera = GameServices[GameScreenService::class].uiCamera
 

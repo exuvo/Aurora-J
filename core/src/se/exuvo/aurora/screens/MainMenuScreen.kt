@@ -32,8 +32,8 @@ import com.artemis.utils.Bag
 
 class MainMenuScreen() : GameScreenImpl() {
 
-	private val assetManager by lazy { GameServices[AssetManager::class] }
-	private val batch by lazy { GameServices[SpriteBatch::class] }
+	private val assetManager by lazy (LazyThreadSafetyMode.NONE) { GameServices[AssetManager::class] }
+	private val batch by lazy (LazyThreadSafetyMode.NONE) { GameServices[SpriteBatch::class] }
 	private val uiCamera = OrthographicCamera()
 
 	override fun show() {

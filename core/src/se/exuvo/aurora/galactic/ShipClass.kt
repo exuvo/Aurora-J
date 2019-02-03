@@ -75,7 +75,7 @@ class ShipClass {
 	
 	override fun toString() = name
 	
-	private val hashcode: Int by lazy {
+	private val hashcode: Int by lazy (LazyThreadSafetyMode.NONE) {
 		var hash = 1;
 		hash = 37 * hash + name.hashCode()
 		hash = 37 * hash + designDay

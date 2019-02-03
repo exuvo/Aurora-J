@@ -47,7 +47,7 @@ fun getFontWidth(font: BitmapFont, text: String): Float {
 class LoadingScreen() : GameScreenImpl() {
 
 	private val assetManager = GameServices[AssetManager::class]
-	private val batch by lazy { GameServices[SpriteBatch::class] }
+	private val batch by lazy (LazyThreadSafetyMode.NONE) { GameServices[SpriteBatch::class] }
 	private val uiCamera = OrthographicCamera()
 	private var texturePackerTask = TexturePackerTask(assetManager)
 

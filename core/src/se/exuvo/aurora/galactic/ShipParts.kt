@@ -24,7 +24,7 @@ abstract class Part {
 		return volume
 	}
 	
-	private val hashcode: Int by lazy {calculateHashCode()}
+	private val hashcode: Int by lazy (LazyThreadSafetyMode.NONE) {calculateHashCode()}
 	
 	// https://stackoverflow.com/questions/113511/best-implementation-for-hashcode-method
 	open fun calculateHashCode() : Int {

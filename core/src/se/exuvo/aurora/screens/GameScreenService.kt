@@ -17,7 +17,7 @@ import com.badlogic.gdx.graphics.GL20
 
 class GameScreenService : Disposable, InputProcessor {
 	private val inputMultiplexer = InputMultiplexer()
-	private val spriteBatch by lazy { GameServices[SpriteBatch::class] }
+	private val spriteBatch by lazy (LazyThreadSafetyMode.NONE) { GameServices[SpriteBatch::class] }
 	val uiCamera = OrthographicCamera()
 	private val screens = LinkedList<GameScreen>()
 	private val addQueue = LinkedList<GameScreen>()
