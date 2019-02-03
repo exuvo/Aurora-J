@@ -15,11 +15,12 @@ import java.util.List;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
@@ -32,29 +33,26 @@ public class XMLParser implements SettingNode {
 	private final Element element;
 	private final XPath xpath;
 
-
 	public XMLParser(String path) throws SAXException, IOException, ParserConfigurationException {
 
 		Document doc = XMLUtils.parseXMLFile(path, false,false);
 		this.element = doc.getDocumentElement();
 
-		this.xpath = XPathFactory.newInstance().newXPath();
-
+		this.xpath = PooledXPathFactory.newXPath();
 	}
 
 	public XMLParser(Document doc) {
 
 		this.element = doc.getDocumentElement();
 
-		this.xpath = XPathFactory.newInstance().newXPath();
+		this.xpath = PooledXPathFactory.newXPath();
 	}
 
 	public XMLParser(Element element) {
 
 		this.element = element;
 
-		this.xpath = XPathFactory.newInstance().newXPath();
-
+		this.xpath = PooledXPathFactory.newXPath();
 	}
 
 	public XMLParser(File xmlFile) throws SAXException, IOException, ParserConfigurationException {
@@ -62,7 +60,7 @@ public class XMLParser implements SettingNode {
 		Document doc = XMLUtils.parseXMLFile(xmlFile, false, false);
 		this.element = doc.getDocumentElement();
 
-		this.xpath = XPathFactory.newInstance().newXPath();
+		this.xpath = PooledXPathFactory.newXPath();
 	}
 
 	public Boolean getBoolean(String expression) {
@@ -215,6 +213,11 @@ public class XMLParser implements SettingNode {
 	}
 
 	public List<XMLParser> getNodes(String expression) {
+		
+		return getNodes(expression, false);
+	}
+	
+	public List<XMLParser> getNodes(String expression, boolean disconnect) {
 
 		NodeList nodes = this.getNodeList(expression);
 
@@ -222,18 +225,55 @@ public class XMLParser implements SettingNode {
 
 		for(int i = 0; i < nodes.getLength(); i++){
 
-			settingNodes.add(new XMLParser((Element)nodes.item(i)));
-
+			Node node = nodes.item(i);
+			
+			if(disconnect){
+				
+				node.getParentNode().removeChild(node);
+			}
+			
+			settingNodes.add(new XMLParser((Element)node));
 		}
 
 		return settingNodes;
 
 	}
+	
+	public List<XMLParser> getNodes(XPathExpression expression, boolean disconnect) {
+
+		NodeList nodes = this.getNodeList(expression);
+
+		List<XMLParser> settingNodes = new ArrayList<XMLParser>(nodes.getLength());
+
+		for(int i = 0; i < nodes.getLength(); i++){
+
+			Node node = nodes.item(i);
+			
+			if(disconnect){
+				
+				node.getParentNode().removeChild(node);
+			}
+			
+			settingNodes.add(new XMLParser((Element)node));
+		}
+
+		return settingNodes;
+	}	
 
 	public String getString(String expression) {
 
 		try {
 			return this.xpath.evaluate(expression, this.element);
+		} catch (XPathExpressionException e) {
+			return null;
+		}
+
+	}
+	
+	public String getString(XPathExpression expression) {
+
+		try {
+			return (String) expression.evaluate(this.element, XPathConstants.STRING);
 		} catch (XPathExpressionException e) {
 			return null;
 		}
@@ -269,6 +309,16 @@ public class XMLParser implements SettingNode {
 		}
 
 	}
+	
+	private NodeList getNodeList(XPathExpression expression){
+
+		try {
+			return (NodeList) expression.evaluate(this.element, XPathConstants.NODESET);
+		} catch(XPathExpressionException e) {
+			return null;
+		}
+
+	}	
 
 	private Element getElement(String expression){
 
@@ -282,5 +332,9 @@ public class XMLParser implements SettingNode {
 	public String getElementName(){
 
 		return element.getTagName();
+	}
+	
+	public Element getElement() {
+		return element;
 	}
 }

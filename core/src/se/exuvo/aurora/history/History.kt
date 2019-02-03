@@ -121,14 +121,20 @@ class History : Disposable {
 	}
 
 	fun entityCreated(entityID: Int, world: World) {
+		val time = galaxy.time
+		val uuid = ComponentMapper.getFor(UUIDComponent::class.java, world).get(entityID).uuid
+		
 		execute({
-			historyEntityEventDAO.add(HistoryEntityEvent(galaxy.time, ComponentMapper.getFor(UUIDComponent::class.java, world).get(entityID).uuid, EntityEvent.CREATE))
+			historyEntityEventDAO.add(HistoryEntityEvent(time, uuid, EntityEvent.CREATE))
 		})
 	}
 
 	fun entityDestroyed(entityID: Int, world: World) {
+		val time = galaxy.time
+		val uuid = ComponentMapper.getFor(UUIDComponent::class.java, world).get(entityID).uuid
+		
 		execute({
-			historyEntityEventDAO.add(HistoryEntityEvent(galaxy.time, ComponentMapper.getFor(UUIDComponent::class.java, world).get(entityID).uuid, EntityEvent.DESTROY))
+			historyEntityEventDAO.add(HistoryEntityEvent(time, uuid, EntityEvent.DESTROY))
 		})
 	}
 }

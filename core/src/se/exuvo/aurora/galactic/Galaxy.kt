@@ -98,6 +98,8 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 			it.init()
 		}
 		
+		updateSpeed()
+		
 		val thread = Thread(this, "Galaxy");
 		thread.setDaemon(true);
 		thread.start();

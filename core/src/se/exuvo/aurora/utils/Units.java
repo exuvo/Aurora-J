@@ -2,6 +2,9 @@ package se.exuvo.aurora.utils;
 
 public class Units {
 
+	public static final double AU = 149597870.7; // In km
+	public static final double C =   299792.458; // In km
+	
 	public static final long NANO_MICRO = 1000;
 	public static final long NANO_MILLI = 1000 * NANO_MICRO;
 	public static final long NANO_SECOND = 1000 * NANO_MILLI;

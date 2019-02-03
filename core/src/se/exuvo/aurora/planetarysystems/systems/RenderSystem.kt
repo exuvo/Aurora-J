@@ -67,8 +67,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	private val uiCamera = GameServices[GameScreenService::class].uiCamera
 	private val galaxyGroupSystem by lazy { GameServices[GroupSystem::class] }
 	private val galaxy = GameServices[Galaxy::class]
+	
 	lateinit private var groupSystem: GroupSystem
 	lateinit private var orbitSystem: OrbitSystem
+	lateinit private var gravSystem: GravimetricSensorSystem
 	lateinit private var familyAspect: Aspect
 
 	override fun initialize() {
@@ -679,14 +681,16 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 		viewport.apply()
 		shapeRenderer.projectionMatrix = viewport.camera.combined
-
+		
+		gravSystem.render(cameraOffset)
+		
 		drawDetections(entityIDs, viewport, cameraOffset)
 
 		if (Gdx.input.isKeyPressed(Input.Keys.C)) {
 			drawSelectionDetectionZones(selectedEntityIDs, viewport, cameraOffset)
 		}
 
-		orbitSystem.render(viewport, cameraOffset)
+		orbitSystem.render(cameraOffset)
 
 		drawEntities(entityIDs, viewport, cameraOffset)
 		drawEntityCenters(entityIDs, viewport, cameraOffset)
@@ -708,6 +712,15 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		drawMovementTimes(entityIDs, selectedEntityIDs, viewport, cameraOffset)
 
 		spriteBatch.end()
+	}
+
+	fun aa(mouseInGameCoordinates: Vector2L) {
+		val x = GravimetricSensorSystem.WATER_SIZE / 2 + (mouseInGameCoordinates.x / 1000L) / GravimetricSensorSystem.H_SQUARE_SIZE_KM
+		val y = GravimetricSensorSystem.WATER_SIZE / 2 + (mouseInGameCoordinates.y / 1000L) / GravimetricSensorSystem.H_SQUARE_SIZE_KM
+		
+		if (x > 0 && x < GravimetricSensorSystem.WATER_SIZE-1 && y > 0 && y < GravimetricSensorSystem.WATER_SIZE-1 ){
+			gravSystem.waveHeight[x.toInt()][y.toInt()] += 0.1f * (Units.NANO_SECOND / galaxy.speed)
+		}
 	}
 
 //	private fun drawDottedLine(dotDist: Float, x1: Float, y1: Float, x2: Float, y2: Float) {

@@ -74,6 +74,9 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
 import se.exuvo.aurora.planetarysystems.events.PooledFastEventDispatcher
+import se.exuvo.aurora.planetarysystems.systems.GravimetricSensorSystem
+import com.badlogic.gdx.math.RandomXS128
+import com.artemis.injection.WiredFieldResolver
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener {
 	companion object {
@@ -92,6 +95,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 
 	val lock = ReentrantReadWriteLock()
 	val world: World
+	val random = RandomXS128()
 
 	lateinit private var solarSystemMapper: ComponentMapper<PlanetarySystemComponent>
 	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
@@ -124,6 +128,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		worldBuilder.with(MovementSystem())
 		worldBuilder.with(SolarIrradianceSystem())
 		worldBuilder.with(PassiveSensorSystem())
+		worldBuilder.with(GravimetricSensorSystem())
 		worldBuilder.with(WeaponSystem())
 		worldBuilder.with(PowerSystem())
 		worldBuilder.with(TimedLifeSystem())
@@ -131,7 +136,9 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		worldBuilder.register(CustomSystemInvocationStrategy())
 		//TODO add system to send changes over network
 
-		world = World(worldBuilder.build())
+		val worldConfig = worldBuilder.build()
+		worldConfig.register(this)
+		world = World(worldConfig)
 
 		world.getAspectSubscriptionManager().get(Aspect.all()).addSubscriptionListener(this)
 		world.inject(this)
@@ -180,23 +187,23 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		renderMapper.create(entity3)
 		circleMapper.create(entity3).set(radius = 1737f)
 		nameMapper.create(entity3).set(name = "Moon")
-		orbitMapper.create(entity3).set(parent = entity2, a_semiMajorAxis = (384400.0 / OrbitSystem.AU).toFloat(), e_eccentricity = 0.2f, w_argumentOfPeriapsis = 0f, M_meanAnomaly = 30f)
+		orbitMapper.create(entity3).set(parent = entity2, a_semiMajorAxis = (384400.0 / Units.AU).toFloat(), e_eccentricity = 0.2f, w_argumentOfPeriapsis = 0f, M_meanAnomaly = 30f)
 		tintMapper.create(entity3).set(Color.GRAY)
 		strategicIconMapper.create(entity3).set(Assets.textures.findRegion("strategic/moon"))
 		emissionsMapper.create(entity3).set(mapOf(Spectrum.Electromagnetic to 5e9, Spectrum.Thermal to 5e9))
 
 		val entity4 = createEntity(empire1)
-		timedMovementMapper.create(entity4).apply { previous.value.position.set((OrbitSystem.AU * 1000L * 1L).toLong(), 0).rotate(45f) } //; previous.value.velocity.set(-1000000f, 0f)
+		timedMovementMapper.create(entity4).apply { previous.value.position.set((Units.AU * 1000L * 1L).toLong(), 0).rotate(45f) } //; previous.value.velocity.set(-1000000f, 0f)
 		renderMapper.create(entity4)
 		solarIrradianceMapper.create(entity4)
 		circleMapper.create(entity4).set(radius = 10f)
 		nameMapper.create(entity4).set(name = "Ship")
 //		moveToEntityMapper.create(entity4).set(world.getEntity(entity1), ApproachType.BRACHISTOCHRONE))
 		tintMapper.create(entity4).set(Color.RED)
-		val sensor1 = PassiveSensor(300000, Spectrum.Electromagnetic, 1e-7, 14, OrbitSystem.AU * 0.3, 20, 0.97, 1);
+		val sensor1 = PassiveSensor(300000, Spectrum.Electromagnetic, 1e-7, 14, Units.AU * 0.3, 20, 0.97, 1);
 		sensor1.name = "EM 1e-4"
 		sensor1.designDay = 1
-		val sensor2 = PassiveSensor(800000, Spectrum.Thermal, 1e-8, 8, OrbitSystem.AU * 1, 0, 0.9, 5);
+		val sensor2 = PassiveSensor(800000, Spectrum.Thermal, 1e-8, 8, Units.AU * 1, 0, 0.9, 5);
 		sensor2.name = "TH 1e-10"
 		sensor2.designDay = 1
 		strategicIconMapper.create(entity4).set(Assets.textures.findRegion("strategic/ship"))

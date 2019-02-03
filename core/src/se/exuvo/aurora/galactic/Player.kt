@@ -19,7 +19,7 @@ class Player(var name: String) {
 	val empire: Empire? = null
 	var speedSteps = listOf(1, 4, 10, 50, 200, 1000, 5000, 25000, 60000)
 	var speedIndex = 0
-	var requestedSpeed = 1L
+	var requestedSpeed = Units.NANO_SECOND / speedSteps[speedIndex]
 
 	init {
 		//TODO read speedSteps from config

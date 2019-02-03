@@ -57,8 +57,8 @@ class MainMenuScreen() : GameScreenImpl() {
 		
 		val systems = Bag(PlanetarySystem::class.java)
 		systems.add(PlanetarySystem("s1", Vector2L(0, 0)))
-		systems.add(PlanetarySystem("s2", Vector2L(4367, 0)))
-		systems.add(PlanetarySystem("s3", Vector2L(-2000, -5000)))
+//		systems.add(PlanetarySystem("s2", Vector2L(4367, 0)))
+//		systems.add(PlanetarySystem("s3", Vector2L(-2000, -5000)))
 		
 		galaxy.init(systems)
 

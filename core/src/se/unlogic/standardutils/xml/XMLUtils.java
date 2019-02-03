@@ -20,6 +20,8 @@ import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -50,19 +52,38 @@ import se.unlogic.standardutils.string.StringUtils;
 
 public class XMLUtils {
 
+	private static final DocumentBuilderFactory DOCUMENT_BUILDER_FACTORY;  
+	private static final DocumentBuilderFactory NAMESPACE_AWARE_DOCUMENT_BUILDER_FACTORY;
+	private static final DocumentBuilderFactory VALIDATING_DOCUMENT_BUILDER_FACTORY;
+	private static final DocumentBuilderFactory NAMESPACE_AWARE_VALIDATING_DOCUMENT_BUILDER_FACTORY;
+	
 	private static final DocumentBuilder DOCUMENT_BUILDER;
 	private static final DocumentBuilder NAMESPACE_AWARE_DOCUMENT_BUILDER;
+	
+	private static final TransformerFactory TRANSFORMER_FACTORY = TransformerFactory.newInstance();
+	
+	static {
+		try {
+			DOCUMENT_BUILDER_FACTORY = DocumentBuilderFactory.newInstance();
+			setFactoryParam(DOCUMENT_BUILDER_FACTORY, false, false);
+			
+			NAMESPACE_AWARE_DOCUMENT_BUILDER_FACTORY = DocumentBuilderFactory.newInstance();
+			NAMESPACE_AWARE_DOCUMENT_BUILDER_FACTORY.setNamespaceAware(true);
+			setFactoryParam(NAMESPACE_AWARE_DOCUMENT_BUILDER_FACTORY, false, true);
+			
+			VALIDATING_DOCUMENT_BUILDER_FACTORY = DocumentBuilderFactory.newInstance();
+			VALIDATING_DOCUMENT_BUILDER_FACTORY.setValidating(true);
+			setFactoryParam(VALIDATING_DOCUMENT_BUILDER_FACTORY, true, false);
+			
+			NAMESPACE_AWARE_VALIDATING_DOCUMENT_BUILDER_FACTORY = DocumentBuilderFactory.newInstance();
+			NAMESPACE_AWARE_VALIDATING_DOCUMENT_BUILDER_FACTORY.setNamespaceAware(true);
+			NAMESPACE_AWARE_VALIDATING_DOCUMENT_BUILDER_FACTORY.setValidating(true);
+			setFactoryParam(NAMESPACE_AWARE_VALIDATING_DOCUMENT_BUILDER_FACTORY, true, true);
+			
+			DOCUMENT_BUILDER = DOCUMENT_BUILDER_FACTORY.newDocumentBuilder();
+			NAMESPACE_AWARE_DOCUMENT_BUILDER = NAMESPACE_AWARE_DOCUMENT_BUILDER_FACTORY.newDocumentBuilder();
 
-	static{
-		try{
-			DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-
-			DOCUMENT_BUILDER = documentBuilderFactory.newDocumentBuilder();
-
-			documentBuilderFactory.setNamespaceAware(true);
-
-			NAMESPACE_AWARE_DOCUMENT_BUILDER = documentBuilderFactory.newDocumentBuilder();
-		}catch(ParserConfigurationException e){
+		} catch (ParserConfigurationException e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -83,10 +104,10 @@ public class XMLUtils {
 		StringWriter sw = new StringWriter();
 		Result result = new StreamResult(sw);
 
-		Transformer transformer = TransformerFactory.newInstance().newTransformer();
+		Transformer transformer = TRANSFORMER_FACTORY.newTransformer();
 		transformer.setOutputProperty(OutputKeys.ENCODING, encoding);
 
-		if(indent){
+		if (indent) {
 			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
 		}
 
@@ -100,10 +121,10 @@ public class XMLUtils {
 		Source source = new DOMSource(node);
 		Result result = new StreamResult(w);
 
-		Transformer transformer = TransformerFactory.newInstance().newTransformer();
+		Transformer transformer = TRANSFORMER_FACTORY.newTransformer();
 		transformer.setOutputProperty(OutputKeys.ENCODING, encoding);
 
-		if(indent){
+		if (indent) {
 			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
 		}
 
@@ -117,46 +138,53 @@ public class XMLUtils {
 
 	public static Document parseXMLFile(File file, boolean validating, boolean namespaceAware) throws SAXException, IOException, ParserConfigurationException {
 
-		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-
-		factory.setNamespaceAware(namespaceAware);
-		factory.setValidating(validating);
-
-		setFactoryParam(factory, validating, namespaceAware);
+		DocumentBuilderFactory factory = getDocumentBuilderFactory(validating, namespaceAware);
 
 		Document doc = factory.newDocumentBuilder().parse(file);
 
 		return doc;
 	}
-	
-	public static Document parseXMLFile(String file, String encoding, boolean validating, boolean namespaceAware) throws SAXException, IOException, ParserConfigurationException {
+
+	public static Document parseXMLFile(Path file, boolean validating, boolean namespaceAware) throws SAXException, IOException, ParserConfigurationException {
+
+		InputStream inputStream = Files.newInputStream(file);
 		
-		return parseXMLFile(new File(file), encoding, validating, namespaceAware);
+		try {
+			DocumentBuilderFactory factory = getDocumentBuilderFactory(validating, namespaceAware);
+
+			Document doc = factory.newDocumentBuilder().parse(inputStream);
+
+			return doc;			
+			
+		}finally {
+			
+			CloseUtils.close(inputStream);
+		}
 	}
 	
+	public static Document parseXMLFile(String file, String encoding, boolean validating, boolean namespaceAware) throws SAXException, IOException, ParserConfigurationException {
+
+		return parseXMLFile(new File(file), encoding, validating, namespaceAware);
+	}
+
 	public static Document parseXMLFile(File file, String encoding, boolean validating, boolean namespaceAware) throws SAXException, IOException, ParserConfigurationException {
 
 		InputStream inputStream = null;
-		
+
 		try {
 			inputStream = new FileInputStream(file);
-			
-			return XMLUtils.parseXML(inputStream, false, false, encoding);					
-			
-		} finally{
-			
+
+			return XMLUtils.parseXML(inputStream, false, false, encoding);
+
+		} finally {
+
 			CloseUtils.close(inputStream);
 		}
 	}
 
 	public static Document parseXML(URI uri, boolean validating, boolean namespaceAware) throws SAXException, IOException, ParserConfigurationException {
 
-		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-
-		factory.setNamespaceAware(namespaceAware);
-		factory.setValidating(validating);
-
-		setFactoryParam(factory, validating, namespaceAware);
+		DocumentBuilderFactory factory = getDocumentBuilderFactory(validating, namespaceAware);
 
 		Document doc = factory.newDocumentBuilder().parse(uri.toString());
 
@@ -165,12 +193,7 @@ public class XMLUtils {
 
 	public static Document parseXML(InputSource inputSource, boolean validating, boolean namespaceAware) throws SAXException, IOException, ParserConfigurationException {
 
-		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-
-		factory.setNamespaceAware(namespaceAware);
-		factory.setValidating(validating);
-
-		setFactoryParam(factory, validating, namespaceAware);
+		DocumentBuilderFactory factory = getDocumentBuilderFactory(validating, namespaceAware);
 
 		Document doc = factory.newDocumentBuilder().parse(inputSource);
 
@@ -179,32 +202,27 @@ public class XMLUtils {
 
 	public static Document parseXML(InputStream stream, boolean validating, boolean namespaceAware) throws SAXException, IOException, ParserConfigurationException {
 
-		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-
-		factory.setNamespaceAware(namespaceAware);
-		factory.setValidating(validating);
-
-		setFactoryParam(factory, validating, namespaceAware);
+		DocumentBuilderFactory factory = getDocumentBuilderFactory(validating, namespaceAware);
 
 		Document doc = factory.newDocumentBuilder().parse(stream);
 
 		return doc;
 	}
-	
+
 	public static Document parseXML(InputStream stream, boolean validating, boolean namespaceAware, String encoding) throws SAXException, IOException, ParserConfigurationException {
-		
+
 		Reader reader = null;
-		
+
 		try {
 			reader = new InputStreamReader(stream, encoding);
-			
+
 			InputSource inputSource = new InputSource(reader);
 			inputSource.setEncoding(encoding);
-			
-			return XMLUtils.parseXML(inputSource, validating, namespaceAware);	
-			
-		} finally{
-			
+
+			return XMLUtils.parseXML(inputSource, validating, namespaceAware);
+
+		} finally {
+
 			CloseUtils.close(reader);
 		}
 	}
@@ -242,40 +260,40 @@ public class XMLUtils {
 		element.appendChild(doc.createCDATASection(value.toString()));
 		return element;
 	}
-	
+
 	public static void writeXMLFile(Node node, String filename, boolean indent, String encoding) throws TransformerFactoryConfigurationError, TransformerException, FileNotFoundException {
-		
+
 		// Prepare the output file
 		File file = new File(filename);
-		
+
 		writeXMLFile(node, file, indent, encoding);
 	}
 
 	public static void writeXMLFile(Node node, File file, boolean indent, String encoding) throws TransformerFactoryConfigurationError, TransformerException, FileNotFoundException {
-		
+
 		writeXMLFile(node, file, indent, encoding, null);
 	}
-	
+
 	public static void writeXMLFile(Node node, File file, boolean indent, String encoding, String version) throws TransformerFactoryConfigurationError, TransformerException, FileNotFoundException {
 
 		FileOutputStream outputStream = null;
 
-		try{
+		try {
 			outputStream = new FileOutputStream(file);
 
 			writeXML(node, outputStream, indent, encoding, version);
 
-		}finally{
+		} finally {
 
 			CloseUtils.close(outputStream);
 		}
 	}
 
 	public static void writeXML(Node node, OutputStream outputStream, boolean indent, String encoding) throws TransformerFactoryConfigurationError, TransformerException {
-		
+
 		writeXML(node, outputStream, indent, encoding, null);
 	}
-	
+
 	public static void writeXML(Node node, OutputStream outputStream, boolean indent, String encoding, String version) throws TransformerFactoryConfigurationError, TransformerException {
 
 		// Prepare the DOM document for writing
@@ -284,17 +302,17 @@ public class XMLUtils {
 		// Prepare the output file
 		Result result = new StreamResult(outputStream);
 
-		Transformer transformer = TransformerFactory.newInstance().newTransformer();
+		Transformer transformer = TRANSFORMER_FACTORY.newTransformer();
 
 		transformer.setOutputProperty(OutputKeys.ENCODING, encoding);
 
-		if(version != null){
-			
+		if (version != null) {
+
 			transformer.setOutputProperty(OutputKeys.VERSION, version);
 		}
-		
-		if(indent){
-			
+
+		if (indent) {
+
 			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
 		}
 
@@ -303,7 +321,7 @@ public class XMLUtils {
 
 	public static Element append(Document doc, Element targetElement, Elementable elementable) {
 
-		if(elementable != null){
+		if (elementable != null) {
 
 			return (Element) targetElement.appendChild(elementable.toXML(doc));
 		}
@@ -313,9 +331,9 @@ public class XMLUtils {
 
 	public static void append(Document doc, Element targetElement, Collection<? extends XMLable> beans) {
 
-		if(beans != null && !beans.isEmpty()){
+		if (beans != null && !beans.isEmpty()) {
 
-			for(XMLable xmlable : beans){
+			for (XMLable xmlable : beans) {
 				targetElement.appendChild(xmlable.toXML(doc));
 			}
 		}
@@ -323,36 +341,36 @@ public class XMLUtils {
 
 	public static <T extends XMLable> void append(Document doc, Element targetElement, T[] beans) {
 
-		if(beans != null){
+		if (beans != null) {
 
-			for(XMLable xmlable : beans){
+			for (XMLable xmlable : beans) {
 				targetElement.appendChild(xmlable.toXML(doc));
 			}
 		}
 	}
-	
+
 	public static void append(Document doc, Element targetElement, String elementName, String subElementsName, Object[] values) {
 
-		if(values != null){
+		if (values != null) {
 
 			Element subElement = doc.createElement(elementName);
 			targetElement.appendChild(subElement);
 
-			for(Object value : values){
+			for (Object value : values) {
 
 				appendNewCDATAElement(doc, subElement, subElementsName, value);
 			}
 		}
 	}
 
-	public static void append(Document doc, Element targetElement, String elementName, String subElementsName, List<? extends Object> values) {
+	public static void append(Document doc, Element targetElement, String elementName, String subElementsName, Collection<? extends Object> values) {
 
-		if(!CollectionUtils.isEmpty(values)){
+		if (!CollectionUtils.isEmpty(values)) {
 
 			Element subElement = doc.createElement(elementName);
 			targetElement.appendChild(subElement);
 
-			for(Object value : values){
+			for (Object value : values) {
 
 				appendNewCDATAElement(doc, subElement, subElementsName, value);
 			}
@@ -361,25 +379,25 @@ public class XMLUtils {
 
 	public static void append(Document doc, Element targetElement, String elementName, Collection<? extends XMLable> beans) {
 
-		if(!CollectionUtils.isEmpty(beans)){
+		if (!CollectionUtils.isEmpty(beans)) {
 
 			Element subElement = doc.createElement(elementName);
 			targetElement.appendChild(subElement);
 
-			for(XMLable xmlable : beans){
+			for (XMLable xmlable : beans) {
 				subElement.appendChild(xmlable.toXML(doc));
 			}
 		}
 	}
 
-	public static void appendAsElementName(Document doc, Element targetElement, String elementName, List<? extends Object> values) {
+	public static void appendAsElementName(Document doc, Element targetElement, String elementName, Collection<? extends Object> values) {
 
-		if(!CollectionUtils.isEmpty(values)){
+		if (!CollectionUtils.isEmpty(values)) {
 
 			Element subElement = doc.createElement(elementName);
 			targetElement.appendChild(subElement);
 
-			for(Object value : values){
+			for (Object value : values) {
 
 				subElement.appendChild(doc.createElement(value.toString()));
 			}
@@ -388,14 +406,14 @@ public class XMLUtils {
 
 	public static void appendNewCDATAElement(Document doc, Element targetElement, String elementName, String value) {
 
-		if(!StringUtils.isEmpty(value)){
+		if (!StringUtils.isEmpty(value)) {
 			targetElement.appendChild(createCDATAElement(elementName, value, doc));
 		}
 	}
 
 	public static void appendNewElement(Document doc, Element targetElement, String elementName, String value) {
 
-		if(!StringUtils.isEmpty(value)){
+		if (!StringUtils.isEmpty(value)) {
 			targetElement.appendChild(createElement(elementName, value, doc));
 		}
 	}
@@ -411,14 +429,14 @@ public class XMLUtils {
 
 	public static void appendNewCDATAElement(Document doc, Element targetElement, String elementName, Object value) {
 
-		if(value != null){
+		if (value != null) {
 			appendNewCDATAElement(doc, targetElement, elementName, value.toString());
 		}
 	}
 
 	public static void appendNewElement(Document doc, Element targetElement, String elementName, Object value) {
 
-		if(value != null){
+		if (value != null) {
 			appendNewElement(doc, targetElement, elementName, value.toString());
 		}
 
@@ -435,12 +453,12 @@ public class XMLUtils {
 
 		NodeList nodes = parent.getElementsByTagName(node.getNodeName());
 
-		if(nodes.getLength() > 1){
+		if (nodes.getLength() > 1) {
 			throw new RuntimeException("Parent element contains multiple nodes with the name " + node.getNodeName());
 		}
-		if(nodes.getLength() == 0){
+		if (nodes.getLength() == 0) {
 			parent.appendChild(node);
-		}else{
+		} else {
 			parent.replaceChild(node, nodes.item(0));
 		}
 	}
@@ -453,16 +471,16 @@ public class XMLUtils {
 	@Deprecated
 	public static Element getTimeUnits(Document doc, TimeUnit timeUnit) {
 
-		switch(timeUnit){
+		switch (timeUnit) {
 			case HOUR:
 				Element hoursElement = doc.createElement("hours");
 				Element hourElement;
-				for(int i = 0; i < 10; ++i){
+				for (int i = 0; i < 10; ++i) {
 					hourElement = doc.createElement("hour");
 					XMLUtils.appendNewElement(doc, hourElement, "value", "0" + i);
 					hoursElement.appendChild(hourElement);
 				}
-				for(int i = 10; i < 24; ++i){
+				for (int i = 10; i < 24; ++i) {
 					hourElement = doc.createElement("hour");
 					XMLUtils.appendNewElement(doc, hourElement, "value", i);
 					hoursElement.appendChild(hourElement);
@@ -471,12 +489,12 @@ public class XMLUtils {
 			case MINUTE:
 				Element minutesElement = doc.createElement("minutes");
 				Element minuteElement;
-				for(int i = 0; i < 10; ++i){
+				for (int i = 0; i < 10; ++i) {
 					minuteElement = doc.createElement("minute");
 					XMLUtils.appendNewElement(doc, minuteElement, "value", "0" + i);
 					minutesElement.appendChild(minuteElement);
 				}
-				for(int i = 10; i < 60; ++i){
+				for (int i = 10; i < 60; ++i) {
 					minuteElement = doc.createElement("minute");
 					XMLUtils.appendNewElement(doc, minuteElement, "value", i);
 					minutesElement.appendChild(minuteElement);
@@ -485,12 +503,12 @@ public class XMLUtils {
 			case SECOND:
 				Element secondsElement = doc.createElement("seconds");
 				Element secondElement;
-				for(int i = 0; i < 10; ++i){
+				for (int i = 0; i < 10; ++i) {
 					secondElement = doc.createElement("second");
 					XMLUtils.appendNewElement(doc, secondElement, "value", "0" + i);
 					secondsElement.appendChild(secondElement);
 				}
-				for(int i = 10; i < 60; ++i){
+				for (int i = 10; i < 60; ++i) {
 					secondElement = doc.createElement("second");
 					XMLUtils.appendNewElement(doc, secondElement, "value", i);
 					secondsElement.appendChild(secondElement);
@@ -502,53 +520,80 @@ public class XMLUtils {
 
 	public static String toValidElementName(String string) {
 
-		if(string.length() >= 3 && string.substring(0, 3).equalsIgnoreCase("xml")){
+		if (string.length() >= 3 && string.substring(0, 3).equalsIgnoreCase("xml")) {
 
 			string = "___" + string.substring(3);
 
-		}else if(string.substring(0,1).matches("[0-9]")){
+		} else if (string.substring(0, 1).matches("[0-9]")) {
 
 			string = "_" + string.substring(1);
 		}
 
-		string = string.replaceAll("[Ã¥Ã¤]", "a");
-		string = string.replaceAll("[Ã…Ã„]", "A");
-		string = string.replace("Ã¶", "o");
-		string = string.replace("Ã–", "O");
+		string = string.replaceAll("[åä]", "a");
+		string = string.replaceAll("[ÅÄ]", "A");
+		string = string.replace("ö", "o");
+		string = string.replace("Ö", "O");
 
 		return string.replaceAll("[^0-9a-zA-Z-.]", "_");
 	}
 
 	public static List<Node> getList(NodeList nodeList) {
 
-		if(nodeList.getLength() == 0){
-			
+		if (nodeList.getLength() == 0) {
+
 			return null;
 		}
-		
+
 		ArrayList<Node> list = new ArrayList<Node>(nodeList.getLength());
-		
+
 		int index = 0;
-		
-		while(index < nodeList.getLength()){
-			
+
+		while (index < nodeList.getLength()) {
+
 			list.add(nodeList.item(index));
-			
+
 			index++;
 		}
-		
+
 		return list;
 	}
-	
+
 	public static boolean isValidXML(String xml) {
-		
+
 		try {
 			parseXML(xml, false, false);
 			return true;
-			
+
 		} catch (Exception ignore) {
-			
+
 			return false;
 		}
+	}
+	
+	private static DocumentBuilderFactory getDocumentBuilderFactory(boolean validating, boolean namespaceAware) {
+		
+		if(validating && namespaceAware) {
+			
+			return NAMESPACE_AWARE_VALIDATING_DOCUMENT_BUILDER_FACTORY;
+		
+		}else if(validating) {
+			
+			return VALIDATING_DOCUMENT_BUILDER_FACTORY;
+		
+		}else if(namespaceAware) {
+			
+			return NAMESPACE_AWARE_DOCUMENT_BUILDER_FACTORY;
+		}
+		
+		return DOCUMENT_BUILDER_FACTORY;
+	}
+	
+	public static <T extends XMLParserPopulateable> T parseBean(Element element, Class<T> beanClass) throws Exception {
+		
+		T bean = beanClass.newInstance();
+
+		bean.populate(new XMLParser(element));
+		
+		return bean;
 	}
 }

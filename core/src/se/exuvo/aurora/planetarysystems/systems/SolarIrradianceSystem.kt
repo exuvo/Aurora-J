@@ -85,7 +85,7 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) 
 			val distance = position.dst(sun.position) / 1000
 
 			// https://en.wikipedia.org/wiki/Inverse-square_law
-			val irradiance = sun.solarConstant * Math.pow(OrbitSystem.AU, 2.0) / Math.pow(distance, 2.0)
+			val irradiance = sun.solarConstant * Math.pow(Units.AU, 2.0) / Math.pow(distance, 2.0)
 			totalIrradiance += irradiance
 //			println("distance ${distance / OrbitSystem.AU} AU, irradiance $irradiance ${(100 * irradiance / sun.solarConstant).toInt()}%")
 

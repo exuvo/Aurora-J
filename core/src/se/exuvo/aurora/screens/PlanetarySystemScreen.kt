@@ -121,6 +121,11 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	override fun draw() {
 		system.lock.read {
 			renderSystem.render(viewport, cameraOffset)
+			
+			if (Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
+				val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(Gdx.input.x, Gdx.input.y))
+				renderSystem.aa(mouseInGameCoordinates)
+			}
 		}
 
 		if (dragSelect) {

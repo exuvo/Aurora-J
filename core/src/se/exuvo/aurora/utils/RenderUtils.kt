@@ -3,6 +3,20 @@ package se.exuvo.aurora.utils
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType
 import com.badlogic.gdx.math.MathUtils
+import com.badlogic.gdx.graphics.Color
+
+fun lerpColors(lerp: Float, low: Color, mid: Color, high: Color, result: Color) {
+	result.set(mid)
+
+	var l = MathUtils.clamp(lerp, -1f, 1f)
+
+	if (l > 0f) {
+		result.lerp(high, l)
+
+	} else {
+		result.lerp(low, -l)
+	}
+}
 
 fun ShapeRenderer.scanCircleSector(x: Double, y: Double, radiusOuter: Double, radiusInner: Double, start: Double, degrees: Double, segments: Int) {
 

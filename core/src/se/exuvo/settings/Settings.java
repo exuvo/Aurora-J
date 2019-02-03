@@ -8,10 +8,8 @@ import java.util.Iterator;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactoryConfigurationError;
-import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
 
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
@@ -24,14 +22,13 @@ import com.martiansoftware.jsap.UnspecifiedParameterException;
 
 import se.unlogic.standardutils.populators.FloatPopulator;
 import se.unlogic.standardutils.populators.IntegerPopulator;
+import se.unlogic.standardutils.xml.PooledXPathFactory;
 import se.unlogic.standardutils.xml.XMLUtils;
 
 public class Settings {
 
 	protected static final Logger log = Logger.getLogger(Settings.class);
 	private static Document doc;
-	private static XPathFactory pathFactory = XPathFactory.newInstance();
-	private static XPath xpath = pathFactory.newXPath();
 	private static Element rootElement;
 
 	public enum Type {
@@ -61,7 +58,7 @@ public class Settings {
 
 	public static Element getNode(String path) {
 		try {
-			return (Element) xpath.evaluate(path, rootElement, XPathConstants.NODE);
+			return (Element) PooledXPathFactory.newXPath().evaluate(path, rootElement, XPathConstants.NODE);
 		} catch (XPathExpressionException e) {
 			throw new RuntimeException(e);
 		}
@@ -69,14 +66,14 @@ public class Settings {
 
 	public static String getNodeValue(String path, Type type) {
 		try {
-			Element node = (Element) xpath.evaluate(path, rootElement, XPathConstants.NODE);
+			Element node = (Element) PooledXPathFactory.newXPath().evaluate(path, rootElement, XPathConstants.NODE);
 
 			if (node != null) {
 
 				String actualType = node.getAttributes().getNamedItem("type").getNodeValue();
 
-				if (actualType.charAt(0) != type.code) {
-					throw new InvalidTypeException("Trying to read " + type + " from " + actualType + " setting!");
+				if (actualType.length() == 0 || actualType.charAt(0) != type.code) {
+					throw new InvalidTypeException("Trying to read " + type + " from " + actualType + " setting " + path + "!");
 				}
 
 				return node.getTextContent();
@@ -170,7 +167,7 @@ public class Settings {
 
 	public static void remove(String path) {
 		try {
-			Element node = (Element) xpath.evaluate(path, rootElement, XPathConstants.NODE);
+			Element node = (Element) PooledXPathFactory.newXPath().evaluate(path, rootElement, XPathConstants.NODE);
 
 			if (node != null) {
 				node.getParentNode().removeChild(node);
@@ -182,14 +179,14 @@ public class Settings {
 
 	private static Element set(String path, String value, Type type) {
 		try {
-			Element node = (Element) xpath.evaluate(path, rootElement, XPathConstants.NODE);
+			Element node = (Element) PooledXPathFactory.newXPath().evaluate(path, rootElement, XPathConstants.NODE);
 
 			if (node != null) {
 
 				String actualType = node.getAttributes().getNamedItem("type").getNodeValue();
 
 				if (actualType.charAt(0) != type.code) {
-					throw new InvalidTypeException("Trying to read " + type + " from " + actualType + " setting!");
+					throw new InvalidTypeException("Trying to write " + type + " to " + actualType + " setting " + path + "!");
 				}
 
 				node.setNodeValue(value);
@@ -232,7 +229,7 @@ public class Settings {
 
 	private static Element ensureNode(String path) {
 		try {
-			Element node = (Element) xpath.evaluate(path, rootElement, XPathConstants.NODE);
+			Element node = (Element) PooledXPathFactory.newXPath().evaluate(path, rootElement, XPathConstants.NODE);
 
 			if (node != null) {
 				return node;
@@ -263,7 +260,7 @@ public class Settings {
 
 	public static void setMatching(String path, String value) {
 		try {
-			Element node = (Element) xpath.evaluate(path, rootElement, XPathConstants.NODE);
+			Element node = (Element) PooledXPathFactory.newXPath().evaluate(path, rootElement, XPathConstants.NODE);
 
 			if (node != null) {
 
@@ -349,7 +346,7 @@ public class Settings {
 			try {
 				doc = XMLUtils.parseXMLFile(file, false, false);
 				try {
-					rootElement = (Element) xpath.evaluate("/" + rootName, doc.getDocumentElement(), XPathConstants.NODE);
+					rootElement = (Element) PooledXPathFactory.newXPath().evaluate("/" + rootName, doc.getDocumentElement(), XPathConstants.NODE);
 				} catch (XPathExpressionException e) {
 					log.error("Error reading root node", e);
 				}

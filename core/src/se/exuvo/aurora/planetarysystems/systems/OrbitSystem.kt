@@ -20,13 +20,13 @@ import se.exuvo.aurora.utils.getUUID
 import se.exuvo.aurora.utils.forEach
 import se.exuvo.settings.Settings
 import java.util.Collections
+import se.exuvo.aurora.utils.Units
 
 //TODO sorted system by no parents first then outwards
 class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 	companion object {
 		val FAMILY = Aspect.all(OrbitComponent::class.java, TimedMovementComponent::class.java)
 		val gravitationalConstant = 6.67408e-11
-		val AU = 149597870.7 // In km
 	}
 
 	val log = Logger.getLogger(this.javaClass)
@@ -47,7 +47,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 		}
 
 		// In km
-		val a_semiMajorAxis = AU * orbit.a_semiMajorAxis
+		val a_semiMajorAxis = Units.AU * orbit.a_semiMajorAxis
 		val periapsis = a_semiMajorAxis * (1.0 - orbit.e_eccentricity)
 		val apoapsis = a_semiMajorAxis * (1.0 + orbit.e_eccentricity)
 
@@ -132,8 +132,8 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 	private fun calculateOrbitalPositionFromEccentricAnomaly(orbit: OrbitComponent, E_eccentricAnomaly: Double, position: Vector2D) {
 
 		// Coordinates with P+ towards periapsis
-		val P: Double = AU * orbit.a_semiMajorAxis * (Math.cos(E_eccentricAnomaly) - orbit.e_eccentricity)
-		val Q: Double = AU * orbit.a_semiMajorAxis * Math.sin(E_eccentricAnomaly) * Math.sqrt(1 - Math.pow(orbit.e_eccentricity.toDouble(), 2.0))
+		val P: Double = Units.AU * orbit.a_semiMajorAxis * (Math.cos(E_eccentricAnomaly) - orbit.e_eccentricity)
+		val Q: Double = Units.AU * orbit.a_semiMajorAxis * Math.sin(E_eccentricAnomaly) * Math.sqrt(1 - Math.pow(orbit.e_eccentricity.toDouble(), 2.0))
 
 //		println("orbitalPeriod ${orbitalPeriod / (24 * 60 * 60)} days, E_eccentricAnomaly $E_eccentricAnomaly, P $P, Q $Q")
 
@@ -177,10 +177,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 
 	private val shapeRenderer by lazy { GameServices[ShapeRenderer::class] }
 
-	fun render(viewport: Viewport, cameraOffset: Vector2L) {
-		viewport.apply()
-		shapeRenderer.projectionMatrix = viewport.camera.combined
-
+	fun render(cameraOffset: Vector2L) {
 		shapeRenderer.color = Color.GRAY
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Point);
 		subscription.getEntities().forEach { entityID ->

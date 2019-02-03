@@ -105,6 +105,16 @@ public class XMLGeneratorDocument implements Document{
 		this.ignoredFields.add(field);
 	}
 	
+	public void addIgnoredField(List<Field> fields) {
+
+		if(this.ignoredFields == null){
+			
+			this.ignoredFields = new ArrayList<Field>();
+		}
+		
+		ignoredFields.addAll(fields);
+	}
+	
 	public void addIgnoredFields(Field... fields){
 		
 		if(this.ignoredFields == null){

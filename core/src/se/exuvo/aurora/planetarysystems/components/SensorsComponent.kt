@@ -45,3 +45,12 @@ class DetectionComponent() : Component() {
 }
 
 data class DetectionHit(var signalStrength: Double, val entities: MutableList<Int>, val hitPositions: MutableList<Vector2L>)
+
+class GravimetricSensorsComponent() : Component() {
+	lateinit var sensors: List<PartRef<PassiveSensor>>
+	
+	fun set(sensors: List<PartRef<PassiveSensor>>): GravimetricSensorsComponent {
+		this.sensors = sensors
+		return this
+	}
+}

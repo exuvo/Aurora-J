@@ -187,6 +187,11 @@ public class XMLGenerator {
 				classElement.appendChild(XMLUtils.createElement(fieldInfo.getName(), fieldValue.toString(), doc));
 			}
 		}
+		
+		if (doc instanceof XMLGeneratorDocument) {
+			
+			triggerElementableListener(generatorDocument, classElement, bean);
+		}
 
 		return classElement;
 	}
@@ -206,7 +211,7 @@ public class XMLGenerator {
 			classInfo = FIELD_MAP.get(clazz);
 		} finally {
 			readLock.unlock();
-		}		
+		}
 		
 		if(classInfo != null){
 			
@@ -426,7 +431,10 @@ public class XMLGenerator {
 				subElement.appendChild(subSubElement);
 			}
 			
-			triggerElementableListener(generatorDocument, subSubElement, value);
+			if (!(value instanceof GeneratedElementable)){
+				
+				triggerElementableListener(generatorDocument, subSubElement, value);
+			}
 			
 		} else {
 

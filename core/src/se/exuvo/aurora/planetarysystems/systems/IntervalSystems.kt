@@ -49,7 +49,7 @@ abstract class GalaxyTimeIntervalIteratingSystem(aspect: Aspect.Builder, val int
 	var lastTime: Long = galaxy.time - interval - 1
 
 	override fun checkProcessing(): Boolean {
-		if (galaxy.time - lastTime > interval) {
+		if (galaxy.time - lastTime >= interval) {
 			lastTime = galaxy.time
 			return true
 		}
@@ -68,7 +68,7 @@ abstract class GalaxyTimeIntervalSystem(val interval: Long) : BaseSystem() {
 	var lastTime: Long = galaxy.time - interval - 1
 
 	override fun checkProcessing(): Boolean {
-		if (galaxy.time - lastTime > interval) {
+		if (galaxy.time - lastTime >= interval) {
 			lastTime = galaxy.time
 			return true
 		}
