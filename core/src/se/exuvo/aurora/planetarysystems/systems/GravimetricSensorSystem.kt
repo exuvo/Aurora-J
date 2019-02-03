@@ -44,21 +44,21 @@ import java.lang.RuntimeException
  *  https://github.com/libgdx/libgdx/wiki/Shaders
  *  https://www.gamefromscratch.com/post/2014/07/08/LibGDX-Tutorial-Part-12-Using-GLSL-Shaders-and-creating-a-Mesh.aspx
 **/
-class GravimetricSensorSystem : GalaxyTimeIntervalSystem(1) { // (SQUARE_SIZE_KM / Units.C).toLong()
+class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Units.C).toLong()) { // 
 	companion object {
 		val SENSOR_ASPECT = Aspect.all(GravimetricSensorsComponent::class.java)
 		val EMISSION_ASPECT = Aspect.all(MassComponent::class.java, TimedMovementComponent::class.java)
 		val SHIP_ASPECT = Aspect.all(ShipComponent::class.java)
 		
-		val MAX_AU = 5;
-		val SQUARES_PER_AU = 50
+		val MAX_AU = 10;
+		val SQUARES_PER_AU = 20
 		val H_SQUARE_SIZE_KM = Units.AU / SQUARES_PER_AU
 		val H_SQUARE_SIZE_KMf = H_SQUARE_SIZE_KM.toFloat()
 		val WATER_SIZE = (MAX_AU * SQUARES_PER_AU).toInt()
 		
-		val WAVE_ATTENUATION = 0.999f
+		val WAVE_ATTENUATION = 0.999f //TODO lower if high SQUARES_PER_AU (Math.pow(0.999, SQUARES_PER_AU.toDouble()).toFloat())
 		val C_WAVE_SPEED = Units.C.toFloat()
-		val MAX_INTERVAL = (H_SQUARE_SIZE_KM / C_WAVE_SPEED).toInt()
+		val MAX_INTERVAL = 5 //(H_SQUARE_SIZE_KM / C_WAVE_SPEED).toInt()
 	}
 
 	val log = Logger.getLogger(this.javaClass)
@@ -115,46 +115,60 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem(1) { // (SQUARE_SIZE_KM
 			override fun removed(entities: IntBag) {}
 		})
 		
-		println("WATER_SIZE $WATER_SIZE, cells ${WATER_SIZE * WATER_SIZE}, stepSpeed $stepSpeed, H_SQUARE_SIZE_KM $H_SQUARE_SIZE_KM")
+		println("WATER_SIZE $WATER_SIZE, cells ${WATER_SIZE * WATER_SIZE}, stepSpeed $stepSpeed, H_SQUARE_SIZE_KM $H_SQUARE_SIZE_KM, interval $interval")
 	}
 
+//	@Subscribe
+//	fun powerEvent(event: MovementEvent) {
+//		val powerComponent = movementMapper.get(event.entityID)
+//		powerComponent.stateChanged = true
+//	}
 
 	/* Water surface simulation using height fields
 	 *  https://gamedev.stackexchange.com/questions/79318/simple-water-surface-simulation-problems-gdc2008-matthias-muller-hello-world
 	 *  https://archive.org/details/GDC2008Fischer
 	 */
 	override fun processSystem() {
-
 		var deltaGameTime = (galaxy.time - lastProcess).toInt()
 		lastProcess = galaxy.time
 		
 		while (deltaGameTime > 0) {
 			var delta = Math.min(deltaGameTime, MAX_INTERVAL)
 			deltaGameTime -= MAX_INTERVAL
-	
+			
+//			println("delta $delta, deltaGameTime $deltaGameTime")
+			
 			if (delta >= H_SQUARE_SIZE_KM / C_WAVE_SPEED) {
 				throw RuntimeException("Interval to large")
 			}
+			
+			var attenuation = WAVE_ATTENUATION
+
+			//TODO attenuation should give same wave pattern irregardless of speed
+//			for (i in 2..delta) {
+//				attenuation *= WAVE_ATTENUATION
+//			}
 	
 			for (x in 1..WATER_SIZE-2) {
 				for (y in 1..WATER_SIZE-2) {
 					var velocity = stepSpeed * ((waveHeight[x-1][y] + waveHeight[x+1][y] + waveHeight[x][y-1] + waveHeight[x][y+1]) - 4 * waveHeight[x][y])
-					waveVelocity[x][y] += velocity * delta
-					waveVelocity[x][y] *= WAVE_ATTENUATION
+					waveVelocity[x][y] = (waveVelocity[x][y] + velocity * delta) * attenuation
 				}
 			}
+			
+			val waveSpeed = C_WAVE_SPEED * delta
 			
 			// Edges with no reflections
 			for (x in 1..WATER_SIZE - 2) {
 				run {
 					val y = 0
 					val u = waveHeight[x][1]
-					waveHeight[x][y] = (C_WAVE_SPEED * delta * u + waveHeight[x][y] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + C_WAVE_SPEED * delta)
+					waveHeight[x][y] = (waveSpeed * u + waveHeight[x][y] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
 				}
 				run {
 					val y = WATER_SIZE - 1
 					val u = waveHeight[x][WATER_SIZE - 2]
-					waveHeight[x][y] = (C_WAVE_SPEED * delta * u + waveHeight[x][y] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + C_WAVE_SPEED * delta)
+					waveHeight[x][y] = (waveSpeed * u + waveHeight[x][y] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
 				}
 			}
 			
@@ -162,12 +176,12 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem(1) { // (SQUARE_SIZE_KM
 				run {
 					val x = 0
 					val u = waveHeight[1][y]
-					waveHeight[x][y] = (C_WAVE_SPEED * delta * u + waveHeight[x][y] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + C_WAVE_SPEED * delta)
+					waveHeight[x][y] = (waveSpeed * u + waveHeight[x][y] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
 				}
 				run {
 					val x = WATER_SIZE - 1
 					val u = waveHeight[WATER_SIZE - 2][y]
-					waveHeight[x][y] = (C_WAVE_SPEED * delta * u + waveHeight[x][y] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + C_WAVE_SPEED * delta)
+					waveHeight[x][y] = (waveSpeed * u + waveHeight[x][y] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
 				}
 			}
 			
@@ -175,6 +189,13 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem(1) { // (SQUARE_SIZE_KM
 				for (y in 1..WATER_SIZE-2) {
 					waveHeight[x][y] += waveVelocity[x][y] * delta
 				}
+			}
+		}
+
+		// Avoid redshift
+		for (x in 1..WATER_SIZE - 2) {
+			for (y in 1..WATER_SIZE - 2) {
+				waveHeight[x][y] *= 0.998f
 			}
 		}
 	}

@@ -384,6 +384,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 				}
 				Input.Buttons.RIGHT -> {
 					selectedAction = null
+					dragSelectPotentialStart = false
 
 					if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
 

@@ -144,6 +144,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 	var tempPosition = Vector2D()
 	var oldPosition = Vector2L()
 	var tempVelocity = Vector2()
+	
 	override fun process(entityID: Int) {
 
 		val orbit = orbitMapper.get(entityID)
