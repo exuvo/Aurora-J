@@ -15,6 +15,7 @@ import com.badlogic.gdx.utils.Disposable
 import org.apache.log4j.Logger
 import se.exuvo.aurora.utils.GameServices
 import kotlin.properties.Delegates
+import com.badlogic.gdx.graphics.glutils.ShaderProgram
 
 object Assets : Disposable {
 
@@ -26,6 +27,7 @@ object Assets : Disposable {
 	var fontUI by Delegates.notNull<BitmapFont>()
 	var skinUI by Delegates.notNull<Skin>()
 	var textures by Delegates.notNull<TextureAtlas>()
+	var gravimetricShaderProgram by Delegates.notNull<ShaderProgram>()
 
 	fun startLoad() {
 		val resolver = manager.getFileHandleResolver()
@@ -70,6 +72,8 @@ object Assets : Disposable {
 			}
 		}
 
+		// Load rest
+		
 		manager.load("fontMap.ttf", BitmapFont::class.java, fontMapLoadParams);
 		manager.load("fontMapSmall.ttf", BitmapFont::class.java, fontMapSmallLoadParams);
 		
@@ -77,6 +81,8 @@ object Assets : Disposable {
 		manager.load("ui/uiskin.json", Skin::class.java, uiSkinLoaderParams);
 		
 		manager.load("images/aurora.atlas", TextureAtlas::class.java);
+		
+		manager.load("shaders/gravimetric.vert", ShaderProgram::class.java)
 		
 		log.info("Queued ${manager.queuedAssets} assets for loading")
 	}
@@ -86,6 +92,7 @@ object Assets : Disposable {
 		fontMapSmall = manager.get("fontMapSmall.ttf", BitmapFont::class.java)
 		skinUI = manager.get("ui/uiskin.json", Skin::class.java)
 		textures = manager.get("images/aurora.atlas")
+		gravimetricShaderProgram = manager.get("shaders/gravimetric.vert")
 	}
 
 	override fun dispose() {

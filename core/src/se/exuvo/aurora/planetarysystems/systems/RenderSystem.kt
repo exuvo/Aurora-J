@@ -682,7 +682,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		viewport.apply()
 		shapeRenderer.projectionMatrix = viewport.camera.combined
 		
-		gravSystem.render(cameraOffset)
+		gravSystem.render(viewport, cameraOffset)
 		
 		drawDetections(entityIDs, viewport, cameraOffset)
 
