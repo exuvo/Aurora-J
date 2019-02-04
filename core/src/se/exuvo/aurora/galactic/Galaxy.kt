@@ -40,8 +40,9 @@ import com.artemis.utils.Sort
 import com.artemis.utils.Bag
 import se.unlogic.standardutils.arrays.ArrayUtils
 import se.unlogic.standardutils.string.StringUtils
+import com.badlogic.gdx.utils.Disposable
 
-class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
+class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, Disposable {
 	val log = Logger.getLogger(this.javaClass)
 
 	lateinit var systems: Bag<PlanetarySystem>
@@ -49,6 +50,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 	private val threadPool = ThreadPoolTaskGroupHandler<SimpleTaskGroup>("Galaxy", Settings.getInt("Galaxy/threads", Runtime.getRuntime().availableProcessors()), true) //
 	private var thread: Thread? = null
 	private var sleeping = false
+	private var shutdown = false
 
 	var day: Int = updateDay()
 	var speed: Long = 1 * Units.NANO_SECOND
@@ -105,6 +107,16 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 		thread.start();
 
 		this.thread = thread
+	}
+	
+	override fun dispose() {
+		shutdown = true
+		
+		thread?.join()
+		
+		systems.forEach {
+			it.dispose()
+		}
 	}
 	
 	fun updateSpeed() {
@@ -186,7 +198,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable {
 
 			var tasks = systems.map { UpdateSystemTask(it, this) }
 			
-			while (true) {
+			while (!shutdown) {
 				var now = System.nanoTime()
 		
 				if (speed > 0L) {

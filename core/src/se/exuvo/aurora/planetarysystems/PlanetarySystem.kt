@@ -77,8 +77,9 @@ import se.exuvo.aurora.planetarysystems.events.PooledFastEventDispatcher
 import se.exuvo.aurora.planetarysystems.systems.GravimetricSensorSystem
 import com.badlogic.gdx.math.RandomXS128
 import com.artemis.injection.WiredFieldResolver
+import com.badlogic.gdx.utils.Disposable
 
-class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener {
+class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener, Disposable {
 	companion object {
 		val planetarySystemIDGenerator = AtomicInteger()
 	}
@@ -298,6 +299,10 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		if (!shipComponent.addCargo(missile, 10)) {
 			println("Failed to add missiles")
 		}
+	}
+	
+	override fun dispose() {
+		world.dispose()
 	}
 
 	fun createEntity(empire: Empire): Int {

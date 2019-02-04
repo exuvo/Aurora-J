@@ -42,6 +42,7 @@ import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.graphics.GL30
 
 class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Units.C).toLong()) { // 
 	companion object {
@@ -59,6 +60,9 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 			0.999f //TODO lower if high SQUARES_PER_AU (Math.pow(0.999, SQUARES_PER_AU.toDouble()).toFloat())
 		const val C_WAVE_SPEED = Units.C.toFloat()
 		const val MAX_INTERVAL = 5 //(H_SQUARE_SIZE_KM / C_WAVE_SPEED).toInt()
+		
+		const val MAX_VERTICES = 500 * 4 * 3
+		const val MAX_INDICES = (MAX_VERTICES / 4) * 6
 	}
 
 	val log = Logger.getLogger(this.javaClass)
@@ -83,18 +87,27 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 	val stepSpeed = ((C_WAVE_SPEED * C_WAVE_SPEED) / (H_SQUARE_SIZE_KM * H_SQUARE_SIZE_KM)).toFloat()
 	var lastProcess: Long = galaxy.time
 
+	//TODO singleton per galaxy
 	val shader: ShaderProgram
 	val mesh: Mesh
 	val vertices: FloatArray
+	val indices: ShortArray
+	val strideSize: Int
 
 	init {
+		if (MAX_INDICES / 6 * 4 != MAX_VERTICES) {
+			throw RuntimeException("MAX_VERTICES not evenly divisible by 4")
+		}
+		
 		shader = Assets.gravimetricShaderProgram
 		mesh = Mesh(
-			false, 5000, 0,
+			false, MAX_VERTICES, MAX_INDICES,
 			VertexAttribute(VertexAttributes.Usage.ColorPacked, 4, ShaderProgram.COLOR_ATTRIBUTE),
 			VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE)
 		);
-		vertices = FloatArray(5000 * (mesh.getVertexAttributes().vertexSize / 4));
+		strideSize = mesh.getVertexAttributes().vertexSize / 4
+		vertices = FloatArray(MAX_VERTICES * (mesh.getVertexAttributes().vertexSize / 4));
+		indices = ShortArray(MAX_INDICES);
 		
 //		val colorSize = mesh.getVertexAttribute(VertexAttributes.Usage.ColorPacked).sizeInBytes / 4
 //		val positionSize = mesh.getVertexAttribute(VertexAttributes.Usage.Position).sizeInBytes / 4
@@ -105,6 +118,10 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 			println("shader errors: ${shader.getLog()}")
 			throw RuntimeException()
 		}
+	}
+	
+	override fun dispose() {
+		mesh.dispose()
 	}
 
 	override fun initialize() {
@@ -182,10 +199,7 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 
 			for (x in 1..WATER_SIZE - 2) {
 				for (y in 1..WATER_SIZE - 2) {
-					var velocity = stepSpeed * ((waveHeight[index(x - 1, y)] + waveHeight[index(x + 1, y)] + waveHeight[index(
-						x,
-						y - 1
-					)] + waveHeight[index(x, y + 1)]) - 4 * waveHeight[index(x, y)])
+					var velocity = stepSpeed * ((waveHeight[index(x - 1, y)] + waveHeight[index(x + 1, y)] + waveHeight[index(x, y - 1)] + waveHeight[index(x, y + 1)]) - 4 * waveHeight[index(x, y)])
 					waveVelocity[index(x, y)] = (waveVelocity[index(x, y)] + velocity * delta) * attenuation
 				}
 			}
@@ -197,14 +211,12 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 				run {
 					val y = 0
 					val u = waveHeight[index(x, 1)]
-					waveHeight[index(x, y)] =
-						(waveSpeed * u + waveHeight[index(x, y)] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
+					waveHeight[index(x, y)] = (waveSpeed * u + waveHeight[index(x, y)] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
 				}
 				run {
 					val y = WATER_SIZE - 1
 					val u = waveHeight[index(x, WATER_SIZE - 2)]
-					waveHeight[index(x, y)] =
-						(waveSpeed * u + waveHeight[index(x, y)] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
+					waveHeight[index(x, y)] = (waveSpeed * u + waveHeight[index(x, y)] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
 				}
 			}
 
@@ -212,14 +224,12 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 				run {
 					val x = 0
 					val u = waveHeight[index(1, y)]
-					waveHeight[index(x, y)] =
-						(waveSpeed * u + waveHeight[index(x, y)] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
+					waveHeight[index(x, y)] = (waveSpeed * u + waveHeight[index(x, y)] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
 				}
 				run {
 					val x = WATER_SIZE - 1
 					val u = waveHeight[index(WATER_SIZE - 2, y)]
-					waveHeight[index(x, y)] =
-						(waveSpeed * u + waveHeight[index(x, y)] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
+					waveHeight[index(x, y)] = (waveSpeed * u + waveHeight[index(x, y)] * H_SQUARE_SIZE_KMf) / (H_SQUARE_SIZE_KMf + waveSpeed)
 				}
 			}
 
@@ -247,8 +257,9 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 	private val highColor = Color.RED
 	private val middleColor = Color(0f, 0f, 0f, 0f)
 	private val color = Color()
+	private var expAverage = 0.0
 
-	//TODO render with custom shader to add interpolation and smooth edges
+	//TODO add interpolation and smooth edges
 	// https://www.gamedevelopment.blog/glsl-shader-language-libgdx/
 	// https://github.com/libgdx/libgdx/wiki/Shaders
 	// https://www.gamefromscratch.com/post/2014/07/08/LibGDX-Tutorial-Part-12-Using-GLSL-Shaders-and-creating-a-Mesh.aspx
@@ -274,6 +285,7 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 //		renderer.end();
 
 		var vertexIdx = 0
+		var indiceIdx = 0
 
 		fun color(colorBits: Float) {
 			vertices[vertexIdx++] = colorBits
@@ -297,24 +309,38 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 				val height = waveHeight[index(i, j)]
 				
 				// works decently even though height never goes down completly
-				if (Math.abs(height) < 0.05f) {
-					continue
-				}
+//				if (Math.abs(height) < 0.05f) {
+//					continue
+//				}
 
 				lerpColors(height, lowColor, middleColor, highColor, color)
 				val colorBits = color.toFloatBits()
 
 				val y = ((j - WATER_SIZE / 2) * H_SQUARE_SIZE_KM - cameraOffset.y).toFloat()
 
-				if (vertices.size - vertexIdx < 6 * (1 + 3)) {
+				if (vertices.size - vertexIdx < 4 * strideSize) {
 					mesh.setVertices(vertices, 0, vertexIdx);
+					mesh.setIndices(indices, 0, indiceIdx)
 					mesh.render(shader, GL20.GL_TRIANGLES);
 					shader.end();
 					
 					vertexIdx = 0
+					indiceIdx = 0
 					shader.begin();
 					shader.setUniformMatrix("u_projTrans", projectionMatrix);
 				}
+				
+				val strideIdx = vertexIdx / strideSize
+				
+				// Triangle 1
+				indices[indiceIdx++] = (strideIdx + 1).toShort()
+				indices[indiceIdx++] = (strideIdx + 0).toShort()
+				indices[indiceIdx++] = (strideIdx + 2).toShort()
+				
+				// Triangle 2
+				indices[indiceIdx++] = (strideIdx + 0).toShort()
+				indices[indiceIdx++] = (strideIdx + 3).toShort()
+				indices[indiceIdx++] = (strideIdx + 2).toShort()
 				
 				color(colorBits);
 				vertex(x, y);
@@ -322,22 +348,26 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 				vertex(x + H_SQUARE_SIZE_KMf, y);
 				color(colorBits);
 				vertex(x + H_SQUARE_SIZE_KMf, y + H_SQUARE_SIZE_KMf);
-
-				color(colorBits);
-				vertex(x + H_SQUARE_SIZE_KMf, y + H_SQUARE_SIZE_KMf);
 				color(colorBits);
 				vertex(x, y + H_SQUARE_SIZE_KMf);
-				color(colorBits);
-				vertex(x, y);
 			}
 		}
 
 		mesh.setVertices(vertices, 0, vertexIdx);
+		mesh.setIndices(indices, 0, indiceIdx)
 		mesh.render(shader, GL20.GL_TRIANGLES);
 		shader.end();
 
 		val time = System.nanoTime() - start
-		println("Took $time")
+		
+		if (expAverage == 0.0) {
+			expAverage = time.toDouble()
+		}
+		
+		//https://en.wikipedia.org/wiki/Moving_average#Application_to_measuring_computer_performance
+		expAverage = time + Math.pow(Math.E, -1/30.0) * (expAverage - time)
+		
+		println("Took ${Units.nanoToString(time)}, expAverage ${Units.nanoToString(expAverage.toLong())}")
 	}
 
 }

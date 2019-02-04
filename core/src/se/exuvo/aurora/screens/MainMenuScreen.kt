@@ -35,7 +35,7 @@ class MainMenuScreen() : GameScreenImpl() {
 	private val assetManager by lazy (LazyThreadSafetyMode.NONE) { GameServices[AssetManager::class] }
 	private val batch by lazy (LazyThreadSafetyMode.NONE) { GameServices[SpriteBatch::class] }
 	private val uiCamera = OrthographicCamera()
-
+	
 	override fun show() {
 		val profiler = GameServices[GLProfiler::class]
 		profiler.setListener(GLErrorListener.THROWING_LISTENER)

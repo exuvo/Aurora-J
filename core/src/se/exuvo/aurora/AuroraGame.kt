@@ -24,6 +24,9 @@ import se.exuvo.aurora.utils.keys.KeyMapping
 import se.exuvo.aurora.utils.Units
 import se.unlogic.standardutils.threads.ThreadUtils
 import com.badlogic.gdx.ApplicationListener
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Window
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics
+import se.exuvo.aurora.galactic.Galaxy
 
 class AuroraGame(val assetsRoot: String) : ApplicationListener {
 	val log = Logger.getLogger(this.javaClass)

@@ -63,6 +63,7 @@ public class DesktopLauncher {
 
 		Lwjgl3ApplicationConfiguration windowConfig = new Lwjgl3ApplicationConfiguration();
 		windowConfig.setTitle("Aurora J");
+		windowConfig.useOpenGL3(true, 3, 2);
 		
 		final int defaultWidth = 1024;
 		final int defaultHeight = 768;
