@@ -6,6 +6,7 @@ import java.util.Iterator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
+import org.lwjgl.system.Configuration;
 
 import com.badlogic.gdx.Files.FileType;
 import com.badlogic.gdx.Graphics.DisplayMode;
@@ -60,10 +61,16 @@ public class DesktopLauncher {
 		Level level = Level.toLevel(Settings.getStr("loglevel", "INFO"));
 		Logger.getLogger("se.exuvo").setLevel(level);
 		log.info("Changed log level to " + level);
-
+		
+		//https://github.com/LWJGL/lwjgl3-wiki/wiki/2.5.-Troubleshooting
+		Configuration.DEBUG.set(true);
+		Configuration.DEBUG_STREAM.set(System.out);
+		
 		Lwjgl3ApplicationConfiguration windowConfig = new Lwjgl3ApplicationConfiguration();
 		windowConfig.setTitle("Aurora J");
-		windowConfig.useOpenGL3(true, 3, 2);
+//		windowConfig.useOpenGL3(true, 3, 2);
+		windowConfig.useOpenGL3(true, 4, 4);
+		windowConfig.enableGLDebugOutput(true, System.err);
 		
 		final int defaultWidth = 1024;
 		final int defaultHeight = 768;

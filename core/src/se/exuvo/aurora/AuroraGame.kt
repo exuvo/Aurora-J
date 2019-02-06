@@ -27,6 +27,13 @@ import com.badlogic.gdx.ApplicationListener
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Window
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics
 import se.exuvo.aurora.galactic.Galaxy
+import org.lwjgl.opengl.GLUtil
+import java.io.PrintStream
+import org.lwjgl.system.Configuration
+import org.lwjgl.system.Callback
+import org.lwjgl.opengl.GL
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application.GLDebugMessageSeverity
 
 class AuroraGame(val assetsRoot: String) : ApplicationListener {
 	val log = Logger.getLogger(this.javaClass)
@@ -35,6 +42,11 @@ class AuroraGame(val assetsRoot: String) : ApplicationListener {
 	override fun create() {
 		com.esotericsoftware.minlog.Log.setLogger(MinlogTolog4j())
 		com.esotericsoftware.minlog.Log.set(com.esotericsoftware.minlog.Log.LEVEL_WARN)
+		
+		Lwjgl3Application.setGLDebugMessageControl(GLDebugMessageSeverity.HIGH, true)
+		Lwjgl3Application.setGLDebugMessageControl(GLDebugMessageSeverity.MEDIUM, true)
+		Lwjgl3Application.setGLDebugMessageControl(GLDebugMessageSeverity.LOW, true)
+		Lwjgl3Application.setGLDebugMessageControl(GLDebugMessageSeverity.NOTIFICATION, true)
 		
 		KeyMappings.load()
 		
