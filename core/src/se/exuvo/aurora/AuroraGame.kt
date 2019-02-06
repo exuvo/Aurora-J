@@ -67,8 +67,8 @@ class AuroraGame(val assetsRoot: String) : ApplicationListener {
 		screenService.resize(width, height)
 	}
 	
-	fun update(): Boolean {
-		return screenService.update(Gdx.graphics.deltaTime)
+	fun update() {
+		screenService.update(Gdx.graphics.deltaTime)
 	}
 
 	override fun render() {

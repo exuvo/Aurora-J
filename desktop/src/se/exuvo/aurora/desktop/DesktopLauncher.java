@@ -121,7 +121,6 @@ public class DesktopLauncher {
 		}
 
 //		windowConfig.foregroundFPS = Settings.getInt("Window/FrameLimit", 60);
-		windowConfig.setIdleFPS(Settings.getInt("Window/idleFrameLimit", 20));
 		windowConfig.useVsync(Settings.getBol("Window/vSync", false));
 		windowConfig.setResizable(Settings.getBol("Window/resizable", true));
 		windowConfig.setPreferencesConfig(Paths.get("").toAbsolutePath().toString(), FileType.Absolute);
@@ -129,7 +128,7 @@ public class DesktopLauncher {
 		String assetsURI = FileUtils.fileExists("assets") ? "assets/" : "../core/assets/";
 
 		try {
-			new CustomLwjgl3Application(new AuroraGame(assetsURI), windowConfig);
+			new CustomLwjgl3Application(new AuroraGame(assetsURI), windowConfig, Settings.getInt("Window/FrameLimit", 60));
 			
 		} catch (Throwable e) {
 			log.error("", e);

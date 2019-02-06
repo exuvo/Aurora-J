@@ -14,6 +14,7 @@ import se.unlogic.standardutils.threads.ThreadUtils
 import java.util.LinkedList
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
+import se.exuvo.aurora.utils.exponentialAverage
 
 class GameScreenService : Disposable, InputProcessor {
 	private val inputMultiplexer = InputMultiplexer()
@@ -26,13 +27,10 @@ class GameScreenService : Disposable, InputProcessor {
 		addQueue.add(screen)
 	}
 
-	val frameDelay = Units.NANO_SECOND / Settings.getInt("Window/FrameLimit", 60)
-	var accumulator = 0L
-	var lastRun = System.nanoTime()
 	var lastDrawStart = System.nanoTime()
 	var frameStartTime = 0L
 	
-	fun update(deltaRealTime: Float): Boolean {
+	fun update(deltaRealTime: Float) {
 
 		if (addQueue.isNotEmpty()) {
 
@@ -73,39 +71,10 @@ class GameScreenService : Disposable, InputProcessor {
 		}
 
 		screens.forEach { it.update(deltaRealTime) }
-		
-		var shouldRender = false
-		val now = System.nanoTime()
-		accumulator += now - lastRun;
-
-		if (accumulator >= frameDelay) {
-			accumulator -= frameDelay
-
-			if (accumulator > frameDelay) {
-				accumulator = frameDelay
-			}
-
-//			println("frameDelay $frameDelay, diff $frameTime, accumulator $accumulator")
-
-			shouldRender = true
-			
-		} else if (accumulator < frameDelay && frameDelay > Units.NANO_MILLI) {
-
-			var sleepTime = (frameDelay - accumulator) / Units.NANO_MILLI
-
-			if (sleepTime > 1) {
-				ThreadUtils.sleep(sleepTime - 1)
-			} else {
-				Thread.yield()
-			}
-		}
-
-		lastRun = now;
-		
-		return shouldRender
 	}
 	
 	private val clearColor = Color.BLACK
+	var renderTimeAverage = 0.0
 	
 	fun render() {
 		val now = System.nanoTime()
@@ -117,11 +86,14 @@ class GameScreenService : Disposable, InputProcessor {
     Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
 		screens.forEach { it.draw() }
+		
+		val renderTime = System.nanoTime() - now
+		renderTimeAverage = exponentialAverage(renderTime.toDouble(), renderTimeAverage, 10.0)
 
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
 
-		Assets.fontUI.draw(spriteBatch, "${Gdx.graphics.framesPerSecond} ${formatFrameTime(frameStartTime)}", 2f, uiCamera.viewportHeight - 3f)
+		Assets.fontUI.draw(spriteBatch, "${Gdx.graphics.framesPerSecond} ${formatFrameTime(frameStartTime)}, ${formatFrameTime(renderTimeAverage.toLong())}", 2f, uiCamera.viewportHeight - 3f)
 		spriteBatch.end()
 	}
 	

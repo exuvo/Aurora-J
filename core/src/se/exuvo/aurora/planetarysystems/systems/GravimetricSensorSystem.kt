@@ -43,6 +43,19 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL30
+import com.badlogic.gdx.graphics.Pixmap
+import com.badlogic.gdx.graphics.glutils.FloatTextureData
+import java.nio.FloatBuffer
+import com.badlogic.gdx.graphics.TextureData
+import com.badlogic.gdx.utils.GdxRuntimeException
+import com.badlogic.gdx.assets.AssetManager
+import java.nio.IntBuffer
+import java.nio.ByteBuffer
+import com.badlogic.gdx.graphics.profiling.GLErrorListener
+import org.lwjgl.opengl.GL11
+import org.lwjgl.opengl.GL44
+import org.lwjgl.opengl.GLUtil
+import se.exuvo.aurora.utils.exponentialAverage
 
 class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Units.C).toLong()) { // 
 	companion object {
@@ -54,7 +67,7 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 		const val SQUARES_PER_AU = 20
 		const val H_SQUARE_SIZE_KM = Units.AU / SQUARES_PER_AU
 		const val H_SQUARE_SIZE_KMf = H_SQUARE_SIZE_KM.toFloat()
-		const val WATER_SIZE = (MAX_AU * SQUARES_PER_AU).toInt()
+		const val WATER_SIZE = MAX_AU * SQUARES_PER_AU
 
 		const val WAVE_ATTENUATION =
 			0.999f //TODO lower if high SQUARES_PER_AU (Math.pow(0.999, SQUARES_PER_AU.toDouble()).toFloat())
@@ -80,11 +93,13 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 	lateinit private var sensorsSubscription: EntitySubscription
 	lateinit private var emissionsSubscription: EntitySubscription
 
-	val waveHeight = FloatArray(WATER_SIZE * WATER_SIZE)
-	val waveVelocity = FloatArray(WATER_SIZE * WATER_SIZE)
-
 	// c² / h²
 	val stepSpeed = ((C_WAVE_SPEED * C_WAVE_SPEED) / (H_SQUARE_SIZE_KM * H_SQUARE_SIZE_KM)).toFloat()
+	
+	val waveHeight = FloatArray(WATER_SIZE * WATER_SIZE) // , {Math.random().toFloat()}
+	val waveVelocity = FloatArray(WATER_SIZE * WATER_SIZE)
+//	val waveHeightWrapper = FloatBuffer.wrap(waveHeight)
+
 	var lastProcess: Long = galaxy.time
 
 	//TODO singleton per galaxy
@@ -93,6 +108,72 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 	val vertices: FloatArray
 	val indices: ShortArray
 	val strideSize: Int
+	
+//	val texture: Texture
+	
+//	val textureData = object: TextureData {
+//		override fun prepare() {}
+//
+//		override fun getType(): TextureData.TextureDataType? = TextureData.TextureDataType.Custom
+//		override fun getFormat(): Pixmap.Format? = throw GdxRuntimeException("not used")
+//
+//		override fun useMipMaps(): Boolean = false
+//		override fun isPrepared(): Boolean = true
+//		override fun isManaged(): Boolean = true
+//
+//		override fun getWidth(): Int = WATER_SIZE
+//		override fun getHeight(): Int = WATER_SIZE
+//
+//		override fun disposePixmap(): Boolean = throw GdxRuntimeException("This TextureData implementation does not return a Pixmap")
+//		override fun consumePixmap(): Pixmap? = throw GdxRuntimeException("This TextureData implementation does not return a Pixmap")
+//
+//		override fun consumeCustomData(target: Int) {
+//			if (!Gdx.graphics.isGL30Available()) {
+//				if (!Gdx.graphics.supportsExtension("GL_ARB_texture_float"))
+//					throw GdxRuntimeException("Extension GL_ARB_texture_float not supported!");
+//			}
+//			
+//			Gdx.gl.glPixelStorei(GL30.GL_UNPACK_ALIGNMENT, 4);
+//			Gdx.gl.glPixelStorei(GL30.GL_UNPACK_ROW_LENGTH, 0);
+//			Gdx.gl.glPixelStorei(GL30.GL_UNPACK_SKIP_PIXELS, 0);
+//			Gdx.gl.glPixelStorei(GL30.GL_UNPACK_SKIP_ROWS, 0);
+//			
+//			Gdx.gl.glTexParameteri(target, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_LINEAR)
+//			Gdx.gl.glTexParameteri(target, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_LINEAR)
+//			Gdx.gl.glTexParameteri(target, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE);
+//			Gdx.gl.glTexParameteri(target, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE);
+//			
+//			// https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/glTexImage2D.xhtml
+////			Gdx.gl.glTexImage2D(target, 0, GL30.GL_R32F, WATER_SIZE, WATER_SIZE, 0, GL30.GL_RED, GL30.GL_FLOAT, waveHeightWrapper);
+//			
+//			
+//			
+////			val buf = ByteBuffer.allocate(4 * 3)
+////			for (i in 1..4) {
+////				buf.put(128.toByte())
+////				buf.put(128.toByte())
+////				buf.put(128.toByte())
+////			}
+////			buf.flip()
+////			
+////			Gdx.gl.glPixelStorei(GL30.GL_UNPACK_ALIGNMENT, 1);
+////			Gdx.gl.glTexImage2D(target, 0, GL30.GL_RGB8, 2, 2, 0, GL30.GL_RGB, GL30.GL_UNSIGNED_BYTE, buf);
+//			
+//			
+//			
+//			val floats = floatArrayOf(0.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+//			                          1.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f)
+//			val buf = FloatBuffer.wrap(floats)
+//			Gdx.gl.glTexImage2D(GL20.GL_TEXTURE_2D, 0, GL20.GL_RGB, 2, 2, 0, GL20.GL_RGB, GL20.GL_FLOAT, buf);
+//			
+//			
+//			var err = Gdx.gl.glGetError();
+//			while (err != GL20.GL_NO_ERROR) {
+//				GLErrorListener.LOGGING_LISTENER.onError(err)
+//				err = Gdx.gl.glGetError()
+//			}
+//		}
+//	}
 
 	init {
 		if (MAX_INDICES / 6 * 4 != MAX_VERTICES) {
@@ -104,20 +185,21 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 			false, MAX_VERTICES, MAX_INDICES,
 			VertexAttribute(VertexAttributes.Usage.ColorPacked, 4, ShaderProgram.COLOR_ATTRIBUTE),
 			VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE)
+//			,VertexAttribute.TexCoords(0)
 		);
 		strideSize = mesh.getVertexAttributes().vertexSize / 4
 		vertices = FloatArray(MAX_VERTICES * (mesh.getVertexAttributes().vertexSize / 4));
 		indices = ShortArray(MAX_INDICES);
 		
-//		val colorSize = mesh.getVertexAttribute(VertexAttributes.Usage.ColorPacked).sizeInBytes / 4
-//		val positionSize = mesh.getVertexAttribute(VertexAttributes.Usage.Position).sizeInBytes / 4
-		
-//		println("colorSize $colorSize, positionSize $positionSize, compiled ${shader.isCompiled}")
-		
 		if (!shader.isCompiled || shader.getLog().length != 0) {
 			println("shader errors: ${shader.getLog()}")
 			throw RuntimeException()
 		}
+		
+//		texture = Texture(textureData)
+////		texture = Texture(GameServices[AssetManager::class].getFileHandleResolver().resolve("images/aurora.png"))
+//		texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
+//		texture.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge)
 	}
 	
 	override fun dispose() {
@@ -155,7 +237,7 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 
 			override fun removed(entities: IntBag) {}
 		})
-
+		
 		println("WATER_SIZE $WATER_SIZE, cells ${WATER_SIZE * WATER_SIZE}, stepSpeed $stepSpeed, H_SQUARE_SIZE_KM $H_SQUARE_SIZE_KM, interval $interval")
 	}
 
@@ -250,9 +332,7 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 //		val time = System.nanoTime() - start
 //		println("Took $time")
 	}
-
-	private val shapeRenderer by lazy(LazyThreadSafetyMode.NONE) { GameServices[ShapeRenderer::class] }
-
+	
 	private val lowColor = Color.BLUE
 	private val highColor = Color.RED
 	private val middleColor = Color(0f, 0f, 0f, 0f)
@@ -266,24 +346,24 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 	fun render(viewport: Viewport, cameraOffset: Vector2L) {
 		val start = System.nanoTime()
 
-//		val renderer = shapeRenderer
-//		renderer.begin(ShapeRenderer.ShapeType.Filled)
-//
-//		for (x in 0..WATER_SIZE - 1) {
-//			for (y in 0..WATER_SIZE - 1) {
-//				val height = waveHeight[index(x, y)]
-//
-//				lerpColors(height, lowColor, middleColor, highColor, color)
-//				renderer.color = color
-//
-//				val x1 = ((x - WATER_SIZE / 2) * H_SQUARE_SIZE_KM - cameraOffset.x).toFloat()
-//				val y1 = ((y - WATER_SIZE / 2) * H_SQUARE_SIZE_KM - cameraOffset.y).toFloat()
-//
-//				renderer.rect(x1, y1, H_SQUARE_SIZE_KMf, H_SQUARE_SIZE_KMf)
-//			}
-//		}
-//		renderer.end();
+		normalRender(viewport, cameraOffset)
+//		textureRender(viewport, cameraOffset)
 
+		val time = System.nanoTime() - start
+		
+		if (expAverage == 0.0) {
+			expAverage = time.toDouble()
+		}
+		
+		//https://en.wikipedia.org/wiki/Moving_average#Application_to_measuring_computer_performance
+		expAverage = exponentialAverage(time.toDouble(), expAverage, 30.0)
+		
+//		println("Took ${Units.nanoToString(time)}, expAverage ${Units.nanoToString(expAverage.toLong())}")
+	}
+
+	fun normalRender(viewport: Viewport, cameraOffset: Vector2L) {
+		
+		val projectionMatrix = viewport.camera.combined
 		var vertexIdx = 0
 		var indiceIdx = 0
 
@@ -295,8 +375,6 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 			vertices[vertexIdx++] = x;
 			vertices[vertexIdx++] = y;
 		}
-
-		val projectionMatrix = viewport.camera.combined
 		
 		shader.begin();
 		shader.setUniformMatrix("u_projTrans", projectionMatrix);
@@ -309,9 +387,9 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 				val height = waveHeight[index(i, j)]
 				
 				// works decently even though height never goes down completly
-//				if (Math.abs(height) < 0.05f) {
-//					continue
-//				}
+				if (Math.abs(height) < 0.05f) {
+					continue
+				}
 
 				lerpColors(height, lowColor, middleColor, highColor, color)
 				val colorBits = color.toFloatBits()
@@ -357,17 +435,141 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 		mesh.setIndices(indices, 0, indiceIdx)
 		mesh.render(shader, GL20.GL_TRIANGLES);
 		shader.end();
-
-		val time = System.nanoTime() - start
+	}
+	
+	fun textureRender(viewport: Viewport, cameraOffset: Vector2L) {
+		//		texture.load(textureData)
 		
-		if (expAverage == 0.0) {
-			expAverage = time.toDouble()
+		Gdx.gl.glClearColor(0.2f, 0.3f, 0.4f, 0.8f)
+    Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
+		
+		val id = Gdx.gl.glGenTexture()
+		if (id == 0) {
+			println("id $id")
 		}
 		
-		//https://en.wikipedia.org/wiki/Moving_average#Application_to_measuring_computer_performance
-		expAverage = time + Math.pow(Math.E, -1/30.0) * (expAverage - time)
+		Gdx.gl.glDisable(GL20.GL_BLEND);
 		
-		println("Took ${Units.nanoToString(time)}, expAverage ${Units.nanoToString(expAverage.toLong())}")
-	}
+		Gdx.gl.glActiveTexture(GL20.GL_TEXTURE1)
+		Gdx.gl.glBindTexture(GL20.GL_TEXTURE_2D, id)
+		
+		var width = GL11.glGetTexLevelParameteri(GL20.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_WIDTH)
+		var height = GL11.glGetTexLevelParameteri(GL20.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_HEIGHT)
+//		println("width $width, height $height")
+		
+//		Gdx.gl.glPixelStorei(GL30.GL_UNPACK_ALIGNMENT, 1)
+//		Gdx.gl.glPixelStorei(GL30.GL_UNPACK_ROW_LENGTH, 0)
+//		Gdx.gl.glPixelStorei(GL30.GL_UNPACK_SKIP_PIXELS, 0)
+//		Gdx.gl.glPixelStorei(GL30.GL_UNPACK_SKIP_ROWS, 0)
+		
+		Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_NEAREST)
+		Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_MAG_FILTER, GL20.GL_NEAREST)
+		Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE)
+		Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE)
+		
+//		Gdx.gl.glTexImage2D(GL20.GL_TEXTURE_2D, 0, GL30.GL_R32F, WATER_SIZE, WATER_SIZE, 0, GL30.GL_RED, GL30.GL_FLOAT, waveHeightWrapper)
+		
+		
+		val floats = floatArrayOf(1.0f, 0.3f, 0.6f, 0.2f)
+		val buf = FloatBuffer.wrap(floats)
+		GL11.glTexImage2D(GL30.GL_TEXTURE_2D, 0, GL30.GL_R32F, 2, 2, 0, GL30.GL_RED, GL30.GL_FLOAT, buf);
+//		GL11.glTexImage2D(GL30.GL_TEXTURE_2D, 0, GL30.GL_R16F, 2, 2, 0, GL30.GL_RED, GL30.GL_FLOAT, buf);
 
+//		val bytes = byteArrayOf(-1, 9,127, 0)
+//		val buf = ByteBuffer.wrap(bytes)
+		
+//		val buf = ByteBuffer.allocate(4)
+//		for(i in 1..4) {
+//			buf.put(127)
+//		}
+//		buf.flip()
+//		GL11.glTexImage2D(GL20.GL_TEXTURE_2D, 0, GL30.GL_R8, 2, 2, 0, GL30.GL_RED, GL30.GL_UNSIGNED_BYTE, buf);
+		
+//		println("w ${buf[0]} ${buf[1]} ${buf[2]} ${buf[3]}")
+		
+		var err = Gdx.gl.glGetError();
+		while (err != GL20.GL_NO_ERROR) {
+			GLErrorListener.THROWING_LISTENER.onError(err)
+			err = Gdx.gl.glGetError()
+		}
+		
+		width = GL11.glGetTexLevelParameteri(GL20.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_WIDTH)
+		height = GL11.glGetTexLevelParameteri(GL20.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_HEIGHT)
+//		println("width $width, height $height")
+
+				
+		val ret = FloatArray(width * height, {0.1f})
+		GL11.glGetTexImage(GL20.GL_TEXTURE_2D, 0, GL30.GL_RED, GL30.GL_FLOAT, ret)
+		
+		
+//		Gdx.gl.glPixelStorei(GL30.GL_PACK_ALIGNMENT, 1)
+//		val packAlign = GL11.glGetInteger(GL11.GL_PACK_ALIGNMENT)
+//		
+//		val ret = ByteBuffer.allocate(width * height + height * (packAlign - 1))
+//		for(i in 1..ret.capacity()) {
+//			ret.put(5)
+//		}
+//		ret.clear()
+//		GL11.glGetTexImage(GL20.GL_TEXTURE_2D, 0, GL30.GL_RED, GL30.GL_UNSIGNED_BYTE, ret)
+		
+//		println("r ${ret[0]} ${ret[1]} ${ret[2]} ${ret[3]}")
+		
+		err = Gdx.gl.glGetError();
+		while (err != GL20.GL_NO_ERROR) {
+			GLErrorListener.THROWING_LISTENER.onError(err)
+			err = Gdx.gl.glGetError()
+		}
+		 
+		shader.begin();
+		shader.setUniformMatrix("u_projTrans", viewport.camera.combined);
+		shader.setUniformi("u_texture", 1);
+		
+//		texture.bind()
+		
+		var vertexIdx = 0
+		var indiceIdx = 0
+		val strideIdx = vertexIdx / strideSize
+		
+		fun vertex(x: Float, y: Float) {
+			vertices[vertexIdx++] = x;
+			vertices[vertexIdx++] = y;
+		}
+		
+		fun texCoords(s: Float, t: Float) {
+			vertices[vertexIdx++] = s;
+			vertices[vertexIdx++] = t;
+		}
+		
+		// Triangle 1
+		indices[indiceIdx++] = (strideIdx + 1).toShort()
+		indices[indiceIdx++] = (strideIdx + 0).toShort()
+		indices[indiceIdx++] = (strideIdx + 2).toShort()
+		
+		// Triangle 2
+		indices[indiceIdx++] = (strideIdx + 0).toShort()
+		indices[indiceIdx++] = (strideIdx + 3).toShort()
+		indices[indiceIdx++] = (strideIdx + 2).toShort()
+		
+		val x = ((-WATER_SIZE / 2) * H_SQUARE_SIZE_KM - cameraOffset.x).toFloat()
+		val y = ((-WATER_SIZE / 2) * H_SQUARE_SIZE_KM - cameraOffset.y).toFloat()
+		val max = (MAX_AU * Units.AU).toFloat()
+		
+		vertex(x, y);
+		texCoords(0f, 0f)
+		vertex(x + max, y);
+		texCoords(1f, 0f)
+		vertex(x + max, y + max);
+		texCoords(1f, 1f)
+		vertex(x, y + max);
+		texCoords(0f, 1f)
+		
+		mesh.setVertices(vertices, 0, vertexIdx);
+		mesh.setIndices(indices, 0, indiceIdx)
+		mesh.render(shader, GL20.GL_TRIANGLES);
+		shader.end();
+		
+		Gdx.gl.glDeleteTexture(id);
+		Gdx.gl.glActiveTexture(GL20.GL_TEXTURE0);
+	}
+	
 }

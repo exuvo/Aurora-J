@@ -362,7 +362,7 @@ public class CustomLwjgl3Window extends Lwjgl3Window {
 		input.windowHandleChanged(windowHandle);
 	}
 
-	boolean update() {
+	void update(boolean shouldRender) {
 		if (!listenerInitialized) {
 			initializeListener();
 		}
@@ -380,8 +380,9 @@ public class CustomLwjgl3Window extends Lwjgl3Window {
 
 		if (!iconified) {
 			input.update();
+			listener.update();
 
-			if (listener.update()) {
+			if (shouldRender) {
 				graphics.update();
 				listener.render();
 				GLFW.glfwSwapBuffers(windowHandle);
@@ -389,8 +390,6 @@ public class CustomLwjgl3Window extends Lwjgl3Window {
 
 			input.prepareNext();
 		}
-
-		return true;
 	}
 
 	void requestRendering() {}

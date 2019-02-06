@@ -44,6 +44,8 @@ fun Entity.printID(): String {
 	return "${this.printName()} (${this.getUUID()})"
 }
 
+fun exponentialAverage(newValue: Double, expAverage: Double, delay: Double) : Double = newValue + Math.pow(Math.E, -1/delay) * (expAverage - newValue)
+
 fun consumeFuel(deltaGameTime: Int, entity: Entity, ship: ShipComponent, partRef: PartRef<Part>, energyConsumed: Long, fuelEnergy: Long) {
 	val part = partRef.part
 	if (part is FueledPart) {
@@ -108,7 +110,7 @@ fun consumeFuel(deltaGameTime: Int, entity: Entity, ship: ShipComponent, partRef
 	}
 }
 
-object EncryptionUtils {
+object GameUtils {
 
 	public val stringDigester: StandardStringDigester
 

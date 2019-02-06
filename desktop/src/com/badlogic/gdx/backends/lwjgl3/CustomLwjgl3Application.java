@@ -37,6 +37,8 @@ import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.badlogic.gdx.utils.SharedLibraryLoader;
 
+import se.unlogic.standardutils.threads.ThreadUtils;
+
 public class CustomLwjgl3Application implements Application {
 
 	private final Lwjgl3ApplicationConfiguration config;
@@ -44,7 +46,6 @@ public class CustomLwjgl3Application implements Application {
 	private volatile CustomLwjgl3Window currentWindow;
 	private Audio audio;
 	private final Files files;
-	private final Net net;
 	private final ObjectMap<String, Preferences> preferences = new ObjectMap<String, Preferences>();
 	private final Lwjgl3Clipboard clipboard;
 	private int logLevel = LOG_INFO;
@@ -56,6 +57,7 @@ public class CustomLwjgl3Application implements Application {
 	private static GLFWErrorCallback errorCallback;
 	private static GLVersion glVersion;
 	private static Callback glDebugCallback;
+	private long frameDelay;
 
 	static void initializeGlfw() {
 		if (errorCallback == null) {
@@ -69,7 +71,7 @@ public class CustomLwjgl3Application implements Application {
 		}
 	}
 
-	public CustomLwjgl3Application(ApplicationListener listener, Lwjgl3ApplicationConfiguration config) {
+	public CustomLwjgl3Application(ApplicationListener listener, Lwjgl3ApplicationConfiguration config, int framerate) {
 		initializeGlfw();
 		setApplicationLogger(new Lwjgl3ApplicationLogger());
 		this.config = Lwjgl3ApplicationConfiguration.copy(config);
@@ -80,31 +82,32 @@ public class CustomLwjgl3Application implements Application {
 	
 		Gdx.app = this;
 		
-		if (!config.disableAudio) {
-			try {
-				this.audio = Gdx.audio = new OpenALAudio(config.audioDeviceSimultaneousSources, config.audioDeviceBufferCount, config.audioDeviceBufferSize);
-			} catch (Throwable t) {
-				log("Lwjgl3Application", "Couldn't initialize audio, disabling audio", t);
-				this.audio = Gdx.audio = new MockAudio();
-			}
-		} else {
+		try {
+			this.audio = Gdx.audio = new OpenALAudio(config.audioDeviceSimultaneousSources, config.audioDeviceBufferCount, config.audioDeviceBufferSize);
+			
+		} catch (Throwable t) {
+			log("Lwjgl3Application", "Couldn't initialize audio, disabling audio", t);
 			this.audio = Gdx.audio = new MockAudio();
 		}
 		
 		this.files = Gdx.files = new Lwjgl3Files();
-		this.net = Gdx.net = new Lwjgl3Net();
 		this.clipboard = new Lwjgl3Clipboard();
 
 		CustomLwjgl3Window window = createWindow(config, listener, 0);
 		windows.add(window);
 		
+		frameDelay = 1000000000L / framerate; // 1 second in nanosecond units
+		
 		try {
 			loop();
 			cleanupWindows();
+			
 		} catch (Throwable t) {
-			if (t instanceof RuntimeException)
+			if (t instanceof RuntimeException) {
 				throw (RuntimeException) t;
-			else throw new GdxRuntimeException(t);
+			} else  {
+				throw new GdxRuntimeException(t);
+			}
 		} finally {
 			cleanup();
 		}
@@ -113,6 +116,9 @@ public class CustomLwjgl3Application implements Application {
 	private void loop() {
 		Array<CustomLwjgl3Window> closedWindows = new Array<CustomLwjgl3Window>();
 		boolean updateAudio = audio instanceof OpenALAudio;
+		
+		long accumulator = 0L;
+		long lastRun = System.nanoTime();
 		
 		while (running && windows.size > 0) {
 			// FIXME put it on a separate thread
@@ -123,13 +129,44 @@ public class CustomLwjgl3Application implements Application {
 			if (closedWindows.size > 0) {
 				closedWindows.clear();
 			}
-			
+
+			boolean shouldRender = false;
+
+			{
+				long now = System.nanoTime();
+				accumulator += now - lastRun;
+
+				if (accumulator >= frameDelay) {
+					accumulator -= frameDelay;
+
+					if (accumulator > frameDelay) {
+						accumulator = frameDelay;
+					}
+
+					shouldRender = true;
+
+//					println("frameDelay $frameDelay, diff $frameTime, accumulator $accumulator")
+
+				} else if (accumulator < frameDelay && frameDelay > 1000000L) { // 1 millisecond in nanosecond units
+
+					long sleepTime = (frameDelay - accumulator) / 1000000L;
+
+					if (sleepTime > 1) {
+						ThreadUtils.sleep(sleepTime - 1);
+					} else {
+						Thread.yield();
+					}
+				}
+
+				lastRun = now;
+			}
+
 			for (CustomLwjgl3Window window : windows) {
 				window.makeCurrent();
 				currentWindow = window;
 				
 				synchronized (lifecycleListeners) {
-					window.update();
+					window.update(shouldRender);
 				}
 				
 				if (window.shouldClose()) {
@@ -224,7 +261,7 @@ public class CustomLwjgl3Application implements Application {
 
 	@Override
 	public Net getNet() {
-		return net;
+		return null;
 	}
 
 	@Override

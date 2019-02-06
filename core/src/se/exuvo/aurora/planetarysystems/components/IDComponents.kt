@@ -3,7 +3,7 @@ package se.exuvo.aurora.planetarysystems.components
 import com.artemis.Component
 import se.exuvo.aurora.galactic.Empire
 import se.exuvo.aurora.planetarysystems.PlanetarySystem
-import se.exuvo.aurora.utils.EncryptionUtils
+import se.exuvo.aurora.utils.GameUtils
 
 class UUIDComponent() : Component() {
 	lateinit var uuid: EntityUUID
@@ -28,7 +28,7 @@ data class EntityUUID(val planetarySystemID: Int, val empireID: Int, val entityU
 
 	override fun hashCode(): Int = hashcode
 	
-	val dispersedHash: Int by lazy (LazyThreadSafetyMode.NONE) { EncryptionUtils.stringDigester.digest(toString()).hashCode() }
+	val dispersedHash: Int by lazy (LazyThreadSafetyMode.NONE) { GameUtils.stringDigester.digest(toString()).hashCode() }
 }
 
 class NameComponent() : Component() {
