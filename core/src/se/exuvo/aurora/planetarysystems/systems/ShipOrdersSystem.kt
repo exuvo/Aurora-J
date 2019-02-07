@@ -5,14 +5,14 @@ import com.artemis.ComponentMapper
 import com.artemis.EntitySubscription.SubscriptionListener
 import com.artemis.systems.IteratingSystem
 import com.artemis.utils.IntBag
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.goap.planner.ReGoapPlannerSettings
 import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.ShipOrdersComponent
+import se.exuvo.aurora.planetarysystems.components.ShipWorldState
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.forEach
-import se.exuvo.aurora.planetarysystems.components.ShipWorldState
 
 class ShipOrdersSystem : IteratingSystem(FAMILY) {
 	companion object {
@@ -20,7 +20,7 @@ class ShipOrdersSystem : IteratingSystem(FAMILY) {
 		val SHIP_FAMILY = Aspect.all(ShipComponent::class.java)
 	}
 
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
 	lateinit private var ordersMapper: ComponentMapper<ShipOrdersComponent<ShipWorldState, Boolean?>>

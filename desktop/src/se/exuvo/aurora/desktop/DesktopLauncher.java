@@ -3,9 +3,11 @@ package se.exuvo.aurora.desktop;
 import java.nio.file.Paths;
 import java.util.Iterator;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.xml.DOMConfigurator;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.logging.log4j.io.IoBuilder;
 import org.lwjgl.system.Configuration;
 
 import com.badlogic.gdx.Files.FileType;
@@ -18,7 +20,7 @@ import com.martiansoftware.jsap.JSAPException;
 import com.martiansoftware.jsap.JSAPResult;
 import com.martiansoftware.jsap.Switch;
 
-import se.exuvo.aurora.AuroraGame;
+import se.exuvo.aurora.AuroraGameMainWindow;
 import se.exuvo.aurora.utils.keys.KeyMappings;
 import se.exuvo.settings.Settings;
 import se.unlogic.standardutils.io.FileUtils;
@@ -28,9 +30,11 @@ public class DesktopLauncher {
 	private static Logger log;
 
 	public static void main(String[] args) {
-		DOMConfigurator.configure("log4j.xml");
-		log = Logger.getLogger(DesktopLauncher.class);
+		System.setProperty("log4j.configurationFile", "log4j2.xml");
+		log = LogManager.getLogger(DesktopLauncher.class);
 		log.fatal("### Starting ###");
+		Logger glLog = LogManager.getLogger("org.opengl");
+		glLog.fatal("### Starting ###");
 
 		JSAP jsap = new JSAP();
 		arguments(jsap);
@@ -59,18 +63,17 @@ public class DesktopLauncher {
 		}
 
 		Level level = Level.toLevel(Settings.getStr("loglevel", "INFO"));
-		Logger.getLogger("se.exuvo").setLevel(level);
+		Configurator.setLevel("se.exuvo", level);
 		log.info("Changed log level to " + level);
 		
 		//https://github.com/LWJGL/lwjgl3-wiki/wiki/2.5.-Troubleshooting
 		Configuration.DEBUG.set(true);
-		Configuration.DEBUG_STREAM.set(System.out);
+		Configuration.DEBUG_STREAM.set(IoBuilder.forLogger(glLog).setLevel(Level.INFO).buildPrintStream());
 		
 		Lwjgl3ApplicationConfiguration windowConfig = new Lwjgl3ApplicationConfiguration();
 		windowConfig.setTitle("Aurora J");
-//		windowConfig.useOpenGL3(true, 3, 2);
 		windowConfig.useOpenGL3(true, 4, 4);
-		windowConfig.enableGLDebugOutput(true, System.err);
+		windowConfig.enableGLDebugOutput(true, IoBuilder.forLogger(glLog).setLevel(Level.WARN).buildPrintStream());
 		
 		final int defaultWidth = 1024;
 		final int defaultHeight = 768;
@@ -128,7 +131,7 @@ public class DesktopLauncher {
 		String assetsURI = FileUtils.fileExists("assets") ? "assets/" : "../core/assets/";
 
 		try {
-			new CustomLwjgl3Application(new AuroraGame(assetsURI), windowConfig, Settings.getInt("Window/FrameLimit", 60));
+			new CustomLwjgl3Application(new AuroraGameMainWindow(assetsURI), windowConfig, Settings.getInt("Window/FrameLimit", 60));
 			
 		} catch (Throwable e) {
 			log.error("", e);

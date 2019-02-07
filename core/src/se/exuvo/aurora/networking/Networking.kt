@@ -1,9 +1,9 @@
 package se.exuvo.aurora.networking
 
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 
 class Networking() {
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 	
 	
 

@@ -422,6 +422,8 @@ public class CustomLwjgl3Window extends Lwjgl3Window {
 		Gdx.input = input;
 
 		GLFW.glfwMakeContextCurrent(windowHandle);
+		
+		AuroraGame.Companion.currentWindow = listener;
 	}
 
 	@Override

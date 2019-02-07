@@ -1,13 +1,14 @@
 package com.esotericsoftware.kryonet;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.esotericsoftware.minlog.Log;
 
 public class MinlogTolog4j extends Log.Logger {
 
-	private static final Logger log = Logger.getLogger(MinlogTolog4j.class);
+	private static final Logger log = LogManager.getLogger(MinlogTolog4j.class);
 
 	@Override
 	public void log(int level, String category, String message, Throwable ex) {

@@ -2,7 +2,7 @@ package se.exuvo.aurora.planetarysystems
 
 import com.artemis.Aspect
 import com.artemis.ComponentMapper
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.Empire
 import se.exuvo.aurora.planetarysystems.components.CircleComponent
@@ -17,7 +17,7 @@ import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.TintComponent
 import se.exuvo.aurora.planetarysystems.systems.OrbitSystem
-import se.exuvo.aurora.utils.*
+import se.exuvo.aurora.utils.forEach
 import java.util.Random
 import kotlin.concurrent.write
 
@@ -26,7 +26,7 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 		val FAMILY = Aspect.exclude(ThrustComponent::class.java)
 	}
 
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 	val world = system.world
 	
 	lateinit private var timedMovementMapper: ComponentMapper<TimedMovementComponent>

@@ -8,10 +8,10 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.utils.GameServices
+import se.exuvo.aurora.AuroraGame
 
 class ResearchScreen : GameScreenImpl(), InputProcessor {
 
-	private val spriteBatch by lazy (LazyThreadSafetyMode.NONE) { GameServices[SpriteBatch::class] }
 	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 
 	private val stage = Stage(ScreenViewport())
@@ -91,6 +91,8 @@ class ResearchScreen : GameScreenImpl(), InputProcessor {
 	}
 
 	override fun draw() {
+//		val spriteBatch = AuroraGame.currentWindow.spriteBatch
+		
 		stage.draw()
 	}
 

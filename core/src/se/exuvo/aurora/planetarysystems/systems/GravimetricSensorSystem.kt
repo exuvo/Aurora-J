@@ -4,58 +4,41 @@ import com.artemis.Aspect
 import com.artemis.ComponentMapper
 import com.artemis.EntitySubscription
 import com.artemis.EntitySubscription.SubscriptionListener
-import com.artemis.systems.IteratingSystem
+import com.artemis.annotations.Wire
 import com.artemis.utils.IntBag
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.Texture
-import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.badlogic.gdx.graphics.g3d.particles.emitters.Emitter
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.GL30
+import com.badlogic.gdx.graphics.Mesh
+import com.badlogic.gdx.graphics.VertexAttribute
+import com.badlogic.gdx.graphics.VertexAttributes
+import com.badlogic.gdx.graphics.glutils.ShaderProgram
+import com.badlogic.gdx.graphics.profiling.GLErrorListener
 import com.badlogic.gdx.utils.viewport.Viewport
-import org.apache.log4j.Logger
-import se.exuvo.aurora.galactic.Galaxy
+import org.apache.logging.log4j.LogManager
+import org.lwjgl.opengl.GL11
+import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.PassiveSensor
+import se.exuvo.aurora.planetarysystems.PlanetarySystem
 import se.exuvo.aurora.planetarysystems.components.DetectionComponent
 import se.exuvo.aurora.planetarysystems.components.EmissionsComponent
+import se.exuvo.aurora.planetarysystems.components.GravimetricSensorsComponent
+import se.exuvo.aurora.planetarysystems.components.MassComponent
 import se.exuvo.aurora.planetarysystems.components.OwnerComponent
 import se.exuvo.aurora.planetarysystems.components.PassiveSensorsComponent
 import se.exuvo.aurora.planetarysystems.components.PoweredPartState
 import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.UUIDComponent
-import se.exuvo.aurora.planetarysystems.systems.OrbitSystem.OrbitCache
-import se.exuvo.aurora.utils.GameServices
-import se.exuvo.aurora.utils.Vector2L
-import se.exuvo.aurora.utils.forEach
 import se.exuvo.aurora.utils.Units
-import se.exuvo.aurora.planetarysystems.components.MassComponent
-import se.exuvo.aurora.planetarysystems.components.GravimetricSensorsComponent
-import se.exuvo.aurora.utils.lerpColors
-import se.exuvo.aurora.planetarysystems.PlanetarySystem
-import com.artemis.annotations.Wire
-import java.lang.RuntimeException
-import se.exuvo.aurora.Assets
-import com.badlogic.gdx.graphics.glutils.ShaderProgram
-import com.badlogic.gdx.graphics.Mesh
-import com.badlogic.gdx.graphics.VertexAttribute
-import com.badlogic.gdx.graphics.VertexAttributes
-import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.math.Matrix4
-import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.graphics.GL30
-import com.badlogic.gdx.graphics.Pixmap
-import com.badlogic.gdx.graphics.glutils.FloatTextureData
-import java.nio.FloatBuffer
-import com.badlogic.gdx.graphics.TextureData
-import com.badlogic.gdx.utils.GdxRuntimeException
-import com.badlogic.gdx.assets.AssetManager
-import java.nio.IntBuffer
-import java.nio.ByteBuffer
-import com.badlogic.gdx.graphics.profiling.GLErrorListener
-import org.lwjgl.opengl.GL11
-import org.lwjgl.opengl.GL44
-import org.lwjgl.opengl.GLUtil
+import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.exponentialAverage
+import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.lerpColors
+import java.nio.FloatBuffer
+import se.exuvo.aurora.AuroraGame
+import com.badlogic.gdx.utils.Disposable
 
 class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Units.C).toLong()) { // 
 	companion object {
@@ -78,7 +61,7 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 		const val MAX_INDICES = (MAX_VERTICES / 4) * 6
 	}
 
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 
 	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>
 	lateinit private var sensorsMapper: ComponentMapper<PassiveSensorsComponent>
@@ -101,14 +84,45 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 //	val waveHeightWrapper = FloatBuffer.wrap(waveHeight)
 
 	var lastProcess: Long = galaxy.time
-
-	//TODO singleton per galaxy
-	val shader: ShaderProgram
-	val mesh: Mesh
-	val vertices: FloatArray
-	val indices: ShortArray
 	val strideSize: Int
+
+	class GravGlobalData(window: GravWindowData): Disposable {
+		val shader: ShaderProgram
+		val vertices: FloatArray
+		val indices: ShortArray
+
+		init {
+			shader = Assets.gravimetricShaderProgram
+
+			if (!shader.isCompiled || shader.getLog().length != 0) {
+				println("shader errors: ${shader.getLog()}")
+				throw RuntimeException()
+			}
+			
+			vertices = FloatArray(MAX_VERTICES * (window.mesh.getVertexAttributes().vertexSize / 4));
+			indices = ShortArray(MAX_INDICES);
+		}
+		
+		override fun dispose() {}
+	}
 	
+	class GravWindowData(): Disposable {
+
+		val mesh: Mesh
+
+		init {
+			mesh = Mesh(false, MAX_VERTICES, MAX_INDICES,
+			            VertexAttribute(VertexAttributes.Usage.ColorPacked, 4, ShaderProgram.COLOR_ATTRIBUTE),
+			            VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE)
+//			            ,VertexAttribute.TexCoords(0)
+			);
+		}
+
+		override fun dispose() {
+			mesh.dispose()
+		}
+	}
+
 //	val texture: Texture
 	
 //	val textureData = object: TextureData {
@@ -175,36 +189,48 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 //		}
 //	}
 
+	fun wData(): GravWindowData {
+		var wData = AuroraGame.currentWindow.storage(GravWindowData::class)
+		
+		if (wData == null) {
+			wData = GravWindowData()
+			AuroraGame.currentWindow.storage + wData
+		}
+		
+		return wData
+	}
+	
+	fun gData() = galaxy.storage[GravGlobalData::class]
+	
 	init {
 		if (MAX_INDICES / 6 * 4 != MAX_VERTICES) {
 			throw RuntimeException("MAX_VERTICES not evenly divisible by 4")
 		}
 		
-		shader = Assets.gravimetricShaderProgram
-		mesh = Mesh(
-			false, MAX_VERTICES, MAX_INDICES,
-			VertexAttribute(VertexAttributes.Usage.ColorPacked, 4, ShaderProgram.COLOR_ATTRIBUTE),
-			VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE)
-//			,VertexAttribute.TexCoords(0)
-		);
-		strideSize = mesh.getVertexAttributes().vertexSize / 4
-		vertices = FloatArray(MAX_VERTICES * (mesh.getVertexAttributes().vertexSize / 4));
-		indices = ShortArray(MAX_INDICES);
+		var windowData = AuroraGame.currentWindow.storage(GravWindowData::class)
 		
-		if (!shader.isCompiled || shader.getLog().length != 0) {
-			println("shader errors: ${shader.getLog()}")
-			throw RuntimeException()
+		if (windowData == null) {
+			windowData = GravWindowData()
+			AuroraGame.currentWindow.storage + windowData
 		}
 		
+		var globalData = galaxy.storage(GravGlobalData::class)
+		
+		if (globalData == null) {
+			globalData = GravGlobalData(windowData)
+			galaxy.storage + globalData
+		}
+		
+		strideSize = windowData.mesh.getVertexAttributes().vertexSize / 4
+		
+
 //		texture = Texture(textureData)
 ////		texture = Texture(GameServices[AssetManager::class].getFileHandleResolver().resolve("images/aurora.png"))
 //		texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
 //		texture.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge)
 	}
 	
-	override fun dispose() {
-		mesh.dispose()
-	}
+	override fun dispose() {}
 
 	override fun initialize() {
 		sensorsSubscription = world.getAspectSubscriptionManager().get(SHIP_ASPECT)
@@ -339,10 +365,6 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 	private val color = Color()
 	private var expAverage = 0.0
 
-	//TODO add interpolation and smooth edges
-	// https://www.gamedevelopment.blog/glsl-shader-language-libgdx/
-	// https://github.com/libgdx/libgdx/wiki/Shaders
-	// https://www.gamefromscratch.com/post/2014/07/08/LibGDX-Tutorial-Part-12-Using-GLSL-Shaders-and-creating-a-Mesh.aspx
 	fun render(viewport: Viewport, cameraOffset: Vector2L) {
 		val start = System.nanoTime()
 
@@ -364,6 +386,15 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 	fun normalRender(viewport: Viewport, cameraOffset: Vector2L) {
 		
 		val projectionMatrix = viewport.camera.combined
+		
+		val gData = gData()
+		val wData = wData()
+		
+		val vertices = gData.vertices
+		val indices = gData.indices
+		val shader = gData.shader
+		val mesh = wData.mesh
+		
 		var vertexIdx = 0
 		var indiceIdx = 0
 
@@ -436,8 +467,21 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 		mesh.render(shader, GL20.GL_TRIANGLES);
 		shader.end();
 	}
-	
+
+	//TODO add interpolation and smooth edges
+	// https://www.gamedevelopment.blog/glsl-shader-language-libgdx/
+	// https://github.com/libgdx/libgdx/wiki/Shaders
+	// https://www.gamefromscratch.com/post/2014/07/08/LibGDX-Tutorial-Part-12-Using-GLSL-Shaders-and-creating-a-Mesh.aspx
 	fun textureRender(viewport: Viewport, cameraOffset: Vector2L) {
+		
+		val gData = gData()
+		val wData = wData()
+		
+		val vertices = gData.vertices
+		val indices = gData.indices
+		val shader = gData.shader
+		val mesh = wData.mesh
+		
 		//		texture.load(textureData)
 		
 		Gdx.gl.glClearColor(0.2f, 0.3f, 0.4f, 0.8f)
@@ -467,6 +511,7 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 		Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_S, GL20.GL_CLAMP_TO_EDGE)
 		Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_2D, GL20.GL_TEXTURE_WRAP_T, GL20.GL_CLAMP_TO_EDGE)
 		
+		//TODO not working
 //		Gdx.gl.glTexImage2D(GL20.GL_TEXTURE_2D, 0, GL30.GL_R32F, WATER_SIZE, WATER_SIZE, 0, GL30.GL_RED, GL30.GL_FLOAT, waveHeightWrapper)
 		
 		

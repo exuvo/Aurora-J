@@ -15,10 +15,10 @@ import java.util.LinkedList
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import se.exuvo.aurora.utils.exponentialAverage
+import se.exuvo.aurora.AuroraGame
 
 class GameScreenService : Disposable, InputProcessor {
 	private val inputMultiplexer = InputMultiplexer()
-	private val spriteBatch by lazy (LazyThreadSafetyMode.NONE) { GameServices[SpriteBatch::class] }
 	val uiCamera = OrthographicCamera()
 	private val screens = LinkedList<GameScreen>()
 	private val addQueue = LinkedList<GameScreen>()
@@ -77,6 +77,7 @@ class GameScreenService : Disposable, InputProcessor {
 	var renderTimeAverage = 0.0
 	
 	fun render() {
+		val spriteBatch = AuroraGame.currentWindow.spriteBatch
 		val now = System.nanoTime()
 		
 		frameStartTime = now - lastDrawStart

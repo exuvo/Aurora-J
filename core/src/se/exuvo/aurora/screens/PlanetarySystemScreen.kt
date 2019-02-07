@@ -39,6 +39,7 @@ import kotlin.concurrent.write
 import kotlin.properties.Delegates
 import com.artemis.Aspect
 import se.exuvo.aurora.galactic.Player
+import se.exuvo.aurora.AuroraGame
 
 class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), InputProcessor {
 	companion object {
@@ -51,15 +52,12 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 		}
 	}
 
-	private val spriteBatch = GameServices[SpriteBatch::class]
-	private val shapeRenderer = GameServices[ShapeRenderer::class]
 	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	private val systemGroupSystem by lazy (LazyThreadSafetyMode.NONE) { system.world.getSystem(GroupSystem::class.java) }
 	private val renderSystem by lazy (LazyThreadSafetyMode.NONE) { system.world.getSystem(RenderSystem::class.java) }
 	private val movementSystem by lazy (LazyThreadSafetyMode.NONE) { system.world.getSystem(MovementSystem::class.java) }
 
-	private val uiCamera = GameServices[GameScreenService::class].uiCamera
 	private var viewport by Delegates.notNull<Viewport>()
 	private var camera by Delegates.notNull<OrthographicCamera>()
 	private val cameraOffset = Vector2L()
@@ -119,6 +117,9 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	}
 
 	override fun draw() {
+		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
+		val uiCamera = AuroraGame.currentWindow.screenService.uiCamera
+
 		system.lock.read {
 			renderSystem.render(viewport, cameraOffset)
 			
@@ -143,6 +144,9 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	}
 
 	private fun drawUI() {
+		val spriteBatch = AuroraGame.currentWindow.spriteBatch
+		val uiCamera = AuroraGame.currentWindow.screenService.uiCamera
+		
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
 		
@@ -193,9 +197,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 		} else if (action == KeyActions_PlanetarySystemScreen.MAP) {
 
-			val galaxyScreen = GameServices[GalaxyScreen::class]
-			galaxyScreen.centerOnPlanetarySystem(system)
-			GameServices[GameScreenService::class].add(galaxyScreen)
+			AuroraGame.currentWindow.screenService.add(GalaxyScreen(this))
 
 		} else if (action == KeyActions_PlanetarySystemScreen.ATTACK) {
 

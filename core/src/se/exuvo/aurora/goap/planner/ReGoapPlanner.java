@@ -7,8 +7,9 @@ import java.util.List;
 import java.util.Queue;
 import java.util.function.Consumer;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import se.exuvo.aurora.goap.interfaces.GoapActionStackData;
 import se.exuvo.aurora.goap.interfaces.IReGoapAction;
@@ -19,7 +20,7 @@ import se.exuvo.aurora.goap.interfaces.ReGoapState;
 
 public class ReGoapPlanner<T, W> implements IGoapPlanner<T, W> {
 
-	protected static final Logger log = Logger.getLogger(ReGoapPlanner.class);
+	protected static final Logger log = LogManager.getLogger(ReGoapPlanner.class);
 	private IReGoapAgent<T, W> goapAgent;
 	private IReGoapGoal<T, W> currentGoal;
 	public boolean calculated;

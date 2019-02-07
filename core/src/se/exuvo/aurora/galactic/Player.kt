@@ -1,9 +1,6 @@
 package se.exuvo.aurora.galactic
 
-import org.apache.log4j.Logger
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.locks.ReentrantReadWriteLock
-import com.artemis.Entity
+import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
 
@@ -13,7 +10,7 @@ class Player(var name: String) {
 		var current = Player("local")
 	}
 
-	private val log = Logger.getLogger(this.javaClass)
+	private val log = LogManager.getLogger(this.javaClass)
 	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 
 	val empire: Empire? = null

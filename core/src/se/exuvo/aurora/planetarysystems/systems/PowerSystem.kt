@@ -5,7 +5,8 @@ import com.artemis.ComponentMapper
 import com.artemis.EntitySubscription.SubscriptionListener
 import com.artemis.systems.IteratingSystem
 import com.artemis.utils.IntBag
-import org.apache.log4j.Logger
+import net.mostlyoriginal.api.event.common.Subscribe
+import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.galactic.Battery
 import se.exuvo.aurora.galactic.ChargedPart
 import se.exuvo.aurora.galactic.Galaxy
@@ -20,12 +21,10 @@ import se.exuvo.aurora.planetarysystems.components.PoweredPartState
 import se.exuvo.aurora.planetarysystems.components.PoweringPartState
 import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
+import se.exuvo.aurora.planetarysystems.events.PowerEvent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.consumeFuel
 import se.exuvo.aurora.utils.forEach
-import org.intellij.lang.annotations.JdkConstants.ListSelectionMode
-import se.exuvo.aurora.planetarysystems.events.PowerEvent
-import net.mostlyoriginal.api.event.common.Subscribe
 
 class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -33,7 +32,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 		val SHIP_FAMILY = Aspect.all(ShipComponent::class.java)
 	}
 
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
 	lateinit private var powerMapper: ComponentMapper<PowerComponent>

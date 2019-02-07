@@ -4,7 +4,7 @@ import com.artemis.Aspect
 import com.artemis.ComponentMapper
 import com.artemis.systems.IteratingSystem
 import net.mostlyoriginal.api.event.common.EventSystem
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.galactic.ElectricalThruster
 import se.exuvo.aurora.galactic.FueledThruster
 import se.exuvo.aurora.galactic.ThrustingPart
@@ -16,14 +16,15 @@ import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.events.PowerEvent
 import se.exuvo.aurora.planetarysystems.events.getEvent
-import se.exuvo.aurora.utils.*
+import se.exuvo.aurora.utils.consumeFuel
+import se.exuvo.aurora.utils.forEach
 
 class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
 		val FAMILY = Aspect.all(ShipComponent::class.java)
 	}
 
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 
 	lateinit private var massMapper: ComponentMapper<MassComponent>
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>

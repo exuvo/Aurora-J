@@ -10,16 +10,16 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGeneratorLoader
 import com.badlogic.gdx.graphics.g2d.freetype.FreetypeFontLoader
 import com.badlogic.gdx.graphics.g2d.freetype.FreetypeFontLoader.FreeTypeFontLoaderParameter
+import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.utils.Disposable
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.utils.GameServices
 import kotlin.properties.Delegates
-import com.badlogic.gdx.graphics.glutils.ShaderProgram
 
 object Assets : Disposable {
 
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 	private val manager by lazy (LazyThreadSafetyMode.NONE) { GameServices[AssetManager::class] }
 
 	var fontMap by Delegates.notNull<BitmapFont>()

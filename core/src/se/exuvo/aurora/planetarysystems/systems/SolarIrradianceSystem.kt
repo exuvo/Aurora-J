@@ -2,18 +2,16 @@ package se.exuvo.aurora.planetarysystems.systems
 
 import com.artemis.Aspect
 import com.artemis.ComponentMapper
-import com.artemis.Entity
+import com.artemis.EntitySubscription
 import com.artemis.EntitySubscription.SubscriptionListener
 import com.artemis.utils.IntBag
-import com.sun.xml.internal.ws.api.pipe.Engine
-import org.apache.log4j.Logger
-import se.exuvo.aurora.galactic.TargetingComputer
-import se.exuvo.aurora.planetarysystems.components.PoweredPartState
+import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
 import se.exuvo.aurora.planetarysystems.components.SunComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
-import se.exuvo.aurora.utils.*
-import com.artemis.EntitySubscription
+import se.exuvo.aurora.utils.Units
+import se.exuvo.aurora.utils.Vector2L
+import se.exuvo.aurora.utils.forEach
 
 class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 	companion object {
@@ -21,7 +19,7 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) 
 		val SUNS_FAMILY = Aspect.all(SunComponent::class.java, TimedMovementComponent::class.java)
 	}
 
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 
 	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>
 	lateinit private var irradianceMapper: ComponentMapper<SolarIrradianceComponent>

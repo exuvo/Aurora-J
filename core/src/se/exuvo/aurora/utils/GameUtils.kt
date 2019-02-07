@@ -1,6 +1,6 @@
 package se.exuvo.aurora.utils
 
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.Logger
 import org.jasypt.digest.StandardStringDigester
 import se.exuvo.aurora.galactic.FuelWastePart
 import se.exuvo.aurora.galactic.FueledPart
@@ -13,9 +13,11 @@ import se.exuvo.aurora.planetarysystems.components.UUIDComponent
 import com.artemis.Entity
 import com.artemis.ComponentMapper
 import com.artemis.utils.IntBag
+import com.badlogic.gdx.Gdx
+import org.apache.logging.log4j.LogManager
 
 
-private val log = Logger.getLogger("se.exuvo.aurora.utils")
+private val log = LogManager.getLogger("se.exuvo.aurora.utils")
 
 inline fun IntBag.forEach(action: (entityID: Int) -> Unit) {
 	for (i in 0 .. size() - 1) {

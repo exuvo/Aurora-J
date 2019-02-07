@@ -8,8 +8,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Window
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import se.exuvo.aurora.Assets
+import se.exuvo.aurora.AuroraGame
 import se.exuvo.aurora.galactic.Galaxy
-import se.exuvo.aurora.planetarysystems.PlanetarySystem
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.OrbitComponent
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
@@ -18,7 +18,6 @@ import se.exuvo.aurora.utils.GameServices
 
 class Scene2DScreen : GameScreenImpl(), InputProcessor {
 
-	private val spriteBatch by lazy (LazyThreadSafetyMode.NONE) { GameServices[SpriteBatch::class] }
 	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 
@@ -26,7 +25,6 @@ class Scene2DScreen : GameScreenImpl(), InputProcessor {
 	private val orbitMapper = ComponentMapper.getFor(OrbitComponent::class.java, galaxy.world)
 	private val thrustMapper = ComponentMapper.getFor(ThrustComponent::class.java, galaxy.world)
 
-	private val uiCamera = GameServices[GameScreenService::class].uiCamera
 	private val stage = Stage(ScreenViewport())
 	private val selectionWindow: Window
 	private val skin = Assets.skinUI

@@ -7,7 +7,7 @@ import com.artemis.EntitySubscription.SubscriptionListener
 import com.artemis.systems.IteratingSystem
 import com.artemis.utils.IntBag
 import net.mostlyoriginal.api.event.common.EventSystem
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.galactic.PartRef
 import se.exuvo.aurora.galactic.PassiveSensor
@@ -21,8 +21,6 @@ import se.exuvo.aurora.planetarysystems.components.PoweredPartState
 import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.UUIDComponent
-import se.exuvo.aurora.planetarysystems.events.PowerEvent
-import se.exuvo.aurora.planetarysystems.events.getEvent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEach
@@ -34,7 +32,7 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 		val EMISSION_FAMILY = Aspect.all(EmissionsComponent::class.java)
 	}
 
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 	private val galaxy = GameServices[Galaxy::class]
 
 	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>

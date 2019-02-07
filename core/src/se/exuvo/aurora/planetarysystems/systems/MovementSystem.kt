@@ -2,12 +2,12 @@ package se.exuvo.aurora.planetarysystems.systems
 
 import com.artemis.Aspect
 import com.artemis.ComponentMapper
+import com.artemis.World
+import com.artemis.WorldConfigurationBuilder.Priority
 import com.artemis.systems.IteratingSystem
 import com.badlogic.gdx.math.Vector2
-import org.apache.log4j.Logger
-import se.exuvo.aurora.galactic.ElectricalThruster
+import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.galactic.Galaxy
-import se.exuvo.aurora.galactic.ThrustingPart
 import se.exuvo.aurora.planetarysystems.components.ApproachType
 import se.exuvo.aurora.planetarysystems.components.MassComponent
 import se.exuvo.aurora.planetarysystems.components.MoveToEntityComponent
@@ -15,15 +15,11 @@ import se.exuvo.aurora.planetarysystems.components.MoveToPositionComponent
 import se.exuvo.aurora.planetarysystems.components.MovementValues
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.OrbitComponent
-import se.exuvo.aurora.planetarysystems.components.PoweredPartState
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
-import se.exuvo.aurora.planetarysystems.events.PowerEvent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEach
-import com.artemis.WorldConfigurationBuilder.Priority
-import com.artemis.World
 
 class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -34,7 +30,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 		lateinit var DESTINATION_ASPECT: Aspect
 	}
 
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 
 	lateinit private var massMapper: ComponentMapper<MassComponent>
 	lateinit private var thrustMapper: ComponentMapper<ThrustComponent>

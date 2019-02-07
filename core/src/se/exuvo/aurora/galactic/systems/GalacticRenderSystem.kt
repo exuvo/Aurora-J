@@ -22,6 +22,7 @@ import com.artemis.Aspect
 import com.artemis.systems.IteratingSystem
 import com.artemis.ComponentMapper
 import com.artemis.BaseEntitySystem
+import se.exuvo.aurora.AuroraGame
 
 class GalacticRenderSystem : BaseEntitySystem(FAMILY) {
 
@@ -37,9 +38,6 @@ class GalacticRenderSystem : BaseEntitySystem(FAMILY) {
 	lateinit private var nameMapper: ComponentMapper<NameComponent>
 	lateinit private var strategicIconMapper: ComponentMapper<StrategicIconComponent>
 
-	private val shapeRenderer = GameServices[ShapeRenderer::class]
-	private val spriteBatch = GameServices[SpriteBatch::class]
-	private val uiCamera = GameServices[GameScreenService::class].uiCamera
 	lateinit private var groupSystem: GroupSystem
 
 	override fun checkProcessing() = false
@@ -47,6 +45,7 @@ class GalacticRenderSystem : BaseEntitySystem(FAMILY) {
 
 	fun drawStrategicEntities(entityIDs: IntArray, viewport: Viewport, cameraOffset: Vector2L) {
 
+		val spriteBatch = AuroraGame.currentWindow.spriteBatch
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
 		spriteBatch.begin()
@@ -77,6 +76,8 @@ class GalacticRenderSystem : BaseEntitySystem(FAMILY) {
 	
 	fun drawWormholeConnections(entityIDs: IntArray, viewport: Viewport, cameraOffset: Vector2L) {
 
+		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
+		
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
 
 //		val zoom = (viewport.camera as OrthographicCamera).zoom
@@ -106,6 +107,10 @@ class GalacticRenderSystem : BaseEntitySystem(FAMILY) {
 	}
 
 	fun render(viewport: Viewport, cameraOffset: Vector2L) {
+
+		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
+		val spriteBatch = AuroraGame.currentWindow.spriteBatch
+		val uiCamera = AuroraGame.currentWindow.screenService.uiCamera
 
 		val entityIDs: IntArray = subscription.getEntities().getData();
 

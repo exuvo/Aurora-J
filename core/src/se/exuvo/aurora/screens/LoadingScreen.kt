@@ -16,6 +16,7 @@ import se.exuvo.aurora.galactic.Technology
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.OutputStreamListener
 import java.io.PrintStream
+import se.exuvo.aurora.AuroraGame
 
 // See GlyphLayout::setText and BitmapFont$BitmapFontData::getGlyphs
 fun getFontWidth(font: BitmapFont, text: String): Float {
@@ -47,7 +48,6 @@ fun getFontWidth(font: BitmapFont, text: String): Float {
 class LoadingScreen() : GameScreenImpl() {
 
 	private val assetManager = GameServices[AssetManager::class]
-	private val batch by lazy (LazyThreadSafetyMode.NONE) { GameServices[SpriteBatch::class] }
 	private val uiCamera = OrthographicCamera()
 	private var texturePackerTask = TexturePackerTask(assetManager)
 
@@ -97,7 +97,7 @@ class LoadingScreen() : GameScreenImpl() {
 				if (assetManager.update()) {
 					Assets.finishLoad()
 					Technology.initTech()
-					GameServices[GameScreenService::class].add(MainMenuScreen())
+					AuroraGame.currentWindow.screenService.add(MainMenuScreen())
 					break;
 				}
 			}
@@ -105,6 +105,8 @@ class LoadingScreen() : GameScreenImpl() {
 	}
 
 	override fun draw() {
+		val batch = AuroraGame.currentWindow.spriteBatch
+		
 		batch.projectionMatrix = uiCamera.combined
 		batch.begin()
 

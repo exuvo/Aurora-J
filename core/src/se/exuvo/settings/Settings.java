@@ -11,7 +11,8 @@ import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
@@ -27,7 +28,7 @@ import se.unlogic.standardutils.xml.XMLUtils;
 
 public class Settings {
 
-	protected static final Logger log = Logger.getLogger(Settings.class);
+	protected static final Logger log = LogManager.getLogger(Settings.class);
 	private static Document doc;
 	private static Element rootElement;
 

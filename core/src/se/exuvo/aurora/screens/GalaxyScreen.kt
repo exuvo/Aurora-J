@@ -27,16 +27,16 @@ import se.exuvo.settings.Settings
 import kotlin.concurrent.read
 import kotlin.properties.Delegates
 import se.exuvo.aurora.galactic.Player
+import se.exuvo.aurora.AuroraGameSecondaryWindow
+import com.badlogic.gdx.backends.lwjgl3.CustomLwjgl3Application
+import se.exuvo.aurora.AuroraGame
 
 class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl(), InputProcessor {
 
-	private val spriteBatch = GameServices[SpriteBatch::class]
-	private val shapeRenderer = GameServices[ShapeRenderer::class]
 	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	private val renderSystem by lazy (LazyThreadSafetyMode.NONE) { galaxy.world.getSystem(GalacticRenderSystem::class.java) }
 
-	private val uiCamera = GameServices[GameScreenService::class].uiCamera
 	private var viewport by Delegates.notNull<Viewport>()
 	private var camera by Delegates.notNull<OrthographicCamera>()
 	private val cameraOffset = Vector2L()
@@ -99,6 +99,9 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 	}
 
 	private fun drawUI() {
+		val spriteBatch = AuroraGame.currentWindow.spriteBatch
+		val uiCamera = AuroraGame.currentWindow.screenService.uiCamera
+
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
 		Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, day ${galaxy.day}, time ${secondsToString(galaxy.time)}, speed ${Units.NANO_SECOND / galaxy.speed}", 8f, 32f)
@@ -131,7 +134,7 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 
 		} else if (action == KeyActions_GalaxyScreen.MAP) {
 
-			GameServices[GameScreenService::class].add(lastSystemScreen)
+			AuroraGame.currentWindow.screenService.add(lastSystemScreen)
 		}
 
 		return false
@@ -191,8 +194,18 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 							if (testCircle.contains(mouseInGalacticCoordinates)) {
 
 								val system = galaxy.getPlanetarySystemByGalacticEntityID(entityID)
-								lastSystemScreen = PlanetarySystemScreen(system)
-								GameServices[GameScreenService::class].add(lastSystemScreen)
+								
+								if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT)) {
+									
+									val app = Gdx.app as CustomLwjgl3Application
+									app.newWindow(AuroraGameSecondaryWindow(system), app.config)
+									
+								} else {
+									
+									lastSystemScreen = PlanetarySystemScreen(system)
+									AuroraGame.currentWindow.screenService.add(lastSystemScreen)
+								}
+								
 
 								return true;
 							}
@@ -382,10 +395,6 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 		camera.update();
 
 		return true;
-	}
-
-	fun centerOnPlanetarySystem(system: PlanetarySystem) {
-
 	}
 
 	override fun dispose() {

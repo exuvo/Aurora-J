@@ -37,6 +37,7 @@ import se.exuvo.aurora.screens.PlanetarySystemScreen
 import se.exuvo.aurora.utils.*
 import se.exuvo.settings.Settings
 import com.artemis.utils.IntBag
+import se.exuvo.aurora.AuroraGame
 
 class RenderSystem : IteratingSystem(FAMILY) {
 	companion object {
@@ -62,9 +63,6 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
 	lateinit private var weaponsComponentMapper: ComponentMapper<WeaponsComponent>
 
-	private val shapeRenderer = GameServices[ShapeRenderer::class]
-	private val spriteBatch = GameServices[SpriteBatch::class]
-	private val uiCamera = GameServices[GameScreenService::class].uiCamera
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	private val galaxy = GameServices[Galaxy::class]
 	
@@ -85,6 +83,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	fun drawEntities(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
 
+		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
@@ -111,6 +110,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	fun drawEntityCenters(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
 
+		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
@@ -144,6 +144,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	fun drawStrategicEntities(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
 
+		val spriteBatch = AuroraGame.currentWindow.spriteBatch
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
 		spriteBatch.begin()
@@ -190,6 +191,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	fun drawSelections(selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
 
+		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
@@ -221,6 +223,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	fun drawTimedMovement(entityIDs: IntBag, selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
 
+		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
@@ -278,6 +281,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	fun drawSelectionMoveTargets(selectedEntityIDs: List<Int>, cameraOffset: Vector2L) {
 
+		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
+		
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color(0.8f, 0.8f, 0.8f, 0.5f)
 
@@ -308,6 +313,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	fun drawAttackTargets(selectedEntityIDs: List<Int>, cameraOffset: Vector2L) {
 
+		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
+		
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color(0.8f, 0f, 0f, 0.5f)
 
@@ -345,6 +352,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	fun drawDetections(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
 
+		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
 		//TODO if multiple detections with the same strength overlap (ie they see the same things), only draw overlap
@@ -470,6 +478,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	fun drawSelectionDetectionZones(selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
 
+		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 		val sensorEntitites = selectedEntityIDs.filter { sensorsMapper.has(it) }
 
@@ -526,6 +535,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	fun drawSelectionDetectionStrength(selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
 
+		val spriteBatch = AuroraGame.currentWindow.spriteBatch
 		val screenPosition = Vector3()
 
 		val font = Assets.fontMap
@@ -583,6 +593,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	fun drawNames(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
 
+		val spriteBatch = AuroraGame.currentWindow.spriteBatch
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 		val screenPosition = Vector3()
 
@@ -619,6 +630,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	fun drawMovementTimes(entityIDs: IntBag, selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
 
+		val spriteBatch = AuroraGame.currentWindow.spriteBatch
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 		val screenPosition = Vector3()
 
@@ -676,6 +688,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	fun render(viewport: Viewport, cameraOffset: Vector2L) {
 
+		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
+		val spriteBatch = AuroraGame.currentWindow.spriteBatch
+		val uiCamera = AuroraGame.currentWindow.screenService.uiCamera
+		
 		val entityIDs = subscription.getEntities()
 		val selectedEntityIDs = galaxyGroupSystem.get(GroupSystem.SELECTED).filter { familyAspect.isInterested(it) }.map { it.id }
 

@@ -6,13 +6,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import se.exuvo.aurora.goap.interfaces.INode;
 
 public class AStar<T> {
 
-	private static final Logger log = Logger.getLogger(AStar.class);
+	private static final Logger log = LogManager.getLogger(AStar.class);
 
 	private final FastPriorityQueue<INode<T>, T> frontier;
 	private final Map<T, INode<T>> stateToNode;

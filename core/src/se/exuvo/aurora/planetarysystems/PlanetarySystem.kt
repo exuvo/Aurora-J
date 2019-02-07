@@ -9,10 +9,11 @@ import com.artemis.WorldConfigurationBuilder
 import com.artemis.annotations.EntityId
 import com.artemis.utils.IntBag
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.RandomXS128
+import com.badlogic.gdx.utils.Disposable
 import net.mostlyoriginal.api.event.common.EventSystem
 import net.mostlyoriginal.api.event.common.SubscribeAnnotationFinder
-import net.mostlyoriginal.api.event.dispatcher.FastEventDispatcher
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.AmmoContainerPart
 import se.exuvo.aurora.galactic.Battery
@@ -54,7 +55,9 @@ import se.exuvo.aurora.planetarysystems.components.SunComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.TintComponent
 import se.exuvo.aurora.planetarysystems.components.UUIDComponent
+import se.exuvo.aurora.planetarysystems.events.PooledFastEventDispatcher
 import se.exuvo.aurora.planetarysystems.systems.CustomSystemInvocationStrategy
+import se.exuvo.aurora.planetarysystems.systems.GravimetricSensorSystem
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.planetarysystems.systems.MovementSystem
 import se.exuvo.aurora.planetarysystems.systems.OrbitSystem
@@ -73,18 +76,13 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
-import se.exuvo.aurora.planetarysystems.events.PooledFastEventDispatcher
-import se.exuvo.aurora.planetarysystems.systems.GravimetricSensorSystem
-import com.badlogic.gdx.math.RandomXS128
-import com.artemis.injection.WiredFieldResolver
-import com.badlogic.gdx.utils.Disposable
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener, Disposable {
 	companion object {
 		val planetarySystemIDGenerator = AtomicInteger()
 	}
 
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 	var updateTime = 0L
 	val entityUIDGenerator = AtomicLong()
 

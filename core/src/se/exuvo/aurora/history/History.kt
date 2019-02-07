@@ -1,8 +1,9 @@
 package se.exuvo.aurora.history
 
+import com.artemis.ComponentMapper
+import com.artemis.World
 import com.badlogic.gdx.utils.Disposable
-import com.badlogic.gdx.utils.Pool.Poolable
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.sqlite.SQLiteConfig
 import org.sqlite.javax.SQLiteConnectionPoolDataSource
 import se.exuvo.aurora.galactic.Galaxy
@@ -23,13 +24,10 @@ import java.sql.SQLException
 import java.sql.Statement
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import com.artemis.Entity
-import com.artemis.ComponentMapper
-import com.artemis.World
 
 class History : Disposable {
 
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 
 	val daoFactory: SimpleAnnotatedDAOFactory
 	val dataSource: SQLiteConnectionPoolDataSource

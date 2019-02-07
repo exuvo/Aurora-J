@@ -6,19 +6,17 @@ import com.artemis.EntitySubscription.SubscriptionListener
 import com.artemis.systems.IteratingSystem
 import com.artemis.utils.IntBag
 import net.mostlyoriginal.api.event.common.EventSystem
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.empires.components.WeaponsComponent
 import se.exuvo.aurora.galactic.AmmunitionPart
 import se.exuvo.aurora.galactic.BeamWeapon
 import se.exuvo.aurora.galactic.ChargedPart
-import se.exuvo.aurora.galactic.ElectricalThruster
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.galactic.MissileLauncher
 import se.exuvo.aurora.galactic.PoweredPart
 import se.exuvo.aurora.galactic.Railgun
 import se.exuvo.aurora.galactic.ReloadablePart
 import se.exuvo.aurora.galactic.TargetingComputer
-import se.exuvo.aurora.galactic.ThrustingPart
 import se.exuvo.aurora.planetarysystems.components.AmmunitionPartState
 import se.exuvo.aurora.planetarysystems.components.ChargedPartState
 import se.exuvo.aurora.planetarysystems.components.NameComponent
@@ -38,7 +36,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		val SHIP_FAMILY = Aspect.all(ShipComponent::class.java)
 	}
 
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 
 	lateinit private var weaponsComponentMapper: ComponentMapper<WeaponsComponent>
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>

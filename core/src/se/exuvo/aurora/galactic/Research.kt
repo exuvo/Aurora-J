@@ -1,6 +1,6 @@
 package se.exuvo.aurora.galactic
 
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.Logger
 import java.lang.NullPointerException
 import se.unlogic.standardutils.numbers.NumberUtils
 

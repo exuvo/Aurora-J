@@ -6,15 +6,15 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputProcessor
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics
+import com.badlogic.gdx.utils.Disposable
 import glm_.vec2.Vec2
 import glm_.vec2.Vec2d
+import imgui.Col
 import imgui.Context
 import imgui.ImGui
 import imgui.TreeNodeFlag
 import imgui.WindowFlag
-import imgui.impl.ImplGL3
-import imgui.impl.LwjglGlfw
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.lwjgl.glfw.GLFW
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.AmmunitionPart
@@ -49,27 +49,29 @@ import se.exuvo.aurora.utils.keys.KeyMappings
 import se.exuvo.aurora.utils.printID
 import se.unlogic.standardutils.reflection.ReflectionUtils
 import uno.glfw.GlfwWindow
+import uno.glfw.GlfwWindowHandle
 import kotlin.concurrent.read
 import kotlin.concurrent.write
-import imgui.DataType
-import uno.glfw.GlfwWindowHandle
-import imgui.Col
-import imgui.Style
-import glm_.vec4.Vec4
+import imgui.impl.CustomLwjglGlfw
+import se.exuvo.aurora.AuroraGame
+import imgui.impl.CustomImplGL3
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 
 	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 
-	private val uiCamera = GameServices[GameScreenService::class].uiCamera
-
 	override val overlay = true
 	private val ctx: Context
+	private val lwjglGlfw: CustomLwjglGlfw
 	private val gdxGLFWKeyMap = mutableMapOf<Int, Int>()
 
+	class ImGuiGlobalStorage(val ctx: Context): Disposable {
+		override fun dispose() {}
+	}
+	
 	init {
 		gdxGLFWKeyMap[Input.Keys.TAB] = GLFW.GLFW_KEY_TAB
 
@@ -104,7 +106,17 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 		gdxGLFWKeyMap[Input.Keys.Y] = GLFW.GLFW_KEY_Y
 		gdxGLFWKeyMap[Input.Keys.Z] = GLFW.GLFW_KEY_Z
 
-		ctx = Context()
+		var firstContext = galaxy.storage(ImGuiGlobalStorage::class)
+//		
+		if (firstContext == null) {
+			ctx = Context()
+			galaxy.storage + ImGuiGlobalStorage(ctx)
+			
+		} else {
+			ctx = Context(firstContext.ctx.io.fonts)
+		}
+		
+		ctx.setCurrent()
 		
 		ImGui.styleColorsDark()
 //		ImGui.styleColorsClassic()
@@ -125,7 +137,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 			//@formatter:on
 		}
 		
-		LwjglGlfw.init(GlfwWindow(GlfwWindowHandle((Gdx.graphics as Lwjgl3Graphics).window.windowHandle)), false)
+		lwjglGlfw = CustomLwjglGlfw(GlfwWindow(GlfwWindowHandle((Gdx.graphics as Lwjgl3Graphics).window.windowHandle)), false)
 	}
 
 	override fun show() {
@@ -149,7 +161,9 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 		// https://github.com/kotlin-graphics/imgui/blob/4b052ea00bae762a4ac5f62b5bf7939f33b7895a/src/test/kotlin/imgui/gl/test%20lwjgl.kt
 
 		try {
-			LwjglGlfw.newFrame()
+			ctx.setCurrent()
+			
+			lwjglGlfw.newFrame()
 			ImGui.newFrame()
 
 			if (demoVisible) {
@@ -203,10 +217,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 			shipDebug()
 
 			ImGui.render()
-
-			if (ImGui.drawData != null) {
-				ImplGL3.renderDrawData(ImGui.drawData!!)
-			}
+			lwjglGlfw.implGl3.renderDrawData(ctx.drawData)
+			
 		} catch (e: Throwable) {
 			log.error("Error drawing debug window", e)
 		}
@@ -524,7 +536,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 		if (ctx.io.wantCaptureKeyboard) {
 			gdxGLFWKeyMap[keycode]?.apply {
-				LwjglGlfw.keyCallback(this, 0, GLFW.GLFW_PRESS, 0)
+				ctx.setCurrent()
+				lwjglGlfw.keyCallback(this, 0, GLFW.GLFW_PRESS, 0)
 			}
 			return true
 		}
@@ -541,7 +554,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	override fun keyUp(keycode: Int): Boolean {
 		if (ctx.io.wantCaptureKeyboard) {
 			gdxGLFWKeyMap[keycode]?.apply {
-				LwjglGlfw.keyCallback(this, 0, GLFW.GLFW_RELEASE, 0)
+				ctx.setCurrent()
+				lwjglGlfw.keyCallback(this, 0, GLFW.GLFW_RELEASE, 0)
 			}
 			return true
 		}
@@ -551,7 +565,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 	override fun keyTyped(character: Char): Boolean {
 		if (ctx.io.wantCaptureKeyboard) {
-			LwjglGlfw.charCallback(character.toInt())
+			ctx.setCurrent()
+			lwjglGlfw.charCallback(character.toInt())
 			return true
 		}
 
@@ -578,7 +593,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 	override fun scrolled(amount: Int): Boolean {
 		if (ctx.io.wantCaptureMouse) {
-			LwjglGlfw.scrollCallback(Vec2d(0, -amount))
+			ctx.setCurrent()
+			lwjglGlfw.scrollCallback(Vec2d(0, -amount))
 			return true
 		}
 
@@ -590,7 +606,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	}
 
 	override fun dispose() {
-		LwjglGlfw.shutdown()
+		ctx.setCurrent()
+		lwjglGlfw.shutdown()
 		ctx.shutdown();
 		super.dispose()
 	}

@@ -1,9 +1,9 @@
 package se.exuvo.aurora.galactic
 
-import org.apache.log4j.Logger
+import com.artemis.Entity
+import org.apache.logging.log4j.LogManager
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantReadWriteLock
-import com.artemis.Entity
 
 
 class Empire(var name: String) {
@@ -13,7 +13,7 @@ companion object {
 	}
 
 	val id = empireIDGenerator.getAndIncrement()
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 	val lock = ReentrantReadWriteLock()
 
 	var funds: Long = 0

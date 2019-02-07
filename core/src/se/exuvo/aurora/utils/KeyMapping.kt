@@ -1,21 +1,19 @@
 package se.exuvo.aurora.utils.keys
 
-import com.badlogic.gdx.utils.Disposable
-import java.util.*
-import kotlin.reflect.KClass
-import com.badlogic.gdx.InputProcessor
-import se.exuvo.settings.Settings
-import org.w3c.dom.Element
-import org.apache.log4j.Logger
-import se.exuvo.aurora.screens.PlanetarySystemScreen
-import se.unlogic.standardutils.reflection.ReflectionUtils
 import com.badlogic.gdx.Input
-import se.exuvo.aurora.screens.ImGuiScreen
+import com.badlogic.gdx.InputProcessor
+import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.screens.GalaxyScreen
+import se.exuvo.aurora.screens.ImGuiScreen
+import se.exuvo.aurora.screens.PlanetarySystemScreen
+import se.exuvo.settings.Settings
+import se.unlogic.standardutils.reflection.ReflectionUtils
+import java.util.HashMap
+import kotlin.reflect.KClass
 
 @Suppress("UNCHECKED_CAST")
 object KeyMappings {
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 	@JvmField
 	var loaded = false
 	
@@ -188,7 +186,7 @@ interface KeyAction {
 }
 
 enum class KeyActions_ImGuiScreen(override val defaultKey: Int? = null,
-																			override val defaultType: KeyPressType
+                                  override val defaultType: KeyPressType
 ) : KeyAction {
 	DEBUG(Input.Keys.GRAVE),
 	;
@@ -198,7 +196,7 @@ enum class KeyActions_ImGuiScreen(override val defaultKey: Int? = null,
 }
 
 enum class KeyActions_PlanetarySystemScreen(override val defaultKey: Int? = null,
-																			override val defaultType: KeyPressType
+                                            override val defaultType: KeyPressType
 ) : KeyAction {
 	SPEED_UP('+'),
 	SPEED_DOWN('-'),
@@ -213,7 +211,7 @@ enum class KeyActions_PlanetarySystemScreen(override val defaultKey: Int? = null
 }
 
 enum class KeyActions_GalaxyScreen(override val defaultKey: Int? = null,
-																			override val defaultType: KeyPressType
+                                   override val defaultType: KeyPressType
 ) : KeyAction {
 	SPEED_UP('+'),
 	SPEED_DOWN('-'),

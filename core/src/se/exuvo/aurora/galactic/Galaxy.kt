@@ -1,25 +1,24 @@
 package se.exuvo.aurora.galactic
 
+import com.artemis.Aspect
 import com.artemis.ComponentMapper
 import com.artemis.Entity
-import com.artemis.EntitySubscription
+import com.artemis.EntitySubscription.SubscriptionListener
 import com.artemis.World
 import com.artemis.WorldConfigurationBuilder
-import org.apache.log4j.Logger
+import com.artemis.utils.Bag
+import com.artemis.utils.IntBag
+import com.artemis.utils.Sort
+import com.badlogic.gdx.utils.Disposable
+import net.mostlyoriginal.api.event.common.EventSystem
+import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.galactic.systems.GalacticRenderSystem
 import se.exuvo.aurora.planetarysystems.PlanetarySystem
 import se.exuvo.aurora.planetarysystems.components.ChangingWorldComponent
 import se.exuvo.aurora.planetarysystems.components.MovementValues
 import se.exuvo.aurora.planetarysystems.components.PlanetarySystemComponent
+import se.exuvo.aurora.planetarysystems.systems.CustomSystemInvocationStrategy
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
-import se.exuvo.aurora.planetarysystems.systems.MovementSystem
-import se.exuvo.aurora.planetarysystems.systems.OrbitSystem
-import se.exuvo.aurora.planetarysystems.systems.PassiveSensorSystem
-import se.exuvo.aurora.planetarysystems.systems.PowerSystem
-import se.exuvo.aurora.planetarysystems.systems.RenderSystem
-import se.exuvo.aurora.planetarysystems.systems.ShipSystem
-import se.exuvo.aurora.planetarysystems.systems.SolarIrradianceSystem
-import se.exuvo.aurora.planetarysystems.systems.WeaponSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.forEach
@@ -30,20 +29,10 @@ import se.unlogic.standardutils.threads.ThreadUtils
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
-import com.artemis.Aspect
-import com.artemis.EntitySubscription.SubscriptionListener
-import com.artemis.utils.IntBag
-import net.mostlyoriginal.api.event.common.EventSystem
-import net.mostlyoriginal.plugin.ProfilerPlugin
-import se.exuvo.aurora.planetarysystems.systems.CustomSystemInvocationStrategy
-import com.artemis.utils.Sort
-import com.artemis.utils.Bag
-import se.unlogic.standardutils.arrays.ArrayUtils
-import se.unlogic.standardutils.string.StringUtils
-import com.badlogic.gdx.utils.Disposable
+import se.exuvo.aurora.utils.Storage
 
 class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, Disposable {
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 
 	lateinit var systems: Bag<PlanetarySystem>
 	private val groupSystem by lazy(LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
@@ -58,6 +47,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 	var tickSize: Int = 0
 
 	val players = ArrayList<Player>()
+	val storage = Storage()
 
 	val worldLock = ReentrantReadWriteLock()
 	val world: World
@@ -312,7 +302,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 
 	class UpdateSystemTask(val system: PlanetarySystem, val galaxy: Galaxy) : Runnable {
 
-		val log by lazy(LazyThreadSafetyMode.NONE) { Logger.getLogger(this.javaClass) }
+		val log by lazy(LazyThreadSafetyMode.NONE) { LogManager.getLogger(this.javaClass) }
 
 		override fun run() {
 			try {

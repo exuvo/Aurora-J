@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+	<Appenders>
+		<File name="file" fileName="log.log" append="true">
+			<PatternLayout pattern="[%5.10p] %d{[yyyy-MM-dd] [HH:mm:ss,SSS]} [%10.10t] %C{1}.%M - %m%n" />
+		</File>
+		<File name="file-opengl" fileName="log.opengl" append="true">
+			<PatternLayout pattern="[%5.10p] %d{[HH:mm:ss,SSS]} %m%n" />
+		</File>
+		<File name="file-error" fileName="log.error" append="true">
+			<PatternLayout pattern="[%5.10p] %d{[yyyy-MM-dd] [HH:mm:ss,SSS]} [%10.10t] %C{1}.%M - %m%n" />
+		</File>
+		<Console name="stdout" target="SYSTEM_OUT">
+			<PatternLayout pattern="[%p] %d{[HH:mm:ss]} %C{1}.%M %m%n" />
+		</Console>
+		<Console name="stdout-error" target="SYSTEM_ERR">
+			<PatternLayout pattern="[%p] %d{[HH:mm:ss]} %C{1}.%M %m%n" />
+		</Console>
+	</Appenders>
+	<Loggers>
+		<Root level="warn">
+			<AppenderRef ref="file" />
+			<AppenderRef ref="file-error" />
+			<AppenderRef ref="stdout" />
+		</Root>
+		<Logger name="org.apache.log4j.xml" level="info" />
+		<Logger name="org.opengl" level="info" additivity="false" >
+			<appender-ref ref="file-opengl" />
+		</Logger>
+		<Logger name="se.exuvo" level="info" additivity="false" >
+			<appender-ref ref="file" />
+			<appender-ref ref="file-error" level="error" />
+			<appender-ref ref="stdout-error" level="error" />
+		</Logger>
+	</Loggers>
+</Configuration>

@@ -2,25 +2,22 @@ package se.exuvo.aurora.planetarysystems.systems
 
 import com.artemis.Aspect
 import com.artemis.ComponentMapper
-import com.artemis.Entity
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.utils.viewport.Viewport
-import com.sun.xml.internal.ws.api.pipe.Engine
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
+import se.exuvo.aurora.AuroraGame
 import se.exuvo.aurora.planetarysystems.components.MassComponent
 import se.exuvo.aurora.planetarysystems.components.OrbitComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
-import se.exuvo.aurora.utils.GameServices
+import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.Vector2D
 import se.exuvo.aurora.utils.Vector2L
-import se.exuvo.aurora.utils.getUUID
 import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.getUUID
 import se.exuvo.settings.Settings
 import java.util.Collections
-import se.exuvo.aurora.utils.Units
 
 //TODO sorted system by no parents first then outwards
 class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
@@ -29,7 +26,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 		const val gravitationalConstant = 6.67408e-11
 	}
 
-	val log = Logger.getLogger(this.javaClass)
+	val log = LogManager.getLogger(this.javaClass)
 
 	lateinit private var orbitMapper: ComponentMapper<OrbitComponent>
 	lateinit private var massMapper: ComponentMapper<MassComponent>
@@ -176,9 +173,9 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 		movement.time = galaxy.time
 	}
 
-	private val shapeRenderer by lazy (LazyThreadSafetyMode.NONE) { GameServices[ShapeRenderer::class] }
-
 	fun render(cameraOffset: Vector2L) {
+		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
+		
 		shapeRenderer.color = Color.GRAY
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Point);
 		subscription.getEntities().forEach { entityID ->

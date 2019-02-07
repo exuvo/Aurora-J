@@ -28,6 +28,15 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.LifecycleListener;
 import com.badlogic.gdx.Net;
 import com.badlogic.gdx.Preferences;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationLogger;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Clipboard;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Cursor;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3FileHandle;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3NativesLoader;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Preferences;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowConfiguration;
 import com.badlogic.gdx.backends.lwjgl3.audio.OpenALAudio;
 import com.badlogic.gdx.backends.lwjgl3.audio.mock.MockAudio;
 import com.badlogic.gdx.graphics.glutils.GLVersion;
@@ -552,6 +561,10 @@ public class CustomLwjgl3Application implements Application {
 		}
 
 		return false;
+	}
+
+	public Lwjgl3ApplicationConfiguration getConfig() {
+		return config;
 	}
 
 }
