@@ -1,4 +1,7 @@
+// if (file('../imgui').exists()) includeBuild "../imgui"
+
 include 'desktop', 'core'
+
 
 // awful hack in settings.grade to reflectively enable logging
 def LoggerFactory = Class.forName("org.slf4j.LoggerFactory")
