@@ -50,7 +50,7 @@ public class GridPacker implements Packer {
 
 		inputRects.reverse();
 
-		Array<Page> pages = new Array();
+		Array<Page> pages = new Array<Page>();
 		while (inputRects.size > 0) {
 			if (progress != null && progress.update(n - inputRects.size + 1, n)) break;
 			Page result = packPage(inputRects, cellWidth, cellHeight);
@@ -61,7 +61,7 @@ public class GridPacker implements Packer {
 
 	private Page packPage (Array<Rect> inputRects, int cellWidth, int cellHeight) {
 		Page page = new Page();
-		page.outputRects = new Array();
+		page.outputRects = new Array<Rect>();
 
 		int maxWidth = settings.maxWidth, maxHeight = settings.maxHeight;
 		if (settings.edgePadding) {

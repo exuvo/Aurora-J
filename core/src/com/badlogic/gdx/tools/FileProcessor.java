@@ -16,8 +16,6 @@
 
 package com.badlogic.gdx.tools;
 
-import com.badlogic.gdx.utils.Array;
-
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
@@ -25,6 +23,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.regex.Pattern;
+
+import com.badlogic.gdx.utils.Array;
 
 /** Collects files recursively, filtering by file name. Callbacks are provided to process files and the results are collected,
  * either {@link #processFile(Entry)} or {@link #processDir(Entry, ArrayList)} can be overridden, or both. The entries provided to
@@ -38,9 +38,9 @@ public class FileProcessor {
 			return o1.getName().compareTo(o2.getName());
 		}
 	};
-	Array<Pattern> inputRegex = new Array();
+	Array<Pattern> inputRegex = new Array<Pattern>();
 	String outputSuffix;
-	ArrayList<Entry> outputFiles = new ArrayList();
+	ArrayList<Entry> outputFiles = new ArrayList<Entry>();
 	boolean recursive = true;
 	boolean flattenOutput;
 
@@ -128,10 +128,10 @@ public class FileProcessor {
 		if (outputRoot == null) outputRoot = new File("");
 		outputFiles.clear();
 
-		LinkedHashMap<File, ArrayList<Entry>> dirToEntries = new LinkedHashMap();
+		LinkedHashMap<File, ArrayList<Entry>> dirToEntries = new LinkedHashMap<File, ArrayList<Entry>>();
 		process(files, outputRoot, outputRoot, dirToEntries, 0);
 
-		ArrayList<Entry> allEntries = new ArrayList();
+		ArrayList<Entry> allEntries = new ArrayList<Entry>();
 		for (java.util.Map.Entry<File, ArrayList<Entry>> mapEntry : dirToEntries.entrySet()) {
 			ArrayList<Entry> dirEntries = mapEntry.getValue();
 			if (comparator != null) Collections.sort(dirEntries, entryComparator);
@@ -178,7 +178,7 @@ public class FileProcessor {
 			File dir = file.getParentFile();
 			ArrayList<Entry> entries = dirToEntries.get(dir);
 			if (entries == null) {
-				entries = new ArrayList();
+				entries = new ArrayList<Entry>();
 				dirToEntries.put(dir, entries);
 			}
 		}

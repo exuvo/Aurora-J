@@ -10,7 +10,7 @@ import com.badlogic.gdx.utils.Disposable
 import glm_.vec2.Vec2
 import glm_.vec2.Vec2d
 import imgui.Col
-import imgui.Context
+import imgui.imgui.Context
 import imgui.ImGui
 import imgui.TreeNodeFlag
 import imgui.WindowFlag
@@ -52,9 +52,9 @@ import uno.glfw.GlfwWindow
 import uno.glfw.GlfwWindowHandle
 import kotlin.concurrent.read
 import kotlin.concurrent.write
-import imgui.impl.CustomLwjglGlfw
 import se.exuvo.aurora.AuroraGame
-import imgui.impl.CustomImplGL3
+import imgui.impl.glfw.ImplGlfw
+import imgui.impl.gl.ImplGL3
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
@@ -65,7 +65,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 	override val overlay = true
 	private val ctx: Context
-	private val lwjglGlfw: CustomLwjglGlfw
+	private val lwjglGlfw: ImplGlfw
+	private val gl3: ImplGL3
 	private val gdxGLFWKeyMap = mutableMapOf<Int, Int>()
 
 	class ImGuiGlobalStorage(val ctx: Context): Disposable {
@@ -110,6 +111,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 //		
 		if (firstContext == null) {
 			ctx = Context()
+//			ctx.io.configFlags = ctx.io.configFlags or ConfigFlag.NavEnableKeyboard.i
 			galaxy.storage + ImGuiGlobalStorage(ctx)
 			
 		} else {
@@ -137,18 +139,19 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 			//@formatter:on
 		}
 		
-		lwjglGlfw = CustomLwjglGlfw(GlfwWindow(GlfwWindowHandle((Gdx.graphics as Lwjgl3Graphics).window.windowHandle)), false)
+		lwjglGlfw = ImplGlfw(GlfwWindow(GlfwWindowHandle((Gdx.graphics as Lwjgl3Graphics).window.windowHandle)), false)
+		gl3 = ImplGL3()
 	}
 
 	override fun show() {
-		addResourceAmount[0] = 1
+		addResourceAmount = 1
 	}
 
 	private var demoVisible = false
 	private var mainDebugVisible = false
 	private var shipDebugVisible = true
 
-	var slider = FloatArray(1)
+	var slider = 1f
 	var stringbuf = CharArray(10)
 	var img = Assets.textures.findRegion("strategic/sun")
 	var menuBarState = BooleanArray(1)
@@ -172,7 +175,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 			if (mainDebugVisible) {
 
-				if (ImGui.begin_("Debug window", ::mainDebugVisible, WindowFlag.MenuBar.i)) {
+				if (ImGui.begin("Debug window", ::mainDebugVisible, WindowFlag.MenuBar.i)) {
 
 					if (ImGui.beginMenuBar()) {
 						if (ImGui.beginMenu("Windows")) {
@@ -208,7 +211,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 					}
 
 					ImGui.inputText("string", stringbuf)
-					ImGui.sliderFloat("float", slider, 0f, 1f)
+					ImGui.sliderFloat("float", ::slider, 0f, 1f)
 					ImGui.image(img.getTexture().textureObjectHandle, Vec2(64, 64))
 				}
 				ImGui.end()
@@ -217,7 +220,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 			shipDebug()
 
 			ImGui.render()
-			lwjglGlfw.implGl3.renderDrawData(ctx.drawData)
+			gl3.renderDrawData(ctx.drawData)
 			
 		} catch (e: Throwable) {
 			log.error("Error drawing debug window", e)
@@ -230,12 +233,12 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	var powerUsedValues = FloatArray(60)
 	var arrayIndex = 0
 	var addResource = Resource.NUCLEAR_FISSION
-	var addResourceAmount = IntArray(1)
+	var addResourceAmount = 0
 	private fun shipDebug() {
 
 		if (shipDebugVisible) {
 
-			if (ImGui.begin_("Ship debug", ::shipDebugVisible, WindowFlag.AlwaysAutoResize.i)) {
+			if (ImGui.begin("Ship debug", ::shipDebugVisible, WindowFlag.AlwaysAutoResize.i)) {
 
 				val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED)
 
@@ -471,11 +474,11 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 									ImGui.endCombo()
 								}
 
-								ImGui.inputScalar("kg", imgui.DataType.Int, addResourceAmount, 10, 100, "%d", 0)
+								ImGui.inputScalar("kg", imgui.DataType.Int, ::addResourceAmount, 10, 100, "%d", 0)
 
 								if (ImGui.button("Add")) {
 									system.lock.write {
-										if (!shipComponent.addCargo(addResource, addResourceAmount[0])) {
+										if (!shipComponent.addCargo(addResource, addResourceAmount)) {
 											println("Cargo does not fit")
 										}
 									}
@@ -485,7 +488,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 								if (ImGui.button("Remove")) {
 									system.lock.write {
-										if (shipComponent.retrieveCargo(addResource, addResourceAmount[0]) != addResourceAmount[0]) {
+										if (shipComponent.retrieveCargo(addResource, addResourceAmount) != addResourceAmount) {
 											println("Does not have enough of specified cargo")
 										}
 									}
@@ -537,7 +540,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 		if (ctx.io.wantCaptureKeyboard) {
 			gdxGLFWKeyMap[keycode]?.apply {
 				ctx.setCurrent()
-				lwjglGlfw.keyCallback(this, 0, GLFW.GLFW_PRESS, 0)
+				ImplGlfw.keyCallback(this, 0, GLFW.GLFW_PRESS, 0)
 			}
 			return true
 		}
@@ -555,7 +558,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 		if (ctx.io.wantCaptureKeyboard) {
 			gdxGLFWKeyMap[keycode]?.apply {
 				ctx.setCurrent()
-				lwjglGlfw.keyCallback(this, 0, GLFW.GLFW_RELEASE, 0)
+				ImplGlfw.keyCallback(this, 0, GLFW.GLFW_RELEASE, 0)
 			}
 			return true
 		}
@@ -566,7 +569,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	override fun keyTyped(character: Char): Boolean {
 		if (ctx.io.wantCaptureKeyboard) {
 			ctx.setCurrent()
-			lwjglGlfw.charCallback(character.toInt())
+			ImplGlfw.charCallback(character.toInt())
 			return true
 		}
 
@@ -594,7 +597,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	override fun scrolled(amount: Int): Boolean {
 		if (ctx.io.wantCaptureMouse) {
 			ctx.setCurrent()
-			lwjglGlfw.scrollCallback(Vec2d(0, -amount))
+			ImplGlfw.scrollCallback(Vec2d(0, -amount))
 			return true
 		}
 
@@ -607,6 +610,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 	override fun dispose() {
 		ctx.setCurrent()
+		gl3.shutdown()
 		lwjglGlfw.shutdown()
 		ctx.shutdown();
 		super.dispose()

@@ -124,6 +124,7 @@ public class CollectionUtils {
 
 	}
 
+	@SafeVarargs
 	public static <T> List<T> getList(T... objects) {
 
 		if(objects == null){
@@ -186,6 +187,7 @@ public class CollectionUtils {
 	 * @param lists
 	 * @return
 	 */
+	@SafeVarargs
 	public static <T> ArrayList<T> combine(Collection<T>... collections) {
 
 		int totalSize = 0;
@@ -224,6 +226,7 @@ public class CollectionUtils {
 	 * @param lists
 	 * @return
 	 */
+	@SafeVarargs
 	public static <T> HashSet<T> combineAsSet(Collection<T>... collections) {
 
 		int totalSize = 0;

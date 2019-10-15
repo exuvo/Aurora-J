@@ -119,7 +119,7 @@ public class PositionClient {
 	}
 
 	static class UI {
-		HashMap<Integer, Character> characters = new HashMap();
+		HashMap<Integer, Character> characters = new HashMap<Integer, Character>();
 
 		public String inputHost () {
 			String input = (String)JOptionPane.showInputDialog(null, "Host:", "Connect to server", JOptionPane.QUESTION_MESSAGE,

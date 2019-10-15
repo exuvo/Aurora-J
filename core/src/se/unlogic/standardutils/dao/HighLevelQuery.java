@@ -101,6 +101,7 @@ public class HighLevelQuery<T> extends RelationQuery {
 		this.parameters.add(parameter);
 	}
 
+	@SuppressWarnings("unchecked")
 	public synchronized void addParameter(QueryParameter<T, ?>... parameters) {
 
 		if (this.parameters == null) {
@@ -136,6 +137,7 @@ public class HighLevelQuery<T> extends RelationQuery {
 		this.orderByCriterias.add(criteria);
 	}
 
+	@SuppressWarnings("unchecked")
 	public synchronized void addOrderByCriteria(OrderByCriteria<T>... criterias) {
 
 		if (this.orderByCriterias == null) {

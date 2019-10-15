@@ -55,13 +55,13 @@ public class TexturePacker {
 	private final Settings settings;
 	private final Packer packer;
 	private final ImageProcessor imageProcessor;
-	private final Array<InputImage> inputImages = new Array();
-	private File rootDir;
+	private final Array<InputImage> inputImages = new Array<InputImage>();
+//	private File rootDir;
 	private ProgressListener progress;
 
 	/** @param rootDir Used to strip the root directory prefix from image file names, can be null. */
 	public TexturePacker (File rootDir, Settings settings) {
-		this.rootDir = rootDir;
+//		this.rootDir = rootDir;
 		this.settings = settings;
 
 		if (settings.pot) {
@@ -357,7 +357,7 @@ public class TexturePacker {
 			page.outputRects.sort();
 			for (Rect rect : page.outputRects) {
 				writeRect(writer, page, rect, rect.name);
-				Array<Alias> aliases = new Array(rect.aliases.toArray());
+				Array<Alias> aliases = new Array<Alias>((Alias[]) rect.aliases.toArray());
 				aliases.sort();
 				for (Alias alias : aliases) {
 					Rect aliasRect = new Rect();

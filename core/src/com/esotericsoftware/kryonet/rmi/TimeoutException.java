@@ -28,6 +28,7 @@ package com.esotericsoftware.kryonet.rmi;
  * @see ObjectSpace#getRemoteObject(com.esotericsoftware.kryonet.Connection,
  *      int, Class...)
  */
+@SuppressWarnings("serial")
 public class TimeoutException extends RuntimeException {
 	public TimeoutException() {
 		super();

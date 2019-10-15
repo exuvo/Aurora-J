@@ -39,7 +39,7 @@ import static com.esotericsoftware.minlog.Log.trace;
  * @author Nathan Sweet <misc@n4te.com>
  */
 class TcpConnection {
-	static private final int IPTOS_LOWDELAY = 0x10;
+//	static private final int IPTOS_LOWDELAY = 0x10;
 
 	SocketChannel socketChannel;
 	int keepAliveMillis = 8000;

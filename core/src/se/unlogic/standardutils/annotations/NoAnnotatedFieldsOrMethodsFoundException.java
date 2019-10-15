@@ -15,6 +15,7 @@ public class NoAnnotatedFieldsOrMethodsFoundException extends RuntimeException {
 	private final Class<?> beanClass;
 	private final Class<? extends Annotation>[] annotations;
 
+	@SafeVarargs
 	public NoAnnotatedFieldsOrMethodsFoundException(Class<?> beanClass,Class<? extends Annotation>... annotations) {
 
 		super("No annotated fields found in class " + beanClass + " with annotations " + annotations);

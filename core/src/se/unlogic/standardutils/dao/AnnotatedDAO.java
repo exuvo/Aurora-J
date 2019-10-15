@@ -2112,11 +2112,13 @@ public class AnnotatedDAO<T> {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	public boolean deleteWhereNotIn(List<T> beans, TransactionHandler transactionHandler, Field excludedField, QueryParameter<T, ?>... queryParameters) throws SQLException {
 
 		return this.deleteWhereNotIn(beans, transactionHandler.getConnection(), excludedField, queryParameters);
 	}
 
+	@SuppressWarnings("unchecked")
 	public boolean deleteWhereNotIn(List<T> beans, Connection connection, Field excludedField, QueryParameter<T, ?>... queryParameters) throws SQLException {
 
 		// Generate SQL
@@ -2401,7 +2403,7 @@ public class AnnotatedDAO<T> {
 
 		if(!manyToOneRelationKeys.isEmpty()){
 
-			return manyToOneRelationKeys.get(0).getBeanField();
+			return manyToOneRelationKeys.values().iterator().next().getBeanField();
 		}
 
 		throw new RuntimeException("No key field found!");

@@ -115,7 +115,7 @@ public class ChatServer {
 	void updateNames () {
 		// Collect the names for each connection.
 		Connection[] connections = server.getConnections();
-		ArrayList names = new ArrayList(connections.length);
+		ArrayList<String> names = new ArrayList<String>(connections.length);
 		for (int i = connections.length - 1; i >= 0; i--) {
 			ChatConnection connection = (ChatConnection)connections[i];
 			names.add(connection.name);

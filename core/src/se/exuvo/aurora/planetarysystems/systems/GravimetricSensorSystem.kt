@@ -497,8 +497,11 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 		Gdx.gl.glActiveTexture(GL20.GL_TEXTURE1)
 		Gdx.gl.glBindTexture(GL20.GL_TEXTURE_2D, id)
 		
-		var width = GL11.glGetTexLevelParameteri(GL20.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_WIDTH)
-		var height = GL11.glGetTexLevelParameteri(GL20.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_HEIGHT)
+		var width: Int
+		var height: Int
+		
+//		width = GL11.glGetTexLevelParameteri(GL20.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_WIDTH)
+//		height = GL11.glGetTexLevelParameteri(GL20.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_HEIGHT)
 //		println("width $width, height $height")
 		
 //		Gdx.gl.glPixelStorei(GL30.GL_UNPACK_ALIGNMENT, 1)

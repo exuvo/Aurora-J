@@ -97,11 +97,13 @@ public interface Listener {
 		/**
 		 * All type listeners.
 		 */
+		@SuppressWarnings("rawtypes")
 		private final HashMap<Class<?>, BiConsumer> listeners = new HashMap<>();
 
 		public TypeListener() {
 		}
 
+		@SuppressWarnings("unchecked")
 		@Override
 		public void received(Connection con, Object msg) {
 			if (listeners.containsKey(msg.getClass())) {
@@ -223,7 +225,7 @@ public interface Listener {
 	static public class LagListener extends QueuedListener {
 		private final ScheduledExecutorService threadPool;
 		private final int lagMillisMin, lagMillisMax;
-		final LinkedList<Runnable> runnables = new LinkedList();
+		final LinkedList<Runnable> runnables = new LinkedList<Runnable>();
 
 		public LagListener(int lagMillisMin, int lagMillisMax,
 				Listener listener) {

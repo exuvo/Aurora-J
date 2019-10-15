@@ -21,7 +21,7 @@ import com.esotericsoftware.minlog.Log;
 // RMI has more overhead (usually 4 bytes) then just sending an object.
 public class ChatRmiServer {
 	Server server;
-	ArrayList<Player> players = new ArrayList();
+	ArrayList<Player> players = new ArrayList<Player>();
 
 	public ChatRmiServer () throws IOException {
 		server = new Server() {
@@ -84,7 +84,7 @@ public class ChatRmiServer {
 
 	void updateNames () {
 		// Collect the names of each player.
-		ArrayList namesList = new ArrayList(players.size());
+		ArrayList<String> namesList = new ArrayList<String>(players.size());
 		for (Player player : players)
 			if (player.name != null) namesList.add(player.name);
 		// Set the names on everyone's chat frame.

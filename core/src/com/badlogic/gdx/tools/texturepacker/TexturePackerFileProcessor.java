@@ -34,11 +34,11 @@ import com.badlogic.gdx.utils.ObjectMap;
 /** @author Nathan Sweet */
 public class TexturePackerFileProcessor extends FileProcessor {
 	private final Settings defaultSettings;
-	private ObjectMap<File, Settings> dirToSettings = new ObjectMap();
+	private ObjectMap<File, Settings> dirToSettings = new ObjectMap<File, Settings>();
 	private Json json = new Json();
 	private String packFileName;
 	private File root;
-	ArrayList<File> ignoreDirs = new ArrayList();
+	ArrayList<File> ignoreDirs = new ArrayList<File>();
 
 	public TexturePackerFileProcessor () {
 		this(new Settings(), "pack.atlas");
@@ -59,7 +59,7 @@ public class TexturePackerFileProcessor extends FileProcessor {
 		root = inputFile;
 
 		// Collect pack.json setting files.
-		final ArrayList<File> settingsFiles = new ArrayList();
+		final ArrayList<File> settingsFiles = new ArrayList<File>();
 		FileProcessor settingsProcessor = new FileProcessor() {
 			protected void processFile (Entry inputFile) throws Exception {
 				settingsFiles.add(inputFile.inputFile);
@@ -127,7 +127,6 @@ public class TexturePackerFileProcessor extends FileProcessor {
 				deleteProcessor.setRecursive(false);
 
 				File packFile = new File(rootSettings.getScaledPackFileName(packFileName, i));
-				String scaledPackFileName = packFile.getName();
 
 				String prefix = packFile.getName();
 				int dotIndex = prefix.lastIndexOf('.');

@@ -414,6 +414,7 @@ public class CustomLwjgl3Window extends Lwjgl3Window {
 		}
 	}
 
+	@SuppressWarnings("static-access")
 	void makeCurrent() {
 		Gdx.graphics = graphics;
 		Gdx.gl30 = graphics.getGL30();

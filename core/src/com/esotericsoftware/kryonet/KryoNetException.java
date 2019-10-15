@@ -19,7 +19,9 @@
 
 package com.esotericsoftware.kryonet;
 
+@SuppressWarnings("serial")
 public class KryoNetException extends RuntimeException {
+	
 	public KryoNetException() {
 		super();
 	}

@@ -45,8 +45,8 @@ public class ImageProcessor {
 
 	private String rootPath;
 	private final Settings settings;
-	private final HashMap<String, Rect> crcs = new HashMap();
-	private final Array<Rect> rects = new Array();
+	private final HashMap<String, Rect> crcs = new HashMap<String, Rect>();
+	private final Array<Rect> rects = new Array<Rect>();
 	private float scale = 1;
 	private Resampling resampling = Resampling.bicubic;
 
@@ -162,7 +162,7 @@ public class ImageProcessor {
 
 		// Scale image.
 		if (scale != 1) {
-			int originalWidth = width, originalHeight = height;
+//			int originalWidth = width, originalHeight = height;
 			width = Math.max(1, Math.round(width * scale));
 			height = Math.max(1, Math.round(height * scale));
 			BufferedImage newImage = new BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR);

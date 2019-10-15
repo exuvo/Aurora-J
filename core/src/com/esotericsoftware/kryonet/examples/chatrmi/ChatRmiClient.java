@@ -126,13 +126,14 @@ public class ChatRmiClient {
 	}
 
 	// This is the JFrame for the client. It implments IChatFrame so the server can call methods on it.
+	@SuppressWarnings("serial")
 	static private class ChatFrame extends JFrame implements IChatFrame {
 		CardLayout cardLayout;
 		JProgressBar progressBar;
-		JList messageList;
+		JList<String> messageList;
 		JTextField sendText;
 		JButton sendButton;
-		JList nameList;
+		JList<String> nameList;
 
 		public ChatFrame (String host) {
 			super("Chat RMI Client");
@@ -159,12 +160,12 @@ public class ChatRmiClient {
 					JPanel topPanel = new JPanel(new GridLayout(1, 2));
 					panel.add(topPanel);
 					{
-						topPanel.add(new JScrollPane(messageList = new JList()));
-						messageList.setModel(new DefaultListModel());
+						topPanel.add(new JScrollPane(messageList = new JList<String>()));
+						messageList.setModel(new DefaultListModel<String>());
 					}
 					{
-						topPanel.add(new JScrollPane(nameList = new JList()));
-						nameList.setModel(new DefaultListModel());
+						topPanel.add(new JScrollPane(nameList = new JList<String>()));
+						nameList.setModel(new DefaultListModel<String>());
 					}
 					DefaultListSelectionModel disableSelections = new DefaultListSelectionModel() {
 						public void setSelectionInterval (int index0, int index1) {
@@ -222,7 +223,7 @@ public class ChatRmiClient {
 			EventQueue.invokeLater(new Runnable() {
 				public void run () {
 					cardLayout.show(getContentPane(), "chat");
-					DefaultListModel model = (DefaultListModel)nameList.getModel();
+					DefaultListModel<String> model = (DefaultListModel<String>)nameList.getModel();
 					model.removeAllElements();
 					for (String name : names)
 						model.addElement(name);
@@ -234,7 +235,7 @@ public class ChatRmiClient {
 		public void addMessage (final String message) {
 			EventQueue.invokeLater(new Runnable() {
 				public void run () {
-					DefaultListModel model = (DefaultListModel)messageList.getModel();
+					DefaultListModel<String> model = (DefaultListModel<String>)messageList.getModel();
 					model.addElement(message);
 					messageList.ensureIndexIsVisible(model.size() - 1);
 				}

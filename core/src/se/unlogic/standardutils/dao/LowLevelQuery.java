@@ -143,6 +143,7 @@ public class LowLevelQuery<T> extends RelationQuery {
 		this.chainedResultSetPopulators.addAll(chainedPopulators);
 	}
 
+	@SuppressWarnings("unchecked")
 	public void addChainedResultSetPopulator(ChainedResultSetPopulator<T>... chainedPopulators) {
 
 		checkChainedResultSetPopulatorList();

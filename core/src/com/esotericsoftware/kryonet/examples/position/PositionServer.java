@@ -23,7 +23,7 @@ import com.esotericsoftware.minlog.Log;
 
 public class PositionServer {
 	Server server;
-	HashSet<Character> loggedIn = new HashSet();
+	HashSet<Character> loggedIn = new HashSet<Character>();
 
 	public PositionServer () throws IOException {
 		server = new Server() {

@@ -387,9 +387,9 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 				position.add(tempVelocity.x.toLong(), tempVelocity.y.toLong())
 
 			}
-			else -> {
-				throw RuntimeException("Unknown approach type: " + approach)
-			}
+//			else -> {
+//				throw RuntimeException("Unknown approach type: " + approach)
+//			}
 		}
 
 	}
