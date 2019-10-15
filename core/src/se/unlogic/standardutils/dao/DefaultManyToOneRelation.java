@@ -28,16 +28,16 @@ public class DefaultManyToOneRelation<LocalType,RemoteType, RemoteKeyType> imple
 	private final Field field;
 	private QueryParameterPopulator<RemoteKeyType> queryParameterPopulator;
 	private Method queryMethod;
-	private final BeanResultSetPopulator<RemoteKeyType> remoteKeyPopulator;
-	private final Field remoteKeyField;
+	protected final BeanResultSetPopulator<RemoteKeyType> remoteKeyPopulator;
+	protected final Field remoteKeyField;
 
 	private final AnnotatedDAOFactory daoFactory;
-	private AnnotatedDAO<RemoteType> annotatedDAO;
-	private QueryParameterFactory<RemoteType,RemoteKeyType> queryParameterFactory;
-	private final Class<RemoteType> remoteClass;
+	protected AnnotatedDAO<RemoteType> annotatedDAO;
+	protected QueryParameterFactory<RemoteType,RemoteKeyType> queryParameterFactory;
+	protected final Class<RemoteType> remoteClass;
 	private final Class<RemoteKeyType> remoteRemoteKeyClass;
 
-	private boolean initialized;
+	protected boolean initialized;
 
 	public DefaultManyToOneRelation(Class<LocalType> beanClass, Class<RemoteType> remoteClass, Class<RemoteKeyType> remoteKeyClass, Field field, Field remoteKeyField, DAOManaged daoManaged, AnnotatedDAOFactory daoFactory) {
 
@@ -79,6 +79,7 @@ public class DefaultManyToOneRelation<LocalType,RemoteType, RemoteKeyType> imple
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.ManyToOneRelation#getColumnName()
 	 */
+	@Override
 	public String getColumnName(){
 
 		return columnName;
@@ -87,6 +88,7 @@ public class DefaultManyToOneRelation<LocalType,RemoteType, RemoteKeyType> imple
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.ManyToOneRelation#getQueryParameterPopulator()
 	 */
+	@Override
 	public QueryParameterPopulator<RemoteKeyType> getQueryParameterPopulator(){
 
 		if(queryParameterPopulator == null && queryMethod == null){
@@ -105,6 +107,7 @@ public class DefaultManyToOneRelation<LocalType,RemoteType, RemoteKeyType> imple
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.ManyToOneRelation#getQueryMethod()
 	 */
+	@Override
 	public Method getQueryMethod(){
 
 		if(this.queryMethod == null){
@@ -117,6 +120,7 @@ public class DefaultManyToOneRelation<LocalType,RemoteType, RemoteKeyType> imple
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.ManyToOneRelation#getBeanValue(LocalType)
 	 */
+	@Override
 	@SuppressWarnings("unchecked")
 	public RemoteKeyType getBeanValue(LocalType bean){
 
@@ -142,6 +146,7 @@ public class DefaultManyToOneRelation<LocalType,RemoteType, RemoteKeyType> imple
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.ManyToOneRelation#getParamValue(java.lang.Object)
 	 */
+	@Override
 	@SuppressWarnings("unchecked")
 	public RemoteKeyType getParamValue(Object bean) {
 
@@ -165,10 +170,10 @@ public class DefaultManyToOneRelation<LocalType,RemoteType, RemoteKeyType> imple
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.ManyToOneRelation#setValue(LocalType, java.sql.ResultSet, java.sql.Connection, java.lang.reflect.Field[])
 	 */
+	@Override
 	public void getRemoteValue(LocalType bean, ResultSet resultSet, Connection connection, RelationQuery relationQuery) throws SQLException{
 
 		try {
-
 			if(!initialized){
 				this.init();
 			}
@@ -177,11 +182,11 @@ public class DefaultManyToOneRelation<LocalType,RemoteType, RemoteKeyType> imple
 
 			if(keyValue != null){
 
-				HighLevelQuery<RemoteType> query = new HighLevelQuery<RemoteType>(relationQuery,remoteClass);
+				HighLevelQuery<RemoteType> query = new HighLevelQuery<RemoteType>(relationQuery, remoteClass);
 
 				query.addParameter(queryParameterFactory.getParameter(keyValue));
 
-				RemoteType remoteBeanInstance = annotatedDAO.get(query ,connection);
+				RemoteType remoteBeanInstance = annotatedDAO.get(query, connection);
 
 				this.getField().set(bean, remoteBeanInstance);
 			}
@@ -196,11 +201,10 @@ public class DefaultManyToOneRelation<LocalType,RemoteType, RemoteKeyType> imple
 		}
 	}
 
-
-
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.ManyToOneRelation#add(LocalType, java.sql.Connection, java.lang.reflect.Field)
 	 */
+	@Override
 	@SuppressWarnings("unchecked")
 	public void add(LocalType bean, Connection connection, RelationQuery relationQuery) throws SQLException{
 
@@ -230,6 +234,7 @@ public class DefaultManyToOneRelation<LocalType,RemoteType, RemoteKeyType> imple
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.ManyToOneRelation#update(LocalType, java.sql.Connection, java.lang.reflect.Field)
 	 */
+	@Override
 	@SuppressWarnings("unchecked")
 	public void update(LocalType bean, Connection connection, RelationQuery relationQuery) throws SQLException{
 
@@ -256,10 +261,13 @@ public class DefaultManyToOneRelation<LocalType,RemoteType, RemoteKeyType> imple
 
 	}
 
-	private void init() {
+	protected synchronized void init() {
 
-		this.annotatedDAO = this.daoFactory.getDAO(remoteClass);
-		this.queryParameterFactory = annotatedDAO.getParamFactory(remoteKeyField, remoteRemoteKeyClass);
+		if (annotatedDAO == null) {
+
+			this.annotatedDAO = this.daoFactory.getDAO(remoteClass);
+			this.queryParameterFactory = annotatedDAO.getParamFactory(remoteKeyField, remoteRemoteKeyClass);
+		}
 
 		this.initialized = true;
 	}
@@ -267,6 +275,7 @@ public class DefaultManyToOneRelation<LocalType,RemoteType, RemoteKeyType> imple
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.ManyToOneRelation#getField()
 	 */
+	@Override
 	public Field getField() {
 
 		return field;
@@ -275,6 +284,7 @@ public class DefaultManyToOneRelation<LocalType,RemoteType, RemoteKeyType> imple
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.ManyToOneRelation#getBeanField()
 	 */
+	@Override
 	public Field getBeanField() {
 
 		return this.field;
@@ -283,6 +293,7 @@ public class DefaultManyToOneRelation<LocalType,RemoteType, RemoteKeyType> imple
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.ManyToOneRelation#getParamType()
 	 */
+	@Override
 	public Class<RemoteType> getParamType() {
 
 		return remoteClass;
@@ -292,6 +303,7 @@ public class DefaultManyToOneRelation<LocalType,RemoteType, RemoteKeyType> imple
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.ManyToOneRelation#isAutoGenerated()
 	 */
+	@Override
 	public boolean isAutoGenerated() {
 
 		return false;

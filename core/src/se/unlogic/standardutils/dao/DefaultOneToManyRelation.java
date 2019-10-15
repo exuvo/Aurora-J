@@ -58,6 +58,7 @@ public class DefaultOneToManyRelation<LocalType,RemoteType> implements OneToMany
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.OneToManyRelation#setValue(LocalType, java.sql.Connection, java.lang.reflect.Field[])
 	 */
+	@Override
 	public void getRemoteValue(LocalType bean, Connection connection, RelationQuery relationQuery) throws SQLException{
 
 		if(!initialized){
@@ -84,6 +85,7 @@ public class DefaultOneToManyRelation<LocalType,RemoteType> implements OneToMany
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.OneToManyRelation#add(LocalType, java.sql.Connection, java.lang.reflect.Field[])
 	 */
+	@Override
 	@SuppressWarnings("unchecked")
 	public void add(LocalType bean, Connection connection, RelationQuery relationQuery) throws SQLException{
 
@@ -122,6 +124,7 @@ public class DefaultOneToManyRelation<LocalType,RemoteType> implements OneToMany
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.OneToManyRelation#update(LocalType, java.sql.Connection, java.lang.reflect.Field[])
 	 */
+	@Override
 	@SuppressWarnings("unchecked")
 	public void update(LocalType bean, Connection connection, RelationQuery relationQuery) throws SQLException{
 
@@ -170,9 +173,9 @@ public class DefaultOneToManyRelation<LocalType,RemoteType> implements OneToMany
 		}
 	}
 
-	private void init() {
+	private synchronized void init() {
 
-		if(annotatedDAO == null){
+		if (annotatedDAO == null) {
 			annotatedDAO = this.daoFactory.getDAO(remoteClass);
 			queryParameterFactory = annotatedDAO.getParamFactory(remoteField, beanClass);
 		}

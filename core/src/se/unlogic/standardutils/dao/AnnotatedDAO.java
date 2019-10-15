@@ -12,6 +12,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.SQLTransactionRollbackException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -278,17 +279,17 @@ public class AnnotatedDAO<T> {
 						}
 					}
 
-					DefaultManyToOneRelation<T, ?, ?> relation = null;
+					ManyToOneRelation<T, ?, ?> relation = null;
 
 					if(field.isAnnotationPresent(Key.class)){
 
-						relation = DefaultManyToOneRelation.getGenericInstance(beanClass, field.getType(), remoteKeyField.getType(), field, remoteKeyField, daoManaged, daoFactory);
+						relation = getManyToOneRelationInstance(beanClass, field.getType(), remoteKeyField.getType(), field, remoteKeyField, daoManaged, daoFactory);
 
 						manyToOneRelationKeys.put(field, relation);
 
 					}else{
 
-						relation = DefaultManyToOneRelation.getGenericInstance(beanClass, field.getType(), remoteKeyField.getType(), field, remoteKeyField, daoManaged, daoFactory);
+						relation = getManyToOneRelationInstance(beanClass, field.getType(), remoteKeyField.getType(), field, remoteKeyField, daoManaged, daoFactory);
 
 						this.manyToOneRelations.put(field, relation);
 					}
@@ -434,6 +435,11 @@ public class AnnotatedDAO<T> {
 		this.generateDefaultGetSQL();
 		this.generateDefaultSortingCriteria();
 		this.generateBooleanSQL();
+	}
+	
+	public <LT,RT,RKT> ManyToOneRelation<LT, RT, RKT> getManyToOneRelationInstance(Class<LT> beanClass, Class<RT> remoteClass, Class<RKT> remoteKeyClass, Field field, Field remoteField, DAOManaged daoManaged, AnnotatedDAOFactory daoFactory){
+
+		return DefaultManyToOneRelation.getGenericInstance(beanClass, remoteClass, remoteKeyClass, field, remoteField, daoManaged, daoFactory);
 	}
 
 	public DataSource getDataSource() {
@@ -1124,8 +1130,8 @@ public class AnnotatedDAO<T> {
 			transactionHandler.commit();
 		}finally{
 			TransactionHandler.autoClose(transactionHandler);
-		}		
-	}	
+		}
+	}
 	
 	public void addOrUpdateAll(Collection<T> beans, TransactionHandler transactionHandler, RelationQuery relationQuery) throws SQLException {
 
@@ -1282,6 +1288,30 @@ public class AnnotatedDAO<T> {
 		}
 	}
 
+	public void update(T bean, RelationQuery relationQuery, int retryCount) throws SQLException {
+		
+		while(true) {
+			
+			try {
+				
+				this.update(bean, relationQuery);
+				
+				return;
+				
+			} catch (SQLTransactionRollbackException e) {
+				
+				if(retryCount > 0) {
+					
+					retryCount--;
+					
+				} else {
+					
+					throw e;
+				}
+			}	
+		}
+	}
+	
 	public void update(T bean, TransactionHandler transactionHandler, RelationQuery relationQuery) throws SQLException {
 
 		this.update(bean, transactionHandler.getConnection(), relationQuery);
@@ -1416,7 +1446,7 @@ public class AnnotatedDAO<T> {
 
 	public T get(LowLevelQuery<T> lowLevelQuery, Connection connection) throws SQLException {
 
-		BeanResultSetPopulator<T> populator = this.getPopulator(connection, lowLevelQuery);
+		BeanResultSetPopulator<T> populator = getPopulator(connection, lowLevelQuery, false);
 
 		ObjectQuery<T> query = null;
 
@@ -1501,12 +1531,12 @@ public class AnnotatedDAO<T> {
 
 	public T get(HighLevelQuery<T> highLevelQuery, Connection connection) throws SQLException {
 
-		BeanResultSetPopulator<T> populator = this.getPopulator(connection, highLevelQuery);
+		BeanResultSetPopulator<T> populator = getPopulator(connection, highLevelQuery, false);
 
 		ObjectQuery<T> query = null;
 
 		try{
-			query = new ObjectQuery<T>(connection, false, this.generateGetSQL(highLevelQuery) + this.getCriterias(highLevelQuery, true, false), populator);
+			query = new ObjectQuery<T>(connection, false, this.generateGetSQL(highLevelQuery) + this.getCriterias(highLevelQuery, null, true, false, true), populator);
 
 			if(highLevelQuery.getParameters() != null){
 
@@ -1553,7 +1583,7 @@ public class AnnotatedDAO<T> {
 		BooleanQuery query = null;
 
 		try{
-			query = new BooleanQuery(connection, false, this.booleanSQL + this.getCriterias(highLevelQuery, true, false));
+			query = new BooleanQuery(connection, false, this.booleanSQL + this.getCriterias(highLevelQuery, null, true, false, true));
 
 			if(highLevelQuery.getParameters() != null){
 
@@ -1568,15 +1598,15 @@ public class AnnotatedDAO<T> {
 		}
 	}
 
-	private String getCriterias(HighLevelQuery<T> highLevelQuery, boolean orderBy, boolean rowLimiter) {
+	private String getCriterias(HighLevelQuery<T> highLevelQuery, String customOrderByCriteria, boolean orderBy, boolean rowLimiter, boolean isFirstParam) {
 
-		if(highLevelQuery == null){
+		if (highLevelQuery == null) {
 
-			if(orderBy){
+			if (orderBy) {
 
 				return this.defaultSortingCriteria;
 
-			}else{
+			} else {
 
 				return "";
 			}
@@ -1584,72 +1614,81 @@ public class AnnotatedDAO<T> {
 
 		StringBuilder stringBuilder = new StringBuilder();
 
-		if(highLevelQuery.getParameters() != null){
+		if (highLevelQuery.getParameters() != null) {
 
-			boolean first = true;
+			boolean first = isFirstParam;
 
-			for(QueryParameter<T, ?> queryParameter : highLevelQuery.getParameters()){
+			for (QueryParameter<T, ?> queryParameter : highLevelQuery.getParameters()) {
 
-				if(first){
+				if (first) {
 
 					stringBuilder.append(" WHERE ");
 
 					first = false;
 
-				}else{
+				} else {
 
 					stringBuilder.append(" AND ");
 				}
 
-				stringBuilder.append(queryParameter.getColumn().getColumnName() + " " + queryParameter.getOperator());
+				// TODO disabled table name prefix for now
+				//stringBuilder.append(getTableName());
+				//stringBuilder.append(".");
+				stringBuilder.append(queryParameter.getColumn().getColumnName());
+				stringBuilder.append(" ");
+				stringBuilder.append(queryParameter.getOperator());
 
-				if(queryParameter.hasValues()){
+				if (queryParameter.hasValues()) {
 
-					if(queryParameter.hasMultipleValues()){
+					if (queryParameter.hasMultipleValues()) {
 
 						//stringBuilder.append(queryParameter.getOperator() + " " + queryParameter.getColumn().getColumnName());
 
 						stringBuilder.append(" (?");
 
-						if(queryParameter.getValues().size() > 1){
+						if (queryParameter.getValues().size() > 1) {
 
 							StringUtils.repeatString(",?", queryParameter.getValues().size() - 1, stringBuilder);
 						}
 
 						stringBuilder.append(")");
 
-					}else{
+					} else {
 
 						stringBuilder.append(" ?");
 					}
 				}
 			}
 		}
+		
+		if (customOrderByCriteria != null) {
+			stringBuilder.append(customOrderByCriteria);
+		}
 
-		if(orderBy && highLevelQuery.getOrderByCriterias() != null){
+		if (orderBy && highLevelQuery.getOrderByCriterias() != null) {
 
-			boolean first = true;
+			boolean first = customOrderByCriteria == null;
 
-			for(OrderByCriteria<T> criteria : highLevelQuery.getOrderByCriterias()){
+			for (OrderByCriteria<T> criteria : highLevelQuery.getOrderByCriterias()) {
 
-				if(first){
+				if (first) {
 
 					stringBuilder.append(" ORDER BY " + criteria.getColumn().getColumnName() + " " + criteria.getOrder().toString());
 
 					first = false;
 
-				}else{
+				} else {
 
 					stringBuilder.append(", " + criteria.getColumn().getColumnName() + " " + criteria.getOrder().toString());
 				}
 			}
 
-		}else{
+		} else if (customOrderByCriteria == null) {
 
 			stringBuilder.append(this.defaultSortingCriteria);
 		}
 
-		if(rowLimiter && highLevelQuery.getRowLimiter() != null){
+		if (rowLimiter && highLevelQuery.getRowLimiter() != null) {
 
 			stringBuilder.append(" ");
 			stringBuilder.append(highLevelQuery.getRowLimiter().getLimitSQL());
@@ -1657,7 +1696,7 @@ public class AnnotatedDAO<T> {
 
 		return stringBuilder.toString();
 	}
-
+	
 	@SuppressWarnings("unchecked")
 	private <ColumnType> Column<T, ? super ColumnType> getColumn(Field field, Class<ColumnType> paramClass) {
 
@@ -1675,9 +1714,9 @@ public class AnnotatedDAO<T> {
 		return (Column<T, ColumnType>)column;
 	}
 
-	protected BeanResultSetPopulator<T> getPopulator(Connection connection, LowLevelQuery<T> query) {
+	protected BeanResultSetPopulator<T> getPopulator(Connection connection, LowLevelQuery<T> query, boolean isGetAll) {
 
-		BeanResultSetPopulator<T> populator = getPopulator(connection, (RelationQuery)query);
+		BeanResultSetPopulator<T> populator = getPopulator(connection, (RelationQuery) query, isGetAll);
 
 		if(query.hasChainedBeanResultSetPopulators()){
 
@@ -1687,65 +1726,78 @@ public class AnnotatedDAO<T> {
 		return populator;
 	}
 
-	protected BeanResultSetPopulator<T> getPopulator(Connection connection, RelationQuery relationQuery) {
-
+	protected BeanResultSetPopulator<T> getPopulator(Connection connection, RelationQuery relationQuery, boolean isGetAll) {
+		
 		ArrayList<ManyToOneRelation<T, ?, ?>> manyToOneRelations = null;
-
-		if(RelationQuery.hasRelations(relationQuery)){
-
-			for(Field relation : relationQuery.getRelations()){
-
+		
+		if (RelationQuery.hasRelations(relationQuery)) {
+			
+			for (Field relation : relationQuery.getRelations()) {
+				
 				ManyToOneRelation<T, ?, ?> manyToOneRelation = this.manyToOneRelations.get(relation);
-
-				if(manyToOneRelation == null){
-
+				
+				if (manyToOneRelation == null) {
+					
 					manyToOneRelation = this.manyToOneRelationKeys.get(relation);
 				}
-
-				if(manyToOneRelation != null){
-
-					if(manyToOneRelations == null){
-
+				
+				if (manyToOneRelation != null) {
+					
+					if (manyToOneRelations == null) {
+						
 						manyToOneRelations = new ArrayList<ManyToOneRelation<T, ?, ?>>();
 					}
-
+					
 					manyToOneRelations.add(manyToOneRelation);
 				}
 			}
 		}
-
-		if(!autoGetRelations.isEmpty() && (relationQuery == null || !relationQuery.isDisableAutoRelations())){
-
-			for(Field relation : autoGetRelations){
-
-				if(relationQuery == null || (!relationQuery.containsRelation(relation) && !relationQuery.containsExcludedRelation(relation))){
-
+		
+		if (!autoGetRelations.isEmpty() && (relationQuery == null || !relationQuery.isDisableAutoRelations())) {
+			
+			for (Field relation : autoGetRelations) {
+				
+				if (relationQuery == null || (!relationQuery.containsRelation(relation) && !relationQuery.containsExcludedRelation(relation))) {
+					
 					ManyToOneRelation<T, ?, ?> manyToOneRelation = this.manyToOneRelations.get(relation);
-
-					if(manyToOneRelation == null){
-
+					
+					if (manyToOneRelation == null) {
+						
 						manyToOneRelation = this.manyToOneRelationKeys.get(relation);
 					}
-
-					if(manyToOneRelation != null){
-
-						if(manyToOneRelations == null){
-
+					
+					if (manyToOneRelation != null) {
+						
+						if (manyToOneRelations == null) {
+							
 							manyToOneRelations = new ArrayList<ManyToOneRelation<T, ?, ?>>();
 						}
-
+						
 						manyToOneRelations.add(manyToOneRelation);
 					}
 				}
 			}
 		}
-
-		if(manyToOneRelations != null){
-
-			return new BeanRelationPopulator<T>(this.populator, manyToOneRelations, connection, relationQuery);
+		
+		if (manyToOneRelations != null) {
+			
+			return getBeanRelationPopulator(manyToOneRelations, connection, relationQuery, isGetAll);
 		}
-
+		
 		return this.populator;
+	}
+	
+	protected BeanResultSetPopulator<T> getBeanRelationPopulator(List<ManyToOneRelation<T, ?, ?>> manyToOneRelations, Connection connection, RelationQuery relationQuery, boolean isGetAll) {
+
+		return new BeanRelationPopulator<T>(populator, manyToOneRelations, connection, relationQuery);
+	}
+	
+	protected void populateRelations(List<T> beans, Connection connection, RelationQuery relationQuery, BeanResultSetPopulator<T> populator) throws SQLException {
+		
+		for (T bean : beans) {
+			
+			populateRelations(bean, connection, relationQuery);
+		}
 	}
 
 	protected void populateRelations(T bean, Connection connection, RelationQuery relationQuery) throws SQLException {
@@ -1818,31 +1870,28 @@ public class AnnotatedDAO<T> {
 	}
 
 	public List<T> getAll(LowLevelQuery<T> lowLevelQuery, Connection connection) throws SQLException {
-
-		BeanResultSetPopulator<T> populator = this.getPopulator(connection, lowLevelQuery);
-
+		
+		BeanResultSetPopulator<T> populator = getPopulator(connection, lowLevelQuery, true);
+		
 		ArrayListQuery<T> query = null;
-
-		try{
-
+		
+		try {
+			
 			query = new ArrayListQuery<T>(connection, false, lowLevelQuery.getSql(), populator);
-
+			
 			setCustomQueryParameters(query, lowLevelQuery.getParameters());
-
+			
 			ArrayList<T> beans = query.executeQuery();
-
-			if(beans != null && (RelationQuery.hasRelations(lowLevelQuery) || !autoGetRelations.isEmpty())){
-
-				for(T bean : beans){
-
-					this.populateRelations(bean, connection, lowLevelQuery);
-				}
+			
+			if (beans != null && (RelationQuery.hasRelations(lowLevelQuery) || !autoGetRelations.isEmpty())) {
+				
+				populateRelations(beans, connection, lowLevelQuery, populator);
 			}
-
+			
 			return beans;
-
-		}finally{
-
+			
+		} finally {
+			
 			PreparedStatementQuery.autoCloseQuery(query);
 		}
 	}
@@ -1895,53 +1944,53 @@ public class AnnotatedDAO<T> {
 		}
 	}
 
-	protected List<T> getAll(String sql, CustomQueryParameter<?> queryParameter, Connection connection, RelationQuery relationQuery) throws SQLException {
-
-		BeanResultSetPopulator<T> populator = this.getPopulator(connection, relationQuery);
+	protected List<T> getAllManyToMany(String sql, String orderByCriteria, CustomQueryParameter<?> queryParameter, Connection connection, RelationQuery relationQuery) throws SQLException {
+		
+		BeanResultSetPopulator<T> populator = getPopulator(connection, relationQuery, true);
 
 		ArrayListQuery<T> query = null;
-
-		try{
-
-			query = new ArrayListQuery<T>(connection, false, sql, populator);
-
-			if(queryParameter.getQueryParameterPopulator() != null){
-
+		
+		try {
+			query = new ArrayListQuery<T>(connection, false, sql + getCriterias(new HighLevelQuery<T>(relationQuery, beanClass), orderByCriteria, true, true, false), populator);
+			
+			if (queryParameter.getQueryParameterPopulator() != null) {
+				
 				queryParameter.getQueryParameterPopulator().populate(query, 1, queryParameter.getParamValue());
-
-			}else{
-
-				try{
+				
+			} else {
+				
+				try {
 					queryParameter.getQueryMethod().invoke(query, 1, queryParameter.getParamValue());
-
-				}catch(IllegalArgumentException e){
-
+					
+				} catch (IllegalArgumentException e) {
+					
 					throw new RuntimeException(e);
-
-				}catch(IllegalAccessException e){
-
+					
+				} catch (IllegalAccessException e) {
+					
 					throw new RuntimeException(e);
-
-				}catch(InvocationTargetException e){
-
+					
+				} catch (InvocationTargetException e) {
+					
 					throw new RuntimeException(e);
 				}
 			}
-
+			
+			if (relationQuery != null) {
+				setQueryParameters(query, relationQuery.getRelationParameters(this.beanClass), 2);
+			}
+			
 			ArrayList<T> beans = query.executeQuery();
-
-			if(beans != null && (RelationQuery.hasRelations(relationQuery) || !autoGetRelations.isEmpty())){
-
-				for(T bean : beans){
-
-					this.populateRelations(bean, connection, relationQuery);
-				}
+			
+			if (beans != null && (RelationQuery.hasRelations(relationQuery) || !autoGetRelations.isEmpty())) {
+				
+				populateRelations(beans, connection, relationQuery, populator);
 			}
-
+			
 			return beans;
-
-		}finally{
-
+			
+		} finally {
+			
 			PreparedStatementQuery.autoCloseQuery(query);
 		}
 	}
@@ -1967,30 +2016,27 @@ public class AnnotatedDAO<T> {
 	}
 
 	public List<T> getAll(HighLevelQuery<T> highLevelQuery, Connection connection) throws SQLException {
-
-		BeanResultSetPopulator<T> populator = this.getPopulator(connection, highLevelQuery);
-
+		
+		BeanResultSetPopulator<T> populator = getPopulator(connection, highLevelQuery, true);
+		
 		ArrayListQuery<T> query = null;
-
-		try{
-			query = new ArrayListQuery<T>(connection, false, this.generateGetSQL(highLevelQuery) + this.getCriterias(highLevelQuery, true, true), populator);
-
+		
+		try {
+			query = new ArrayListQuery<T>(connection, false, this.generateGetSQL(highLevelQuery) + this.getCriterias(highLevelQuery, null, true, true, true), populator);
+			
 			setQueryParameters(query, highLevelQuery, 1);
-
+			
 			ArrayList<T> beans = query.executeQuery();
-
-			if(beans != null && (RelationQuery.hasRelations(highLevelQuery) || !autoGetRelations.isEmpty())){
-
-				for(T bean : beans){
-
-					this.populateRelations(bean, connection, highLevelQuery);
-				}
+			
+			if (beans != null && (RelationQuery.hasRelations(highLevelQuery) || !autoGetRelations.isEmpty())) {
+				
+				populateRelations(beans, connection, highLevelQuery, populator);
 			}
-
+			
 			return beans;
-
-		}finally{
-
+			
+		} finally {
+			
 			PreparedStatementQuery.autoCloseQuery(query);
 		}
 	}
@@ -2098,7 +2144,7 @@ public class AnnotatedDAO<T> {
 		UpdateQuery query = null;
 
 		try{
-			query = new UpdateQuery(connection, false, this.deleteByFieldSQL + this.getCriterias(highLevelQuery, false, false));
+			query = new UpdateQuery(connection, false, this.deleteByFieldSQL + this.getCriterias(highLevelQuery, null, false, false, true));
 
 			setQueryParameters(query, highLevelQuery, 1);
 
@@ -2216,7 +2262,7 @@ public class AnnotatedDAO<T> {
 		ObjectQuery<Integer> query = null;
 
 		try{
-			query = new ObjectQuery<Integer>(connection, false, "SELECT COUNT(*) FROM " + tableName + this.getCriterias(highLevelQuery, false, false), IntegerPopulator.getPopulator());
+			query = new ObjectQuery<Integer>(connection, false, "SELECT COUNT(*) FROM " + tableName + this.getCriterias(highLevelQuery, null, false, false, true), IntegerPopulator.getPopulator());
 
 			if(highLevelQuery != null && highLevelQuery.getParameters() != null){
 
@@ -2318,26 +2364,32 @@ public class AnnotatedDAO<T> {
 
 		return this.columnMap.get(field);
 	}
-
+	
 	protected void setQueryParameters(PreparedStatementQuery query, HighLevelQuery<T> highLevelQuery, final int startIndex) throws SQLException {
+		
+		if (highLevelQuery != null) {
+			setQueryParameters(query, highLevelQuery.getParameters(), startIndex);
+		}
+	}
 
-		if(highLevelQuery != null && highLevelQuery.getParameters() != null){
+	private void setQueryParameters(PreparedStatementQuery query, List<QueryParameter<T, ?>> queryParameters, final int startIndex) throws SQLException {
 
+		if (queryParameters != null) {
 			int index = startIndex;
-
-			for(QueryParameter<?, ?> queryParameter : highLevelQuery.getParameters()){
-
+			
+			for(QueryParameter<?, ?> queryParameter : queryParameters){
+				
 				if(queryParameter.hasValues()){
-
+					
 					if(queryParameter.hasMultipleValues()){
-
+						
 						for(Object value : queryParameter.getValues()){
-
+							
 							setQueryParameter(queryParameter, value, query, index++);
 						}
-
+						
 					}else{
-
+						
 						setQueryParameter(queryParameter, queryParameter.getValue(), query, index++);
 					}
 				}
@@ -2401,10 +2453,10 @@ public class AnnotatedDAO<T> {
 			return simpleKeys.get(0).getBeanField();
 		}
 
-		if(!manyToOneRelationKeys.isEmpty()){
-
-			return manyToOneRelationKeys.values().iterator().next().getBeanField();
-		}
+//		if(!manyToOneRelationKeys.isEmpty()){
+//
+//			return manyToOneRelationKeys.get(0).getBeanField();
+//		}
 
 		throw new RuntimeException("No key field found!");
 	}

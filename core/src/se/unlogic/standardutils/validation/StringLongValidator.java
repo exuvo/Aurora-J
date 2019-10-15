@@ -7,10 +7,14 @@
  ******************************************************************************/
 package se.unlogic.standardutils.validation;
 
+import java.io.Serializable;
+
 import se.unlogic.standardutils.numbers.NumberUtils;
 
 
-public class StringLongValidator extends StringNumberValidator<Long> {
+public class StringLongValidator extends StringNumberValidator<Long> implements Serializable{
+
+	private static final long serialVersionUID = -7326717405488375362L;
 
 	public StringLongValidator() {
 		super(null, null);
@@ -22,7 +26,7 @@ public class StringLongValidator extends StringNumberValidator<Long> {
 
 	public boolean validateFormat(String value) {
 
-		Long numberValue = NumberUtils.toLong(value);
+		Long numberValue = getLongValue(value);
 
 		if(numberValue == null){
 
@@ -43,5 +47,10 @@ public class StringLongValidator extends StringNumberValidator<Long> {
 		else{
 			return true;
 		}
+	}
+	
+	protected Long getLongValue(String value) {
+
+		return NumberUtils.toLong(value);
 	}
 }

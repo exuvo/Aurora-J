@@ -47,13 +47,13 @@ subprojects {
 	apply plugin: "kotlin"
 	
 	tasks.withType(JavaCompile).all {
-		sourceCompatibility = "1.8"
-		targetCompatibility = "11"
+		sourceCompatibility = "12"
+		targetCompatibility = "12"
 	}
 	
 	tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 		kotlinOptions {
-			jvmTarget = "11"
+			jvmTarget = "12"
 		}
 	}
 		

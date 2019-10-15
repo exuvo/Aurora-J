@@ -1,6 +1,7 @@
 package se.unlogic.standardutils.date;
 
 import java.text.ParseException;
+import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -28,6 +29,7 @@ public class PooledSimpleDateFormat implements ThreadSafeDateFormat{
 		this.pool = new GenericObjectPool<SimpleDateFormat>(new SimpleDateFormatFactory(format, locale, timeZone));
 	}
 
+	@Override
 	public Date parse(String date) throws ParseException{
 
 		SimpleDateFormat dateFormat = null;
@@ -35,14 +37,27 @@ public class PooledSimpleDateFormat implements ThreadSafeDateFormat{
 		try{
 			dateFormat = pool.borrowObject();
 
-			return dateFormat.parse(date);
+			ParsePosition pos = new ParsePosition(0);
+			Date result = dateFormat.parse(date, pos);
 
-		}finally{
+			if (pos.getIndex() == 0) {
+				
+				throw new ParseException("Unparseable date: \"" + date + "\"", pos.getErrorIndex());
+				
+			} else if (pos.getIndex() != date.length()) {
+				
+				throw new ParseException("Unparsed remains at end: \"" + date + "\", parsed " + pos.getIndex() + " < length " + date.length(), pos.getIndex());
+			}
+
+			return result;
+
+		} finally {
 
 			pool.returnObject(dateFormat);
 		}
 	}
 
+	@Override
 	public String format(Date date){
 
 		SimpleDateFormat dateFormat = null;

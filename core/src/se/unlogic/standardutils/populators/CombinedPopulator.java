@@ -6,7 +6,7 @@ public class CombinedPopulator<T> implements BeanStringPopulator<T> {
 	private final Class<T> type;
 	private final BeanStringPopulator<T>[] populators;
 	
-	@SafeVarargs
+	@SuppressWarnings("unchecked")
 	public CombinedPopulator(Class<T> type, BeanStringPopulator<T>... populators) {
 
 		super();

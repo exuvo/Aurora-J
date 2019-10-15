@@ -14,7 +14,12 @@ import se.unlogic.standardutils.numbers.NumberUtils;
 
 public class StringIntegerValidator extends StringNumberValidator<Integer> implements Serializable {
 
+	private static final StringIntegerValidator INSTANCE = new StringIntegerValidator();
 	private static final long serialVersionUID = 1724653805439617682L;
+	
+	public static StringIntegerValidator getInstance() {
+		return INSTANCE;
+	}
 
 	public StringIntegerValidator() {
 		super(null, null);
@@ -24,6 +29,7 @@ public class StringIntegerValidator extends StringNumberValidator<Integer> imple
 		super(minValue,maxValue);
 	}
 
+	@Override
 	public boolean validateFormat(String value) {
 
 		Integer numberValue = getIntegerValue(value);

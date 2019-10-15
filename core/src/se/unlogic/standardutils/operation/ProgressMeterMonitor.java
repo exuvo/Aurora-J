@@ -27,7 +27,7 @@ public class ProgressMeterMonitor implements Runnable {
 
 			ThreadUtils.sleep(sleepInterval);
 
-			monitorOutput.logProgress(logMessage + String.format("%2d%% complete.", progressMeter.getPercentComplete()));
+			monitorOutput.logProgress(logMessage + String.format("%2d%% complete (" + progressMeter.getCurrentPosition() + "/" + progressMeter.getFinish() + ").", progressMeter.getPercentComplete()));
 		}
 	}
 

@@ -10,6 +10,7 @@ package se.unlogic.standardutils.dao;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 import se.unlogic.standardutils.collections.CollectionUtils;
@@ -17,6 +18,7 @@ import se.unlogic.standardutils.collections.CollectionUtils;
 public class RelationQuery implements Cloneable {
 
 	private List<Field> relations;
+	private HashSet<Field> cachedRelations;
 	private List<Field> excludedRelations;
 	private List<Field> excludedFields;
 
@@ -50,6 +52,7 @@ public class RelationQuery implements Cloneable {
 		this.addRelations(relationQuery);
 		this.addExcludedRelations(relationQuery);
 		this.addExcludedFields(relationQuery);
+		this.addCachedRelations(relationQuery);
 		this.disableAutoRelations(relationQuery.isDisableAutoRelations());
 		this.relationParameterHandler = relationQuery.getRelationParameterHandler();
 		this.relationOrderByHandler = relationQuery.getRelationOrderByHandler();
@@ -117,6 +120,75 @@ public class RelationQuery implements Cloneable {
 		} else {
 
 			this.relations.addAll(relations);
+		}
+	}
+	
+	public HashSet<Field> getCachedRelations() {
+
+		return cachedRelations;
+	}
+
+	public void setCachedRelations(HashSet<Field> cachedRelations) {
+		
+		this.cachedRelations = cachedRelations;
+	}
+	
+	public void addCachedRelation(Field relation) {
+
+		if (this.cachedRelations == null) {
+
+			this.cachedRelations = new HashSet<Field>();
+		}
+
+		this.cachedRelations.add(relation);
+	}
+
+	public void addCachedRelations(Field... cachedRelations) {
+
+		if (this.cachedRelations == null) {
+
+			this.cachedRelations = new HashSet<Field>();
+		}
+
+		this.cachedRelations.addAll(Arrays.asList(cachedRelations));
+	}
+	
+	public static boolean hasCachedRelations(RelationQuery query) {
+
+		if (query == null || query.getCachedRelations() == null || query.getCachedRelations().isEmpty()) {
+			return false;
+		}
+
+		return true;
+	}
+
+	public boolean hasCachedRelations() {
+
+		return hasCachedRelations(this);
+	}
+	
+	public boolean isRelationCached(Field field) {
+
+		return cachedRelations != null && !cachedRelations.isEmpty() && cachedRelations.contains(field);
+	}
+
+	public void addCachedRelations(RelationQuery relationQuery) {
+
+		if (hasCachedRelations(relationQuery)) {
+
+			this.addCachedRelations(relationQuery.getCachedRelations());
+		}
+	}
+
+	public void addCachedRelations(HashSet<Field> cachedRelations) {
+
+		if (this.cachedRelations == null) {
+
+			this.cachedRelations = cachedRelations;
+
+		} else {
+
+			this.cachedRelations.addAll(cachedRelations);
 		}
 	}
 

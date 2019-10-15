@@ -80,6 +80,17 @@ public class TimeUtils {
 
 		return new Timestamp(System.currentTimeMillis());
 	}
+	
+	public static Timestamp getCurrentTimestamp(boolean includeNanos) {
+
+		Timestamp date = new Timestamp(System.currentTimeMillis());
+		
+		if(!includeNanos) {
+			date.setNanos(0);
+		}
+		
+		return date;
+	}
 
 	public static Timestamp getTimeStamp(XMLGregorianCalendar xmlCalendar) {
 

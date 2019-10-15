@@ -52,7 +52,7 @@ import se.unlogic.standardutils.string.StringUtils;
 
 public class XMLUtils {
 
-	private static final DocumentBuilderFactory DOCUMENT_BUILDER_FACTORY;  
+	private static final DocumentBuilderFactory DOCUMENT_BUILDER_FACTORY;
 	private static final DocumentBuilderFactory NAMESPACE_AWARE_DOCUMENT_BUILDER_FACTORY;
 	private static final DocumentBuilderFactory VALIDATING_DOCUMENT_BUILDER_FACTORY;
 	private static final DocumentBuilderFactory NAMESPACE_AWARE_VALIDATING_DOCUMENT_BUILDER_FACTORY;
@@ -154,7 +154,7 @@ public class XMLUtils {
 
 			Document doc = factory.newDocumentBuilder().parse(inputStream);
 
-			return doc;			
+			return doc;
 			
 		}finally {
 			
@@ -250,6 +250,13 @@ public class XMLUtils {
 	public static Element createElement(String name, Object value, Document doc) {
 
 		Element element = doc.createElement(name);
+		element.appendChild(doc.createTextNode(value.toString()));
+		return element;
+	}
+	
+	public static Element createElementNS(String namespace, String name, Object value, Document doc) {
+
+		Element element = doc.createElementNS(namespace, name);
 		element.appendChild(doc.createTextNode(value.toString()));
 		return element;
 	}
@@ -417,10 +424,26 @@ public class XMLUtils {
 			targetElement.appendChild(createElement(elementName, value, doc));
 		}
 	}
+	
+	public static void appendNewElementNS(Document doc, Element targetElement, String namespace, String elementName, String value) {
+
+		if (!StringUtils.isEmpty(value)) {
+			targetElement.appendChild(createElementNS(namespace, elementName, value, doc));
+		}
+	}
 
 	public static Element appendNewElement(Document doc, Element targetElement, String elementName) {
 
 		Element element = doc.createElement(elementName);
+
+		targetElement.appendChild(element);
+
+		return element;
+	}
+	
+	public static Element appendNewElementNS(Document doc, Element targetElement, String namespace, String elementName) {
+
+		Element element = doc.createElementNS(namespace, elementName);
 
 		targetElement.appendChild(element);
 
@@ -438,6 +461,14 @@ public class XMLUtils {
 
 		if (value != null) {
 			appendNewElement(doc, targetElement, elementName, value.toString());
+		}
+
+	}
+	
+	public static void appendNewElementNS(Document doc, Element targetElement, String namespace, String elementName, Object value) {
+
+		if (value != null) {
+			appendNewElementNS(doc, targetElement, namespace, elementName, value.toString());
 		}
 
 	}
@@ -529,10 +560,10 @@ public class XMLUtils {
 			string = "_" + string.substring(1);
 		}
 
-		string = string.replaceAll("[åä]", "a");
-		string = string.replaceAll("[ÅÄ]", "A");
-		string = string.replace("ö", "o");
-		string = string.replace("Ö", "O");
+		string = string.replaceAll("[ï¿½ï¿½]", "a");
+		string = string.replaceAll("[ï¿½ï¿½]", "A");
+		string = string.replace("ï¿½", "o");
+		string = string.replace("ï¿½", "O");
 
 		return string.replaceAll("[^0-9a-zA-Z-.]", "_");
 	}

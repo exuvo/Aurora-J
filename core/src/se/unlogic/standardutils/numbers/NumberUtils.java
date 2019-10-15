@@ -118,6 +118,15 @@ public class NumberUtils {
 
 		return isDouble(value) || isLong(value) ? true : false;
 	}
+	
+	public static Integer toInt(Object value) {
+		
+		if (value == null) {
+			return null;
+		}
+		
+		return toInt(value.toString());
+	}
 
 	public static Integer toInt(String value) {
 

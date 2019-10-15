@@ -32,10 +32,12 @@ public abstract class BaseStringPopulator<T> implements BeanStringPopulator<T> {
 		this.formatValidator = null;
 	}
 
+	@Override
 	public String getPopulatorID() {
 		return populatorID;
 	}
 
+	@Override
 	public final boolean validateFormat(String value) {
 
 		if(formatValidator == null){

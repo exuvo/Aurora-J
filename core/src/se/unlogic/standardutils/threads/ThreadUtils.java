@@ -1,10 +1,8 @@
 package se.unlogic.standardutils.threads;
 
-
-
 public class ThreadUtils {
 
-	public static void run(Runnable runnable, String threadName, boolean daemon){
+	public static void run(Runnable runnable, String threadName, boolean daemon) {
 
 		Thread thread = new Thread(runnable, threadName);
 
@@ -15,7 +13,7 @@ public class ThreadUtils {
 		thread.start();
 	}
 
-	public static void runAndWait(Runnable runnable, String threadName, boolean daemon) throws InterruptedException, Throwable{
+	public static void runAndWait(Runnable runnable, String threadName, boolean daemon) throws InterruptedException, Throwable {
 
 		Thread thread = new Thread(runnable, threadName);
 
@@ -31,56 +29,68 @@ public class ThreadUtils {
 
 		thread.join();
 
-		if(handler.getThrowable() != null){
+		if (handler.getThrowable() != null) {
 
 			throw handler.getThrowable();
 		}
 	}
 
-	public static void sleep(long millis){
+	public static void sleep(long millis) {
 
 		try {
 			Thread.sleep(millis);
 		} catch (InterruptedException e) {}
 	}
-	
+
 	@SuppressWarnings("deprecation")
-	public static boolean killThread(String name){
-		
+	public static boolean killThread(String name) {
+
 		Thread thread = getThread(name);
-		
-		if(thread != null){
-			
+
+		if (thread != null) {
+
 			thread.stop();
 			return true;
 		}
-		
+
 		return false;
 	}
-	
-	public static boolean interruptThread(String name){
-		
+
+	public static boolean interruptThread(String name) {
+
 		Thread thread = getThread(name);
-		
-		if(thread != null){
-			
+
+		if (thread != null) {
+
 			thread.interrupt();
 			return true;
 		}
-		
+
 		return false;
 	}
-	
-	public static Thread getThread(String name){
-		
-		for(Thread thread : Thread.getAllStackTraces().keySet()){
-			
-			if(thread.getName().equals(name)){
-				
+
+	public static Thread getThread(String name) {
+
+		for (Thread thread : Thread.getAllStackTraces().keySet()) {
+
+			if (thread.getName().equals(name)) {
+
 				return thread;
 			}
 		}
-		
+
 		return null;
+	}
+
+	public static void printCurrentStackTrace() {
+
+		StackTraceElement[] elements = Thread.currentThread().getStackTrace();
+		
+		for (int i = 1; i < elements.length; i++) {
+			
+			StackTraceElement currentElement = elements[i];
+			
+			System.out.println("\tat " + currentElement.getClassName() + "." + currentElement.getMethodName() + "(" + currentElement.getFileName() + ":" + currentElement.getLineNumber() + ")");
+		}
 	}
 }

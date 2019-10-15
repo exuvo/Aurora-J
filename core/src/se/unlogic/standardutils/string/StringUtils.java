@@ -59,6 +59,15 @@ public class StringUtils {
 		return new String(encodedString.getBytes(), UTF_8_CHARSET);
 	}
 
+	public static String parseEncodedString(String encodedString, Charset charset) {
+		
+		if (encodedString == null) {
+			return null;
+		}
+
+		return new String(encodedString.getBytes(), charset);
+	}	
+	
 	//TODO move
 	public static boolean isValidUUID(String uuidstring) {
 
@@ -387,9 +396,19 @@ public class StringUtils {
 		return string.substring(index + snippet.length());
 	}
 
+	public static String substringBetween(String string, String startSnippet, String endSnippet) {
+
+		return substringBefore(substringAfter(string, startSnippet), endSnippet);
+	}	
+	
 	public static InputStream getInputStream(String text) {
 
 		return new ByteArrayInputStream(text.getBytes());
+	}
+	
+	public static InputStream getInputStream(String text, Charset charset) {
+
+		return new ByteArrayInputStream(text.getBytes(charset));
 	}
 
 	public static boolean isEmpty(String... strings) {

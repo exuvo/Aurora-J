@@ -48,6 +48,7 @@ public class ValidationException extends Exception implements Elementable {
 		return errors;
 	}
 
+	@Override
 	public final Element toXML(Document doc) {
 
 		Element validationException = doc.createElement("validationException");

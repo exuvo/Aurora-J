@@ -1,6 +1,8 @@
 /*******************************************************************************
- * Copyright (c) 2010 Robert "Unlogic" Olofsson (unlogic@unlogic.se). All rights reserved. This program and the accompanying materials are
- * made available under the terms of the GNU Lesser Public License v3 which accompanies this distribution, and is available at
+ * Copyright (c) 2010 Robert "Unlogic" Olofsson (unlogic@unlogic.se).
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the GNU Lesser Public License v3
+ * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0-standalone.html
  ******************************************************************************/
 package se.unlogic.standardutils.threads;
@@ -13,7 +15,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class ThreadPoolTaskGroupHandler<T extends TaskGroup> implements TaskGroupHandler<T, SimpleExecutionController<T>>, Runnable {
+
+
+public class ThreadPoolTaskGroupHandler<T extends TaskGroup> implements TaskGroupHandler<T,SimpleExecutionController<T>>, Runnable{
 
 	protected final ReentrantLock taskGroupRemoveLock = new ReentrantLock();
 	protected final Condition taskGroupRemoveCondition = taskGroupRemoveLock.newCondition();
@@ -29,11 +33,12 @@ public class ThreadPoolTaskGroupHandler<T extends TaskGroup> implements TaskGrou
 
 	protected final ArrayList<Thread> threads = new ArrayList<Thread>();
 
-	public ThreadPoolTaskGroupHandler(String name, int poolSize, boolean daemon) {
 
-		while (threads.size() < poolSize) {
+	public ThreadPoolTaskGroupHandler(int poolSize, boolean daemon){
 
-			Thread thread = new Thread(this, "TaskGroupHandler " + name + " thread " + (threads.size() + 1));
+		while(threads.size() < poolSize){
+
+			Thread thread = new Thread(this, "TaskGroupHandler thread " + (threads.size() + 1));
 			thread.setDaemon(daemon);
 
 			threads.add(thread);
@@ -46,109 +51,103 @@ public class ThreadPoolTaskGroupHandler<T extends TaskGroup> implements TaskGrou
 
 		Runnable task = null;
 
-		while (true) {
+		while(true){
 
-			try {
+			while(!taskGroupList.isEmpty() && status != Status.SHUTDOWN){
 
-				while (!taskGroupList.isEmpty() && status != Status.SHUTDOWN) {
-
-					SimpleExecutionController<T> executionController;
-
-					try {
-						executionController = taskGroupList.get(getIndex());
-
-					} catch (IndexOutOfBoundsException e) {
-
-						continue;
-					}
-
-					task = executionController.getTaskQueue().poll();
-
-					if (task == null) {
-
-						boolean signalExecutionComplete = false;
-
-						taskGroupRemoveLock.lock();
-
-						try {
-
-							if (executionController.getInitialTaskCount() == executionController.getCompletedTaskCount() && taskGroupList.contains(executionController)) {
-
-								taskGroupList.remove(executionController);
-								taskGroupRemoveCondition.signalAll();
-								signalExecutionComplete = true;
-
-							} else {
-
-								break;
-							}
-
-						} finally {
-
-							taskGroupRemoveLock.unlock();
-
-							if (signalExecutionComplete) {
-
-								executionController.executionComplete();
-							}
-						}
-
-					} else {
-
-						try {
-							task.run();
-
-						} catch (Throwable e) {
-
-							e.printStackTrace();
-
-						} finally {
-
-							executionController.incrementCompletedTaskCount();
-						}
-					}
-				}
-
-				taskGroupAddLock.lock();
+				SimpleExecutionController<T> executionController;
 
 				try {
-					if (status == Status.TERMINATING) {
+					executionController = this.taskGroupList.get(this.getIndex());
 
-						// Last thread sets shutdown status
-						if (getLiveThreads() == 1) {
+				} catch (IndexOutOfBoundsException e) {
 
-							status = Status.SHUTDOWN;
-						}
-
-						return;
-					}
-
-					if (isEmpty()) {
-
-						taskGroupAddCondition.await();
-					}
-
-				} catch (InterruptedException e) {
-
-				} finally {
-					taskGroupAddLock.unlock();
+					continue;
 				}
 
-			} catch (Throwable t) {
-				t.printStackTrace();
+				task = executionController.getTaskQueue().poll();
+
+				if(task == null){
+
+					boolean signalExecutionComplete = false;
+
+					taskGroupRemoveLock.lock();
+
+					try{
+
+						if(executionController.getInitialTaskCount() == executionController.getCompletedTaskCount() && this.taskGroupList.contains(executionController)){
+
+							this.taskGroupList.remove(executionController);
+							this.taskGroupRemoveCondition.signalAll();
+							signalExecutionComplete = true;
+
+						}else{
+
+							break;
+						}
+
+					}finally{
+
+						taskGroupRemoveLock.unlock();
+
+						if(signalExecutionComplete){
+
+							executionController.executionComplete();
+						}
+					}
+
+				}else{
+
+					try{
+						task.run();
+
+					}catch(Throwable e){
+
+						e.printStackTrace();
+
+					}finally{
+
+						executionController.incrementCompletedTaskCount();
+					}
+				}
+			}
+
+			taskGroupAddLock.lock();
+
+			try{
+				if(status == Status.TERMINATING){
+
+					//Last thread sets shutdown status
+					if(getLiveThreads() == 1){
+
+						status = Status.SHUTDOWN;
+					}
+
+					return;
+				}
+
+				if(this.isEmpty()){
+
+					taskGroupAddCondition.await();
+				}
+
+			} catch (InterruptedException e) {
+
+			}finally{
+				taskGroupAddLock.unlock();
 			}
 		}
 	}
 
 	public boolean isEmpty() {
 
-		if (taskGroupList.isEmpty()) {
+		if(this.taskGroupList.isEmpty()){
 			return true;
 		}
 
-		for (SimpleExecutionController<T> controller : taskGroupList) {
+		for(SimpleExecutionController<T> controller : this.taskGroupList){
 
-			if (!controller.getTaskQueue().isEmpty()) {
+			if(!controller.getTaskQueue().isEmpty()){
 
 				return false;
 			}
@@ -157,13 +156,13 @@ public class ThreadPoolTaskGroupHandler<T extends TaskGroup> implements TaskGrou
 		return true;
 	}
 
-	public int getLiveThreads() {
+	public int getLiveThreads(){
 
 		int activeThreadCount = 0;
 
-		for (Thread thread : threads) {
+		for(Thread thread : threads){
 
-			if (thread.isAlive()) {
+			if(thread.isAlive()){
 
 				activeThreadCount++;
 			}
@@ -176,7 +175,7 @@ public class ThreadPoolTaskGroupHandler<T extends TaskGroup> implements TaskGrou
 
 		taskGroupIndex++;
 
-		if (taskGroupIndex >= taskGroupList.size()) {
+		if(taskGroupIndex >= taskGroupList.size()){
 
 			taskGroupIndex = 0;
 		}
@@ -184,38 +183,38 @@ public class ThreadPoolTaskGroupHandler<T extends TaskGroup> implements TaskGrou
 		return taskGroupIndex;
 	}
 
-	void remove(SimpleExecutionController<T> executionController) {
+	void remove(SimpleExecutionController<T> executionController){
 
 		taskGroupRemoveLock.lock();
 
-		try {
+		try{
 
-			taskGroupList.remove(executionController);
-			taskGroupRemoveCondition.signalAll();
+			this.taskGroupList.remove(executionController);
+			this.taskGroupRemoveCondition.signalAll();
 
-		} finally {
+		}finally{
 
 			taskGroupRemoveLock.unlock();
 		}
 	}
 
-	void add(SimpleExecutionController<T> executionController) {
+	void add(SimpleExecutionController<T> executionController){
 
 		taskGroupAddLock.lock();
 
-		try {
+		try{
 
-			if (status == Status.RUNNING) {
+			if(status == Status.RUNNING){
 
-				taskGroupList.add(executionController);
+				this.taskGroupList.add(executionController);
 				taskGroupAddCondition.signalAll();
 
-			} else {
+			}else{
 
 				throw new RejectedExecutionException("TaskGroupHandler status " + status);
 			}
 
-		} finally {
+		}finally{
 
 			taskGroupAddLock.unlock();
 		}
@@ -225,30 +224,30 @@ public class ThreadPoolTaskGroupHandler<T extends TaskGroup> implements TaskGrou
 
 		taskGroupRemoveLock.lock();
 
-		try {
+		try{
 
-			while (!taskGroupList.isEmpty()) {
+			while(!this.taskGroupList.isEmpty()){
 
-				for (SimpleExecutionController<T> executionController : taskGroupList) {
+				for(SimpleExecutionController<T> executionController : taskGroupList){
 
 					executionController.abort();
 				}
 			}
 
-		} finally {
+		}finally{
 
 			taskGroupRemoveLock.unlock();
 		}
 
 	}
 
-	public SimpleExecutionController<T> execute(T taskGroup) throws RejectedExecutionException {
+	public SimpleExecutionController<T> execute(T taskGroup) throws RejectedExecutionException{
 
-		if (status == Status.RUNNING) {
+		if(status == Status.RUNNING){
 
 			return new SimpleExecutionController<T>(taskGroup, this);
 
-		} else {
+		}else{
 
 			throw new RejectedExecutionException("TaskGroupHandler status " + status);
 		}
@@ -256,19 +255,19 @@ public class ThreadPoolTaskGroupHandler<T extends TaskGroup> implements TaskGrou
 
 	public int getTaskGroupCount() {
 
-		return taskGroupList.size();
+		return this.taskGroupList.size();
 	}
 
 	public List<SimpleExecutionController<T>> getTaskGroups() {
 
-		return new ArrayList<SimpleExecutionController<T>>(taskGroupList);
+		return new ArrayList<SimpleExecutionController<T>>(this.taskGroupList);
 	}
 
 	public int getTotalTaskCount() {
 
 		int taskCount = 0;
 
-		for (SimpleExecutionController<T> executionController : taskGroupList) {
+		for(SimpleExecutionController<T> executionController : taskGroupList){
 
 			taskCount += executionController.getTaskQueue().size();
 		}
@@ -276,23 +275,23 @@ public class ThreadPoolTaskGroupHandler<T extends TaskGroup> implements TaskGrou
 		return taskCount;
 	}
 
-	public Status getStatus() {
+	public Status getStatus(){
 
-		return status;
+		return this.status;
 	}
 
 	public void awaitTermination() throws InterruptedException {
 
 		taskGroupRemoveLock.lock();
 
-		try {
+		try{
 
-			while (!taskGroupList.isEmpty()) {
+			while(!this.taskGroupList.isEmpty()){
 
 				taskGroupRemoveCondition.await();
 			}
 
-		} finally {
+		}finally{
 
 			taskGroupRemoveLock.unlock();
 		}
@@ -302,14 +301,14 @@ public class ThreadPoolTaskGroupHandler<T extends TaskGroup> implements TaskGrou
 
 		taskGroupRemoveLock.lock();
 
-		try {
+		try{
 
-			while (!taskGroupList.isEmpty()) {
+			while(!this.taskGroupList.isEmpty()){
 
-				taskGroupRemoveCondition.await(timeout, TimeUnit.MILLISECONDS);
+				taskGroupRemoveCondition.await(timeout,TimeUnit.MILLISECONDS);
 			}
 
-		} finally {
+		}finally{
 
 			taskGroupRemoveLock.unlock();
 		}
@@ -319,15 +318,15 @@ public class ThreadPoolTaskGroupHandler<T extends TaskGroup> implements TaskGrou
 
 		taskGroupAddLock.lock();
 
-		try {
+		try{
 
-			if (status == Status.RUNNING) {
+			if(this.status == Status.RUNNING){
 
-				status = Status.TERMINATING;
-				taskGroupAddCondition.signalAll();
+				this.status = Status.TERMINATING;
+				this.taskGroupAddCondition.signalAll();
 			}
 
-		} finally {
+		}finally{
 
 			taskGroupAddLock.unlock();
 		}
@@ -335,7 +334,7 @@ public class ThreadPoolTaskGroupHandler<T extends TaskGroup> implements TaskGrou
 
 	public void shutdownNow() {
 
-		shutdown();
-		abortAllTaskGroups();
+		this.shutdown();
+		this.abortAllTaskGroups();
 	}
 }

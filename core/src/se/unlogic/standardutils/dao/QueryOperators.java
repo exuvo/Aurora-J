@@ -13,8 +13,8 @@ public enum QueryOperators {
 	NOT_EQUALS("!="),
 	BIGGER_THAN(">"),
 	SMALLER_THAN("<"),
-	BIGGER_THAN_OR_EUALS(">="),
-	SMALLER_THAN_OR_EUALS("<="),
+	BIGGER_THAN_OR_EQUALS(">="),
+	SMALLER_THAN_OR_EQUALS("<="),
 	LIKE("LIKE");
 
 	private String value;

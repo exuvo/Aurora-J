@@ -90,6 +90,7 @@ public class DefaultOneToOneRelation<LocalType,RemoteType,LocalKeyType> implemen
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.OneToOneRelation#setValue(LocalType, java.sql.Connection, java.lang.reflect.Field[])
 	 */
+	@Override
 	@SuppressWarnings("unchecked")
 	public void getRemoteValue(LocalType bean, Connection connection, RelationQuery relationQuery) throws SQLException{
 
@@ -117,6 +118,7 @@ public class DefaultOneToOneRelation<LocalType,RemoteType,LocalKeyType> implemen
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.OneToOneRelation#add(LocalType, java.sql.Connection, java.lang.reflect.Field[])
 	 */
+	@Override
 	@SuppressWarnings("unchecked")
 	public void add(LocalType bean, Connection connection, RelationQuery relationQuery) throws SQLException{
 
@@ -165,6 +167,7 @@ public class DefaultOneToOneRelation<LocalType,RemoteType,LocalKeyType> implemen
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.OneToOneRelation#update(LocalType, java.sql.Connection, java.lang.reflect.Field[])
 	 */
+	@Override
 	@SuppressWarnings("unchecked")
 	public void update(LocalType bean, Connection connection, RelationQuery relationQuery) throws SQLException{
 
@@ -209,9 +212,9 @@ public class DefaultOneToOneRelation<LocalType,RemoteType,LocalKeyType> implemen
 		}
 	}
 
-	private void init() {
+	private synchronized void init() {
 
-		if(annotatedDAO == null){
+		if (annotatedDAO == null) {
 			annotatedDAO = this.daoFactory.getDAO(remoteClass);
 			queryParameterFactory = annotatedDAO.getParamFactory(remoteKeyField, localKeyClass);
 		}
@@ -267,6 +270,7 @@ public class DefaultOneToOneRelation<LocalType,RemoteType,LocalKeyType> implemen
 		return new DefaultOneToOneRelation<LT,RT,LKT>(beanClass,remoteClass,localKeyClass,field,localKeyField,daoFactory,daoManaged);
 	}
 
+	@Override
 	public boolean preAdd() {
 
 		return preAdd;

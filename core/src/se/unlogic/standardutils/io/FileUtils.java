@@ -14,8 +14,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
@@ -39,6 +41,17 @@ public class FileUtils {
 	public static String toValidHttpFilename(String string) {
 
 		return string.replaceAll("[^0-9a-zA-Z+åäöÅÄÖ()!@áé&%$§=. -]", "_");
+	}
+	
+	//Follows RFC6266 filename encoding
+	public static String toContentDispositionFilename(String filename) {
+
+		try {
+			return "filename=\"" + toValidHttpFilename(filename) + "\"; filename*=UTF-8''" + URLEncoder.encode(filename, "UTF-8").replace("+", "%20");
+			
+		} catch (UnsupportedEncodingException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	public final static byte[] getRawBytes(File f) throws IOException {
@@ -322,7 +335,11 @@ public class FileUtils {
 		ByteArrayInputStream inputStream = null;
 
 		try {
-			fileOutputStream = new FileOutputStream(file);
+			File destinationFile = new File(file);
+			
+			createMissingDirectories(destinationFile);
+			
+			fileOutputStream = new FileOutputStream(destinationFile);
 			inputStream = new ByteArrayInputStream(content.getBytes());
 
 			StreamUtils.transfer(inputStream, fileOutputStream);
@@ -401,7 +418,7 @@ public class FileUtils {
 
 	public static void createMissingDirectories(File file) {
 
-		if (!file.getParentFile().exists()) {
+		if (file.getParentFile() != null && !file.getParentFile().exists()) {
 
 			file.getParentFile().mkdirs();
 		}

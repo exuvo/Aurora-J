@@ -19,7 +19,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -29,6 +28,7 @@ import org.xml.sax.SAXException;
 import se.unlogic.standardutils.collections.CollectionUtils;
 import se.unlogic.standardutils.string.StringUtils;
 import se.unlogic.standardutils.xml.ClassPathURIResolver;
+import se.unlogic.standardutils.xml.PooledXPathFactory;
 import se.unlogic.standardutils.xml.XMLUtils;
 
 /**
@@ -43,7 +43,7 @@ public class XSLVariableReader {
 	private final Document doc;
 	private final List<Document> subDocuments;
 
-	private final XPath xpath = XPathFactory.newInstance().newXPath();;
+	private final XPath xpath = PooledXPathFactory.newXPath();
 
 	public XSLVariableReader(Document doc) throws SAXException, IOException, ParserConfigurationException, XPathExpressionException, URISyntaxException {
 

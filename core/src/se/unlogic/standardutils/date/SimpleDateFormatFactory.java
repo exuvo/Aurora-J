@@ -42,6 +42,7 @@ public class SimpleDateFormatFactory implements BeanFactory<SimpleDateFormat> {
 		this.lenient = lenient;
 	}
 
+	@Override
 	public SimpleDateFormat newInstance() {
 
 		SimpleDateFormat simpleDateFormat;

@@ -1,6 +1,8 @@
 /*******************************************************************************
- * Copyright (c) 2010 Robert "Unlogic" Olofsson (unlogic@unlogic.se). All rights reserved. This program and the accompanying materials are
- * made available under the terms of the GNU Lesser Public License v3 which accompanies this distribution, and is available at
+ * Copyright (c) 2010 Robert "Unlogic" Olofsson (unlogic@unlogic.se).
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the GNU Lesser Public License v3
+ * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0-standalone.html
  ******************************************************************************/
 package se.unlogic.standardutils.threads;
@@ -19,57 +21,57 @@ import se.unlogic.standardutils.xml.XMLAttribute;
 import se.unlogic.standardutils.xml.XMLElement;
 import se.unlogic.standardutils.xml.XMLGenerator;
 
-@XMLElement(name = "ExecutionController")
-public class SimpleExecutionController<T extends TaskGroup> implements ExecutionController<T>, Elementable {
+@XMLElement(name="ExecutionController")
+public class SimpleExecutionController<T extends TaskGroup> implements ExecutionController<T>, Elementable{
 
 	private final ReentrantLock globalLock = new ReentrantLock();
 	private Condition finishedCondition = globalLock.newCondition();
 
-	private final T taskGroup;
-
-	private final BlockingQueue<? extends Runnable> taskQueue;
+	private T taskGroup;
+	
+	private BlockingQueue<? extends Runnable> taskQueue;
 	private ThreadPoolTaskGroupHandler<T> threadPoolTaskHandler;
 
 	@XMLAttribute
 	private boolean started;
-
+	
 	@XMLAttribute
 	private boolean aborted;
-
+	
 	@XMLAttribute
-	private final int initialTaskCount;
-
+	private int initialTaskCount;
+	
 	@XMLAttribute
 	private AtomicInteger completedTaskCount = new AtomicInteger();
-
+	
 	public SimpleExecutionController(T taskGroup, ThreadPoolTaskGroupHandler<T> threadPoolTaskHandler) {
 
 		super();
 		this.taskGroup = taskGroup;
-		taskQueue = taskGroup.getTasks();
+		this.taskQueue = taskGroup.getTasks();
 		this.threadPoolTaskHandler = threadPoolTaskHandler;
 		initialTaskCount = taskQueue.size();
-	}
-
+	}	
+	
 	public void abort() {
 
 		globalLock.lock();
-
-		try {
-
-			if (threadPoolTaskHandler != null) {
-
-				if (started) {
+		
+		try{
+			
+			if(this.threadPoolTaskHandler != null){
+				
+				if(started){
 					threadPoolTaskHandler.remove(this);
 				}
-
-				aborted = true;
-
-				executionComplete();
+				
+				this.aborted = true;
+				
+				this.executionComplete();
 			}
-
-		} finally {
-
+			
+		}finally{
+			
 			globalLock.unlock();
 		}
 	}
@@ -77,16 +79,16 @@ public class SimpleExecutionController<T extends TaskGroup> implements Execution
 	public void awaitExecution(long timeout) throws InterruptedException {
 
 		globalLock.lock();
-
-		try {
-
-			if (finishedCondition != null) {
-
+		
+		try{
+			
+			if(finishedCondition != null){
+				
 				finishedCondition.await(timeout, TimeUnit.MILLISECONDS);
 			}
-
-		} finally {
-
+			
+		}finally{
+			
 			globalLock.unlock();
 		}
 
@@ -95,100 +97,104 @@ public class SimpleExecutionController<T extends TaskGroup> implements Execution
 	public void awaitExecution() throws InterruptedException {
 
 		globalLock.lock();
-
-		try {
-
-			if (finishedCondition != null) {
-
+		
+		try{
+			
+			if(finishedCondition != null){
+				
 				finishedCondition.await();
 			}
-
-		} finally {
-
+			
+		}finally{
+			
 			globalLock.unlock();
 		}
 
-	}
-
-	void executionComplete() {
-
+	}	
+	
+	void executionComplete(){
+				
 		globalLock.lock();
-
-		try {
-
-			if (finishedCondition != null) {
-
+		
+		try{
+			
+			if(finishedCondition != null){
+				
 				finishedCondition.signalAll();
-
+				
 				threadPoolTaskHandler = null;
 				finishedCondition = null;
-			}
-
-		} finally {
-
+			}			
+						
+		}finally{
+			
 			globalLock.unlock();
-		}
+		}		
 	}
-
+	
 	public int getRemainingTaskCount() {
 
 		return taskQueue.size();
 	}
 
+	
 	BlockingQueue<? extends Runnable> getTaskQueue() {
-
+	
 		return taskQueue;
 	}
 
 	public void start() {
 
 		globalLock.lock();
-
-		try {
-			if (!started && !aborted) {
-
-				threadPoolTaskHandler.add(this);
-				started = true;
+		
+		try{
+			if(!started && !aborted){
+				
+				this.threadPoolTaskHandler.add(this);
+				this.started = true;
 			}
-
-		} finally {
-
+			
+		}finally{
+			
 			globalLock.unlock();
 		}
 	}
 
+	
 	public int getInitialTaskCount() {
-
+	
 		return initialTaskCount;
 	}
 
+	
 	public int getCompletedTaskCount() {
-
+	
 		return completedTaskCount.get();
 	}
-
-	void incrementCompletedTaskCount() {
-
-		completedTaskCount.incrementAndGet();
+	
+	void incrementCompletedTaskCount(){
+		
+		this.completedTaskCount.incrementAndGet();
 	}
-
-	public boolean isStarted() {
-
+	
+	public boolean isStarted(){
+		
 		return started;
 	}
-
-	public boolean isAborted() {
-
+	
+	public boolean isAborted(){
+		
 		return aborted;
 	}
-
-	public boolean isFinished() {
-
-		return started && !aborted && threadPoolTaskHandler == null;
+	
+	public boolean isFinished(){
+		
+		return started && !aborted && this.threadPoolTaskHandler == null;
 	}
 
+	
 	public T getTaskGroup() {
-
+	
 		return taskGroup;
 	}
 

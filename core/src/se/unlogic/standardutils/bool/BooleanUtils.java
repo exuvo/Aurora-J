@@ -9,23 +9,57 @@ package se.unlogic.standardutils.bool;
 
 public class BooleanUtils {
 
-	public static boolean valueOf(Boolean bool){
+	public static boolean valueOf(Boolean bool) {
 
-		if(bool == null){
+		if (bool == null) {
+			
 			return false;
-		}else{
+			
+		} else {
+			
 			return bool;
 		}
 	}
 
-	public static boolean toBoolean(String bool){
+	public static boolean toBoolean(String bool) {
 
-
-		if(bool == null){
+		if (bool == null) {
 
 			return false;
 		}
 
 		return Boolean.parseBoolean(bool);
+	}
+	
+	public static boolean isFalse(Boolean... bools) {
+
+		return isAll(false, bools);
+	}
+	
+	public static boolean isTrue(Boolean... bools) {
+
+		return isAll(true, bools);
+	}
+	
+	public static boolean isAll(boolean wantedValue, Boolean... bools) {
+
+		if (bools == null) {
+			
+			return false;
+		}
+		
+		for (Boolean bool : bools) {
+			
+			if (bool == null) {
+				
+				return false;
+				
+			} else if (bool == !wantedValue){
+				
+				return false;
+			}
+		}
+		
+		return true;
 	}
 }

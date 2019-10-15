@@ -20,6 +20,8 @@ import se.unlogic.standardutils.populators.annotated.AnnotatedResultSetPopulator
 
 public class SimpleAnnotatedDAOFactory implements AnnotatedDAOFactory {
 
+	private static AnnotatedDAOInstantiator annotatedDAOInstantiator = new DefaultAnnotatedDAOInstantiator();
+	
 	protected final DataSource dataSource;
 	protected final HashMap<Class<?>, AnnotatedDAO<?>> daoMap = new HashMap<Class<?>, AnnotatedDAO<?>>();
 
@@ -45,6 +47,7 @@ public class SimpleAnnotatedDAOFactory implements AnnotatedDAOFactory {
 		this.beanStringPopulators = beanStringPopulators;
 	}
 
+	@Override
 	@SuppressWarnings("unchecked")
 	public synchronized <T> AnnotatedDAO<T> getDAO(Class<T> beanClass) {
 
@@ -52,7 +55,7 @@ public class SimpleAnnotatedDAOFactory implements AnnotatedDAOFactory {
 
 		if (dao == null) {
 
-			dao = new AnnotatedDAO<T>(dataSource, beanClass, this, queryParameterPopulators, beanStringPopulators);
+			dao = annotatedDAOInstantiator.instantiate(dataSource, beanClass, this, queryParameterPopulators, beanStringPopulators);
 			this.daoMap.put(beanClass, dao);
 		}
 
@@ -66,7 +69,7 @@ public class SimpleAnnotatedDAOFactory implements AnnotatedDAOFactory {
 
 		if (dao == null) {
 
-			dao = new AnnotatedDAO<T>(dataSource, beanClass, this, populator, null, null);
+			dao = annotatedDAOInstantiator.instantiate(dataSource, beanClass, this, populator, null, null);
 			this.daoMap.put(beanClass, dao);
 		}
 
@@ -80,7 +83,7 @@ public class SimpleAnnotatedDAOFactory implements AnnotatedDAOFactory {
 
 		if (dao == null) {
 
-			dao = new AnnotatedDAO<T>(dataSource, beanClass, this, populator, queryParameterPopulators);
+			dao = annotatedDAOInstantiator.instantiate(dataSource, beanClass, this, populator, queryParameterPopulators);
 			this.daoMap.put(beanClass, dao);
 		}
 
@@ -94,7 +97,7 @@ public class SimpleAnnotatedDAOFactory implements AnnotatedDAOFactory {
 
 		if (dao == null) {
 
-			dao = new AnnotatedDAO<T>(dataSource, beanClass, this, queryParameterPopulators, typePopulators);
+			dao = annotatedDAOInstantiator.instantiate(dataSource, beanClass, this, queryParameterPopulators, typePopulators);
 			this.daoMap.put(beanClass, dao);
 		}
 
@@ -108,7 +111,7 @@ public class SimpleAnnotatedDAOFactory implements AnnotatedDAOFactory {
 
 		if (dao == null) {
 
-			dao = new AnnotatedDAO<T>(dataSource, beanClass, this, populator, queryParameterPopulators, typePopulators);
+			dao = annotatedDAOInstantiator.instantiate(dataSource, beanClass, this, populator, queryParameterPopulators, typePopulators);
 			this.daoMap.put(beanClass, dao);
 		}
 
@@ -162,4 +165,14 @@ public class SimpleAnnotatedDAOFactory implements AnnotatedDAOFactory {
 
 		return beanStringPopulators;
 	}
+	
+	public static void setAnnotatedDAOInstantiator(AnnotatedDAOInstantiator annotatedDAOInstantiator) {
+		
+		if (annotatedDAOInstantiator == null) {
+			throw new NullPointerException("annotatedDAOInstantiator cannot be null");
+		}
+		
+		SimpleAnnotatedDAOFactory.annotatedDAOInstantiator = annotatedDAOInstantiator;
+	}
+	
 }

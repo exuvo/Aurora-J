@@ -7,37 +7,29 @@
  ******************************************************************************/
 package se.unlogic.standardutils.random;
 
+import java.security.SecureRandom;
 import java.util.Random;
 
 public class RandomUtils {
 
+	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 	private static final Random RANDOM = new Random();
 
-	public static String getRandomString(int minLength, int maxLength){
+	public static final String MIXED_CASE_CHARACTERS_AND_DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	public static final String LOWER_CASE_CHARACTERS = "abcdefghijklmnopqrstuvwxyz";
+	
+	@Deprecated
+	public static String getRandomString(int minLength, int maxLength) {
 
-		int length;
-
-		if(minLength == maxLength){
-
-			length = minLength;
-
-		}else{
-
-			length = RANDOM.nextInt(maxLength - minLength) + minLength;
-		}
-
-		char[] randomString = new char[length];
-
-		for (int x = 0; x < length; x++) {
-			int randDecimalAsciiVal = RANDOM.nextInt(25) + 97;
-			randomString[x] = (char) randDecimalAsciiVal;
-		}
-
-		return new String(randomString);
+		return getRandomString(maxLength, LOWER_CASE_CHARACTERS);
 	}
 
-	//TODO fix max value
 	public static int getRandomInt(int min, int max) {
+
+		if (max < Integer.MAX_VALUE) {
+
+			max++;
+		}
 
 		return RANDOM.nextInt(max) + min;
 	}
@@ -46,9 +38,21 @@ public class RandomUtils {
 
 		return getRandomInt(0, 2) == 1;
 	}
-	
+
 	public static String getRandomHexColor() {
-		
+
 		return "#" + String.format("%02X", getRandomInt(0, 255)) + String.format("%02X", getRandomInt(0, 255)) + String.format("%02X", getRandomInt(0, 255));
+	}
+
+	public static String getRandomString(int length, String chars) {
+
+		StringBuilder stringBuilder = new StringBuilder(length);
+		
+		for (int i = 0; i < length; i++) {
+			
+			stringBuilder.append(chars.charAt(SECURE_RANDOM.nextInt(chars.length())));
+		}
+		
+		return stringBuilder.toString();
 	}
 }

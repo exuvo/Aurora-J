@@ -15,6 +15,7 @@ import java.sql.SQLException;
 import java.sql.SQLSyntaxErrorException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
@@ -23,6 +24,13 @@ import javax.sql.DataSource;
 
 public class DBUtils {
 
+	public static final Pattern LIKE_ESCAPE_PATTERN = Pattern.compile("([%\\\\_])");
+	
+	public static String escapeLikeParameter(String parameter) {
+		
+		return LIKE_ESCAPE_PATTERN.matcher(parameter).replaceAll("\\\\$1");
+	}
+	
 	public static boolean tableExists(DataSource dataSource, String tableName) throws SQLException {
 
 		Connection connection = null;
@@ -53,7 +61,7 @@ public class DBUtils {
 		}
 
 		return false;
-	}	
+	}
 	
 	public static ArrayList<String> listAllTables(Connection connection) throws SQLException {
 

@@ -129,11 +129,34 @@ public class ReflectionUtils {
 		throw new RuntimeException(new NoSuchFieldError(fieldName));
 	}
 
+	public static List<Field> getFields(Class<?> bean, String... fieldNames) {
+
+		List<Field> fields = getFields(bean);
+
+		List<Field> matchingFields = new ArrayList<>(fieldNames.length);
+		
+		outer: for(String fieldName : fieldNames) {
+		
+			for(Field field : fields){
+
+				if(field.getName().equals(fieldName)){
+
+					matchingFields.add(field);
+					continue outer;
+				}
+			}
+			
+			throw new RuntimeException(new NoSuchFieldError(fieldName));
+		}
+
+		return matchingFields;
+	}
+	
 	public static boolean isAvailable(String classname) {
 		try {
 			Class.forName(classname);
 			return true;
-		} catch (ClassNotFoundException cnfe) {
+		} catch (Throwable t) {
 			return false;
 		}
 	}
@@ -283,6 +306,30 @@ public class ReflectionUtils {
 		return null;
 	}
 
+	public static Object getMethodValue(String methodName, Object instance) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
+
+		List<Method> methods = getMethods(instance.getClass());
+
+		for(Method method : methods){
+
+			if(!method.getName().equalsIgnoreCase(methodName)){
+
+				continue;
+			}
+
+			if(method.getParameterTypes().length != 0){
+
+				continue;
+			}
+
+			method.setAccessible(true);
+			
+			return method.invoke(instance);
+		}
+
+		return null;
+	}	
+	
 	public static<T> T getInstance(Class<T> clazz) {
 
 		try{

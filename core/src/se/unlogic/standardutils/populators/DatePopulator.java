@@ -17,16 +17,16 @@ import se.unlogic.standardutils.validation.StringFormatValidator;
 public class DatePopulator extends BaseStringPopulator<Date> {
 
 	private static final DatePopulator POPULATOR = new DatePopulator();
-	private static final DatePopulator POPULATOR_SENSIBLE_YEARS = new DatePopulator(true);
+	private static final DatePopulator YEAR_LIMITED_POPULATOR = new DatePopulator(true);
 
 	public static DatePopulator getPopulator() {
 
 		return POPULATOR;
 	}
 	
-	public static DatePopulator getPopulatorSensibleYears() {
+	public static DatePopulator getYearLimitedPopulator() {
 
-		return POPULATOR_SENSIBLE_YEARS;
+		return YEAR_LIMITED_POPULATOR;
 	}
 
 	private final ThreadSafeDateFormat dateFormat;

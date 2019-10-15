@@ -5,17 +5,18 @@
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/lgpl-3.0-standalone.html
  ******************************************************************************/
-package se.unlogic.standardutils.json;
+package se.unlogic.standardutils.annotations;
 
-import java.util.TreeMap;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-
-public class OrderedJsonObject extends JsonObject {
-
-	private static final long serialVersionUID = 1L;
-
-	public OrderedJsonObject() {
-		this.fields = new TreeMap<String, JsonNode>();
-	}
-		
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.FIELD})
+public @interface Templated {
+	String fieldName() default "";
+	Class<?> templateClass() default Object.class;
 }

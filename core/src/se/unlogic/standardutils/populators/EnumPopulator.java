@@ -36,11 +36,13 @@ public class EnumPopulator<EnumType extends Enum<EnumType>> extends BaseStringPo
 		}
 	}
 
+	@Override
 	public EnumType populate(ResultSet rs) throws SQLException {
 
 		return EnumUtils.toEnum(classType, rs.getString(1));
 	}
 
+	@Override
 	public EnumType getValue(String value) {
 
 		return EnumUtils.toEnum(classType, value);
@@ -52,11 +54,13 @@ public class EnumPopulator<EnumType extends Enum<EnumType>> extends BaseStringPo
 		return EnumUtils.isEnum(classType, value);
 	}
 
+	@Override
 	public Class<? extends EnumType> getType() {
 
 		return classType;
 	}
 
+	@Override
 	public void populate(PreparedStatementQuery query, int paramIndex, Object bean) throws SQLException {
 
 		if(bean != null){

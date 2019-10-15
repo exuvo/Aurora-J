@@ -126,6 +126,7 @@ public class DefaultManyToManyRelation<LocalType,RemoteType> implements ManyToMa
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.ManyToManyRelation#setValue(LocalType, java.sql.Connection, java.lang.reflect.Field[])
 	 */
+	@Override
 	public void getRemoteValue(LocalType bean, Connection connection, RelationQuery relationQuery) throws SQLException{
 
 		try {
@@ -136,8 +137,14 @@ public class DefaultManyToManyRelation<LocalType,RemoteType> implements ManyToMa
 			CustomQueryParameter<LocalType> queryParameter = new CustomQueryParameter<LocalType>(localColumn, bean);
 
 			if(queryParameter.getParamValue() != null){
-
-				field.set(bean, annotatedDAO.getAll(linkTableLinkSQL, queryParameter, connection, relationQuery));
+				
+				String orderByCriteria = null;
+				
+				if (indexColumn != null) {
+					orderByCriteria = " ORDER BY " + linkTable + "." + indexColumn;
+				}
+				
+				field.set(bean, annotatedDAO.getAllManyToMany(linkTableLinkSQL, orderByCriteria, queryParameter, connection, relationQuery));
 			}
 
 		} catch (IllegalArgumentException e) {
@@ -149,10 +156,11 @@ public class DefaultManyToManyRelation<LocalType,RemoteType> implements ManyToMa
 			throw new RuntimeException(e);
 		}
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.ManyToManyRelation#add(LocalType, java.sql.Connection, java.lang.reflect.Field[])
 	 */
+	@Override
 	@SuppressWarnings("unchecked")
 	public void add(LocalType bean, Connection connection, RelationQuery relationQuery) throws SQLException{
 
@@ -205,6 +213,7 @@ public class DefaultManyToManyRelation<LocalType,RemoteType> implements ManyToMa
 	/* (non-Javadoc)
 	 * @see se.unlogic.utils.dao.ManyToManyRelation#update(LocalType, java.sql.Connection, java.lang.reflect.Field[])
 	 */
+	@Override
 	@SuppressWarnings("unchecked")
 	public void update(LocalType bean, Connection connection, RelationQuery relationQuery) throws SQLException{
 
@@ -248,7 +257,7 @@ public class DefaultManyToManyRelation<LocalType,RemoteType> implements ManyToMa
 					
 					insertQuery.setInt(3, index);
 					index++;
-				}				
+				}
 				
 				insertQuery.executeUpdate();
 			}
@@ -263,27 +272,22 @@ public class DefaultManyToManyRelation<LocalType,RemoteType> implements ManyToMa
 		}
 	}
 
-	private void init() {
+	private synchronized void init() {
 
-		if(annotatedDAO == null){
+		if (annotatedDAO == null) {
 			annotatedDAO = this.daoFactory.getDAO(remoteClass);
 		}
 
-		if(this.linkTableLinkSQL == null){
-			
+		if (this.linkTableLinkSQL == null) {
+
 			this.linkTableLinkSQL = "SELECT " + annotatedDAO.getTableName() + ".* FROM " + annotatedDAO.getTableName() + " INNER JOIN " + linkTable + " ON (" + annotatedDAO.getTableName() + "." + remoteKeyColumnName + "=" + linkTable + "." + remoteLinkTableColumnName + ") WHERE " + linkTable + "." + localLinkTableColumnName + " = ?";
-			
-			if(indexColumn != null){
-				
-				linkTableLinkSQL = linkTableLinkSQL + " ORDER BY " + linkTable + "." + indexColumn;
-			}
 		}
 
-		if(this.localColumn == null){
+		if (this.localColumn == null) {
 			this.localColumn = this.daoFactory.getDAO(beanClass).getColumn(this.localKeyField);
 		}
 
-		if(this.remoteColumn == null){
+		if (this.remoteColumn == null) {
 			this.remoteColumn = this.annotatedDAO.getColumn(remoteKeyField);
 		}
 

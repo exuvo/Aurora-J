@@ -357,6 +357,41 @@ public class CollectionUtils {
 		return new ArrayList<T>(new LinkedHashSet<T>(list));
 	}
 
+	public static <T> void removeDuplicates(List<T> list, Comparator<T> comparator) {
+
+		if (list == null) {
+			return;
+		}
+
+		if (list.size() == 1) {
+			return;
+		}
+
+		int index = list.size() - 1;
+
+		while (index >= 0) {
+
+			T currentObject = list.get(index);
+
+			int innerIndex = 0;
+
+			while (innerIndex < index) {
+
+				T compareObject = list.get(innerIndex);
+
+				if (comparator.compare(currentObject, compareObject) == 0) {
+
+					list.remove(index);
+					break;
+				}
+
+				innerIndex++;
+			}
+
+			index--;
+		}
+	}
+
 	public static <T> void add(Collection<T> targetCollection, Collection<T> collectionToAdd) {
 
 		if(collectionToAdd != null){
@@ -437,5 +472,75 @@ public class CollectionUtils {
 		}
 		
 		return list.contains(object);
+	}
+
+	public static <T> List<T> getReverseList(List<T> list) {
+
+		List<T> reverseList = new ArrayList<T>(list);
+
+		Collections.reverse(reverseList);
+
+		return reverseList;
+	}
+
+	public static <T> T getFirstValue(List<T> list) {
+
+		if (!isEmpty(list)) {
+
+			return list.get(0);
+		}
+
+		return null;
+	}
+
+	public static <T> List<List<T>> getDividedList(List<T> list, int parts) {
+
+		if (parts < 1) {
+
+			throw new RuntimeException("parts cannot be less than 1");
+		}
+
+		int partsPerList;
+
+		if (parts > list.size()) {
+
+			partsPerList = 1;
+
+		} else {
+
+			partsPerList = (list.size() + parts - 1) / parts;
+		}
+
+		List<List<T>> sublists = new ArrayList<List<T>>(parts);
+
+		int index = 0;
+
+		while (index < list.size()) {
+
+			if (list.size() > index + partsPerList) {
+
+				sublists.add(list.subList(index, index + partsPerList));
+
+				index += partsPerList;
+
+			} else {
+
+				sublists.add(list.subList(index, list.size()));
+
+				break;
+			}
+		}
+
+		return sublists;
+	}
+
+	public static void removeLastValue(List<?> list) {
+
+		list.remove(list.size() - 1);
+	}
+
+	public static <T> T getLastValue(List<T> list) {
+
+		return list.get(list.size() - 1);
 	}
 }

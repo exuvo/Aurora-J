@@ -63,6 +63,7 @@ public class XMLParser implements SettingNode {
 		this.xpath = PooledXPathFactory.newXPath();
 	}
 
+	@Override
 	public Boolean getBoolean(String expression) {
 
 		String value = this.getString(expression);
@@ -76,12 +77,14 @@ public class XMLParser implements SettingNode {
 
 	}
 
+	@Override
 	public boolean getPrimitiveBoolean(String expression) {
 
 		return Boolean.parseBoolean(this.getString(expression));
 
 	}
 
+	@Override
 	public Double getDouble(String expression) {
 
 		String value = this.getString(expression);
@@ -94,6 +97,7 @@ public class XMLParser implements SettingNode {
 
 	}
 
+	@Override
 	public List<Double> getDoubles(String expression) {
 
 		NodeList nodes = this.getNodeList(expression);
@@ -117,6 +121,7 @@ public class XMLParser implements SettingNode {
 
 	}
 
+	@Override
 	public int getInt(String expression) {
 
 		String value = this.getString(expression);
@@ -129,6 +134,7 @@ public class XMLParser implements SettingNode {
 
 	}
 
+	@Override
 	public Integer getInteger(String expression) {
 
 		String value = this.getString(expression);
@@ -141,6 +147,7 @@ public class XMLParser implements SettingNode {
 
 	}
 
+	@Override
 	public List<Integer> getIntegers(String expression) {
 
 		NodeList nodes = this.getNodeList(expression);
@@ -164,6 +171,7 @@ public class XMLParser implements SettingNode {
 
 	}
 
+	@Override
 	public Long getLong(String expression) {
 
 		String value = this.getString(expression);
@@ -176,6 +184,7 @@ public class XMLParser implements SettingNode {
 
 	}
 
+	@Override
 	public List<Long> getLongs(String expression) {
 
 		NodeList nodes = this.getNodeList(expression);
@@ -199,9 +208,23 @@ public class XMLParser implements SettingNode {
 
 	}
 
+	@Override
 	public XMLParser getNode(String expression) {
 
-		Element element = this.getElement(expression);
+		Element element = this.getElement(expression, false);
+
+		if(element == null){
+
+			return null;
+		}
+
+		return new XMLParser(element);
+
+	}
+	
+	public XMLParser getNode(String expression, boolean disconnect) {
+
+		Element element = this.getElement(expression, disconnect);
 
 		if(element == null){
 
@@ -212,6 +235,7 @@ public class XMLParser implements SettingNode {
 
 	}
 
+	@Override
 	public List<XMLParser> getNodes(String expression) {
 		
 		return getNodes(expression, false);
@@ -260,6 +284,7 @@ public class XMLParser implements SettingNode {
 		return settingNodes;
 	}	
 
+	@Override
 	public String getString(String expression) {
 
 		try {
@@ -280,6 +305,7 @@ public class XMLParser implements SettingNode {
 
 	}
 
+	@Override
 	public List<String> getStrings(String expression) {
 
 		NodeList nodes = this.getNodeList(expression);
@@ -320,11 +346,20 @@ public class XMLParser implements SettingNode {
 
 	}	
 
-	private Element getElement(String expression){
+	private Element getElement(String expression, boolean disconnect){
 
 		try {
-			return (Element) this.xpath.evaluate(expression, this.element, XPathConstants.NODE);
+			Element element = (Element) this.xpath.evaluate(expression, this.element, XPathConstants.NODE);
+			
+			if(disconnect && element != null){
+				
+				element.getParentNode().removeChild(element);
+			}
+			
+			return element;
+			
 		} catch(XPathExpressionException e) {
+			
 			return null;
 		}
 	}
@@ -332,9 +367,5 @@ public class XMLParser implements SettingNode {
 	public String getElementName(){
 
 		return element.getTagName();
-	}
-	
-	public Element getElement() {
-		return element;
 	}
 }

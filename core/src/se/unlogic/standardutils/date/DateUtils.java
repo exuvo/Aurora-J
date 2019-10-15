@@ -24,31 +24,31 @@ public class DateUtils {
 
 	private static final Date SENSIBLE_YEAR_MIN;
 	private static final Date SENSIBLE_YEAR_MAX;
-	
+
 	static {
 		Calendar calendar = Calendar.getInstance();
-		
+
 		calendar.set(1000, 1, 1);
 		SENSIBLE_YEAR_MIN = calendar.getTime();
-		
+
 		calendar.set(9999, 1, 1);
 		SENSIBLE_YEAR_MAX = calendar.getTime();
 	}
-	
+
 	public static boolean isValidDate(ThreadSafeDateFormat sdf, String date) {
-		
+
 		return isValidDate(sdf, date, false);
 	}
-	
+
 	public static boolean isValidDate(ThreadSafeDateFormat sdf, String date, boolean sensibleYearCheck) {
-		
+
 		try {
 			Date parsedDate = sdf.parse(date);
-			
+
 			if (sensibleYearCheck && (parsedDate.before(SENSIBLE_YEAR_MIN) || parsedDate.after(SENSIBLE_YEAR_MAX))) {
 				return false;
 			}
-			
+
 		} catch (ParseException e) {
 			return false;
 		} catch (RuntimeException e) {
@@ -56,21 +56,21 @@ public class DateUtils {
 		}
 		return true;
 	}
-	
+
 	public static boolean isValidDate(DateFormat sdf, String date) {
-		
+
 		return isValidDate(sdf, date, false);
 	}
-	
+
 	public static boolean isValidDate(DateFormat sdf, String date, boolean sensibleYearCheck) {
-		
+
 		try {
 			Date parsedDate = sdf.parse(date);
-			
+
 			if (sensibleYearCheck && (parsedDate.before(SENSIBLE_YEAR_MIN) || parsedDate.after(SENSIBLE_YEAR_MAX))) {
 				return false;
 			}
-			
+
 		} catch (ParseException e) {
 			return false;
 		} catch (RuntimeException e) {
@@ -90,6 +90,17 @@ public class DateUtils {
 		}
 	}
 
+	public static java.sql.Date getSQLDate(ThreadSafeDateFormat sdf, String date) {
+
+		try {
+			return new java.sql.Date(sdf.parse(date).getTime());
+		} catch (ParseException e) {
+			return null;
+		} catch (RuntimeException e) {
+			return null;
+		}
+	}
+	
 	public static Date getDate(DateFormat sdf, String date) {
 
 		try {
@@ -100,7 +111,7 @@ public class DateUtils {
 			return null;
 		}
 	}
-	
+
 	public static double getDateProgress(Date startDate, Date currentDate, Date endDate) {
 
 		if (startDate == null || currentDate == null || endDate == null) {
@@ -116,10 +127,10 @@ public class DateUtils {
 		}
 
 		if (startDate.equals(endDate)) {
-			
+
 			if (currentDate.before(endDate)) {
 				return 0;
-				
+
 			} else {
 				return 1;
 			}
@@ -186,7 +197,7 @@ public class DateUtils {
 
 		return Integer.parseInt(YEAR_FORMATTER.format(new Date()));
 	}
-	
+
 	public static int getCurrentWeek() {
 
 		return Integer.parseInt(YEAR_WEEK_FORMATTER.format(new Date()));
@@ -237,7 +248,7 @@ public class DateUtils {
 
 	}
 
-	public static final String dateAndShortMonthToString(Date date, Locale locale) {
+	public static final String getDateWithMonthString(Date date, Locale locale) {
 
 		Calendar calendar = Calendar.getInstance();
 
@@ -245,12 +256,11 @@ public class DateUtils {
 
 		String monthNames[] = new DateFormatSymbols(locale).getShortMonths();
 
-		return calendar.get(Calendar.DATE) + " " + monthNames[calendar.get(Calendar.MONTH)];
+		return calendar.get(Calendar.DATE) + " " + monthNames[calendar.get(Calendar.MONTH)] + " " + calendar.get(Calendar.YEAR);
 
 	}
 
-	public static int getWorkingDays(Date startDate, Date endDate)
-	{
+	public static int getWorkingDays(Date startDate, Date endDate) {
 
 		Calendar startCal = Calendar.getInstance();
 		startCal.setTime(startDate);
@@ -260,18 +270,16 @@ public class DateUtils {
 
 		int workDays = 0;
 
-		if (startCal.getTimeInMillis() > endCal.getTimeInMillis())
-		{
+		if (startCal.getTimeInMillis() > endCal.getTimeInMillis()) {
 			startCal.setTime(endDate);
 			endCal.setTime(startDate);
 		}
 
-		do
-		{
+		do {
 			startCal.add(Calendar.DAY_OF_MONTH, 1);
-			
+
 			if (startCal.get(Calendar.DAY_OF_WEEK) != Calendar.SATURDAY && startCal.get(Calendar.DAY_OF_WEEK) != Calendar.SUNDAY) {
-			
+
 				workDays++;
 			}
 
@@ -279,34 +287,35 @@ public class DateUtils {
 
 		return workDays;
 	}
-	
-	public static int getNumberOfWeeksInYear(int year){
+
+	public static int getNumberOfWeeksInYear(int year) {
+
 		Calendar cal = Calendar.getInstance();
-	    cal.set(Calendar.YEAR, year);
-	    cal.set(Calendar.MONTH, Calendar.DECEMBER);
-	    cal.set(Calendar.DAY_OF_MONTH, 31);
-	    int week = cal.get(Calendar.WEEK_OF_YEAR); //Either 1 or 53
-	    
-	    if(week == 1){
-	    	return 52;
-	    } else {
-	    	return week;
-	    }
+		cal.set(Calendar.YEAR, year);
+		cal.set(Calendar.MONTH, Calendar.DECEMBER);
+		cal.set(Calendar.DAY_OF_MONTH, 31);
+		int week = cal.get(Calendar.WEEK_OF_YEAR); //Either 1 or 53
+
+		if (week == 1) {
+			return 52;
+		} else {
+			return week;
+		}
 	}
-	
-	public static java.sql.Date getTodaysDatePlusMinusDays(int days){
-		
+
+	public static java.sql.Date getTodaysDatePlusMinusDays(int days) {
+
 		Calendar calendar = Calendar.getInstance();
 		calendar.add(Calendar.DATE, days);
-		
+
 		return new java.sql.Date(calendar.getTimeInMillis());
 	}
-	
-	public static int getWeek(Date date){
-		
+
+	public static int getWeek(Date date) {
+
 		Calendar calendar = Calendar.getInstance();
 		calendar.setTime(date);
-		
+
 		return calendar.get(Calendar.WEEK_OF_YEAR);
 	}
 
@@ -324,7 +333,7 @@ public class DateUtils {
 
 		if (direction >= 0) {
 			direction = 1;
-			
+
 		} else {
 			direction = -1;
 		}
@@ -347,18 +356,18 @@ public class DateUtils {
 
 		Calendar end = Calendar.getInstance();
 		end.setTime(endDate);
-	    
-	    return getYearsBetween(start, end);
+
+		return getYearsBetween(start, end);
 	}
 
 	public static Integer getYearsBetween(Calendar start, Calendar end) {
-		
-	    int diff = end.get(Calendar.YEAR) - start.get(Calendar.YEAR);
-	    
-	    if (start.get(Calendar.MONTH) > end.get(Calendar.MONTH) || (start.get(Calendar.MONTH) == end.get(Calendar.MONTH) && start.get(Calendar.DATE) > end.get(Calendar.DATE))) {
-	        diff--;
-	    }
-	    
-	    return diff;
+
+		int diff = end.get(Calendar.YEAR) - start.get(Calendar.YEAR);
+
+		if (start.get(Calendar.MONTH) > end.get(Calendar.MONTH) || (start.get(Calendar.MONTH) == end.get(Calendar.MONTH) && start.get(Calendar.DATE) > end.get(Calendar.DATE))) {
+			diff--;
+		}
+
+		return diff;
 	}
 }

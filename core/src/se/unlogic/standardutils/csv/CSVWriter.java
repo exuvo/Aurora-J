@@ -33,7 +33,7 @@ public class CSVWriter implements Closeable{
 				if(cell.contains(delimiter) || cell.contains("\n") || cell.contains("\r")){
 					
 					writer.write("\"");
-					writer.write(cell);
+					writer.write(cell.replaceAll("\"", ""));
 					writer.write("\"");
 				
 				}else{
@@ -48,6 +48,7 @@ public class CSVWriter implements Closeable{
 		writer.write("\n");
 	}
 	
+	@Override
 	public void close() throws IOException{
 		
 		writer.close();
