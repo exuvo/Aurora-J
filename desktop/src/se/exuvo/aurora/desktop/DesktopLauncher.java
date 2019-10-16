@@ -68,11 +68,12 @@ public class DesktopLauncher {
 		
 		//https://github.com/LWJGL/lwjgl3-wiki/wiki/2.5.-Troubleshooting
 		Configuration.DEBUG.set(true);
-		Configuration.DEBUG_STREAM.set(IoBuilder.forLogger(glLog).setLevel(Level.INFO).buildPrintStream());
+//		Configuration.DEBUG_STREAM.set(IoBuilder.forLogger(glLog).setLevel(Level.INFO).buildPrintStream());
 		
 		Lwjgl3ApplicationConfiguration windowConfig = new Lwjgl3ApplicationConfiguration();
 		windowConfig.setTitle("Aurora J");
-		windowConfig.useOpenGL3(true, 4, 4);
+//		windowConfig.useOpenGL3(true, 4, 4);
+		windowConfig.useOpenGL3(false, 2, 1);
 		windowConfig.enableGLDebugOutput(true, IoBuilder.forLogger(glLog).setLevel(Level.WARN).buildPrintStream());
 		
 		final int defaultWidth = 1024;

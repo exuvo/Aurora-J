@@ -40,6 +40,30 @@ eclipse {
 		name = appName + "-desktop"
 		linkedResource name: 'assets', type: '2', location: 'PARENT-1-PROJECT_LOC/core/assets'
 	}
+	/*classpath {
+        file {
+            whenMerged {
+                def jre = entries.find { it.path.contains 'org.eclipse.jdt.launching.JRE_CONTAINER' }
+                jre.accessRules.add(new AccessRule('0', 'javafx/**'))
+            }
+        }
+    }*/
+	/*classpath {
+		file {
+			whenMerged { classpath ->
+				classpath.entries.removeAll { entry ->
+					
+					if (entry.kind == 'src') {
+						entry.includes = []
+						entry.excludes = []
+						entry.getEntryAttributes().clear()
+					}
+					
+					false
+				}
+			}
+		}
+	}*/
 }
 
 task afterEclipseImport(description: "Post processing after project generation", group: "IDE") {

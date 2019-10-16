@@ -127,7 +127,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		worldBuilder.with(MovementSystem())
 		worldBuilder.with(SolarIrradianceSystem())
 		worldBuilder.with(PassiveSensorSystem())
-		worldBuilder.with(GravimetricSensorSystem())
+//		worldBuilder.with(GravimetricSensorSystem())
 		worldBuilder.with(WeaponSystem())
 		worldBuilder.with(PowerSystem())
 		worldBuilder.with(TimedLifeSystem())
