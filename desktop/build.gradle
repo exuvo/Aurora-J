@@ -1,9 +1,11 @@
+apply plugin: "artemis"
+
 sourceSets.main.java.srcDirs = [ "src" ]
 sourceSets.main.kotlin.srcDirs = [ "src" ]
 
 project.ext.mainClassName = "se.exuvo.aurora.desktop.DesktopLauncher"
 project.ext.assetsDir = new File("../core/assets");
-project.ext.weaveDir = new File("$buildDir/exploded")
+project.ext.weaveDir = new File("$buildDir/explodedForWeave")
 
 task run(dependsOn: classes, type: JavaExec) {
 	main = project.mainClassName
@@ -22,12 +24,27 @@ task debug(dependsOn: classes, type: JavaExec) {
 	debug = true
 }
 
-task dist(type: Jar) {
-	from files(sourceSets.main.output.classesDirs)
+// https://github.com/junkdog/artemis-odb/wiki/Weaving-LibGDX
+// Prepare folder with all dependencies exploded.
+task explodeForWeave(type: Sync, dependsOn: classes) {
+	into project.weaveDir
+	from files(sourceSets.main.output.classesDir)
 	from files(sourceSets.main.output.resourcesDir)
 	from {configurations.compile.collect {zipTree(it)}}
-	from files(project.assetsDir);
- 
+	from files(project.assetsDir)
+}
+
+// artemis-odb: weaving settings.
+weave {
+	dependsOn explodeForWeave
+	classesDir = project.weaveDir
+	enableArtemisPlugin = true
+	enablePooledWeaving = true
+	optimizeEntitySystems = true
+}
+
+task dist(type: Jar, dependsOn: weave) {
+	from project.weaveDir
 	manifest {
 		attributes 'Main-Class': project.mainClassName
 	}

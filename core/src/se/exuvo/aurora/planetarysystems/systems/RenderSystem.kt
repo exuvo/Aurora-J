@@ -582,7 +582,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 						viewport.camera.project(screenPosition)
 
 						font.color = Color.GREEN
-						font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceWidth * .5f, screenPosition.y - textRow * font.lineHeight)
+						font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceXadvance * .5f, screenPosition.y - textRow * font.lineHeight)
 					}
 				}
 
@@ -623,7 +623,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				screenPosition.set(x, y - radius * 1.2f, 0f)
 				viewport.camera.project(screenPosition)
 
-				font.draw(spriteBatch, name, screenPosition.x - name.length * font.spaceWidth * .5f, screenPosition.y - 0.5f * font.lineHeight)
+				font.draw(spriteBatch, name, screenPosition.x - name.length * font.spaceXadvance * .5f, screenPosition.y - 0.5f * font.lineHeight)
 			}
 		}
 	}
@@ -666,7 +666,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 						viewport.camera.project(screenPosition)
 
 						font.color = Color.GREEN
-						font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceWidth * .5f, screenPosition.y - 1.5f * font.lineHeight)
+						font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceXadvance * .5f, screenPosition.y - 1.5f * font.lineHeight)
 					}
 
 					run {
@@ -679,7 +679,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 						viewport.camera.project(screenPosition)
 
 						font.color = Color.RED
-						font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceWidth * .5f, screenPosition.y - 1.5f * font.lineHeight)
+						font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceXadvance * .5f, screenPosition.y - 1.5f * font.lineHeight)
 					}
 				}
 			}

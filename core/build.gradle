@@ -1,16 +1,8 @@
 sourceSets.main.java.srcDirs = [ "src" ]
 sourceSets.main.kotlin.srcDirs = [ "src" ]
 
-eclipse.project {
-	name = appName + "-core"
+eclipse {
+  project.name = appName + "-core"
+  //autoBuildTasks build
+  //synchronizationTasks taskName
 }
-
-// artemis-odb: weaving settings.
-weave {
-	classesDir = new File(buildDir, "classes/java/main")
-	enableArtemisPlugin = true
-	enablePooledWeaving = true
-	optimizeEntitySystems = true
-}
-
-classes.finalizedBy weave

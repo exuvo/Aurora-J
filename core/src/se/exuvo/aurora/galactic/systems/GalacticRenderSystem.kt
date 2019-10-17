@@ -143,7 +143,7 @@ class GalacticRenderSystem : BaseEntitySystem(FAMILY) {
 			screenPosition.set(x, y - radius * 1.1f, 0f)
 			viewport.camera.project(screenPosition)
 
-			font.draw(spriteBatch, name, screenPosition.x - name.length * font.spaceWidth * .5f, screenPosition.y - font.lineHeight / zoom)
+			font.draw(spriteBatch, name, screenPosition.x - name.length * font.spaceXadvance * .5f, screenPosition.y - font.lineHeight / zoom)
 		}
 
 		spriteBatch.end()
