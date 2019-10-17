@@ -72,6 +72,7 @@ public class DesktopLauncher {
 		
 		Lwjgl3ApplicationConfiguration windowConfig = new Lwjgl3ApplicationConfiguration();
 		windowConfig.setTitle("Aurora J");
+		//TODO auto try latest or 4.4, 4.2, 3.2, 2.1
 //		windowConfig.useOpenGL3(true, 4, 4);
 		windowConfig.useOpenGL3(false, 2, 1);
 		windowConfig.enableGLDebugOutput(true, IoBuilder.forLogger(glLog).setLevel(Level.WARN).buildPrintStream());

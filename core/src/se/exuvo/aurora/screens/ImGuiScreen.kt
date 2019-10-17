@@ -55,6 +55,8 @@ import kotlin.concurrent.write
 import se.exuvo.aurora.AuroraGame
 import imgui.impl.glfw.ImplGlfw
 import imgui.impl.gl.ImplGL3
+import imgui.impl.gl.GLInterface
+import imgui.impl.gl.ImplBestGL
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
@@ -66,7 +68,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	override val overlay = true
 	private val ctx: Context
 	private val lwjglGlfw: ImplGlfw
-	private val gl3: ImplGL3
+	private val gl3: GLInterface
 	private val gdxGLFWKeyMap = mutableMapOf<Int, Int>()
 
 	class ImGuiGlobalStorage(val ctx: Context): Disposable {
@@ -140,7 +142,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 		}
 		
 		lwjglGlfw = ImplGlfw(GlfwWindow(GlfwWindowHandle((Gdx.graphics as Lwjgl3Graphics).window.windowHandle)), false)
-		gl3 = ImplGL3()
+		gl3 = ImplBestGL()
 	}
 
 	override fun show() {
@@ -166,6 +168,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 		try {
 			ctx.setCurrent()
 			
+			gl3.newFrame()
 			lwjglGlfw.newFrame()
 			ImGui.newFrame()
 
@@ -173,6 +176,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 				ImGui.showDemoWindow(::demoVisible)
 			}
 
+			//TODO add radial menu for command menu https://github.com/ocornut/imgui/issues/434#issuecomment-351743369
+			
 			if (mainDebugVisible) {
 
 				if (ImGui.begin("Debug window", ::mainDebugVisible, WindowFlag.MenuBar.i)) {
