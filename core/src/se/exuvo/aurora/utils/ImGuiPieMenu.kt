@@ -114,7 +114,6 @@ fun BeginPiePopup(pName: String, iMouseButton: Int): Boolean {
 			s_oPieMenuContext.m_iLastFrame = iCurrentFrame;
 
 			s_oPieMenuContext.m_iMaxIndex = -1;
-			s_oPieMenuContext.m_oPieMenuStack.clear()
 			BeginPieMenuEx();
 
 			return true;
@@ -163,7 +162,7 @@ fun EndPiePopup(): Unit {
 		val fRotate: Float = fLastRotate - item_arc_span * ( oPieMenu.m_iCurrentIndex - 1.f ) / 2.f;
 		var item_hovered: Int = -1;
 		
-		for(item_n in 0 until oPieMenu.m_iCurrentIndex) {
+		for (item_n in 0 until oPieMenu.m_iCurrentIndex) {
 			val item_label: String = oPieMenu.m_oItemNames[ item_n ];
 //			val inner_spacing: Float = oStyle.itemInnerSpacing.x / fMinRadius / 2;
 			val fMinInnerSpacing: Float = oStyle.itemInnerSpacing.x / ( fMinRadius * 2.f );
@@ -174,6 +173,7 @@ fun EndPiePopup(): Unit {
 			val item_outer_ang_max: Float = item_arc_span * ( item_n + 0.5f - fMaxInnerSpacing ) + fRotate;
 
 			var hovered: Boolean = false;
+			
 			if (fDragDistSqr >= fMinRadius * fMinRadius && fDragDistSqr < fMaxRadius * fMaxRadius) {
 				
 				while((drag_angle - item_inner_ang_min) < 0f) {
@@ -186,7 +186,7 @@ fun EndPiePopup(): Unit {
 
 				if (drag_angle >= item_inner_ang_min && drag_angle < item_inner_ang_max) {
 					hovered = true;
-					bItemHovered = !oPieMenu.m_oItemIsSubMenu[ item_n ];
+					bItemHovered = !oPieMenu.m_oItemIsSubMenu[item_n];
 				}
 			}
 

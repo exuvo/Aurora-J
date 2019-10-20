@@ -121,8 +121,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 		if (commandMenuPotentialStart && (System.currentTimeMillis() - commandMenuPotentialStartTime > 200 || commandMenuPotentialStartPos.dst(Gdx.input.getX().toLong(), Gdx.input.getY().toLong()) > 50)) {
 			commandMenuPotentialStart = false
 			
-			println("open command menu")
-			imGuiScreen.openCommandMenu(commandMenuPotentialStartPos.x.toInt(), commandMenuPotentialStartPos.y.toInt())
+			imGuiScreen.openCommandMenu()
 		}
 	}
 

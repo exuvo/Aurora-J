@@ -532,11 +532,9 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	
 	private var commandMenuVisible = false
 	private var commandMenuOpen = false;
-	private var commandMenuPos = Vec2()
 	
-	fun openCommandMenu(mouseX: Int, mouseY: Int) {
+	fun openCommandMenu() {
 		commandMenuVisible = true
-		commandMenuPos.put(mouseX, mouseY)
 	}
 	
 	fun closeCommandMenu() {
@@ -553,33 +551,27 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 				commandMenuOpen = true
 			}
 			
-//			ImGui.setNextWindowPos(commandMenuPos)
-			
-		
-//		if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(1)) {
-//			ImGui::OpenPopup("PieMenu");
-//		}
-//
 			if (BeginPiePopup("PieMenu", 1)) {
 				if (PieMenuItem("Test1")) {
-					commandMenuVisible = false
+//					commandMenuVisible = false
+					println("1")
 				}
 				
-				if (PieMenuItem("Test2")) {}
+				if (PieMenuItem("Test2")) {println("2")}
 	
-				if (PieMenuItem("Test3", false)) {}
+				if (PieMenuItem("Test3", false)) {println("3")}
 	
 				if (BeginPieMenu("Sub")) {
 					
 					if (BeginPieMenu("Sub sub\nmenu")) {
-						if (PieMenuItem("SubSub")) {}
-						if (PieMenuItem("SubSub2")) {}
+						if (PieMenuItem("SubSub")) {println("subsub1")}
+						if (PieMenuItem("SubSub2")) {println("subsub2")}
 						
 						EndPieMenu();
 					}
 					
-					if (PieMenuItem("TestSub")) {}
-					if (PieMenuItem("TestSub2")) {}
+					if (PieMenuItem("TestSub")) {println("sub1")}
+					if (PieMenuItem("TestSub2")) {println("sub2")}
 					
 					EndPieMenu();
 				}
