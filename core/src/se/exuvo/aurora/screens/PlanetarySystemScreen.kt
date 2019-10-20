@@ -40,6 +40,8 @@ import kotlin.properties.Delegates
 import com.artemis.Aspect
 import se.exuvo.aurora.galactic.Player
 import se.exuvo.aurora.AuroraGame
+import glm_.vec2.Vec2
+import glm_.vec2.Vec2i
 
 class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), InputProcessor {
 	companion object {
@@ -57,6 +59,8 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	private val systemGroupSystem by lazy (LazyThreadSafetyMode.NONE) { system.world.getSystem(GroupSystem::class.java) }
 	private val renderSystem by lazy (LazyThreadSafetyMode.NONE) { system.world.getSystem(RenderSystem::class.java) }
 	private val movementSystem by lazy (LazyThreadSafetyMode.NONE) { system.world.getSystem(MovementSystem::class.java) }
+	
+	private val imGuiScreen by lazy (LazyThreadSafetyMode.NONE) { AuroraGame.currentWindow.screenService[ImGuiScreen::class] }
 
 	private var viewport by Delegates.notNull<Viewport>()
 	private var camera by Delegates.notNull<OrthographicCamera>()
@@ -71,7 +75,6 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	var zoomLevel = 0
 	var zoomSensitivity = Settings.getFloat("UI/zoomSensitivity", 1.25f).toDouble()
 	val maxZoom = 1E8f
-	var selectedAction: KeyActions_PlanetarySystemScreen? = null
 
 	init {
 		viewport = ScreenViewport()
@@ -113,6 +116,13 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 		if (hDirection != 0f || vDirection != 0f) {
 			cameraOffset.add((camera.zoom * hDirection).toLong(), (camera.zoom * vDirection).toLong())
+		}
+		
+		if (commandMenuPotentialStart && (System.currentTimeMillis() - commandMenuPotentialStartTime > 200 || commandMenuPotentialStartPos.dst(Gdx.input.getX().toLong(), Gdx.input.getY().toLong()) > 50)) {
+			commandMenuPotentialStart = false
+			
+			println("open command menu")
+			imGuiScreen.openCommandMenu(commandMenuPotentialStartPos.x.toInt(), commandMenuPotentialStartPos.y.toInt())
 		}
 	}
 
@@ -241,9 +251,15 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	}
 
 	var moveWindow = false
-
 	var dragSelectPotentialStart = false
 	var dragSelect = false
+	
+	var commandMenuPotentialStart = false
+	var commandMenuPotentialStartTime: Long = 0
+	var commandMenuPotentialStartPos = Vector2L()
+	
+	var selectedAction: KeyActions_PlanetarySystemScreen? = null
+	
 	val selectionFamily = system.world.getAspectSubscriptionManager().get(Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java).one(CircleComponent::class.java))
 	val weaponFamily = WeaponSystem.FAMILY.build(system.world)
 	val movementFamily = MovementSystem.CAN_ACCELERATE_FAMILY.build(system.world)
@@ -253,10 +269,14 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 	override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
 
+		imGuiScreen.closeCommandMenu()
+		
 		if (!moveWindow && !dragSelect) {
 
 			when (button) {
 				Input.Buttons.LEFT -> {
+					
+					commandMenuPotentialStart = false
 
 					system.lock.read {
 
@@ -379,6 +399,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 				}
 				Input.Buttons.MIDDLE -> {
 					selectedAction = null
+					commandMenuPotentialStart = false
 					moveWindow = true
 					dragX = screenX
 					dragY = screenY
@@ -388,105 +409,9 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 					selectedAction = null
 					dragSelectPotentialStart = false
 
-					if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
-
-						val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED).filter {
-
-							val planetarySystem = planetarySystemMapper.get(it)
-							system == planetarySystem?.system && movementFamily.isInterested(it)
-						}
-
-						if (selectedEntities.isNotEmpty()) {
-
-							system.lock.read {
-
-								val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
-								val entitiesUnderMouse = ArrayList<Entity>()
-								val entityIDs = selectionFamily.entities
-								val testCircle = CircleL()
-								val zoom = camera.zoom
-
-								// Exact check first
-								entityIDs.forEach { entityID ->
-									val position = movementMapper.get(entityID).get(galaxy.time).value.position
-									val radius: Float
-
-									if (renderSystem.inStrategicView(entityID, zoom)) {
-
-										radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
-
-									} else {
-
-										radius = circleMapper.get(entityID).radius
-									}
-
-									testCircle.set(position, radius * 1000)
-
-									if (testCircle.contains(mouseInGameCoordinates)) {
-										entitiesUnderMouse.add(system.world.getEntity(entityID))
-									}
-								}
-
-								// Lenient check if empty
-								if (entitiesUnderMouse.isEmpty()) {
-									entityIDs.forEach { entityID ->
-										val position = movementMapper.get(entityID).get(galaxy.time).value.position
-										val radius: Float
-
-										if (renderSystem.inStrategicView(entityID, zoom)) {
-
-											radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
-
-										} else {
-
-											radius = circleMapper.get(entityID).radius * 1.1f + 2 * camera.zoom
-										}
-
-										testCircle.set(position, radius * 1000)
-
-										if (testCircle.contains(mouseInGameCoordinates)) {
-											entitiesUnderMouse.add(system.world.getEntity(entityID))
-										}
-									}
-								}
-
-								if (entitiesUnderMouse.isNotEmpty()) {
-
-//									println("Issuing move to entity order")
-
-									val targetEntity = entitiesUnderMouse.get(0)
-									var approachType = ApproachType.BRACHISTOCHRONE
-
-									if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-										approachType = ApproachType.BALLISTIC
-									}
-
-									for (entity in selectedEntities) {
-
-										movementSystem.moveToEntity(entity.id, targetEntity.id, approachType)
-									}
-
-								} else {
-
-//									println("Issuing move to position order")
-
-									val targetPosition = mouseInGameCoordinates
-									var approachType = ApproachType.BRACHISTOCHRONE
-
-									if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-										approachType = ApproachType.BALLISTIC
-									}
-
-									for (entity in selectedEntities) {
-
-										movementSystem.moveToPosition(entity.id, targetPosition, approachType)
-									}
-								}
-
-								return true;
-							}
-						}
-					}
+					commandMenuPotentialStart = true
+					commandMenuPotentialStartTime = System.currentTimeMillis()
+					commandMenuPotentialStartPos.set(screenX.toLong(), screenY.toLong())
 				}
 			}
 
@@ -513,47 +438,153 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 			return true
 		}
 
-		if (dragSelect && button == Input.Buttons.LEFT) {
-
-			if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-				galaxyGroupSystem.clear(GroupSystem.SELECTED)
-//				println("cleared selection")
+		if (button == Input.Buttons.LEFT) {
+			
+			if (dragSelect) {
+				if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+					galaxyGroupSystem.clear(GroupSystem.SELECTED)
+	//				println("cleared selection")
+				}
+	
+				val dragSelection = getDragSelection()
+	//			println("dragSelection $dragSelection")
+	
+				val p1GameCoordinates = toWorldCordinates(Vector3(dragSelection.x.toFloat(), (viewport.screenHeight - dragSelection.y).toFloat(), 0f))
+				val p2GameCoordinates = toWorldCordinates(Vector3((dragSelection.x + dragSelection.width).toFloat(), (viewport.screenHeight - (dragSelection.y + dragSelection.height)).toFloat(), 0f))
+	//			println("p1GameCoordinates $p1GameCoordinates, p2GameCoordinates $p2GameCoordinates")
+	
+				val entitiesInSelection = ArrayList<Entity>()
+				val entityIDs = selectionFamily.entities
+				val testRectangle = RectangleL(p1GameCoordinates.x, p1GameCoordinates.y, p2GameCoordinates.x - p1GameCoordinates.x, p2GameCoordinates.y - p1GameCoordinates.y)
+	//			println("testRectangle $testRectangle")
+	
+				// Exact check first
+				entityIDs.forEach { entityID ->
+					val position = movementMapper.get(entityID).get(galaxy.time).value.position
+	
+					if (testRectangle.contains(position)) {
+						entitiesInSelection.add(system.world.getEntity(entityID))
+					}
+				}
+	
+				if (entitiesInSelection.isNotEmpty()) {
+					galaxyGroupSystem.add(entitiesInSelection, GroupSystem.SELECTED)
+	//				println("drag selected ${entitiesInSelection.size} entities")
+				}
+	
+				dragSelect = false;
+				return true
 			}
-
-			val dragSelection = getDragSelection()
-//			println("dragSelection $dragSelection")
-
-			val p1GameCoordinates = toWorldCordinates(Vector3(dragSelection.x.toFloat(), (viewport.screenHeight - dragSelection.y).toFloat(), 0f))
-			val p2GameCoordinates = toWorldCordinates(Vector3((dragSelection.x + dragSelection.width).toFloat(), (viewport.screenHeight - (dragSelection.y + dragSelection.height)).toFloat(), 0f))
-//			println("p1GameCoordinates $p1GameCoordinates, p2GameCoordinates $p2GameCoordinates")
-
-			val entitiesInSelection = ArrayList<Entity>()
-			val entityIDs = selectionFamily.entities
-			val testRectangle = RectangleL(p1GameCoordinates.x, p1GameCoordinates.y, p2GameCoordinates.x - p1GameCoordinates.x, p2GameCoordinates.y - p1GameCoordinates.y)
-//			println("testRectangle $testRectangle")
-
-			// Exact check first
-			entityIDs.forEach { entityID ->
-				val position = movementMapper.get(entityID).get(galaxy.time).value.position
-
-				if (testRectangle.contains(position)) {
-					entitiesInSelection.add(system.world.getEntity(entityID))
+	
+			if (dragSelectPotentialStart) {
+				if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+					galaxyGroupSystem.clear(GroupSystem.SELECTED)
+	//				println("cleared selection")
 				}
 			}
-
-			if (entitiesInSelection.isNotEmpty()) {
-				galaxyGroupSystem.add(entitiesInSelection, GroupSystem.SELECTED)
-//				println("drag selected ${entitiesInSelection.size} entities")
-			}
-
-			dragSelect = false;
-			return true
 		}
+		
+		if (button == Input.Buttons.RIGHT && commandMenuPotentialStart) {
+			
+			commandMenuPotentialStart = false
+			
+			if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
 
-		if (dragSelectPotentialStart && button == Input.Buttons.LEFT) {
-			if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-				galaxyGroupSystem.clear(GroupSystem.SELECTED)
-//				println("cleared selection")
+				val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED).filter {
+
+					val planetarySystem = planetarySystemMapper.get(it)
+					system == planetarySystem?.system && movementFamily.isInterested(it)
+				}
+
+				if (selectedEntities.isNotEmpty()) {
+
+					system.lock.read {
+
+						val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
+						val entitiesUnderMouse = ArrayList<Entity>()
+						val entityIDs = selectionFamily.entities
+						val testCircle = CircleL()
+						val zoom = camera.zoom
+
+						// Exact check first
+						entityIDs.forEach { entityID ->
+							val position = movementMapper.get(entityID).get(galaxy.time).value.position
+							val radius: Float
+
+							if (renderSystem.inStrategicView(entityID, zoom)) {
+
+								radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
+
+							} else {
+
+								radius = circleMapper.get(entityID).radius
+							}
+
+							testCircle.set(position, radius * 1000)
+
+							if (testCircle.contains(mouseInGameCoordinates)) {
+								entitiesUnderMouse.add(system.world.getEntity(entityID))
+							}
+						}
+
+						// Lenient check if empty
+						if (entitiesUnderMouse.isEmpty()) {
+							entityIDs.forEach { entityID ->
+								val position = movementMapper.get(entityID).get(galaxy.time).value.position
+								val radius: Float
+
+								if (renderSystem.inStrategicView(entityID, zoom)) {
+
+									radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
+
+								} else {
+
+									radius = circleMapper.get(entityID).radius * 1.1f + 2 * camera.zoom
+								}
+
+								testCircle.set(position, radius * 1000)
+
+								if (testCircle.contains(mouseInGameCoordinates)) {
+									entitiesUnderMouse.add(system.world.getEntity(entityID))
+								}
+							}
+						}
+
+						if (entitiesUnderMouse.isNotEmpty()) {
+
+//							println("Issuing move to entity order")
+
+							val targetEntity = entitiesUnderMouse.get(0)
+							var approachType = ApproachType.BRACHISTOCHRONE
+
+							if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+								approachType = ApproachType.BALLISTIC
+							}
+
+							for (entity in selectedEntities) {
+								movementSystem.moveToEntity(entity.id, targetEntity.id, approachType)
+							}
+
+						} else {
+
+//							println("Issuing move to position order")
+
+							val targetPosition = mouseInGameCoordinates
+							var approachType = ApproachType.BRACHISTOCHRONE
+
+							if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+								approachType = ApproachType.BALLISTIC
+							}
+
+							for (entity in selectedEntities) {
+
+								movementSystem.moveToPosition(entity.id, targetPosition, approachType)
+							}
+						}
+
+						return true;
+					}
+				}
 			}
 		}
 
@@ -623,7 +654,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	}
 
 	fun getMouseInScreenCordinates(): Vector3 {
-		return getMouseInScreenCordinates(Gdx.input.getX(0), Gdx.input.getY(0))
+		return getMouseInScreenCordinates(Gdx.input.getX(), Gdx.input.getY())
 	}
 
 	fun getMouseInScreenCordinates(screenX: Int, screenY: Int): Vector3 {

@@ -9,7 +9,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.profiling.GLErrorListener
 import com.badlogic.gdx.graphics.profiling.GLProfiler
 import net.mostlyoriginal.api.event.common.EventSystem
-import net.mostlyoriginal.plugin.ProfilerPlugin
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.Empire
 import se.exuvo.aurora.galactic.Galaxy

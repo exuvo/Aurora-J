@@ -57,6 +57,11 @@ import imgui.impl.glfw.ImplGlfw
 import imgui.impl.gl.ImplGL3
 import imgui.impl.gl.GLInterface
 import imgui.impl.gl.ImplBestGL
+import imgui.imgui.widgets.BeginPiePopup
+import imgui.imgui.widgets.PieMenuItem
+import imgui.imgui.widgets.BeginPieMenu
+import imgui.imgui.widgets.EndPieMenu
+import imgui.imgui.widgets.EndPiePopup
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
@@ -163,7 +168,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 		// https://github.com/kotlin-graphics/imgui/wiki/Using-libGDX
 		// https://github.com/ocornut/imgui
-		// https://github.com/kotlin-graphics/imgui/blob/4b052ea00bae762a4ac5f62b5bf7939f33b7895a/src/test/kotlin/imgui/gl/test%20lwjgl.kt
+		//TODO add radial menu for right click command menu like War of Worlds https://github.com/ocornut/imgui/issues/434#issuecomment-351743369
 
 		try {
 			ctx.setCurrent()
@@ -176,8 +181,6 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 				ImGui.showDemoWindow(::demoVisible)
 			}
 
-			//TODO add radial menu for command menu https://github.com/ocornut/imgui/issues/434#issuecomment-351743369
-			
 			if (mainDebugVisible) {
 
 				if (ImGui.begin("Debug window", ::mainDebugVisible, WindowFlag.MenuBar.i)) {
@@ -223,6 +226,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 			}
 
 			shipDebug()
+			commandMenu()
 
 			ImGui.render()
 			gl3.renderDrawData(ctx.drawData)
@@ -523,6 +527,65 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 			}
 			ImGui.end()
+		}
+	}
+	
+	private var commandMenuVisible = false
+	private var commandMenuOpen = false;
+	private var commandMenuPos = Vec2()
+	
+	fun openCommandMenu(mouseX: Int, mouseY: Int) {
+		commandMenuVisible = true
+		commandMenuPos.put(mouseX, mouseY)
+	}
+	
+	fun closeCommandMenu() {
+		commandMenuVisible = false
+		commandMenuOpen = false
+	}
+	
+	private fun commandMenu() {
+		
+		if (commandMenuVisible) {
+			
+			if (!commandMenuOpen) {
+				ImGui.openPopup("PieMenu");
+				commandMenuOpen = true
+			}
+			
+//			ImGui.setNextWindowPos(commandMenuPos)
+			
+		
+//		if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(1)) {
+//			ImGui::OpenPopup("PieMenu");
+//		}
+//
+			if (BeginPiePopup("PieMenu", 1)) {
+				if (PieMenuItem("Test1")) {
+					commandMenuVisible = false
+				}
+				
+				if (PieMenuItem("Test2")) {}
+	
+				if (PieMenuItem("Test3", false)) {}
+	
+				if (BeginPieMenu("Sub")) {
+					
+					if (BeginPieMenu("Sub sub\nmenu")) {
+						if (PieMenuItem("SubSub")) {}
+						if (PieMenuItem("SubSub2")) {}
+						
+						EndPieMenu();
+					}
+					
+					if (PieMenuItem("TestSub")) {}
+					if (PieMenuItem("TestSub2")) {}
+					
+					EndPieMenu();
+				}
+	
+				EndPiePopup();
+			}
 		}
 	}
 

@@ -66,7 +66,7 @@ project(":desktop") {
 		compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 		
 		compile "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
-		compile "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
+		//compile "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
 		compile "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
 		
 		compile "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-windows"
@@ -80,7 +80,7 @@ project(":core") {
 	dependencies {
 		//tmp fix for desktop dependencies not working correctly for launch classpath
 		runtime "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
-		runtime "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
+		//runtime "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
 		runtime "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
 		runtime "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-windows"
 		runtime "org.apache.logging.log4j:log4j-iostreams:$log4jVersion"
@@ -90,20 +90,20 @@ project(":core") {
 				
 		compile "com.badlogicgames.gdx:gdx:$gdxVersion"
 		compile "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
-		compile "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
-		compile "com.badlogicgames.gdx:gdx-ai:1.8.1"
+		//compile "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
+		//compile "com.badlogicgames.gdx:gdx-ai:1.8.1"
 		compile "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
-		compile "com.badlogicgames.box2dlights:box2dlights:1.4"
+		//compile "com.badlogicgames.box2dlights:box2dlights:1.4"
 		
-		compile "io.github.libktx:ktx-actors:$ktxVersion"
-		compile "io.github.libktx:ktx-app:$ktxVersion"
-		compile "io.github.libktx:ktx-assets:$ktxVersion"
-		compile "io.github.libktx:ktx-collections:$ktxVersion"
-		compile "io.github.libktx:ktx-freetype:$ktxVersion"
+		//compile "io.github.libktx:ktx-actors:$ktxVersion"
+		//compile "io.github.libktx:ktx-app:$ktxVersion"
+		//compile "io.github.libktx:ktx-assets:$ktxVersion"
+		//compile "io.github.libktx:ktx-collections:$ktxVersion"
+		//compile "io.github.libktx:ktx-freetype:$ktxVersion"
 		//compile "io.github.libktx:ktx-freetype-async:$ktxVersion"
-		compile "io.github.libktx:ktx-math:$ktxVersion"
-		compile "io.github.libktx:ktx-scene2d:$ktxVersion"
-		compile "io.github.libktx:ktx-style:$ktxVersion"
+		//compile "io.github.libktx:ktx-math:$ktxVersion"
+		//compile "io.github.libktx:ktx-scene2d:$ktxVersion"
+		//compile "io.github.libktx:ktx-style:$ktxVersion"
 		
 		compile "org.apache.logging.log4j:log4j-core:$log4jVersion"
 		compile "com.martiansoftware:jsap:$jsapVersion"
@@ -114,12 +114,12 @@ project(":core") {
 		compile "org.jasypt:jasypt:1.9.2"
 		
 		compile "net.onedaybeard.artemis:artemis-odb:$artemisVersion"
-		compile "net.onedaybeard.artemis:artemis-odb-serializer-json-libgdx:$artemisVersion"
-		compile "net.onedaybeard.artemis:artemis-odb-serializer-kryo:$artemisVersion"
+		//compile "net.onedaybeard.artemis:artemis-odb-serializer-json-libgdx:$artemisVersion"
+		//compile "net.onedaybeard.artemis:artemis-odb-serializer-kryo:$artemisVersion"
 		compile "net.mostlyoriginal.artemis-odb:contrib-core:$artemisContribVersion"
 		compile "net.mostlyoriginal.artemis-odb:contrib-eventbus:$artemisContribVersion"
-		compile "net.mostlyoriginal.artemis-odb:contrib-plugin-operations:$artemisContribVersion"
-		compile "net.mostlyoriginal.artemis-odb:contrib-plugin-profiler:$artemisContribVersion"
+		//compile "net.mostlyoriginal.artemis-odb:contrib-plugin-operations:$artemisContribVersion"
+		//compile "net.mostlyoriginal.artemis-odb:contrib-plugin-profiler:$artemisContribVersion"
 		
 		compile "org.lwjgl:lwjgl:$lwjglVersion"
 		compile "org.lwjgl:lwjgl-glfw:$lwjglVersion"

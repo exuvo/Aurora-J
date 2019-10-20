@@ -16,6 +16,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import se.exuvo.aurora.utils.exponentialAverage
 import se.exuvo.aurora.AuroraGame
+import kotlin.reflect.KClass
 
 class GameScreenService : Disposable, InputProcessor {
 	private val inputMultiplexer = InputMultiplexer()
@@ -25,6 +26,18 @@ class GameScreenService : Disposable, InputProcessor {
 
 	fun <T : GameScreen> add(screen: T) {
 		addQueue.add(screen)
+	}
+	
+	@Suppress("UNCHECKED_CAST")
+	operator fun <T : GameScreen> get(screenClass: KClass<T>): T {
+		
+		screens.forEach { screen ->
+			if (screenClass.isInstance(screen)) {
+				return screen as T
+			}
+		}
+		
+		throw NullPointerException()
 	}
 
 	var lastDrawStart = System.nanoTime()
