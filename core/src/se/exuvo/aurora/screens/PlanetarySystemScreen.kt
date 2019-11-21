@@ -268,7 +268,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 	override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
 
-		imGuiScreen.closeCommandMenu()
+//		imGuiScreen.closeCommandMenu()
 		
 		if (!moveWindow && !dragSelect) {
 

@@ -290,7 +290,11 @@ fun EndPiePopup(): Unit {
 	}
 
 	if (s_oPieMenuContext.m_bClose || (!bItemHovered && isMouseReleased(s_oPieMenuContext.m_iMouseButton))) {
-		closeCurrentPopup();
+		try {
+			closeCurrentPopup();
+		} catch (err: NullPointerException) {
+			err.printStackTrace()
+		}
 	}
 
 	endPopup();

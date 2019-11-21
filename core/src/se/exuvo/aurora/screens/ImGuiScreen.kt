@@ -530,54 +530,60 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 		}
 	}
 	
-	private var commandMenuVisible = false
 	private var commandMenuOpen = false;
+	private var commandMenuClose = false;
 	
 	fun openCommandMenu() {
-		commandMenuVisible = true
+		commandMenuOpen = true
 	}
 	
 	fun closeCommandMenu() {
-		commandMenuVisible = false
-		commandMenuOpen = false
+		commandMenuClose = true
 	}
 	
 	private fun commandMenu() {
 		
-		if (commandMenuVisible) {
+		if (commandMenuOpen) {
+			ImGui.openPopup("PieMenu");
+			commandMenuOpen = false
+		}
+		
+		if (BeginPiePopup("PieMenu", 1)) {
 			
-			if (!commandMenuOpen) {
-				ImGui.openPopup("PieMenu");
-				commandMenuOpen = true
+			if (commandMenuClose) {
+				try {
+					ImGui.closeCurrentPopup();
+				} catch (err: NullPointerException) {
+					err.printStackTrace()
+				}
+				commandMenuClose = false
 			}
 			
-			if (BeginPiePopup("PieMenu", 1)) {
-				if (PieMenuItem("Test1")) {
+			if (PieMenuItem("Test1")) {
 //					commandMenuVisible = false
-					println("1")
-				}
+				println("1")
+			}
+			
+			if (PieMenuItem("Test2")) {println("2")}
+
+			if (PieMenuItem("Test3", false)) {println("3")}
+
+			if (BeginPieMenu("Sub")) {
 				
-				if (PieMenuItem("Test2")) {println("2")}
-	
-				if (PieMenuItem("Test3", false)) {println("3")}
-	
-				if (BeginPieMenu("Sub")) {
-					
-					if (BeginPieMenu("Sub sub\nmenu")) {
-						if (PieMenuItem("SubSub")) {println("subsub1")}
-						if (PieMenuItem("SubSub2")) {println("subsub2")}
-						
-						EndPieMenu();
-					}
-					
-					if (PieMenuItem("TestSub")) {println("sub1")}
-					if (PieMenuItem("TestSub2")) {println("sub2")}
+				if (BeginPieMenu("Sub sub\nmenu")) {
+					if (PieMenuItem("SubSub")) {println("subsub1")}
+					if (PieMenuItem("SubSub2")) {println("subsub2")}
 					
 					EndPieMenu();
 				}
-	
-				EndPiePopup();
+				
+				if (PieMenuItem("TestSub")) {println("sub1")}
+				if (PieMenuItem("TestSub2")) {println("sub2")}
+				
+				EndPieMenu();
 			}
+
+			EndPiePopup();
 		}
 	}
 
