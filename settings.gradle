@@ -1,6 +1,6 @@
 // if (file('../imgui').exists()) includeBuild "../imgui"
 
-include 'desktop', 'core'
+include 'core'
 
 
 // awful hack in settings.grade to reflectively enable logging

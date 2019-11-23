@@ -37,7 +37,7 @@ interface AuroraGame : ApplicationListener {
 	}
 }
 
-class AuroraGameMainWindow(val assetsRoot: String) : AuroraGame {
+class AuroraGameMainWindow() : AuroraGame {
 	val log = LogManager.getLogger(this.javaClass)
 	override lateinit var screenService: GameScreenService
 	override lateinit var shapeRenderer: ShapeRenderer
@@ -56,7 +56,7 @@ class AuroraGameMainWindow(val assetsRoot: String) : AuroraGame {
 		KeyMappings.load()
 
 		GameServices + GLProfiler(Gdx.graphics)
-		GameServices + AssetManager(AuroraAssetsResolver(assetsRoot))
+		GameServices + AssetManager(AuroraAssetsResolver())
 		GameServices + GroupSystem(ReentrantReadWriteLock())
 		GameServices + History()
 
@@ -144,9 +144,15 @@ class AuroraGameSecondaryWindow(val system: PlanetarySystem) : AuroraGame {
 	}
 }
 
-class AuroraAssetsResolver(val assetsRoot: String) : FileHandleResolver {
+class AuroraAssetsResolver() : FileHandleResolver {
 
 	override fun resolve(fileName: String): FileHandle {
-		return Gdx.files.internal(assetsRoot + fileName)
+		var file: FileHandle? = Gdx.files.internal("assets/" + fileName)
+		
+		if (file == null) {
+			file = Gdx.files.classpath("/assets/" + fileName)
+		}
+		
+		return file!!;
 	}
 }

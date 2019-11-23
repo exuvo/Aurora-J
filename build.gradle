@@ -59,32 +59,16 @@ subprojects {
 	}
 }
 
-project(":desktop") {
+project(":core") {
 	dependencies {
-		compile project(":core")
-		compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-		
+		//DesktopLauncher
 		compile "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
 		//compile "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
 		compile "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
-		
 		compile "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-windows"
-		
 		compile "org.apache.logging.log4j:log4j-iostreams:$log4jVersion"
-		compile "com.martiansoftware:jsap:$jsapVersion"
-	}
-}
-
-project(":core") {
-	dependencies {
-		//tmp fix for desktop dependencies not working correctly for launch classpath
-		runtime "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
-		//runtime "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
-		runtime "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
-		runtime "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-windows"
-		runtime "org.apache.logging.log4j:log4j-iostreams:$log4jVersion"
 	
-		compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+		compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 		compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 				
 		compile "com.badlogicgames.gdx:gdx:$gdxVersion"

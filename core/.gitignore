@@ -1,1 +1,8 @@
 /examples/
+/history-dev.db
+/history.db
+/imgui.ini
+/log.error
+/log.log
+/log.opengl
+/settings.xml

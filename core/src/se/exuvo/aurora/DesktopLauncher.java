@@ -1,4 +1,4 @@
-package se.exuvo.aurora.desktop;
+package se.exuvo.aurora;
 
 import java.nio.file.Paths;
 import java.util.Iterator;
@@ -20,7 +20,6 @@ import com.martiansoftware.jsap.JSAPException;
 import com.martiansoftware.jsap.JSAPResult;
 import com.martiansoftware.jsap.Switch;
 
-import se.exuvo.aurora.AuroraGameMainWindow;
 import se.exuvo.aurora.utils.keys.KeyMappings;
 import se.exuvo.settings.Settings;
 import se.unlogic.standardutils.io.FileUtils;
@@ -30,7 +29,11 @@ public class DesktopLauncher {
 	private static Logger log;
 
 	public static void main(String[] args) {
-		System.setProperty("log4j.configurationFile", "log4j2.xml");
+		
+		String logConfigURI = FileUtils.fileExists("log4j2.xml") ? "log4j2.xml" : DesktopLauncher.class.getResource("/log4j2.xml").toString();
+		
+		System.setProperty("log4j.configurationFile", logConfigURI);
+		
 		log = LogManager.getLogger(DesktopLauncher.class);
 		log.fatal("### Starting ###");
 		Logger glLog = LogManager.getLogger("org.opengl");
@@ -73,8 +76,8 @@ public class DesktopLauncher {
 		Lwjgl3ApplicationConfiguration windowConfig = new Lwjgl3ApplicationConfiguration();
 		windowConfig.setTitle("Aurora J");
 		//TODO auto try latest or 4.4, 4.2, 3.2, 2.1
-//		windowConfig.useOpenGL3(true, 4, 4);
-		windowConfig.useOpenGL3(false, 2, 1);
+		windowConfig.useOpenGL3(true, 4, 4);
+//		windowConfig.useOpenGL3(false, 2, 1);
 		windowConfig.enableGLDebugOutput(true, IoBuilder.forLogger(glLog).setLevel(Level.WARN).buildPrintStream());
 		
 		final int defaultWidth = 1024;
@@ -130,10 +133,8 @@ public class DesktopLauncher {
 		windowConfig.setResizable(Settings.getBol("Window/resizable", true));
 		windowConfig.setPreferencesConfig(Paths.get("").toAbsolutePath().toString(), FileType.Absolute);
 
-		String assetsURI = FileUtils.fileExists("assets") ? "assets/" : "../core/assets/";
-
 		try {
-			new CustomLwjgl3Application(new AuroraGameMainWindow(assetsURI), windowConfig, Settings.getInt("Window/FrameLimit", 60));
+			new CustomLwjgl3Application(new AuroraGameMainWindow(), windowConfig, Settings.getInt("Window/FrameLimit", 60));
 			
 		} catch (Throwable e) {
 			log.error("", e);
