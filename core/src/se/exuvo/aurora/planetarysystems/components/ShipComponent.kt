@@ -5,7 +5,7 @@ import se.exuvo.aurora.galactic.CargoType
 import se.exuvo.aurora.galactic.ContainerPart
 import se.exuvo.aurora.galactic.Part
 import se.exuvo.aurora.galactic.Resource
-import se.exuvo.aurora.galactic.ShipClass
+import se.exuvo.aurora.galactic.ShipHull
 import java.security.InvalidParameterException
 import java.util.ArrayList
 import java.lang.IllegalArgumentException
@@ -21,11 +21,11 @@ import se.exuvo.aurora.galactic.PassiveSensor
 import se.exuvo.aurora.galactic.TargetingComputer
 import se.exuvo.aurora.galactic.PartRef
 import kotlin.Suppress
-import se.exuvo.aurora.galactic.MunitionClass
+import se.exuvo.aurora.galactic.MunitionHull
 import com.artemis.Entity
 
 class ShipComponent() : Component() {
-	lateinit var shipClass: ShipClass
+	lateinit var hull: ShipHull
 	var constructionTime: Long = -1
 	var commissionDay: Int? = null
 	lateinit var armor: Array<Int>
@@ -33,24 +33,24 @@ class ShipComponent() : Component() {
 	lateinit var partEnabled: Array<Boolean>
 	lateinit var partState: Array<PartState>
 	lateinit var cargo: Map<Resource, ShipCargo>
-	lateinit var munitionCargo: MutableMap<MunitionClass, Int>
+	lateinit var munitionCargo: MutableMap<MunitionHull, Int>
 	var mass: Long = 0
 	var cargoChanged = true
 
-	fun set(shipClass: ShipClass,
+	fun set(hull: ShipHull,
 					constructionTime: Long
 	): ShipComponent {
-		this.shipClass = shipClass
+		this.hull = hull
 		this.constructionTime = constructionTime
 
-		armor = Array<Int>(shipClass.getSurfaceArea(), { shipClass.armorLayers })
-		partHealth = Array<Int>(shipClass.getParts().size, { shipClass[it].part.maxHealth })
-		partEnabled = Array<Boolean>(shipClass.getParts().size, { true })
-		partState = Array<PartState>(shipClass.getParts().size, { PartState() })
+		armor = Array<Int>(hull.getSurfaceArea(), { hull.armorLayers })
+		partHealth = Array<Int>(hull.getParts().size, { hull[it].part.maxHealth })
+		partEnabled = Array<Boolean>(hull.getParts().size, { true })
+		partState = Array<PartState>(hull.getParts().size, { PartState() })
 		cargo = emptyMap()
 		munitionCargo = LinkedHashMap()
 		
-		var containerPartRefs = shipClass[ContainerPart::class]
+		var containerPartRefs = hull[ContainerPart::class]
 
 		if (containerPartRefs.isNotEmpty()) {
 
@@ -77,7 +77,7 @@ class ShipComponent() : Component() {
 		}
 
 		partState.forEachIndexed { partIndex, state ->
-			val partRef = shipClass[partIndex]
+			val partRef = hull[partIndex]
 
 			if (partRef.part is PoweringPart) {
 				state.put(PoweringPartState())
@@ -97,7 +97,7 @@ class ShipComponent() : Component() {
 
 			if (partRef.part is AmmunitionPart) {
 				val ammoState = AmmunitionPartState()
-				ammoState.type = shipClass.preferredMunitions[partRef]
+				ammoState.type = hull.preferredMunitions[partRef]
 				state.put(ammoState)
 			}
 
@@ -114,7 +114,7 @@ class ShipComponent() : Component() {
 				var tcs = TargetingComputerState()
 
 				@Suppress("UNCHECKED_CAST")
-				var defaultAssignments: List<PartRef<Part>>? = shipClass.defaultWeaponAssignments[partRef as PartRef<TargetingComputer>]
+				var defaultAssignments: List<PartRef<Part>>? = hull.defaultWeaponAssignments[partRef as PartRef<TargetingComputer>]
 
 				if (defaultAssignments != null) {
 					tcs.linkedWeapons = defaultAssignments.toMutableList()
@@ -128,7 +128,7 @@ class ShipComponent() : Component() {
 	}
 
 	fun getMass(): Int {
-		var mass = shipClass.getMass()
+		var mass = hull.getMass()
 		
 		//TODO add cargo
 		
@@ -175,7 +175,7 @@ class ShipComponent() : Component() {
 		return 0
 	}
 	
-	fun getCargoAmount(munitionClass: MunitionClass): Int {
+	fun getCargoAmount(munitionClass: MunitionHull): Int {
 
 		val shipCargo = cargo[munitionClass.storageType]
 
@@ -292,7 +292,7 @@ class ShipComponent() : Component() {
 		return false
 	}
 
-	fun addCargo(munitionClass: MunitionClass, amount: Int): Boolean {
+	fun addCargo(munitionClass: MunitionHull, amount: Int): Boolean {
 
 		val shipCargo = cargo[munitionClass.storageType]
 
@@ -353,7 +353,7 @@ class ShipComponent() : Component() {
 		return 0
 	}
 
-	fun retrieveCargo(munitionClass: MunitionClass, amount: Int): Int {
+	fun retrieveCargo(munitionClass: MunitionHull, amount: Int): Int {
 
 		var available = munitionCargo[munitionClass]
 
@@ -425,7 +425,7 @@ data class PassiveSensorState(var lastScan: Long = 0
 
 data class ChargedPartState(var charge: Long = 0)
 
-data class AmmunitionPartState(var type: MunitionClass? = null,
+data class AmmunitionPartState(var type: MunitionHull? = null,
 															 var amount: Int = 0
 )
 

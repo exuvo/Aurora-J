@@ -62,6 +62,12 @@ import imgui.imgui.widgets.PieMenuItem
 import imgui.imgui.widgets.BeginPieMenu
 import imgui.imgui.widgets.EndPieMenu
 import imgui.imgui.widgets.EndPiePopup
+import imgui.ImGui.windowContentRegionWidth
+import imgui.TabBarFlag
+import se.exuvo.aurora.planetarysystems.components.EntityUUID
+import se.exuvo.aurora.empires.components.ColonyComponent
+import se.exuvo.aurora.planetarysystems.components.NameComponent
+import se.exuvo.aurora.planetarysystems.components.EntityReference
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
@@ -128,7 +134,6 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 		ctx.setCurrent()
 		
 		ImGui.styleColorsDark()
-//		ImGui.styleColorsClassic()
 		
 		ImGui.style.apply {
 			//@formatter:off restore classic colors for some parts
@@ -156,19 +161,20 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 	private var demoVisible = false
 	private var mainDebugVisible = false
-	private var shipDebugVisible = true
+	private var shipDebugVisible = false
+	private var shipDesignerVisible = false
+	private var colonyManagerVisible = true
 
 	var slider = 1f
 	var stringbuf = CharArray(10)
 	var img = Assets.textures.findRegion("strategic/sun")
 	var menuBarState = BooleanArray(1)
 	var graphValues = floatArrayOf(0f, 5f, 2f, 4f)
-
+	
 	override fun draw() {
 
 		// https://github.com/kotlin-graphics/imgui/wiki/Using-libGDX
 		// https://github.com/ocornut/imgui
-		//TODO add radial menu for right click command menu like War of Worlds https://github.com/ocornut/imgui/issues/434#issuecomment-351743369
 
 		try {
 			ctx.setCurrent()
@@ -180,6 +186,24 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 			if (demoVisible) {
 				ImGui.showDemoWindow(::demoVisible)
 			}
+			
+//			if (ImGui.begin("test2")) {
+//				ImGui.text("Hello, world")
+//				ImGui.end()
+//			}
+//			
+//			ImGui.openPopup("test");
+//			
+//			if (ImGui.beginPopup("test")) {
+//				if(ImGui.button("close")) {
+//				  try {
+//				    ImGui.closeCurrentPopup();
+//				  } catch (err: NullPointerException) {
+//				    err.printStackTrace()
+//				  }
+//				}
+//			  ImGui.endPopup();
+//			}
 
 			if (mainDebugVisible) {
 
@@ -189,6 +213,12 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 						if (ImGui.beginMenu("Windows")) {
 							if (ImGui.menuItem("Ship debug", "", shipDebugVisible)) {
 								shipDebugVisible = !shipDebugVisible
+							}
+							if (ImGui.menuItem("Ship designer", "", shipDesignerVisible)) {
+								shipDesignerVisible = !shipDesignerVisible
+							}
+							if (ImGui.menuItem("Colony manager", "", colonyManagerVisible)) {
+								colonyManagerVisible = !colonyManagerVisible
 							}
 							if (ImGui.menuItem("ImGui Demo", "hotkey", demoVisible)) {
 								demoVisible = !demoVisible
@@ -210,6 +240,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 					ImGui.text("Hello, world %d", 4)
 					ImGui.text("ctx.hoveredWindow ${ctx.hoveredWindow}")
 					ImGui.text("ctx.navWindow ${ctx.navWindow}")
+					ImGui.text("ctx.navWindow.dc ${ctx.navWindow?.dc}")
 					ImGui.text("ctx.io.wantCaptureMouse ${ctx.io.wantCaptureMouse}")
 					ImGui.text("ctx.io.wantCaptureKeyboard ${ctx.io.wantCaptureKeyboard}")
 					ImGui.plotLines("plot", graphValues)
@@ -227,12 +258,121 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 			shipDebug()
 			commandMenu()
+			shipDesigner()
+			colonyManager();
 
 			ImGui.render()
 			gl3.renderDrawData(ctx.drawData)
 			
 		} catch (e: Throwable) {
 			log.error("Error drawing debug window", e)
+		}
+	}
+	
+	private fun shipDesigner() {
+		
+		if (shipDesignerVisible) {
+
+			if (ImGui.begin("Ship designer", ::shipDesignerVisible, WindowFlag.None.i)) {
+				
+				
+				
+				
+				ImGui.end()
+			}
+		}
+	}
+	
+	var selectedColony: EntityReference? = null
+	
+	private fun colonyManager() {
+		
+		if (colonyManagerVisible) {
+
+			with (ImGui) {
+				with (imgui.dsl) {
+					window("Colony manager", ::colonyManagerVisible, WindowFlag.None.i) {
+						
+						//TODO tabs trees, child windows with scroll
+						child("Colonies", Vec2(windowContentRegionWidth * 0.3f, 0), true, WindowFlag.None.i) {
+							text("colonies ${galaxy.getEmpire(1).colonies.size}")
+							
+							galaxy.getEmpire(1).colonies.forEach { colonyRef ->
+								selectedColony = colonyRef
+								
+								val system = colonyRef.system
+								
+								system.lock.read {
+									val nameMapper = ComponentMapper.getFor(NameComponent::class.java, system.world)
+									val colonyMapper = ComponentMapper.getFor(ColonyComponent::class.java, system.world)
+									val name = nameMapper.get(colonyRef.entityID).name
+									val colony = colonyMapper.get(colonyRef.entityID)
+									
+//									if (selectedColony == colonyRef) {
+//										push style
+//									}
+									
+									text("Colony $name - ${colony.population}")
+								}
+							}
+						}
+	
+						sameLine()
+						
+						child("Tabs", Vec2(0, 0), false, WindowFlag.None.i) {
+							
+							val colonyRef = selectedColony
+							
+							if (colonyRef == null) {
+								text("No colony selected")
+								
+							} else if (beginTabBar("Tabs", TabBarFlag.None.i)) {
+								
+								val system = colonyRef.system
+								val entityID = colonyRef.entityID
+								
+								system.lock.read {
+//									val nameMapper = ComponentMapper.getFor(NameComponent::class.java, system.world)
+									val colonyMapper = ComponentMapper.getFor(ColonyComponent::class.java, system.world)
+//									val name = nameMapper.get(entityID)
+									val colony = colonyMapper.get(entityID)
+									
+									if (beginTabItem("Shipyards")) {
+										
+										columns(5)
+										text("Location")
+										nextColumn()
+										text("Type")
+										nextColumn()
+										text("Slipways")
+										nextColumn()
+										text("Capacity")
+										nextColumn()
+										text("Assigned Hull")
+										
+										colony.shipyards.forEach { shipyard ->
+											nextColumn()
+											text("${shipyard.location}")
+											nextColumn()
+											text("${shipyard.type}")
+											nextColumn()
+											text("${shipyard.slipways.size}")
+											nextColumn()
+											text("${shipyard.capacity}")
+											nextColumn()
+											text("${shipyard.assignedHull?.name}")
+										}
+										
+										endTabItem()
+									}
+								}
+								
+								endTabBar()
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -243,6 +383,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	var arrayIndex = 0
 	var addResource = Resource.NUCLEAR_FISSION
 	var addResourceAmount = 0
+	
 	private fun shipDebug() {
 
 		if (shipDebugVisible) {
@@ -292,7 +433,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 							if (ImGui.collapsingHeader("Parts", TreeNodeFlag.DefaultOpen.i)) {
 
-								for (partRef in shipComponent.shipClass.getPartRefs()) {
+								for (partRef in shipComponent.hull.getPartRefs()) {
 									if (ImGui.treeNode("${partRef.part::class.simpleName} ${partRef.part.name}")) {
 
 										if (partRef.part is PoweringPart) {
@@ -535,27 +676,28 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	
 	fun openCommandMenu() {
 		commandMenuOpen = true
+		commandMenuClose = false
 	}
 	
 	fun closeCommandMenu() {
+		commandMenuOpen = false
 		commandMenuClose = true
 	}
 	
 	private fun commandMenu() {
 		
 		if (commandMenuOpen) {
-			ImGui.openPopup("PieMenu");
+			ImGui.openPopup("CommandMenu");
 			commandMenuOpen = false
 		}
 		
-		if (BeginPiePopup("PieMenu", 1)) {
+		if (BeginPiePopup("CommandMenu", 1)) {
 			
 			if (commandMenuClose) {
 				try {
+					//Exception in popups.kt:175 if no window was selected before opening popup 
 					ImGui.closeCurrentPopup();
-				} catch (err: NullPointerException) {
-					err.printStackTrace()
-				}
+				} catch (err: KotlinNullPointerException) {}
 				commandMenuClose = false
 			}
 			
@@ -573,6 +715,23 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 				if (BeginPieMenu("Sub sub\nmenu")) {
 					if (PieMenuItem("SubSub")) {println("subsub1")}
 					if (PieMenuItem("SubSub2")) {println("subsub2")}
+					
+					if (BeginPieMenu("Sub sub\nmenu")) {
+					if (PieMenuItem("SubSub")) {println("subsub1")}
+					if (PieMenuItem("SubSub2")) {println("subsub2")}
+					if (BeginPieMenu("Sub sub\nmenu")) {
+					if (PieMenuItem("SubSub")) {println("subsub1")}
+					if (PieMenuItem("SubSub2")) {println("subsub2")}
+					if (BeginPieMenu("Sub sub\nmenu")) {
+					if (PieMenuItem("SubSub")) {println("subsub1")}
+					if (PieMenuItem("SubSub2")) {println("subsub2")}
+					
+					EndPieMenu();
+				}
+					EndPieMenu();
+				}
+					EndPieMenu();
+				}
 					
 					EndPieMenu();
 				}
@@ -602,6 +761,11 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	}
 
 	override fun keyDown(keycode: Int): Boolean {
+		
+		if (keycode == Input.Keys.NUM_1) {
+			closeCommandMenu()
+			return true;
+		}
 
 		if (ctx.io.wantCaptureKeyboard) {
 			gdxGLFWKeyMap[keycode]?.apply {

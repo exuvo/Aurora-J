@@ -35,7 +35,7 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 	override fun preProcessSystem() {
 		subscription.getEntities().forEach { entityID ->
 			val ship = shipMapper.get(entityID)
-			val thrusters = ship.shipClass.getPartRefs().filter({ it.part is ThrustingPart })
+			val thrusters = ship.hull.getPartRefs().filter({ it.part is ThrustingPart })
 			val thrustComponent = thrustMapper.get(entityID)
 
 			for (thruster in thrusters) {
@@ -72,7 +72,7 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 
 		var thrust = 0f
 		var maxThrust = 0f
-		val thrusters = ship.shipClass.getPartRefs().filter({ it.part is ThrustingPart })
+		val thrusters = ship.hull.getPartRefs().filter({ it.part is ThrustingPart })
 
 		if (thrusters.isNotEmpty()) {
 			val thrustComponent = thrustMapper.get(entityID)

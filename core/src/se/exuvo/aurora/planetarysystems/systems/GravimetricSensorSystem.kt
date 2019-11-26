@@ -40,6 +40,8 @@ import java.nio.FloatBuffer
 import se.exuvo.aurora.AuroraGame
 import com.badlogic.gdx.utils.Disposable
 
+//TODO render as displacement of elastic plane weighted down by mass
+
 class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Units.C).toLong()) { // 
 	companion object {
 		val SENSOR_ASPECT = Aspect.all(GravimetricSensorsComponent::class.java)
@@ -242,7 +244,7 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 					if (sensorComponent == null) {
 
 						val ship = shipMapper.get(entityID)
-						val sensors = ship.shipClass[PassiveSensor::class]
+						val sensors = ship.hull[PassiveSensor::class]
 
 						if (sensors.isNotEmpty()) {
 

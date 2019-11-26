@@ -57,7 +57,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 					if (weaponsComponent == null) {
 
 						val ship = shipMapper.get(entityID)
-						val targetingComputers = ship.shipClass[TargetingComputer::class]
+						val targetingComputers = ship.hull[TargetingComputer::class]
 
 						if (targetingComputers.isNotEmpty()) {
 							weaponsComponent = weaponsComponentMapper.create(entityID)

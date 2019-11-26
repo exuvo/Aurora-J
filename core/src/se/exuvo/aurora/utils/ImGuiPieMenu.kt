@@ -37,6 +37,8 @@ import java.util.Stack
 import glm_.vec4.Vec4
 import glm_.vec2.Vec2i
 
+// From https://github.com/ocornut/imgui/issues/434#issuecomment-351743369
+
 const val c_iRadiusEmpty = 30
 const val c_iRadiusMin = 30
 const val c_iMinItemCount = 3
@@ -89,7 +91,6 @@ fun BeginPieMenuEx(): Unit {
 
 fun EndPieMenuEx(): Unit {
 	assert(s_oPieMenuContext.m_iCurrentIndex >= 0);
-//	val oPieMenu: PieMenu = s_oPieMenuContext.m_oPieMenuStack[s_oPieMenuContext.m_iCurrentIndex];
 
 	--s_oPieMenuContext.m_iCurrentIndex;
 }
@@ -291,10 +292,9 @@ fun EndPiePopup(): Unit {
 
 	if (s_oPieMenuContext.m_bClose || (!bItemHovered && isMouseReleased(s_oPieMenuContext.m_iMouseButton))) {
 		try {
+			//Exception in popups.kt:175 if no window was selected before opening popup 
 			closeCurrentPopup();
-		} catch (err: NullPointerException) {
-			err.printStackTrace()
-		}
+		} catch (err: KotlinNullPointerException) {}
 	}
 
 	endPopup();
@@ -304,8 +304,6 @@ fun EndPiePopup(): Unit {
 
 fun BeginPieMenu(pName: String, bEnabled: Boolean = true): Boolean
 {
-	assert(s_oPieMenuContext.m_iCurrentIndex >= 0);
-	
 	val oPieMenu: PieMenu = s_oPieMenuContext.m_oPieMenuStack[s_oPieMenuContext.m_iCurrentIndex];
 
 	val oTextSize: Vec2 = calcTextSize(pName, -1, true);
@@ -347,8 +345,6 @@ fun EndPieMenu(): Unit {
 }
 
 fun PieMenuItem(pName: String, bEnabled: Boolean = true): Boolean {
-	assert(s_oPieMenuContext.m_iCurrentIndex >= 0);
-
 	var oPieMenu: PieMenu = s_oPieMenuContext.m_oPieMenuStack[s_oPieMenuContext.m_iCurrentIndex];
 
 	var oTextSize: Vec2 = calcTextSize(pName, -1, true);

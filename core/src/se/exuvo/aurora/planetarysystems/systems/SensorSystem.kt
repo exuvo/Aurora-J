@@ -67,7 +67,7 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 					if (sensorComponent == null) {
 
 						val ship = shipMapper.get(entityID)
-						val sensors = ship.shipClass[PassiveSensor::class]
+						val sensors = ship.hull[PassiveSensor::class]
 
 						if (sensors.isNotEmpty()) {
 
@@ -178,7 +178,7 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 								temp.set(temp.len().toLong(), 0).scl(Math.random() * (1 - sensor.part.accuracy))
 
 								if (shipMapper.has(emitter.entityID)) {
-									val hash = 37 * shipMapper.get(emitter.entityID).shipClass.hashCode() + sensor.hashCode()
+									val hash = 37 * shipMapper.get(emitter.entityID).hull.hashCode() + sensor.hashCode()
 //									println("hash $hash, uuid ${uuidMapper.get(emitter.entity).uuid.dispersedHash}, sensor ${sensor.hashCode()}")
 									temp.rotate((hash % 360).toFloat())
 

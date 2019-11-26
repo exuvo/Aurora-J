@@ -26,13 +26,12 @@ import se.exuvo.aurora.galactic.FuelContainerPart
 import se.exuvo.aurora.galactic.FueledThruster
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.galactic.MissileLauncher
-import se.exuvo.aurora.galactic.MunitionClass
+import se.exuvo.aurora.galactic.MunitionHull
 import se.exuvo.aurora.galactic.NuclearContainerPart
 import se.exuvo.aurora.galactic.PartRef
 import se.exuvo.aurora.galactic.PassiveSensor
 import se.exuvo.aurora.galactic.Railgun
 import se.exuvo.aurora.galactic.Resource
-import se.exuvo.aurora.galactic.ShipClass
 import se.exuvo.aurora.galactic.SolarPanel
 import se.exuvo.aurora.galactic.TargetingComputer
 import se.exuvo.aurora.galactic.WeaponPart
@@ -76,6 +75,13 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
+import se.exuvo.aurora.galactic.ShipHull
+import se.exuvo.aurora.empires.components.ColonyComponent
+import se.exuvo.aurora.empires.components.ShipyardLocation
+import se.exuvo.aurora.empires.components.ShipyardType
+import se.exuvo.aurora.empires.components.Shipyard
+import se.exuvo.aurora.empires.components.ShipyardSlipway
+import se.exuvo.aurora.planetarysystems.components.EntityReference
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener, Disposable {
 	companion object {
@@ -111,6 +117,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 	lateinit private var emissionsMapper: ComponentMapper<EmissionsComponent>
 	lateinit private var moveToEntityMapper: ComponentMapper<MoveToEntityComponent>
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
+	lateinit private var colonyMapper: ComponentMapper<ColonyComponent>
 
 	init {
 		galaxy.world.getMapper(GalacticPositionComponent::class.java).create(galacticEntityID).set(initialPosition)
@@ -180,6 +187,19 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		tintMapper.create(entity2).set(Color.GREEN)
 		strategicIconMapper.create(entity2).set(Assets.textures.findRegion("strategic/world"))
 		emissionsMapper.create(entity2).set(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10))
+		colonyMapper.create(entity2).set(population = 1000).apply {
+			shipyards += Shipyard(ShipyardLocation.TERRESTIAL, ShipyardType.CIVILIAN).apply{
+				capacity = 1000L
+				slipways += ShipyardSlipway(null)
+				slipways += ShipyardSlipway(null)
+			}
+			shipyards += Shipyard(ShipyardLocation.ORBITAL, ShipyardType.MILITARY).apply{
+				capacity = 10000L
+				slipways += ShipyardSlipway(null)
+			}
+		}
+		
+		empire1.colonies += EntityReference(this, entity2)
 
 		val entity3 = createEntity(empire1)
 		timedMovementMapper.create(entity3)
@@ -208,7 +228,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		strategicIconMapper.create(entity4).set(Assets.textures.findRegion("strategic/ship"))
 		emissionsMapper.create(entity4).set(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10))
 
-		val shipClass = ShipClass()
+		val shipClass = ShipHull()
 		shipClass.name = "Elodin"
 		shipClass.designDay = 1
 //		shipClass.powerScheme = PowerScheme.SOLAR_REACTOR_BATTERY
@@ -256,11 +276,11 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		val dummyMass2 = Battery(10 * Units.KILOWATT, 50 * Units.KILOWATT, 0.8f, 1 * Units.GIGAWATT)
 		dummyMass2.cost[Resource.GENERIC] = 100
 
-		val sabot = MunitionClass(Resource.SABOTS)
+		val sabot = MunitionHull(Resource.SABOTS)
 		sabot.name = "A sabot"
 		sabot.addPart(dummyMass1)
 
-		val missile = MunitionClass(Resource.MISSILES)
+		val missile = MunitionHull(Resource.MISSILES)
 		missile.name = "A missile"
 		missile.addPart(dummyMass2)
 

@@ -4,17 +4,25 @@ import se.exuvo.aurora.planetarysystems.components.PowerScheme
 import java.lang.IllegalArgumentException
 import kotlin.reflect.KClass
 
-class ShipClass {
+class ShipHull {
 	var name: String = ""
+	var hullClass: ShipHullClass = ShipHullClass.NONE
 	var designDay: Int = 0
+	var locked = false
+	var obsolete = false
 	private val parts: MutableList<Part> = ArrayList()
 	private val partRefs: MutableList<PartRef<Part>> = ArrayList()
 	var armorLayers = 1 // Centimeters of armor
 	var armorBlockHP = 100
 	var preferredCargo: Map<Resource, Int> = LinkedHashMap()
-	var preferredMunitions: MutableMap<PartRef<out Part>, MunitionClass> = LinkedHashMap()
+	var preferredMunitions: MutableMap<PartRef<out Part>, MunitionHull> = LinkedHashMap()
 	var powerScheme: PowerScheme = PowerScheme.SOLAR_BATTERY_REACTOR
 	var defaultWeaponAssignments: MutableMap<PartRef<TargetingComputer>, List<PartRef<Part>>> = LinkedHashMap()
+	
+	var parentHull: ShipHull? = null
+	var derivatives: MutableList<ShipHull> = ArrayList()
+	
+	var comment: String = ""
 
 	@Suppress("UNCHECKED_CAST")
 	operator fun <T: Part> get(partClass: KClass<T>) : List<PartRef<T>> = partRefs.filter { partClass.isInstance(it.part) } as List<PartRef<T>>
@@ -88,4 +96,10 @@ class ShipClass {
 }
 
 data class PartRef<T: Part>(val part: T, val index: Int)
+
+data class ShipHullClass(var name: String, var code: String) {
+	companion object {
+		val NONE = ShipHullClass("", "")
+	}
+}
 

@@ -3,7 +3,7 @@ package se.exuvo.aurora.galactic
 import se.exuvo.aurora.planetarysystems.components.PowerScheme
 import java.lang.IllegalArgumentException
 
-class MunitionClass(val storageType: Resource) {
+class MunitionHull(val storageType: Resource) {
 	var name: String = ""
 	var designDay: Int = 0
 	private val parts: MutableList<Part> = ArrayList()

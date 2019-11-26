@@ -328,7 +328,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				val y = (movement.getYinKM() - cameraOffset.y).toFloat()
 
 				val ship = shipMapper.get(entityID)
-				val tcs = ship.shipClass[TargetingComputer::class]
+				val tcs = ship.hull[TargetingComputer::class]
 
 				usedTargets.clear()
 

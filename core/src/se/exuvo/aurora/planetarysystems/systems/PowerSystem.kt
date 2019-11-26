@@ -55,9 +55,9 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 
 						val ship = shipMapper.get(entityID)
 
-						powerComponent = powerMapper.create(entityID).set(ship.shipClass.powerScheme)
+						powerComponent = powerMapper.create(entityID).set(ship.hull.powerScheme)
 
-						ship.shipClass.getPartRefs().forEach {
+						ship.hull.getPartRefs().forEach {
 							val partRef = it
 
 							if (partRef.part is PoweringPart) {
@@ -74,8 +74,8 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 						}
 
 						powerComponent.poweringParts.sortWith(Comparator { aRef, bRef ->
-							val aInt = ship.shipClass.powerScheme.getPowerTypeValue(aRef.part)
-							val bInt = ship.shipClass.powerScheme.getPowerTypeValue(bRef.part)
+							val aInt = ship.hull.powerScheme.getPowerTypeValue(aRef.part)
+							val bInt = ship.hull.powerScheme.getPowerTypeValue(bRef.part)
 
 							aInt.compareTo(bInt)
 						})
