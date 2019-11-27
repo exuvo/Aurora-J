@@ -64,10 +64,12 @@ import imgui.imgui.widgets.EndPieMenu
 import imgui.imgui.widgets.EndPiePopup
 import imgui.ImGui.windowContentRegionWidth
 import imgui.TabBarFlag
+import imgui.or
 import se.exuvo.aurora.planetarysystems.components.EntityUUID
 import se.exuvo.aurora.empires.components.ColonyComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.EntityReference
+import se.exuvo.aurora.galactic.Player
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
@@ -293,27 +295,58 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 				with (imgui.dsl) {
 					window("Colony manager", ::colonyManagerVisible, WindowFlag.None.i) {
 						
-						//TODO tabs trees, child windows with scroll
-						child("Colonies", Vec2(windowContentRegionWidth * 0.3f, 0), true, WindowFlag.None.i) {
-							text("colonies ${galaxy.getEmpire(1).colonies.size}")
+						val empire = Player.current.empire!!
+						
+						// windowContentRegionWidth * 0.3f
+						child("Colonies", Vec2(200, 0), true, WindowFlag.None.i) {
 							
-							galaxy.getEmpire(1).colonies.forEach { colonyRef ->
-								selectedColony = colonyRef
+							collapsingHeader("Colonies ${empire.colonies.size}", TreeNodeFlag.DefaultOpen.i) {
 								
-								val system = colonyRef.system
+								val systemColonyMap = empire.colonies.groupBy { ref -> ref.system }
 								
-								system.lock.read {
-									val nameMapper = ComponentMapper.getFor(NameComponent::class.java, system.world)
-									val colonyMapper = ComponentMapper.getFor(ColonyComponent::class.java, system.world)
-									val name = nameMapper.get(colonyRef.entityID).name
-									val colony = colonyMapper.get(colonyRef.entityID)
+								systemColonyMap.forEach { entry ->
 									
-//									if (selectedColony == colonyRef) {
-//										push style
-//									}
-									
-									text("Colony $name - ${colony.population}")
+									val system = entry.key
+									system.lock.read {
+										
+										if (treeNodeExV(system.galacticEntityID.toString(), TreeNodeFlag.DefaultOpen or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen, "System ${system.initialName}")) {
+											
+											var newSelectedColony: EntityReference? = null
+											
+											entry.value.forEachIndexed { idx, colonyRef ->
+												
+												val entityID = colonyRef.entityID
+												
+												val nameMapper = ComponentMapper.getFor(NameComponent::class.java, system.world)
+												val colonyMapper = ComponentMapper.getFor(ColonyComponent::class.java, system.world)
+												val name = nameMapper.get(entityID).name
+												val colony = colonyMapper.get(entityID)
+												
+												var nodeFlags = TreeNodeFlag.Leaf or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen
+												
+												if (colonyRef == selectedColony) {
+													nodeFlags = nodeFlags or TreeNodeFlag.Selected
+												}
+												
+												treeNodeExV(idx.toString(), nodeFlags, "$name - ${colony.population}")
+			
+												if (isItemClicked()) {
+													newSelectedColony = colonyRef
+												}
+											}
+											
+											if (newSelectedColony != null) {
+												selectedColony = newSelectedColony
+											}
+											
+//											treePop()
+										}
+									}
 								}
+							}
+							
+							collapsingHeader("Supply stations 0", TreeNodeFlag.DefaultOpen.i) {
+								
 							}
 						}
 	
@@ -326,43 +359,121 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 							if (colonyRef == null) {
 								text("No colony selected")
 								
-							} else if (beginTabBar("Tabs", TabBarFlag.None.i)) {
+							} else if (beginTabBar("Tabs", TabBarFlag.Reorderable or TabBarFlag.TabListPopupButton or TabBarFlag.FittingPolicyResizeDown)) {
 								
 								val system = colonyRef.system
 								val entityID = colonyRef.entityID
 								
 								system.lock.read {
-//									val nameMapper = ComponentMapper.getFor(NameComponent::class.java, system.world)
 									val colonyMapper = ComponentMapper.getFor(ColonyComponent::class.java, system.world)
-//									val name = nameMapper.get(entityID)
 									val colony = colonyMapper.get(entityID)
 									
 									if (beginTabItem("Shipyards")) {
 										
-										columns(5)
+										columns(7)
 										text("Location")
 										nextColumn()
 										text("Type")
 										nextColumn()
-										text("Slipways")
-										nextColumn()
 										text("Capacity")
 										nextColumn()
-										text("Assigned Hull")
+										text("Tooled Hull")
+										nextColumn()
+										text("Activity")
+										nextColumn()
+										text("Progress")
+										nextColumn()
+										text("Completion Date")
 										
 										colony.shipyards.forEach { shipyard ->
 											nextColumn()
-											text("${shipyard.location}")
+											text("${shipyard.location.short}")
 											nextColumn()
-											text("${shipyard.type}")
+											text("${shipyard.type.short}")
 											nextColumn()
-											text("${shipyard.slipways.size}")
+											text(Units.volumeToString(shipyard.capacity))
 											nextColumn()
-											text("${shipyard.capacity}")
+											text("${shipyard.tooledHull}")
 											nextColumn()
-											text("${shipyard.assignedHull?.name}")
+											
+											val modActivity = shipyard.modificationActivity
+											
+											if (modActivity != null) {
+												
+												text("${modActivity.getDescription()}")
+												nextColumn()
+												
+												if (shipyard.modificationProgress == 0L) {
+													text("0%")
+												} else {
+													val progress = (100 * shipyard.modificationProgress) / modActivity.getCost(shipyard)
+													text("$progress%")
+												}
+												nextColumn()
+												
+												val daysToCompletion = (modActivity.getCost(shipyard) - shipyard.modificationProgress) / shipyard.modificationRate
+												text(Units.daysToString(galaxy.day + daysToCompletion.toInt()))
+												
+											} else {
+												text("")
+												nextColumn()
+												text("")
+												nextColumn()
+												text("")
+											}
+
+											shipyard.slipways.forEach { slipway ->
+												nextColumn()
+
+												val hull = slipway.hull
+
+												if (hull != null) {
+													text("")
+													nextColumn()
+													text(Units.massToString(hull.getMass()))
+													nextColumn()
+													text(Units.volumeToString(hull.getVolume()))
+													nextColumn()
+													text("${hull}")
+													nextColumn()
+													text("Building")
+													nextColumn()
+													text("${slipway.progress()}%")
+													nextColumn()
+													val daysToCompletion = (slipway.totalCost() - slipway.usedResources()) / shipyard.buildRate
+													text(Units.daysToString(galaxy.day + daysToCompletion.toInt()))
+												} else {
+													text("")
+													nextColumn()
+													text("-")
+													nextColumn()
+													text("-")
+													nextColumn()
+													text("-")
+													nextColumn()
+													text("Empty")
+													nextColumn()
+													text("-")
+													nextColumn()
+													text("-")
+												}
+
+
+											}
 										}
 										
+										endTabItem()
+									}
+									
+									if (beginTabItem("Industry")) {
+										
+										text("todo")
+										endTabItem()
+									}
+									
+									if (beginTabItem("Mining")) {
+										
+										text("todo")
 										endTabItem()
 									}
 								}
@@ -594,7 +705,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 									val usedVolume = shipComponent.getUsedCargoVolume(cargo)
 									val maxVolume = shipComponent.getMaxCargoVolume(cargo)
 									val usedMass = shipComponent.getUsedCargoMass(cargo)
-									val usage = if (maxVolume == 0) 0f else usedVolume / maxVolume.toFloat()
+									val usage = if (maxVolume == 0L) 0f else usedVolume / maxVolume.toFloat()
 									ImGui.progressBar(usage, Vec2(), "$usedMass kg, ${usedVolume / 1000}/${maxVolume / 1000} m³")
 
 									ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
@@ -628,7 +739,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 								if (ImGui.button("Add")) {
 									system.lock.write {
-										if (!shipComponent.addCargo(addResource, addResourceAmount)) {
+										if (!shipComponent.addCargo(addResource, addResourceAmount.toLong())) {
 											println("Cargo does not fit")
 										}
 									}
@@ -638,7 +749,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 								if (ImGui.button("Remove")) {
 									system.lock.write {
-										if (shipComponent.retrieveCargo(addResource, addResourceAmount) != addResourceAmount) {
+										if (shipComponent.retrieveCargo(addResource, addResourceAmount.toLong()) != addResourceAmount.toLong()) {
 											println("Does not have enough of specified cargo")
 										}
 									}
@@ -651,7 +762,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 										val usedVolume = shipComponent.getUsedCargoVolume(resource)
 										val maxVolume = shipComponent.getMaxCargoVolume(resource)
 										val usedMass = shipComponent.getUsedCargoMass(resource)
-										val usage = if (maxVolume == 0) 0f else usedVolume / maxVolume.toFloat()
+										val usage = if (maxVolume == 0L) 0f else usedVolume / maxVolume.toFloat()
 										ImGui.progressBar(usage, Vec2(), "$usedMass kg, ${usedVolume / 1000}/${maxVolume / 1000} m³")
 
 										ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)

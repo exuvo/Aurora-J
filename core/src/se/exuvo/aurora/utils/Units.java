@@ -9,11 +9,14 @@ public class Units {
 	public static final long NANO_MILLI = 1000 * NANO_MICRO;
 	public static final long NANO_SECOND = 1000 * NANO_MILLI;
 	
-	public static final long KILOWATT = 1000;
-	public static final long MEGAWATT = 1000 * KILOWATT;
-	public static final long GIGAWATT = 1000 * MEGAWATT;
-	public static final long TERAWATT = 1000 * GIGAWATT;
-
+	public static final long KILO = 1000;
+	public static final long MEGA = 1000 * KILO;
+	public static final long GIGA = 1000 * MEGA;
+	public static final long TERA = 1000 * GIGA;
+	
+	public static final long CUBIC_DECIMETRE = 1000;
+	public static final long CUBIC_METRE     = 1000 * CUBIC_DECIMETRE;
+	
 	public static String nanoToString(long nanotime) {
 
 		int nanos = (int) (nanotime % NANO_MILLI);
@@ -35,52 +38,86 @@ public class Units {
 		int seconds = (int) (time % 60);
 		int minutes = (int) ((time / 60) % 60);
 		int hours = (int) ((time / (60 * 60)) % 24);
-		int days = (int) (time / (60 * 60 * 24));
 
-		return String.format("%d.%02d:%02d:%02ds", days, hours, minutes, seconds);
+		return String.format("%02d:%02d:%02d", hours, minutes, seconds);
 	}
 	
 	public static String powerToString(long power) {
 		
-		if (power < KILOWATT) {
+		if (power < KILO) {
 			return String.format("%d W", power);
 			
-		} else if (power < MEGAWATT) {
-			return String.format("%d.%02d kW", power / KILOWATT, power % KILOWATT / 10);
+		} else if (power < MEGA) {
+			return String.format("%d.%02d kW", power / KILO, power % KILO / 10);
 			
-		} else if (power < GIGAWATT) {
-			return String.format("%d.%02d MW", power / MEGAWATT, power % MEGAWATT / 10 / KILOWATT);
+		} else if (power < GIGA) {
+			return String.format("%d.%02d MW", power / MEGA, power % MEGA / 10 / KILO);
 			
-		} else if (power < TERAWATT) {
-			return String.format("%d.%02d GW", power / GIGAWATT, power % GIGAWATT / 10 / MEGAWATT);
+		} else if (power < TERA) {
+			return String.format("%d.%02d GW", power / GIGA, power % GIGA / 10 / MEGA);
 			
-		} else if (power < 1000 * TERAWATT) {
-			return String.format("%d.%02d TW", power / TERAWATT, power % TERAWATT / 10 / GIGAWATT);
+		} else if (power < 1000 * TERA) {
+			return String.format("%d.%02d TW", power / TERA, power % TERA / 10 / GIGA);
 			
 		} else {
-			return String.format("%d TW", power / TERAWATT);
+			return String.format("%d TW", power / TERA);
 		}
 	}
 	
-//	public static void main(String args[]) {
-//		System.out.println(powerToString(1));
-//		System.out.println(powerToString(12));
-//		System.out.println(powerToString(123));
-//		System.out.println(powerToString(1234));
-//		System.out.println(powerToString(12345));
-//		System.out.println(powerToString(123456));
-//		System.out.println(powerToString(1234567));
-//		System.out.println(powerToString(12345678));
-//		System.out.println(powerToString(123456789));
-//		System.out.println(powerToString(1234567890));
-//		System.out.println(powerToString(12345678901L));
-//		System.out.println(powerToString(123456789012L));
-//		System.out.println(powerToString(1234567890123L));
-//		System.out.println(powerToString(12345678901234L));
-//		System.out.println(powerToString(123456789012345L));
-//		System.out.println(powerToString(1234567890123456L));
-//		System.out.println(powerToString(12345678901234567L));
-//		System.out.println(powerToString(123456789012345678L));
-//		System.out.println(powerToString(1234567890123456789L));
-//	}
+	public static String volumeToString(long volume) {
+		
+		if (volume < CUBIC_DECIMETRE) {
+			return String.format("%d cm³", volume);
+			
+		} else if (volume < CUBIC_METRE) {
+			return String.format("%d.%02d dm³", volume / CUBIC_DECIMETRE, volume % CUBIC_DECIMETRE / 10);
+			
+		} else {
+			return String.format("%d m³", volume / CUBIC_METRE);
+		}
+	}
+
+	public static String massToString(long mass) {
+
+		if (mass < KILO) {
+			return String.format("%d g", mass);
+
+		} else if (mass < MEGA) {
+			return String.format("%d.%02d kg", mass / KILO, mass % KILO / 10);
+
+		} else if (mass < GIGA) {
+			return String.format("%d.%02d Mg", mass / MEGA, mass % MEGA / 10 / KILO);
+
+		} else if (mass < TERA) {
+			return String.format("%d.%02d Gg", mass / GIGA, mass % GIGA / 10 / MEGA);
+
+		} else if (mass < 1000 * TERA) {
+			return String.format("%d.%02d Tg", mass / TERA, mass % TERA / 10 / GIGA);
+
+		} else {
+			return String.format("%d Tg", mass / TERA);
+		}
+	}
+	
+	public static String daysToString(int day) {
+
+		int year = day / 365;
+		
+		return String.format("%04d-%03d", year, 1 + day % 365);
+	}
+	
+	public static String daysToYearString(int day) {
+
+		int year = day / 365;
+		
+		return String.format("%04d", year);
+	}
+	
+	public static String daysToSubYearString(int day) {
+
+		int year = day / 365;
+		
+		return String.format("%02d", year % 100);
+	}
+	
 }

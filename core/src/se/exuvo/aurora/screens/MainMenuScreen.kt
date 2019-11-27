@@ -29,6 +29,7 @@ import net.mostlyoriginal.api.event.dispatcher.PollingPooledEventDispatcher
 import se.exuvo.aurora.planetarysystems.systems.CustomSystemInvocationStrategy
 import com.artemis.utils.Bag
 import se.exuvo.aurora.AuroraGame
+import se.exuvo.aurora.galactic.Player
 
 class MainMenuScreen() : GameScreenImpl() {
 
@@ -52,7 +53,9 @@ class MainMenuScreen() : GameScreenImpl() {
 //		if (Gdx.input.isKeyPressed(Input.Keys.ENTER)) {
 
 		val empires = mutableListOf(Empire("player1"), Empire("player2"))
-		val galaxy = Galaxy(empires, 0) //, system2, system3
+		Player.current.empire = empires[0]
+		
+		val galaxy = Galaxy(empires, 2100L * 365 * 24 * 60 * 60)
 		
 		val systems = Bag(PlanetarySystem::class.java)
 		systems.add(PlanetarySystem("s1", Vector2L(0, 0)))

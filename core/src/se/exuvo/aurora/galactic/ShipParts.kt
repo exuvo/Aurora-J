@@ -6,7 +6,7 @@ import java.util.Objects
 abstract class Part {
 	var name: String = ""
 	var designDay: Int = -1
-	val cost: MutableMap<Resource, Int> = LinkedHashMap() 
+	val cost: MutableMap<Resource, Long> = LinkedHashMap() 
 	var maxHealth = 1
 	var crewRequirement = 1
 	
@@ -14,8 +14,8 @@ abstract class Part {
 	fun getMass() = cost.values.sum()
 	
 	// In cm3
-	fun getVolume() : Int {
-		var volume = 0
+	fun getVolume() : Long {
+		var volume = 0L
 		
 		cost.forEach({resource, amount ->
 			volume += amount * resource.specificVolume
@@ -31,7 +31,8 @@ abstract class Part {
 		var hash = 1;
 		hash = 37 * hash + name.hashCode()
 		hash = 37 * hash + designDay
-		hash = 37 * hash + getVolume()
+		val volume = getVolume()
+		hash = 37 * hash + (volume xor (volume shr 32)).toInt()
 		hash = 37 * hash + maxHealth
 		hash = 37 * hash + crewRequirement
 		return hash

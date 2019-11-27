@@ -82,6 +82,7 @@ import se.exuvo.aurora.empires.components.ShipyardType
 import se.exuvo.aurora.empires.components.Shipyard
 import se.exuvo.aurora.empires.components.ShipyardSlipway
 import se.exuvo.aurora.planetarysystems.components.EntityReference
+import se.exuvo.aurora.empires.components.ShipyardModificationExpandCapacity
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener, Disposable {
 	companion object {
@@ -166,6 +167,99 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 
 	fun init() {
 		val empire1 = galaxy.getEmpire(1)
+		
+		val sensor1 = PassiveSensor(300000, Spectrum.Electromagnetic, 1e-7, 14, Units.AU * 0.3, 20, 0.97, 1);
+		sensor1.name = "EM 1e-4"
+		sensor1.designDay = 1
+		
+		val sensor2 = PassiveSensor(800000, Spectrum.Thermal, 1e-8, 8, Units.AU * 1, 0, 0.9, 5);
+		sensor2.name = "TH 1e-10"
+		sensor2.designDay = 1
+		
+		val shipHull = ShipHull()
+		shipHull.name = "Elodin"
+		shipHull.designDay = galaxy.day
+//		shipClass.powerScheme = PowerScheme.SOLAR_REACTOR_BATTERY
+
+		shipHull.addPart(sensor1)
+		shipHull.addPart(sensor2)
+
+		val solarPanel = SolarPanel()
+		solarPanel.name = "Solar Panel"
+		solarPanel.cost[Resource.SEMICONDUCTORS] = 300
+		shipHull.addPart(solarPanel)
+
+		val reactor = FissionReactor(5 * Units.MEGA)
+		reactor.name = "Nuclear Reactor"
+		reactor.cost[Resource.GENERIC] = 1000
+		shipHull.addPart(reactor)
+//		println("Reactor fuel consumption ${reactor.fuelConsumption} kg / ${reactor.fuelTime} s")
+
+		val nuclearStorage = NuclearContainerPart(10000)
+		nuclearStorage.name = "Nuclear Cargo"
+		nuclearStorage.cost[Resource.GENERIC] = 100
+		shipHull.addPart(nuclearStorage)
+
+		val ammoStorage = AmmoContainerPart(1000000)
+		ammoStorage.name = "Munitions Cargo"
+		ammoStorage.cost[Resource.GENERIC] = 100
+		shipHull.addPart(ammoStorage)
+
+		val fuelStorage = FuelContainerPart(10000000)
+		fuelStorage.name = "Fuel Cargo"
+		fuelStorage.cost[Resource.GENERIC] = 100
+		shipHull.addPart(fuelStorage)
+
+		val battery = Battery(200 * Units.KILO, 500 * Units.KILO, 0.8f, 100 * Units.GIGA)
+		battery.name = "Battery"
+		shipHull.addPart(battery)
+
+		val targetingComputer = TargetingComputer(2, 10, 0f, 10 * Units.KILO)
+		targetingComputer.name = "TC 2-10"
+		shipHull.addPart(targetingComputer)
+
+		val dummyMass1 = Battery(10 * Units.KILO, 50 * Units.KILO, 0.8f, 1 * Units.GIGA)
+		dummyMass1.cost[Resource.GENERIC] = 10
+
+		val dummyMass2 = Battery(10 * Units.KILO, 50 * Units.KILO, 0.8f, 1 * Units.GIGA)
+		dummyMass2.cost[Resource.GENERIC] = 100
+
+		val sabot = MunitionHull(Resource.SABOTS)
+		sabot.name = "A sabot"
+		sabot.addPart(dummyMass1)
+
+		val missile = MunitionHull(Resource.MISSILES)
+		missile.name = "A missile"
+		missile.addPart(dummyMass2)
+
+		val railgun = Railgun(2 * Units.MEGA, 7, 5 * Units.MEGA, 5)
+		shipHull.addPart(railgun)
+		val railgunRef = shipHull[Railgun::class][0]
+		shipHull.preferredMunitions[railgunRef] = sabot
+
+		val missileLauncher = MissileLauncher(200 * Units.KILO, 13, 3, 10)
+		shipHull.addPart(missileLauncher)
+		val missileLauncherRef = shipHull[MissileLauncher::class][0]
+		shipHull.preferredMunitions[missileLauncherRef] = missile
+
+		val beam = BeamWeapon(1 * Units.MEGA, BeamWavelength.Microwaves, 0.0, 10 * Units.MEGA)
+		shipHull.addPart(beam)
+
+		val tcRef: PartRef<TargetingComputer> = shipHull[TargetingComputer::class][0]
+		shipHull.defaultWeaponAssignments[tcRef] = shipHull.getPartRefs().filter({ it.part is WeaponPart })
+
+		val ionThruster = ElectricalThruster(1f * 9.82f * 1000f, 1 * Units.MEGA)
+		shipHull.addPart(ionThruster)
+
+		val chemicalThruster = FueledThruster(10f * 9.82f * 1000f, 1)
+		shipHull.addPart(chemicalThruster)
+		
+		val shipHull2 = ShipHull()
+		shipHull2.name = "Elodin"
+		shipHull2.designDay = galaxy.day + 700
+		shipHull2.parentHull = shipHull
+		
+		shipHull.derivatives += shipHull2
 
 		val entity1 = createEntity(Empire.GAIA)
 		timedMovementMapper.create(entity1).set(0, 0, 0f, 0f, 0)
@@ -187,15 +281,21 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		tintMapper.create(entity2).set(Color.GREEN)
 		strategicIconMapper.create(entity2).set(Assets.textures.findRegion("strategic/world"))
 		emissionsMapper.create(entity2).set(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10))
-		colonyMapper.create(entity2).set(population = 1000).apply {
+		colonyMapper.create(entity2).set(population = random.nextLong(1000000)).apply {
 			shipyards += Shipyard(ShipyardLocation.TERRESTIAL, ShipyardType.CIVILIAN).apply{
-				capacity = 1000L
-				slipways += ShipyardSlipway(null)
-				slipways += ShipyardSlipway(null)
+				capacity = random.nextLong(2000)
+				slipways += ShipyardSlipway()
+				slipways += ShipyardSlipway().apply{
+					build(shipHull2)
+				}
 			}
 			shipyards += Shipyard(ShipyardLocation.ORBITAL, ShipyardType.MILITARY).apply{
-				capacity = 10000L
-				slipways += ShipyardSlipway(null)
+				capacity = random.nextLong(10000)
+				tooledHull = shipHull
+				modificationActivity = ShipyardModificationExpandCapacity(500)
+				slipways += ShipyardSlipway().apply{
+					build(shipHull)
+				}
 			}
 		}
 		
@@ -219,94 +319,11 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		nameMapper.create(entity4).set(name = "Ship")
 //		moveToEntityMapper.create(entity4).set(world.getEntity(entity1), ApproachType.BRACHISTOCHRONE))
 		tintMapper.create(entity4).set(Color.RED)
-		val sensor1 = PassiveSensor(300000, Spectrum.Electromagnetic, 1e-7, 14, Units.AU * 0.3, 20, 0.97, 1);
-		sensor1.name = "EM 1e-4"
-		sensor1.designDay = 1
-		val sensor2 = PassiveSensor(800000, Spectrum.Thermal, 1e-8, 8, Units.AU * 1, 0, 0.9, 5);
-		sensor2.name = "TH 1e-10"
-		sensor2.designDay = 1
 		strategicIconMapper.create(entity4).set(Assets.textures.findRegion("strategic/ship"))
 		emissionsMapper.create(entity4).set(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10))
+		
 
-		val shipClass = ShipHull()
-		shipClass.name = "Elodin"
-		shipClass.designDay = 1
-//		shipClass.powerScheme = PowerScheme.SOLAR_REACTOR_BATTERY
-
-		shipClass.addPart(sensor1)
-		shipClass.addPart(sensor2)
-
-		val solarPanel = SolarPanel()
-		solarPanel.name = "Solar Panel"
-		solarPanel.cost[Resource.SEMICONDUCTORS] = 300
-		shipClass.addPart(solarPanel)
-
-		val reactor = FissionReactor(5 * Units.MEGAWATT)
-		reactor.name = "Nuclear Reactor"
-		reactor.cost[Resource.GENERIC] = 1000
-		shipClass.addPart(reactor)
-//		println("Reactor fuel consumption ${reactor.fuelConsumption} kg / ${reactor.fuelTime} s")
-
-		val nuclearStorage = NuclearContainerPart(10000)
-		nuclearStorage.name = "Nuclear Cargo"
-		nuclearStorage.cost[Resource.GENERIC] = 100
-		shipClass.addPart(nuclearStorage)
-
-		val ammoStorage = AmmoContainerPart(1000000)
-		ammoStorage.name = "Munitions Cargo"
-		ammoStorage.cost[Resource.GENERIC] = 100
-		shipClass.addPart(ammoStorage)
-
-		val fuelStorage = FuelContainerPart(10000000)
-		fuelStorage.name = "Fuel Cargo"
-		fuelStorage.cost[Resource.GENERIC] = 100
-		shipClass.addPart(fuelStorage)
-
-		val battery = Battery(200 * Units.KILOWATT, 500 * Units.KILOWATT, 0.8f, 100 * Units.GIGAWATT)
-		battery.name = "Battery"
-		shipClass.addPart(battery)
-
-		val targetingComputer = TargetingComputer(2, 10, 0f, 10 * Units.KILOWATT)
-		targetingComputer.name = "TC 2-10"
-		shipClass.addPart(targetingComputer)
-
-		val dummyMass1 = Battery(10 * Units.KILOWATT, 50 * Units.KILOWATT, 0.8f, 1 * Units.GIGAWATT)
-		dummyMass1.cost[Resource.GENERIC] = 10
-
-		val dummyMass2 = Battery(10 * Units.KILOWATT, 50 * Units.KILOWATT, 0.8f, 1 * Units.GIGAWATT)
-		dummyMass2.cost[Resource.GENERIC] = 100
-
-		val sabot = MunitionHull(Resource.SABOTS)
-		sabot.name = "A sabot"
-		sabot.addPart(dummyMass1)
-
-		val missile = MunitionHull(Resource.MISSILES)
-		missile.name = "A missile"
-		missile.addPart(dummyMass2)
-
-		val railgun = Railgun(2 * Units.MEGAWATT, 7, 5 * Units.MEGAWATT, 5)
-		shipClass.addPart(railgun)
-		val railgunRef = shipClass[Railgun::class][0]
-		shipClass.preferredMunitions[railgunRef] = sabot
-
-		val missileLauncher = MissileLauncher(200 * Units.KILOWATT, 13, 3, 10)
-		shipClass.addPart(missileLauncher)
-		val missileLauncherRef = shipClass[MissileLauncher::class][0]
-		shipClass.preferredMunitions[missileLauncherRef] = missile
-
-		val beam = BeamWeapon(1 * Units.MEGAWATT, BeamWavelength.Microwaves, 0.0, 10 * Units.MEGAWATT)
-		shipClass.addPart(beam)
-
-		val tcRef: PartRef<TargetingComputer> = shipClass[TargetingComputer::class][0]
-		shipClass.defaultWeaponAssignments[tcRef] = shipClass.getPartRefs().filter({ it.part is WeaponPart })
-
-		val ionThruster = ElectricalThruster(1f * 9.82f * 1000f, 1 * Units.MEGAWATT)
-		shipClass.addPart(ionThruster)
-
-		val chemicalThruster = FueledThruster(10f * 9.82f * 1000f, 1)
-		shipClass.addPart(chemicalThruster)
-
-		val shipComponent = shipMapper.create(entity4).set(shipClass, galaxy.time)
+		val shipComponent = shipMapper.create(entity4).set(shipHull, galaxy.time)
 		shipComponent.addCargo(Resource.NUCLEAR_FISSION, 100)
 		shipComponent.addCargo(Resource.ROCKET_FUEL, 10000)
 
@@ -326,7 +343,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 	fun createEntity(empire: Empire): Int {
 		val entityID = world.create()
 		solarSystemMapper.create(entityID).set(this)
-		uuidMapper.create(entityID).set(EntityUUID(sid, empire.id, getNewEnitityID()))
+		uuidMapper.create(entityID).set(EntityUUID(sid, empire.id, getNewEntitityID()))
 
 		history.entityCreated(entityID, world)
 		return entityID
@@ -349,7 +366,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		}
 	}
 
-	var delay = (Math.random() * 30).toLong()
+//	var delay = (Math.random() * 30).toLong()
 	fun update(deltaGameTime: Int) {
 
 		lock.write {
@@ -357,14 +374,14 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 			world.process()
 		}
 		
-		if (Math.random() > 0.97) {
-			delay = (Math.random() * 30).toLong()
-		}
-		
+//		if (Math.random() > 0.97) {
+//			delay = (Math.random() * 30).toLong()
+//		}
+//		
 //		Thread.sleep(delay)
 	}
 
-	private fun getNewEnitityID(): Long {
+	private fun getNewEntitityID(): Long {
 		return entityUIDGenerator.incrementAndGet();
 	}
 }

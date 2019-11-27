@@ -1,6 +1,7 @@
 package se.exuvo.aurora.galactic
 
 import se.exuvo.aurora.planetarysystems.components.PowerScheme
+import se.exuvo.aurora.utils.sumByLong
 import java.lang.IllegalArgumentException
 
 class MunitionHull(val storageType: Resource) {
@@ -35,15 +36,15 @@ class MunitionHull(val storageType: Resource) {
 	}
 	
 	// Kg
-	fun getMass(): Int {
+	fun getMass(): Long {
 		//TODO add armor
-		return parts.sumBy { it.getMass() }
+		return parts.sumByLong { it.getMass() }
 	}
 
 	// cm³
-	fun getVolume(): Int {
+	fun getVolume(): Long {
 		//TODO add armor
-		return parts.sumBy { it.getVolume() }
+		return parts.sumByLong { it.getVolume() }
 	}
 	
 	fun getRadius(): Int {

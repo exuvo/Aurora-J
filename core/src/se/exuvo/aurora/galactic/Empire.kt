@@ -21,6 +21,7 @@ companion object {
 
 	var funds: Long = 0
 	val colonies = ArrayList<EntityReference>()
+	val stations = ArrayList<EntityReference>()
 	val technologies = HashMap<String, Technology>()
 	val parts = ArrayList<Part>()
 	val researchTeams = ArrayList<ResearchTeam>()

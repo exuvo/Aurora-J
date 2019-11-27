@@ -44,9 +44,9 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		val FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, CircleComponent::class.java)
 		val STRATEGIC_ICON_SIZE = 24f
 
-		var debugPassiveSensors = Settings.getBol("System/Render/debugPassiveSensors", false)
-		var debugDisableStrategicView = Settings.getBol("System/Render/debugDisableStrategicView", false)
-		var debugDrawPassiveSensors = Settings.getBol("System/Render/debugDrawPassiveSensors", true)
+		var debugPassiveSensors = Settings.getBol("Systems/Render/debugPassiveSensors", false)
+		var debugDisableStrategicView = Settings.getBol("Systems/Render/debugDisableStrategicView", false)
+		var debugDrawPassiveSensors = Settings.getBol("Systems/Render/debugDrawPassiveSensors", true)
 	}
 
 	lateinit private var circleMapper: ComponentMapper<CircleComponent>
@@ -657,7 +657,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				if (movement.next != null && movement.previous.time != galaxy.time) {
 
 					if (selectedEntityIDs.contains(entityID)) {
-						val text = "${(movement.previous.time / (24L * 60L * 60L)).toInt()} ${PlanetarySystemScreen.secondsToString(movement.previous.time)}"
+						val text = "${Units.daysToString((movement.previous.time / (24L * 60L * 60L)).toInt())} ${Units.secondsToString(movement.previous.time)}"
 						val movementValues = movement.previous.value
 						val x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
 						val y = (movementValues.getYinKM() - cameraOffset.y).toFloat()
@@ -670,7 +670,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					}
 
 					run {
-						val text = "${(movement.next!!.time / (24L * 60L * 60L)).toInt()} ${PlanetarySystemScreen.secondsToString(movement.next!!.time)}"
+						val text = "${Units.daysToString((movement.next!!.time / (24L * 60L * 60L)).toInt())} ${Units.secondsToString(movement.next!!.time)}"
 						val movementValues = movement.next!!.value
 						val x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
 						val y = (movementValues.getYinKM() - cameraOffset.y).toFloat()

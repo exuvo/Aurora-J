@@ -13,7 +13,7 @@ class Player(var name: String) {
 	private val log = LogManager.getLogger(this.javaClass)
 	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 
-	val empire: Empire? = null
+	var empire: Empire? = null
 	var speedSteps = listOf(1, 4, 10, 50, 200, 1000, 5000, 25000, 60000)
 	var speedIndex = 0
 	var requestedSpeed = Units.NANO_SECOND / speedSteps[speedIndex]

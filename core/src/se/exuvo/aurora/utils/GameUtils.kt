@@ -46,6 +46,14 @@ fun Entity.printID(): String {
 	return "${this.printName()} (${this.getUUID()})"
 }
 
+inline fun <T> Iterable<T>.sumByLong(selector: (T) -> Long): Long {
+    var sum = 0L
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
 fun exponentialAverage(newValue: Double, expAverage: Double, delay: Double) : Double = newValue + Math.pow(Math.E, -1/delay) * (expAverage - newValue)
 
 fun consumeFuel(deltaGameTime: Int, entity: Entity, ship: ShipComponent, partRef: PartRef<Part>, energyConsumed: Long, fuelEnergy: Long) {
@@ -60,7 +68,7 @@ fun consumeFuel(deltaGameTime: Int, entity: Entity, ship: ShipComponent, partRef
 
 			fuelEnergyConsumed -= fueledState.fuelEnergyRemaining
 
-			var fuelRequired = part.fuelConsumption
+			var fuelRequired = part.fuelConsumption.toLong()
 
 			if (fuelEnergyConsumed > fuelEnergy * part.fuelTime) {
 
@@ -72,7 +80,7 @@ fun consumeFuel(deltaGameTime: Int, entity: Entity, ship: ShipComponent, partRef
 
 			if (part is FuelWastePart) {
 
-				var fuelConsumed = Math.ceil((part.fuelConsumption * fueledState.fuelEnergyRemaining).toDouble() / (fuelEnergy * part.fuelTime)).toInt()
+				var fuelConsumed = Math.ceil((part.fuelConsumption * fueledState.fuelEnergyRemaining).toDouble() / (fuelEnergy * part.fuelTime)).toLong()
 
 				if (fuelEnergyConsumed > fuelEnergy * part.fuelTime) {
 
@@ -96,8 +104,8 @@ fun consumeFuel(deltaGameTime: Int, entity: Entity, ship: ShipComponent, partRef
 
 			if (part is FuelWastePart) {
 
-				val fuelRemainingPre = Math.ceil((part.fuelConsumption * fueledState.fuelEnergyRemaining).toDouble() / (fuelEnergy * part.fuelTime)).toInt()
-				val fuelRemainingPost = Math.ceil((part.fuelConsumption * (fueledState.fuelEnergyRemaining - fuelEnergyConsumed)).toDouble() / (fuelEnergy * part.fuelTime)).toInt()
+				val fuelRemainingPre = Math.ceil((part.fuelConsumption * fueledState.fuelEnergyRemaining).toDouble() / (fuelEnergy * part.fuelTime)).toLong()
+				val fuelRemainingPost = Math.ceil((part.fuelConsumption * (fueledState.fuelEnergyRemaining - fuelEnergyConsumed)).toDouble() / (fuelEnergy * part.fuelTime)).toLong()
 				val fuelConsumed = fuelRemainingPre - fuelRemainingPost;
 
 //							println("fuelRemainingPre $fuelRemainingPre, fuelRemainingPost $fuelRemainingPost, fuelConsumed $fuelConsumed")

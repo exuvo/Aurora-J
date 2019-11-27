@@ -44,15 +44,6 @@ import glm_.vec2.Vec2
 import glm_.vec2.Vec2i
 
 class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), InputProcessor {
-	companion object {
-
-		fun secondsToString(time: Long): String {
-			val hours = (time / 3600) % 24
-			val minutes = (time / 60) % 60
-			val seconds = time % 60
-			return String.format("%02d:%02d:%02d", hours, minutes, seconds)
-		}
-	}
 
 	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
@@ -159,7 +150,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
 		
-		val layout = Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, day ${galaxy.day}, time ${secondsToString(galaxy.time)}, ", 8f, 32f)
+		val layout = Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, ${Units.daysToString(galaxy.day)} ${Units.secondsToString(galaxy.time)}, ", 8f, 32f)
 		
 		if (galaxy.speed == 0L) {
 			Assets.fontUI.color = Color.RED

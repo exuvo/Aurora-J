@@ -34,7 +34,6 @@ class ShipComponent() : Component() {
 	lateinit var partState: Array<PartState>
 	lateinit var cargo: Map<Resource, ShipCargo>
 	lateinit var munitionCargo: MutableMap<MunitionHull, Int>
-	var mass: Long = 0
 	var cargoChanged = true
 
 	fun set(hull: ShipHull,
@@ -127,7 +126,7 @@ class ShipComponent() : Component() {
 		return this
 	}
 
-	fun getMass(): Int {
+	fun getMass(): Long {
 		var mass = hull.getMass()
 		
 		//TODO add cargo
@@ -159,7 +158,7 @@ class ShipComponent() : Component() {
 		partEnabled[partRef.index] = enabled
 	}
 
-	fun getCargoAmount(resource: Resource): Int {
+	fun getCargoAmount(resource: Resource): Long {
 
 		val shipCargo = cargo[resource]
 
@@ -191,7 +190,7 @@ class ShipComponent() : Component() {
 		return 0
 	}
 
-	fun getUsedCargoVolume(resource: Resource): Int {
+	fun getUsedCargoVolume(resource: Resource): Long {
 
 		val shipCargo = cargo[resource]
 
@@ -203,7 +202,7 @@ class ShipComponent() : Component() {
 		return 0
 	}
 	
-	fun getMaxCargoVolume(resource: Resource): Int {
+	fun getMaxCargoVolume(resource: Resource): Long {
 
 		val shipCargo = cargo[resource]
 
@@ -215,7 +214,7 @@ class ShipComponent() : Component() {
 		return 0
 	}
 	
-	fun getUsedCargoVolume(type: CargoType): Int {
+	fun getUsedCargoVolume(type: CargoType): Long {
 
 		val shipCargo = cargo[type.resources[0]]
 
@@ -227,7 +226,7 @@ class ShipComponent() : Component() {
 		return 0
 	}
 
-	fun getMaxCargoVolume(type: CargoType): Int {
+	fun getMaxCargoVolume(type: CargoType): Long {
 
 		val shipCargo = cargo[type.resources[0]]
 
@@ -239,7 +238,7 @@ class ShipComponent() : Component() {
 		return 0
 	}
 
-	fun getUsedCargoMass(resource: Resource): Int {
+	fun getUsedCargoMass(resource: Resource): Long {
 
 		val shipCargo = cargo[resource]
 
@@ -255,7 +254,7 @@ class ShipComponent() : Component() {
 		return 0
 	}
 
-	fun getUsedCargoMass(type: CargoType): Int {
+	fun getUsedCargoMass(type: CargoType): Long {
 
 		val shipCargo = cargo[type.resources[0]]
 
@@ -267,7 +266,7 @@ class ShipComponent() : Component() {
 		return 0
 	}
 
-	fun addCargo(resource: Resource, amount: Int): Boolean {
+	fun addCargo(resource: Resource, amount: Long): Boolean {
 
 		if (resource.specificVolume == 0) {
 			throw InvalidParameterException()
@@ -322,7 +321,7 @@ class ShipComponent() : Component() {
 		return false
 	}
 
-	fun retrieveCargo(resource: Resource, amount: Int): Int {
+	fun retrieveCargo(resource: Resource, amount: Long): Long {
 
 		if (resource.specificVolume == 0) {
 			throw InvalidParameterException()
@@ -334,7 +333,7 @@ class ShipComponent() : Component() {
 
 			val available = shipCargo.contents[resource]
 
-			if (available == null || available == 0) {
+			if (available == null || available == 0L) {
 				return 0
 			}
 
@@ -380,9 +379,9 @@ class ShipComponent() : Component() {
 }
 
 data class ShipCargo(val type: CargoType) {
-	var maxVolume = 0
-	var usedVolume = 0
-	var contents: MutableMap<Resource, Int> = LinkedHashMap()
+	var maxVolume = 0L
+	var usedVolume = 0L
+	var contents: MutableMap<Resource, Long> = LinkedHashMap()
 
 	init {
 		for (resource in type.resources) {

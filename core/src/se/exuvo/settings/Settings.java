@@ -15,6 +15,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import com.martiansoftware.jsap.JSAP;
@@ -317,6 +319,18 @@ public class Settings {
 		log.info("Saving settings");
 
 		try {
+			doc.normalize();
+			NodeList emptyTextNodes = (NodeList) PooledXPathFactory.newXPath().evaluate("//text()[normalize-space(.) = '']", rootElement, XPathConstants.NODESET);
+
+			for (int i = 0; i < emptyTextNodes.getLength(); i++) {
+				Node emptyTextNode = emptyTextNodes.item(i);
+				emptyTextNode.getParentNode().removeChild(emptyTextNode);
+			}
+		} catch (XPathExpressionException e) {
+			log.error("Error removing whitespace", e);
+		}
+		
+		try {
 			XMLUtils.writeXMLFile(doc, new File("settings.xml"), true, "UTF-8");
 			return true;
 
@@ -346,6 +360,7 @@ public class Settings {
 
 			try {
 				doc = XMLUtils.parseXMLFile(file, false, false);
+				doc.normalize();
 				try {
 					rootElement = (Element) PooledXPathFactory.newXPath().evaluate("/" + rootName, doc.getDocumentElement(), XPathConstants.NODE);
 				} catch (XPathExpressionException e) {

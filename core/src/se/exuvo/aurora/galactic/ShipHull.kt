@@ -3,6 +3,9 @@ package se.exuvo.aurora.galactic
 import se.exuvo.aurora.planetarysystems.components.PowerScheme
 import java.lang.IllegalArgumentException
 import kotlin.reflect.KClass
+import se.exuvo.aurora.utils.sumByLong
+import se.exuvo.aurora.empires.components.ShipyardType
+import se.exuvo.aurora.utils.Units
 
 class ShipHull {
 	var name: String = ""
@@ -10,17 +13,18 @@ class ShipHull {
 	var designDay: Int = 0
 	var locked = false
 	var obsolete = false
+	var requiredShipYardType = ShipyardType.CIVILIAN
 	private val parts: MutableList<Part> = ArrayList()
 	private val partRefs: MutableList<PartRef<Part>> = ArrayList()
 	var armorLayers = 1 // Centimeters of armor
 	var armorBlockHP = 100
-	var preferredCargo: Map<Resource, Int> = LinkedHashMap()
-	var preferredMunitions: MutableMap<PartRef<out Part>, MunitionHull> = LinkedHashMap()
+	val preferredCargo: Map<Resource, Int> = LinkedHashMap()
+	val preferredMunitions: MutableMap<PartRef<out Part>, MunitionHull> = LinkedHashMap()
 	var powerScheme: PowerScheme = PowerScheme.SOLAR_BATTERY_REACTOR
-	var defaultWeaponAssignments: MutableMap<PartRef<TargetingComputer>, List<PartRef<Part>>> = LinkedHashMap()
+	val defaultWeaponAssignments: MutableMap<PartRef<TargetingComputer>, List<PartRef<Part>>> = LinkedHashMap()
 	
 	var parentHull: ShipHull? = null
-	var derivatives: MutableList<ShipHull> = ArrayList()
+	val derivatives: MutableList<ShipHull> = ArrayList()
 	
 	var comment: String = ""
 
@@ -52,15 +56,15 @@ class ShipHull {
 	}
 
 	// Kg
-	fun getMass(): Int {
+	fun getMass(): Long {
 		//TODO add armor
-		return parts.sumBy { it.getMass() }
+		return parts.sumByLong { it.getMass() }
 	}
 	
 	// cm³
-	fun getVolume(): Int {
+	fun getVolume(): Long {
 		//TODO add armor
-		return parts.sumBy { it.getVolume() }
+		return parts.sumByLong { it.getVolume() }
 	}
 
 	// cm^2
@@ -81,7 +85,33 @@ class ShipHull {
 		return surface.toInt()
 	}
 	
-	override fun toString() = name
+	fun getCost(): Map<Resource, Long> {
+		val cost = HashMap<Resource, Long>()
+		
+		parts.forEach { part ->
+			part.cost.forEach{resource, amount ->
+				var prevCost = cost[resource]
+				
+				if (prevCost == null) {
+					cost[resource] = amount
+				} else {
+					cost[resource] = prevCost + amount
+				}
+			}
+		}
+		return cost
+	}
+	
+	//TODO YYYY[-derivative YY] name
+	override fun toString(): String {
+		val parentHull = parentHull
+		
+		if (parentHull == null) {
+			return "$name ${Units.daysToYearString(designDay)}"
+		}
+		
+		return "$name ${Units.daysToYearString(parentHull.designDay)}-${Units.daysToSubYearString(designDay)}"
+	} 
 	
 	private val hashcode: Int by lazy (LazyThreadSafetyMode.NONE) {
 		var hash = 1;
