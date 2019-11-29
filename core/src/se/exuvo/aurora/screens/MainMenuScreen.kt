@@ -55,7 +55,7 @@ class MainMenuScreen() : GameScreenImpl() {
 		val empires = mutableListOf(Empire("player1"), Empire("player2"))
 		Player.current.empire = empires[0]
 		
-		val galaxy = Galaxy(empires, 2100L * 365 * 24 * 60 * 60)
+		val galaxy = Galaxy(empires, 0)
 		
 		val systems = Bag(PlanetarySystem::class.java)
 		systems.add(PlanetarySystem("s1", Vector2L(0, 0)))

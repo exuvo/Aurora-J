@@ -6,6 +6,7 @@ import com.artemis.utils.Bag
 import se.exuvo.aurora.galactic.Resource
 import java.security.InvalidParameterException
 import java.lang.IllegalStateException
+import se.exuvo.aurora.utils.Units
 
 
 class ColonyComponent() : Component() {
@@ -50,7 +51,7 @@ class Shipyard (
 	val location: ShipyardLocation,
 	val type: ShipyardType
 ) {
-	var capacity = 0L // In cm³
+	var capacity = 1000L // In cm³
 	var fuelCostPerMass = 0.0 //kg fuel per kg of hull to launch into space
 	var buildRate = 1 // kg per day
 	var tooledHull: ShipHull? = null
@@ -117,7 +118,7 @@ class ShipyardModificationExpandCapacity(val addedCapacity: Long): ShipyardModif
 	override fun complete(shipyard: Shipyard) {
 		shipyard.capacity += addedCapacity
 	}
-	override fun getDescription() = "Expanding capacity"
+	override fun getDescription() = "Expanding capacity by " + Units.volumeToString(addedCapacity)
 }
 
 class ShipyardModificationRetool(val assignedHull: ShipHull): ShipyardModification {

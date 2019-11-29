@@ -86,7 +86,7 @@ public class DesktopLauncher {
 		if (Settings.getBol("Window/fullscreen", false)) {
 
 			Monitor monitor;
-			Integer monitorIndex = Settings.getInt("Window/monitorIndex", 0);
+			Integer monitorIndex = Settings.getInt("Window/monitorIndex");
 
 			if (monitorIndex == null) {
 				monitor = Lwjgl3ApplicationConfiguration.getPrimaryMonitor();
@@ -95,30 +95,29 @@ public class DesktopLauncher {
 				monitor = Lwjgl3ApplicationConfiguration.getMonitors()[monitorIndex];
 			}
 
+			Integer refreshRate = Settings.getInt("Window/refreshRate");
+			
+			DisplayMode[] displayModes = Lwjgl3ApplicationConfiguration.getDisplayModes(monitor);
 			DisplayMode displayMode = null;
 
-			if (Settings.getInt("Window/width", defaultWidth) == null && Settings.getInt("Window/height", defaultHeight) == null) {
-
+			for (DisplayMode dm : displayModes) {
+				if (dm.width == Settings.getInt("Window/width", defaultWidth) && dm.height == Settings.getInt("Window/height", defaultHeight) 
+						&& ((refreshRate == null && (displayMode == null || displayMode.refreshRate < dm.refreshRate))
+								|| dm.refreshRate == refreshRate)) {
+					displayMode = dm;
+					break;
+				}
+			}
+			
+			if (displayMode == null) {
+				
+				log.warn("Found no valid display mode for given display settings, using current monitor display mode instead.");
 				displayMode = Lwjgl3ApplicationConfiguration.getDisplayMode(monitor);
+			}
 
-			} else {
+			if (displayMode == null) {
 
-				DisplayMode[] displayModes = Lwjgl3ApplicationConfiguration.getDisplayModes(monitor);
-
-				Integer refreshRate = Settings.getInt("Window/refreshRate", 60);
-
-				for (DisplayMode dm : displayModes) {
-
-					if (dm.width == Settings.getInt("Window/width", defaultWidth) && dm.height == Settings.getInt("Window/height", defaultHeight) && (refreshRate == null || dm.refreshRate == refreshRate)) {
-						displayMode = dm;
-						break;
-					}
-				}
-
-				if (displayMode == null) {
-
-					throw new UnsupportedOperationException("Found no valid display mode for given display settings");
-				}
+				throw new UnsupportedOperationException("Found no valid display mode");
 			}
 
 			windowConfig.setFullscreenMode(displayMode);

@@ -23,8 +23,7 @@ import com.martiansoftware.jsap.JSAP;
 import com.martiansoftware.jsap.JSAPResult;
 import com.martiansoftware.jsap.UnspecifiedParameterException;
 
-import se.unlogic.standardutils.populators.FloatPopulator;
-import se.unlogic.standardutils.populators.IntegerPopulator;
+import se.unlogic.standardutils.numbers.NumberUtils;
 import se.unlogic.standardutils.xml.PooledXPathFactory;
 import se.unlogic.standardutils.xml.XMLUtils;
 
@@ -34,31 +33,6 @@ public class Settings {
 	private static Document doc;
 	private static Element rootElement;
 
-	public enum Type {
-		STRING('s'), BOOLEAN('b'), INTEGER('i'), FLOAT('f');
-
-		private char code;
-
-		private Type(char code) {
-			this.code = code;
-		}
-
-		public char getCode() {
-			return code;
-		}
-
-		public static Type valueOf(char charAt) {
-
-			for (Type type : values()) {
-				if (type.getCode() == charAt) {
-					return type;
-				}
-			}
-
-			throw new IllegalArgumentException("" + charAt);
-		}
-	};
-
 	public static Element getNode(String path) {
 		try {
 			return (Element) PooledXPathFactory.newXPath().evaluate(path, rootElement, XPathConstants.NODE);
@@ -67,18 +41,11 @@ public class Settings {
 		}
 	}
 
-	public static String getNodeValue(String path, Type type) {
+	public static String getNodeValue(String path) {
 		try {
 			Element node = (Element) PooledXPathFactory.newXPath().evaluate(path, rootElement, XPathConstants.NODE);
 
 			if (node != null) {
-
-				String actualType = node.getAttributes().getNamedItem("type").getNodeValue();
-
-				if (actualType.length() == 0 || actualType.charAt(0) != type.code) {
-					throw new InvalidTypeException("Trying to read " + type + " from " + actualType + " setting " + path + "!");
-				}
-
 				return node.getTextContent();
 			}
 
@@ -90,43 +57,76 @@ public class Settings {
 	}
 
 	public static String getStr(String path) {
-		String nodeValue = getNodeValue(path, Type.STRING);
+		String nodeValue = getNodeValue(path);
 
 		return nodeValue;
 	}
 
 	public static Boolean getBol(String path) {
-		String nodeValue = getNodeValue(path, Type.BOOLEAN);
+		String nodeValue = getNodeValue(path);
 
 		if (nodeValue != null) {
-			return Boolean.parseBoolean(nodeValue);
+			
+			if ("true".equals(nodeValue)) {
+				return true;
+				
+			} else if ("false".equals(nodeValue)) {
+				return false;
+			}
+			
+			throw new InvalidTypeException("Trying to read boolean from \"" + nodeValue + "\" at " + path + "!");
 		}
 
 		return null;
 	}
 
 	public static Integer getInt(String path) {
-		String nodeValue = getNodeValue(path, Type.INTEGER);
+		String nodeValue = getNodeValue(path);
 
 		if (nodeValue != null) {
-			return Integer.parseInt(nodeValue);
+			try {
+				return Integer.parseInt(nodeValue);
+
+			} catch (NumberFormatException e) {
+				throw new InvalidTypeException("Trying to read integer from \"" + nodeValue + "\" at " + path + "!", e);
+			}
 		}
 
 		return null;
 	}
 
 	public static Float getFloat(String path) {
-		String nodeValue = getNodeValue(path, Type.FLOAT);
+		String nodeValue = getNodeValue(path);
 
 		if (nodeValue != null) {
-			return Float.parseFloat(nodeValue);
+			try {
+				return Float.parseFloat(nodeValue);
+				
+			} catch (NumberFormatException e) {
+				throw new InvalidTypeException("Trying to read float from \"" + nodeValue + "\" at " + path + "!", e);
+			}
+		}
+
+		return null;
+	}
+
+	public static Double getDouble(String path) {
+		String nodeValue = getNodeValue(path);
+
+		if (nodeValue != null) {
+			try {
+				return Double.parseDouble(nodeValue);
+				
+			} catch (NumberFormatException e) {
+				throw new InvalidTypeException("Trying to read double from \"" + nodeValue + "\" at " + path + "!", e);
+			}
 		}
 
 		return null;
 	}
 
 	public static String getStr(String path, String defaultValue) {
-		String nodeValue = getNodeValue(path, Type.STRING);
+		String nodeValue = getNodeValue(path);
 
 		if (nodeValue == null) {
 			set(path, defaultValue);
@@ -135,8 +135,8 @@ public class Settings {
 		return nodeValue;
 	}
 
-	public static Boolean getBol(String path, boolean defaultValue) {
-		String nodeValue = getNodeValue(path, Type.BOOLEAN);
+	public static boolean getBol(String path, boolean defaultValue) {
+		String nodeValue = getNodeValue(path);
 
 		if (nodeValue != null) {
 			return Boolean.parseBoolean(nodeValue);
@@ -146,8 +146,8 @@ public class Settings {
 		return defaultValue;
 	}
 
-	public static Integer getInt(String path, int defaultValue) {
-		String nodeValue = getNodeValue(path, Type.INTEGER);
+	public static int getInt(String path, int defaultValue) {
+		String nodeValue = getNodeValue(path);
 
 		if (nodeValue != null) {
 			return Integer.parseInt(nodeValue);
@@ -157,11 +157,22 @@ public class Settings {
 		return defaultValue;
 	}
 
-	public static Float getFloat(String path, float defaultValue) {
-		String nodeValue = getNodeValue(path, Type.FLOAT);
+	public static float getFloat(String path, float defaultValue) {
+		String nodeValue = getNodeValue(path);
 
 		if (nodeValue != null) {
 			return Float.parseFloat(nodeValue);
+		}
+
+		set(path, defaultValue);
+		return defaultValue;
+	}
+	
+	public static double getDouble(String path, double defaultValue) {
+		String nodeValue = getNodeValue(path);
+
+		if (nodeValue != null) {
+			return Double.parseDouble(nodeValue);
 		}
 
 		set(path, defaultValue);
@@ -180,50 +191,205 @@ public class Settings {
 		}
 	}
 
-	private static Element set(String path, String value, Type type) {
+	private static Element createNode(String path, String value) {
+		
+		int lastPart = path.lastIndexOf('/');
+
+		Element parentNode;
+		String nodeName;
+
+		if (lastPart == -1) {
+
+			parentNode = rootElement;
+			nodeName = path;
+
+		} else if (lastPart == 0) {
+
+			parentNode = doc.getDocumentElement();
+			nodeName = path.substring(1);
+
+		} else {
+
+			String parentPath = path.substring(0, lastPart);
+			nodeName = path.substring(1 + parentPath.length());
+			parentNode = ensureNode(parentPath);
+		}
+
+		Element node = XMLUtils.createElement(nodeName, value, doc);
+		parentNode.appendChild(node);
+		
+		return node;
+	}
+	
+	public static Element set(String path, String value) {
 		try {
 			Element node = (Element) PooledXPathFactory.newXPath().evaluate(path, rootElement, XPathConstants.NODE);
 
 			if (node != null) {
 
-				String actualType = node.getAttributes().getNamedItem("type").getNodeValue();
+				String currentValue = node.getTextContent();
 
-				if (actualType.charAt(0) != type.code) {
-					throw new InvalidTypeException("Trying to write " + type + " to " + actualType + " setting " + path + "!");
+				if ("true".equals(currentValue) || "false".equals(currentValue)) {
+					throw new InvalidTypeException("Trying to write " + value + " to boolean setting!");
+
+				} else if (NumberUtils.toInt(currentValue) != null) {
+					throw new InvalidTypeException("Trying to write " + value + " to int setting!");
+
+				} else if (NumberUtils.isFloat(currentValue)) {
+					throw new InvalidTypeException("Trying to write " + value + " to float setting!");
+
+				} else if (NumberUtils.isDouble(currentValue)) {
+					throw new InvalidTypeException("Trying to write " + value + " to double setting!");
+				}
+
+				node.setNodeValue(value);
+				return node;
+
+			} else {
+
+				return createNode(path, value);
+			}
+
+		} catch (XPathExpressionException e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	public static void setMatching(String path, String value) {
+		try {
+			Element node = (Element) PooledXPathFactory.newXPath().evaluate(path, rootElement, XPathConstants.NODE);
+
+			if (node != null) {
+
+				String currentValue = node.getTextContent();
+
+				if ("true".equals(currentValue) || "false".equals(currentValue)) {
+					if (value != "true" && value != "false") {
+						throw new InvalidTypeException("Trying to write " + value + " to boolean setting!");
+					}
+
+				} else if (NumberUtils.toInt(currentValue) != null) {
+					if (!NumberUtils.isInt(value)) {
+						throw new InvalidTypeException("Trying to write " + value + " to int setting!");
+					}
+
+				} else if (NumberUtils.isFloat(currentValue)) {
+					if (!NumberUtils.isFloat(value)) {
+						throw new InvalidTypeException("Trying to write " + value + " to float setting!");
+					}
+					
+				} else if (NumberUtils.isDouble(currentValue)) {
+					if (!NumberUtils.isDouble(value)) {
+						throw new InvalidTypeException("Trying to write " + value + " to double setting!");
+					}
 				}
 
 				node.setNodeValue(value);
 
 			} else {
 
-				int lastPart = path.lastIndexOf('/');
-
-				Element parentNode;
-				String nodeName;
-
-				if (lastPart == -1) {
-
-					parentNode = rootElement;
-					nodeName = path;
-
-				} else if (lastPart == 0) {
-
-					parentNode = doc.getDocumentElement();
-					nodeName = path.substring(1);
-
-				} else {
-
-					String parentPath = path.substring(0, lastPart);
-					nodeName = path.substring(1 + parentPath.length());
-					parentNode = ensureNode(parentPath);
-				}
-
-				node = XMLUtils.createElement(nodeName, value, doc);
-				node.setAttribute("type", String.valueOf(type.code));
-				parentNode.appendChild(node);
+				throw new RuntimeException("Node missing " + path);
 			}
 
-			return node;
+		} catch (XPathExpressionException e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	public static Element set(String path, boolean value) {
+		try {
+			Element node = (Element) PooledXPathFactory.newXPath().evaluate(path, rootElement, XPathConstants.NODE);
+
+			if (node != null) {
+				
+				String currentValue = node.getTextContent();
+				
+				if (!"true".equals(currentValue) && !"false".equals(currentValue)) {
+					throw new InvalidTypeException("Trying to write " + value + " to non boolean setting!");
+				}
+
+				node.setNodeValue(Boolean.toString(value));
+				return node;
+
+			} else {
+
+				return createNode(path, Boolean.toString(value));
+			}
+
+		} catch (XPathExpressionException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public static Element set(String path, int value) {
+		try {
+			Element node = (Element) PooledXPathFactory.newXPath().evaluate(path, rootElement, XPathConstants.NODE);
+
+			if (node != null) {
+				
+				String currentValue = node.getTextContent();
+				
+				if (NumberUtils.toInt(currentValue) == null) {
+					throw new InvalidTypeException("Trying to write " + value + " to non int setting!");
+				}
+
+				node.setNodeValue(Integer.toString(value));
+				return node;
+
+			} else {
+
+				return createNode(path, Integer.toString(value));
+			}
+
+		} catch (XPathExpressionException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public static Element set(String path, float value) {
+		try {
+			Element node = (Element) PooledXPathFactory.newXPath().evaluate(path, rootElement, XPathConstants.NODE);
+
+			if (node != null) {
+				
+				String currentValue = node.getTextContent();
+				
+				if (!NumberUtils.isFloat(currentValue)) {
+					throw new InvalidTypeException("Trying to write " + value + " to non float setting!");
+				}
+
+				node.setNodeValue(Float.toString(value));
+				return node;
+
+			} else {
+
+				return createNode(path, Float.toString(value));
+			}
+
+		} catch (XPathExpressionException e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	public static Element set(String path, double value) {
+		try {
+			Element node = (Element) PooledXPathFactory.newXPath().evaluate(path, rootElement, XPathConstants.NODE);
+
+			if (node != null) {
+
+				String currentValue = node.getTextContent();
+				
+				if (!NumberUtils.isDouble(currentValue)) {
+					throw new InvalidTypeException("Trying to write " + value + " to non double setting!");
+				}
+				
+				node.setNodeValue(Double.toString(value));
+				return node;
+
+			} else {
+
+				return createNode(path, Double.toString(value));
+			}
 
 		} catch (XPathExpressionException e) {
 			throw new RuntimeException(e);
@@ -259,60 +425,6 @@ public class Settings {
 		} catch (XPathExpressionException e) {
 			throw new RuntimeException(e);
 		}
-	}
-
-	public static void setMatching(String path, String value) {
-		try {
-			Element node = (Element) PooledXPathFactory.newXPath().evaluate(path, rootElement, XPathConstants.NODE);
-
-			if (node != null) {
-
-				String actualType = node.getAttributes().getNamedItem("type").getNodeValue();
-
-				Type type = Type.valueOf(actualType.charAt(0));
-
-				if (type == Type.BOOLEAN) {
-					if (value != "true" && value != "false") {
-						throw new InvalidTypeException("Trying to write " + value + " to " + actualType + " setting!");
-					}
-
-				} else if (type == Type.INTEGER) {
-					if (!IntegerPopulator.getPopulator().validateFormat(value)) {
-						throw new InvalidTypeException("Trying to write " + value + " to " + actualType + " setting!");
-					}
-
-				} else if (type == Type.FLOAT) {
-					if (!FloatPopulator.getPopulator().validateFormat(value)) {
-						throw new InvalidTypeException("Trying to write " + value + " to " + actualType + " setting!");
-					}
-				}
-
-				node.setNodeValue(value);
-
-			} else {
-
-				throw new RuntimeException("Node missing " + path);
-			}
-
-		} catch (XPathExpressionException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	public static Element set(String path, String value) {
-		return set(path, value, Type.STRING);
-	}
-
-	public static Element set(String path, boolean value) {
-		return set(path, Boolean.toString(value), Type.BOOLEAN);
-	}
-
-	public static Element set(String path, int value) {
-		return set(path, Integer.toString(value), Type.INTEGER);
-	}
-
-	public static Element set(String path, float value) {
-		return set(path, Float.toString(value), Type.FLOAT);
 	}
 
 	public static boolean save() {

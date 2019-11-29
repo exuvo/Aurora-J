@@ -115,14 +115,14 @@ public class Units {
 	
 	public static String daysToDate(int days) {
 
-		int year = days / 365;
+		int year = 2100 + days / 365;
 		
 		return String.format("%04d-%03d", year, 1 + days % 365);
 	}
 	
 	public static String daysToYear(int days) {
 
-		int year = days / 365;
+		int year = 2100 + days / 365;
 		
 		return String.format("%04d", year);
 	}

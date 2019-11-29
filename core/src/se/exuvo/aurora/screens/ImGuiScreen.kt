@@ -73,6 +73,7 @@ import se.exuvo.aurora.galactic.Player
 import se.exuvo.aurora.empires.components.Shipyard
 import se.exuvo.aurora.empires.components.ShipyardSlipway
 import imgui.SelectableFlag
+import imgui.Dir
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
@@ -378,8 +379,12 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 									val colony = colonyMapper.get(entityID)
 									
 									if (beginTabItem("Shipyards")) {
-										//TODO right align some columns https://stackoverflow.com/questions/58044749/how-to-right-align-text-in-imgui-columns
+										
+										//TODO replace with tables when that is done https://github.com/ocornut/imgui/issues/125
+										
 										columns(7)
+										
+										
 										text("Type")
 										nextColumn()
 										text("Capacity")
@@ -396,26 +401,27 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 										
 										colony.shipyards.forEach { shipyard ->
 											nextColumn()
-											var shipyardFlags = TreeNodeFlag.DefaultOpen or TreeNodeFlag.NoTreePushOnOpen or TreeNodeFlag.OpenOnArrow
 											
 											val shipyardSelected = shipyard == selectedShipyard
 											
-											if (shipyardSelected) {
-												shipyardFlags = shipyardFlags or TreeNodeFlag.Selected
+											val storage = ctx.currentWindow!!.dc.stateStorage
+											
+											val buttonIDString = "##" + shipyard.hashCode().toString()
+											val buttonID = getId(buttonIDString)
+											val shipyardOpen = storage.int(buttonID, 1) != 0
+											
+											if (arrowButtonEx(buttonIDString, if (shipyardOpen) Dir.Down else Dir.Right, Vec2(ctx.fontSize), 0)) {
+												storage[buttonID] = !shipyardOpen
 											}
 											
-											val shipyardOpen = treeNodeExV(shipyard.hashCode().toString(), shipyardFlags, "${shipyard.type.short} - ${shipyard.location.short}")
-											
-											if (isItemClicked()) {
+											sameLine()
+											if (selectable("${shipyard.type.short} - ${shipyard.location.short}", shipyardSelected, SelectableFlag.SpanAllColumns.i)) {
 												selectedShipyard = shipyard
 												selectedSlipway = null
 											}
 											
 											nextColumn()
-											if (selectable(Units.volumeToString(shipyard.capacity), shipyardSelected, SelectableFlag.SpanAllColumns.i)) {
-												selectedShipyard = shipyard
-												selectedSlipway = null
-											}
+											rightAlignedColumnText(Units.volumeToString(shipyard.capacity))
 											nextColumn()
 											text("${shipyard.tooledHull}")
 											nextColumn()
@@ -437,7 +443,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 												
 												val daysToCompletion = (modActivity.getCost(shipyard) - shipyard.modificationProgress) / shipyard.modificationRate
 												
-												text(Units.daysToRemaining(daysToCompletion.toInt()))
+												rightAlignedColumnText(Units.daysToRemaining(daysToCompletion.toInt()))
 												nextColumn()
 												text(Units.daysToDate(galaxy.day + daysToCompletion.toInt()))
 												
@@ -456,37 +462,27 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 													nextColumn()
 													
 													val hull = slipway.hull
-													var slipwayFlags = TreeNodeFlag.Leaf or TreeNodeFlag.NoTreePushOnOpen
-													
 													val slipwaySelected = slipway == selectedSlipway
-													
-													if (slipwaySelected) {
-														slipwayFlags = slipwayFlags or TreeNodeFlag.Selected
-													}
 	
+													ImGui.cursorPosX = ImGui.cursorPosX + ctx.fontSize + 2 * ImGui.style.framePadding.x
+													
+													val firstText: String
+													
 													if (hull != null) {
-														treeNodeExV(shipyard.hashCode().toString(), slipwayFlags, Units.massToString(hull.getMass()))
+														firstText = Units.massToString(hull.getMass());
+														
 													} else {
-														treeNodeExV(shipyard.hashCode().toString(), slipwayFlags, "a")
+														firstText = "a"
 													}
 													
-													if (isItemClicked()) {
+													if (selectable(firstText, slipwaySelected, SelectableFlag.SpanAllColumns.i)) {
 														selectedShipyard = null
 														selectedSlipway = slipway
 													}
 													
-													val shipyardHovered = isItemHovered()
-													
-													if (shipyardHovered) {
-														
-													}
-													
 													if (hull != null) {
 														nextColumn()
-														if (selectable(Units.volumeToString(hull.getVolume()), slipwaySelected, SelectableFlag.SpanAllColumns.i)) {
-															selectedShipyard = null
-															selectedSlipway = slipway
-														}
+														rightAlignedColumnText(Units.volumeToString(hull.getVolume()))
 														nextColumn()
 														text("${hull}")
 														nextColumn()
@@ -495,15 +491,12 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 														text("${slipway.progress()}%")
 														nextColumn()
 														val daysToCompletion = (slipway.totalCost() - slipway.usedResources()) / shipyard.buildRate
-														text(Units.daysToRemaining(daysToCompletion.toInt()))
+														rightAlignedColumnText(Units.daysToRemaining(daysToCompletion.toInt()))
 														nextColumn()
 														text(Units.daysToDate(galaxy.day + daysToCompletion.toInt()))
 													} else {
 														nextColumn()
-														if (selectable("-", slipwaySelected, SelectableFlag.SpanAllColumns.i)) {
-															selectedShipyard = null
-															selectedSlipway = slipway
-														}
+														rightAlignedColumnText("-")
 														nextColumn()
 														text("-")
 														nextColumn()
@@ -511,7 +504,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 														nextColumn()
 														text("-")
 														nextColumn()
-														text("-")
+														rightAlignedColumnText("-")
 														nextColumn()
 														text("-")
 													}
@@ -542,6 +535,13 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 					}
 				}
 			}
+		}
+	}
+	
+	private fun rightAlignedColumnText(string: String) {
+		with (ImGui) {
+			ImGui.cursorPosX = ImGui.cursorPosX + ImGui.getColumnWidth() - calcTextSize(string).x - ImGui.scrollX - 2 * ImGui.style.itemSpacing.x
+			text(string)
 		}
 	}
 
