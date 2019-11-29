@@ -657,7 +657,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				if (movement.next != null && movement.previous.time != galaxy.time) {
 
 					if (selectedEntityIDs.contains(entityID)) {
-						val text = "${Units.daysToString((movement.previous.time / (24L * 60L * 60L)).toInt())} ${Units.secondsToString(movement.previous.time)}"
+						val text = "${Units.daysToDate((movement.previous.time / (24L * 60L * 60L)).toInt())} ${Units.secondsToString(movement.previous.time)}"
 						val movementValues = movement.previous.value
 						val x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
 						val y = (movementValues.getYinKM() - cameraOffset.y).toFloat()
@@ -670,7 +670,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					}
 
 					run {
-						val text = "${Units.daysToString((movement.next!!.time / (24L * 60L * 60L)).toInt())} ${Units.secondsToString(movement.next!!.time)}"
+						val text = "${Units.daysToDate((movement.next!!.time / (24L * 60L * 60L)).toInt())} ${Units.secondsToString(movement.next!!.time)}"
 						val movementValues = movement.next!!.value
 						val x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
 						val y = (movementValues.getYinKM() - cameraOffset.y).toFloat()

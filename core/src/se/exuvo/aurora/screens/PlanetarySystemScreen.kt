@@ -150,7 +150,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
 		
-		val layout = Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, ${Units.daysToString(galaxy.day)} ${Units.secondsToString(galaxy.time)}, ", 8f, 32f)
+		val layout = Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, ${Units.daysToDate(galaxy.day)} ${Units.secondsToString(galaxy.time)}, ", 8f, 32f)
 		
 		if (galaxy.speed == 0L) {
 			Assets.fontUI.color = Color.RED

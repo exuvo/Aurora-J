@@ -102,15 +102,14 @@ class ShipHull {
 		return cost
 	}
 	
-	//TODO YYYY[-derivative YY] name
 	override fun toString(): String {
 		val parentHull = parentHull
 		
 		if (parentHull == null) {
-			return "$name ${Units.daysToYearString(designDay)}"
+			return "$name ${Units.daysToYear(designDay)}"
 		}
 		
-		return "$name ${Units.daysToYearString(parentHull.designDay)}-${Units.daysToSubYearString(designDay)}"
+		return "$name ${Units.daysToYear(parentHull.designDay)}-${Units.daysToSubYear(designDay)}"
 	} 
 	
 	private val hashcode: Int by lazy (LazyThreadSafetyMode.NONE) {

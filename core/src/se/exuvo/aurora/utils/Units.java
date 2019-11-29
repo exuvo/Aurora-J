@@ -99,23 +99,37 @@ public class Units {
 		}
 	}
 	
-	public static String daysToString(int day) {
+	public static String daysToRemaining(int days) {
 
-		int year = day / 365;
-		
-		return String.format("%04d-%03d", year, 1 + day % 365);
+		if (days <= 365) {
+			
+			return String.format("%3d days", days);
+			
+		} else {
+			
+			int year = days / 365;
+			
+			return String.format("%d years %3d days", year, days % 365);
+		}
 	}
 	
-	public static String daysToYearString(int day) {
+	public static String daysToDate(int days) {
 
-		int year = day / 365;
+		int year = days / 365;
+		
+		return String.format("%04d-%03d", year, 1 + days % 365);
+	}
+	
+	public static String daysToYear(int days) {
+
+		int year = days / 365;
 		
 		return String.format("%04d", year);
 	}
 	
-	public static String daysToSubYearString(int day) {
+	public static String daysToSubYear(int days) {
 
-		int year = day / 365;
+		int year = days / 365;
 		
 		return String.format("%02d", year % 100);
 	}

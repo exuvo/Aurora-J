@@ -70,6 +70,9 @@ import se.exuvo.aurora.empires.components.ColonyComponent
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.EntityReference
 import se.exuvo.aurora.galactic.Player
+import se.exuvo.aurora.empires.components.Shipyard
+import se.exuvo.aurora.empires.components.ShipyardSlipway
+import imgui.SelectableFlag
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
@@ -286,6 +289,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	}
 	
 	var selectedColony: EntityReference? = null
+	var selectedShipyard: Shipyard? = null
+	var selectedSlipway: ShipyardSlipway? = null
 	
 	private fun colonyManager() {
 		
@@ -296,6 +301,10 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 					window("Colony manager", ::colonyManagerVisible, WindowFlag.None.i) {
 						
 						val empire = Player.current.empire!!
+						
+						if (selectedColony == null && empire.colonies.isNotEmpty()) {
+							selectedColony = empire.colonies[0]
+						}
 						
 						// windowContentRegionWidth * 0.3f
 						child("Colonies", Vec2(200, 0), true, WindowFlag.None.i) {
@@ -369,10 +378,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 									val colony = colonyMapper.get(entityID)
 									
 									if (beginTabItem("Shipyards")) {
-										
+										//TODO right align some columns https://stackoverflow.com/questions/58044749/how-to-right-align-text-in-imgui-columns
 										columns(7)
-										text("Location")
-										nextColumn()
 										text("Type")
 										nextColumn()
 										text("Capacity")
@@ -383,15 +390,32 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 										nextColumn()
 										text("Progress")
 										nextColumn()
-										text("Completion Date")
+										text("Remaining")
+										nextColumn()
+										text("Completion")
 										
 										colony.shipyards.forEach { shipyard ->
 											nextColumn()
-											text("${shipyard.location.short}")
+											var shipyardFlags = TreeNodeFlag.DefaultOpen or TreeNodeFlag.NoTreePushOnOpen or TreeNodeFlag.OpenOnArrow
+											
+											val shipyardSelected = shipyard == selectedShipyard
+											
+											if (shipyardSelected) {
+												shipyardFlags = shipyardFlags or TreeNodeFlag.Selected
+											}
+											
+											val shipyardOpen = treeNodeExV(shipyard.hashCode().toString(), shipyardFlags, "${shipyard.type.short} - ${shipyard.location.short}")
+											
+											if (isItemClicked()) {
+												selectedShipyard = shipyard
+												selectedSlipway = null
+											}
+											
 											nextColumn()
-											text("${shipyard.type.short}")
-											nextColumn()
-											text(Units.volumeToString(shipyard.capacity))
+											if (selectable(Units.volumeToString(shipyard.capacity), shipyardSelected, SelectableFlag.SpanAllColumns.i)) {
+												selectedShipyard = shipyard
+												selectedSlipway = null
+											}
 											nextColumn()
 											text("${shipyard.tooledHull}")
 											nextColumn()
@@ -404,15 +428,18 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 												nextColumn()
 												
 												if (shipyard.modificationProgress == 0L) {
-													text("0%")
+													selectable("0%")
 												} else {
 													val progress = (100 * shipyard.modificationProgress) / modActivity.getCost(shipyard)
-													text("$progress%")
+													selectable("$progress%")
 												}
 												nextColumn()
 												
 												val daysToCompletion = (modActivity.getCost(shipyard) - shipyard.modificationProgress) / shipyard.modificationRate
-												text(Units.daysToString(galaxy.day + daysToCompletion.toInt()))
+												
+												text(Units.daysToRemaining(daysToCompletion.toInt()))
+												nextColumn()
+												text(Units.daysToDate(galaxy.day + daysToCompletion.toInt()))
 												
 											} else {
 												text("")
@@ -420,48 +447,79 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 												text("")
 												nextColumn()
 												text("")
+												nextColumn()
+												text("")
 											}
 
-											shipyard.slipways.forEach { slipway ->
-												nextColumn()
-
-												val hull = slipway.hull
-
-												if (hull != null) {
-													text("")
+											if (shipyardOpen) {
+												shipyard.slipways.forEach { slipway ->
 													nextColumn()
-													text(Units.massToString(hull.getMass()))
-													nextColumn()
-													text(Units.volumeToString(hull.getVolume()))
-													nextColumn()
-													text("${hull}")
-													nextColumn()
-													text("Building")
-													nextColumn()
-													text("${slipway.progress()}%")
-													nextColumn()
-													val daysToCompletion = (slipway.totalCost() - slipway.usedResources()) / shipyard.buildRate
-													text(Units.daysToString(galaxy.day + daysToCompletion.toInt()))
-												} else {
-													text("")
-													nextColumn()
-													text("-")
-													nextColumn()
-													text("-")
-													nextColumn()
-													text("-")
-													nextColumn()
-													text("Empty")
-													nextColumn()
-													text("-")
-													nextColumn()
-													text("-")
+													
+													val hull = slipway.hull
+													var slipwayFlags = TreeNodeFlag.Leaf or TreeNodeFlag.NoTreePushOnOpen
+													
+													val slipwaySelected = slipway == selectedSlipway
+													
+													if (slipwaySelected) {
+														slipwayFlags = slipwayFlags or TreeNodeFlag.Selected
+													}
+	
+													if (hull != null) {
+														treeNodeExV(shipyard.hashCode().toString(), slipwayFlags, Units.massToString(hull.getMass()))
+													} else {
+														treeNodeExV(shipyard.hashCode().toString(), slipwayFlags, "a")
+													}
+													
+													if (isItemClicked()) {
+														selectedShipyard = null
+														selectedSlipway = slipway
+													}
+													
+													val shipyardHovered = isItemHovered()
+													
+													if (shipyardHovered) {
+														
+													}
+													
+													if (hull != null) {
+														nextColumn()
+														if (selectable(Units.volumeToString(hull.getVolume()), slipwaySelected, SelectableFlag.SpanAllColumns.i)) {
+															selectedShipyard = null
+															selectedSlipway = slipway
+														}
+														nextColumn()
+														text("${hull}")
+														nextColumn()
+														text("Building")
+														nextColumn()
+														text("${slipway.progress()}%")
+														nextColumn()
+														val daysToCompletion = (slipway.totalCost() - slipway.usedResources()) / shipyard.buildRate
+														text(Units.daysToRemaining(daysToCompletion.toInt()))
+														nextColumn()
+														text(Units.daysToDate(galaxy.day + daysToCompletion.toInt()))
+													} else {
+														nextColumn()
+														if (selectable("-", slipwaySelected, SelectableFlag.SpanAllColumns.i)) {
+															selectedShipyard = null
+															selectedSlipway = slipway
+														}
+														nextColumn()
+														text("-")
+														nextColumn()
+														text("None")
+														nextColumn()
+														text("-")
+														nextColumn()
+														text("-")
+														nextColumn()
+														text("-")
+													}
 												}
-
-
 											}
 										}
 										
+										endColumns()
 										endTabItem()
 									}
 									

@@ -117,7 +117,7 @@ class ShipyardModificationExpandCapacity(val addedCapacity: Long): ShipyardModif
 	override fun complete(shipyard: Shipyard) {
 		shipyard.capacity += addedCapacity
 	}
-	override fun getDescription() = "Expand capacity"
+	override fun getDescription() = "Expanding capacity"
 }
 
 class ShipyardModificationRetool(val assignedHull: ShipHull): ShipyardModification {
@@ -131,7 +131,7 @@ class ShipyardModificationRetool(val assignedHull: ShipHull): ShipyardModificati
 	override fun complete(shipyard: Shipyard) {
 		shipyard.tooledHull = assignedHull
 	}
-	override fun getDescription() = "Retool to " + assignedHull
+	override fun getDescription() = "Retooling to " + assignedHull
 }
 
 class ShipyardModificationAddSlipway(): ShipyardModification {
@@ -139,5 +139,5 @@ class ShipyardModificationAddSlipway(): ShipyardModification {
 	override fun complete(shipyard: Shipyard) {
 		shipyard.slipways + ShipyardSlipway()
 	}
-	override fun getDescription() = "Add slipway"
+	override fun getDescription() = "Adding slipway"
 }
