@@ -380,139 +380,197 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 									
 									if (beginTabItem("Shipyards")) {
 										
-										//TODO replace with tables when that is done https://github.com/ocornut/imgui/issues/125
-										
-										columns(7)
-										
-										
-										text("Type")
-										nextColumn()
-										text("Capacity")
-										nextColumn()
-										text("Tooled Hull")
-										nextColumn()
-										text("Activity")
-										nextColumn()
-										text("Progress")
-										nextColumn()
-										text("Remaining")
-										nextColumn()
-										text("Completion")
-										
-										colony.shipyards.forEach { shipyard ->
+										child("List", Vec2(0, -200), true, WindowFlag.None.i) {
+											
+											//TODO replace with tables when that is done https://github.com/ocornut/imgui/issues/125
+											columns(7)
+											
+											text("Type")
 											nextColumn()
-											
-											val shipyardSelected = shipyard == selectedShipyard
-											
-											val storage = ctx.currentWindow!!.dc.stateStorage
-											
-											val buttonIDString = "##" + shipyard.hashCode().toString()
-											val buttonID = getId(buttonIDString)
-											val shipyardOpen = storage.int(buttonID, 1) != 0
-											
-											if (arrowButtonEx(buttonIDString, if (shipyardOpen) Dir.Down else Dir.Right, Vec2(ctx.fontSize), 0)) {
-												storage[buttonID] = !shipyardOpen
-											}
-											
-											sameLine()
-											if (selectable("${shipyard.type.short} - ${shipyard.location.short}", shipyardSelected, SelectableFlag.SpanAllColumns.i)) {
-												selectedShipyard = shipyard
-												selectedSlipway = null
-											}
-											
+											text("Capacity")
 											nextColumn()
-											rightAlignedColumnText(Units.volumeToString(shipyard.capacity))
+											text("Tooled Hull")
 											nextColumn()
-											text("${shipyard.tooledHull}")
+											text("Activity")
 											nextColumn()
+											text("Progress")
+											nextColumn()
+											text("Remaining")
+											nextColumn()
+											text("Completion")
 											
-											val modActivity = shipyard.modificationActivity
-											
-											if (modActivity != null) {
-												
-												text("${modActivity.getDescription()}")
+											colony.shipyards.forEach { shipyard ->
 												nextColumn()
 												
-												if (shipyard.modificationProgress == 0L) {
-													selectable("0%")
-												} else {
-													val progress = (100 * shipyard.modificationProgress) / modActivity.getCost(shipyard)
-													selectable("$progress%")
+												val shipyardSelected = shipyard == selectedShipyard && selectedSlipway == null
+												
+												val storage = ctx.currentWindow!!.dc.stateStorage
+												
+												val buttonIDString = "##" + shipyard.hashCode().toString()
+												val buttonID = getId(buttonIDString)
+												val shipyardOpen = storage.int(buttonID, 1) != 0
+												
+												if (arrowButtonEx(buttonIDString, if (shipyardOpen) Dir.Down else Dir.Right, Vec2(ctx.fontSize), 0)) {
+													storage[buttonID] = !shipyardOpen
 												}
+												
+												sameLine()
+												if (selectable("${shipyard.type.short} - ${shipyard.location.short}", shipyardSelected, SelectableFlag.SpanAllColumns.i)) {
+													selectedShipyard = shipyard
+													selectedSlipway = null
+												}
+												
+												nextColumn()
+												rightAlignedColumnText(Units.volumeToString(shipyard.capacity))
+												nextColumn()
+												text("${shipyard.tooledHull}")
 												nextColumn()
 												
-												val daysToCompletion = (modActivity.getCost(shipyard) - shipyard.modificationProgress) / shipyard.modificationRate
+												val modActivity = shipyard.modificationActivity
 												
-												rightAlignedColumnText(Units.daysToRemaining(daysToCompletion.toInt()))
-												nextColumn()
-												text(Units.daysToDate(galaxy.day + daysToCompletion.toInt()))
-												
-											} else {
-												text("")
-												nextColumn()
-												text("")
-												nextColumn()
-												text("")
-												nextColumn()
-												text("")
-											}
-
-											if (shipyardOpen) {
-												shipyard.slipways.forEach { slipway ->
+												if (modActivity != null) {
+													
+													text("${modActivity.getDescription()}")
 													nextColumn()
 													
-													val hull = slipway.hull
-													val slipwaySelected = slipway == selectedSlipway
+													if (shipyard.modificationProgress == 0L) {
+														selectable("0%")
+													} else {
+														val progress = (100 * shipyard.modificationProgress) / modActivity.getCost(shipyard)
+														selectable("$progress%")
+													}
+													nextColumn()
+													
+													val daysToCompletion = (modActivity.getCost(shipyard) - shipyard.modificationProgress) / shipyard.modificationRate
+													
+													rightAlignedColumnText(Units.daysToRemaining(daysToCompletion.toInt()))
+													nextColumn()
+													text(Units.daysToDate(galaxy.day + daysToCompletion.toInt()))
+													
+												} else {
+													text("")
+													nextColumn()
+													text("")
+													nextColumn()
+													text("")
+													nextColumn()
+													text("")
+												}
 	
-													ImGui.cursorPosX = ImGui.cursorPosX + ctx.fontSize + 2 * ImGui.style.framePadding.x
-													
-													val firstText: String
-													
-													if (hull != null) {
-														firstText = Units.massToString(hull.getMass());
+												if (shipyardOpen) {
+													shipyard.slipways.forEach { slipway ->
+														nextColumn()
 														
-													} else {
-														firstText = "a"
-													}
-													
-													if (selectable(firstText, slipwaySelected, SelectableFlag.SpanAllColumns.i)) {
-														selectedShipyard = null
-														selectedSlipway = slipway
-													}
-													
-													if (hull != null) {
-														nextColumn()
-														rightAlignedColumnText(Units.volumeToString(hull.getVolume()))
-														nextColumn()
-														text("${hull}")
-														nextColumn()
-														text("Building")
-														nextColumn()
-														text("${slipway.progress()}%")
-														nextColumn()
-														val daysToCompletion = (slipway.totalCost() - slipway.usedResources()) / shipyard.buildRate
-														rightAlignedColumnText(Units.daysToRemaining(daysToCompletion.toInt()))
-														nextColumn()
-														text(Units.daysToDate(galaxy.day + daysToCompletion.toInt()))
-													} else {
-														nextColumn()
-														rightAlignedColumnText("-")
-														nextColumn()
-														text("-")
-														nextColumn()
-														text("None")
-														nextColumn()
-														text("-")
-														nextColumn()
-														rightAlignedColumnText("-")
-														nextColumn()
-														text("-")
+														val hull = slipway.hull
+														val slipwaySelected = slipway == selectedSlipway
+		
+														ImGui.cursorPosX = ImGui.cursorPosX + ctx.fontSize + 2 * ImGui.style.framePadding.x
+														
+														if (selectable("##" + slipway.hashCode().toString(), slipwaySelected, SelectableFlag.SpanAllColumns.i)) {
+															selectedShipyard = shipyard
+															selectedSlipway = slipway
+														}
+														
+														if (hull != null) {
+															sameLineRightAlignedColumnText(Units.massToString(hull.getMass()))
+															nextColumn()
+															rightAlignedColumnText(Units.volumeToString(hull.getVolume()))
+															nextColumn()
+															text("${hull}")
+															nextColumn()
+															text("Building")
+															nextColumn()
+															text("${slipway.progress()}%")
+															nextColumn()
+															val daysToCompletion = (slipway.totalCost() - slipway.usedResources()) / shipyard.buildRate
+															rightAlignedColumnText(Units.daysToRemaining(daysToCompletion.toInt()))
+															nextColumn()
+															text(Units.daysToDate(galaxy.day + daysToCompletion.toInt()))
+														} else {
+															sameLineRightAlignedColumnText("-")
+															nextColumn()
+															rightAlignedColumnText("-")
+															nextColumn()
+															text("-")
+															nextColumn()
+															text("None")
+															nextColumn()
+															text("-")
+															nextColumn()
+															rightAlignedColumnText("-")
+															nextColumn()
+															text("-")
+														}
 													}
 												}
 											}
+											
+											endColumns()
 										}
 										
-										endColumns()
+										var shipyard = selectedShipyard
+										val slipway = selectedSlipway
+										
+										if (slipway != null) {
+											
+											slipway.hull?.let { hull ->
+												
+												alignTextToFramePadding()
+												text("Building: ${hull.name}")
+												sameLine()
+												
+												if (button("Cancel")) {
+													
+													slipway.hull = null
+													slipway.hullCost = emptyMap()
+													
+													slipway.usedResources.forEach { entry ->
+														colony.addCargo(entry.key, entry.value)
+														slipway.usedResources[entry.key] = 0L
+													}
+													
+												} else {
+													
+													text("Used/Remaining resources:")
+													group {
+														slipway.hullCost.forEach { entry ->
+															text(entry.key.name)
+														}
+													}
+													sameLine()
+													group {
+														var maxWidth = 0f
+														slipway.usedResources.forEach { entry ->
+															maxWidth = kotlin.math.max(maxWidth, calcTextSize(Units.massToString(entry.value)).x)
+														}
+														slipway.usedResources.forEach { entry ->
+															val string = Units.massToString(entry.value)
+															ImGui.cursorPosX = ImGui.cursorPosX + maxWidth - calcTextSize(string).x - ImGui.scrollX
+															text(string)
+														}
+													}
+													sameLine()
+													group {
+														var maxWidth = 0f
+														slipway.hullCost.forEach { entry ->
+															maxWidth = kotlin.math.max(maxWidth, calcTextSize(Units.massToString(entry.value)).x)
+														}
+														slipway.hullCost.forEach { entry ->
+															text("/")
+															sameLine()
+															val string = Units.massToString(entry.value)
+															ImGui.cursorPosX = ImGui.cursorPosX + maxWidth - calcTextSize(string).x - ImGui.scrollX
+															text(string)
+														}
+													}
+												}
+											}
+											
+										} else if (shipyard != null) {
+											
+											
+										} else 
+										
 										endTabItem()
 									}
 									
@@ -544,7 +602,14 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 			text(string)
 		}
 	}
-
+	
+	private fun sameLineRightAlignedColumnText(string: String) {
+		with (ImGui) {
+			sameLine(ImGui.cursorPosX + ImGui.getColumnWidth() - calcTextSize(string).x - ImGui.scrollX - 2 * ImGui.style.itemSpacing.x)
+			text(string)
+		}
+	}
+	
 	var lastDebugTime = 0L
 	var powerAvailiableValues = FloatArray(60)
 	var powerRequestedValues = FloatArray(60)

@@ -81,6 +81,9 @@ class ShipyardSlipway() {
 		hull = newHull
 		hullCost = newHull.getCost()
 		usedResources.clear()
+		hullCost.forEach { entry ->
+			usedResources[entry.key] = 0L
+		}
 	}
 	
 	fun usedResources() = usedResources.values.sum()
