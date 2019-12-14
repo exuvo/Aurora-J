@@ -12,7 +12,10 @@ import imgui.*
 import imgui.ImGui.getId
 import imgui.internal.*
 import imgui.imgui.widgets.*
-import imgui.imgui.g
+import imgui.api.g
+import imgui.classes.DrawList
+import imgui.classes.Style
+import imgui.internal.classes.Rect
 import imgui.ImGui.io
 import imgui.ImGui.calcTextSize
 import imgui.ImGui.isPopupOpen
@@ -291,10 +294,7 @@ fun EndPiePopup(): Unit {
 	}
 
 	if (s_oPieMenuContext.m_bClose || (!bItemHovered && isMouseReleased(s_oPieMenuContext.m_iMouseButton))) {
-		try {
-			//Exception in popups.kt:175 if no window was selected before opening popup 
-			closeCurrentPopup();
-		} catch (err: KotlinNullPointerException) {}
+		closeCurrentPopup();
 	}
 
 	endPopup();

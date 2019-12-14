@@ -10,7 +10,7 @@ import com.badlogic.gdx.utils.Disposable
 import glm_.vec2.Vec2
 import glm_.vec2.Vec2d
 import imgui.Col
-import imgui.imgui.Context
+import imgui.classes.Context
 import imgui.ImGui
 import imgui.TreeNodeFlag
 import imgui.WindowFlag
@@ -928,10 +928,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 		if (BeginPiePopup("CommandMenu", 1)) {
 			
 			if (commandMenuClose) {
-				try {
-					//Exception in popups.kt:175 if no window was selected before opening popup 
-					ImGui.closeCurrentPopup();
-				} catch (err: KotlinNullPointerException) {}
+				ImGui.closeCurrentPopup();
 				commandMenuClose = false
 			}
 			
