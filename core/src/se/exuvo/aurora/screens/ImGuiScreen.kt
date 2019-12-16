@@ -74,6 +74,12 @@ import se.exuvo.aurora.empires.components.Shipyard
 import se.exuvo.aurora.empires.components.ShipyardSlipway
 import imgui.SelectableFlag
 import imgui.Dir
+import se.exuvo.aurora.galactic.ShipHull
+import se.exuvo.aurora.empires.components.ShipyardModification
+import imgui.StyleVar
+import imgui.internal.ItemFlag
+import se.exuvo.aurora.empires.components.ShipyardModificationRetool
+import se.exuvo.aurora.empires.components.ShipyardModifications
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
@@ -292,6 +298,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	var selectedColony: EntityReference? = null
 	var selectedShipyard: Shipyard? = null
 	var selectedSlipway: ShipyardSlipway? = null
+	var selectedHull: ShipHull? = null
+	var selectedShipyardModification: ShipyardModifications? = null
 	
 	private fun colonyManager() {
 		
@@ -355,7 +363,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 								}
 							}
 							
-							collapsingHeader("Supply stations 0", TreeNodeFlag.DefaultOpen.i) {
+							collapsingHeader("Stations 0", TreeNodeFlag.DefaultOpen.i) {
 								
 							}
 						}
@@ -418,6 +426,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 												if (selectable("${shipyard.type.short} - ${shipyard.location.short}", shipyardSelected, SelectableFlag.SpanAllColumns.i)) {
 													selectedShipyard = shipyard
 													selectedSlipway = null
+													selectedHull = null
 												}
 												
 												nextColumn()
@@ -469,6 +478,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 														if (selectable("##" + slipway.hashCode().toString(), slipwaySelected, SelectableFlag.SpanAllColumns.i)) {
 															selectedShipyard = shipyard
 															selectedSlipway = slipway
+															selectedHull = null
 														}
 														
 														if (hull != null) {
@@ -511,9 +521,12 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 										var shipyard = selectedShipyard
 										val slipway = selectedSlipway
 										
-										if (slipway != null) {
+										if (shipyard != null && slipway != null) {
 											
-											slipway.hull?.let { hull ->
+											val hull = slipway.hull
+											val tooledHull = shipyard.tooledHull
+											
+											if (hull != null) {
 												
 												alignTextToFramePadding()
 												text("Building: ${hull.name}")
@@ -564,12 +577,135 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 														}
 													}
 												}
+												
+											} else if (tooledHull != null) {
+												
+												val selectedHull2 = selectedHull
+												
+												if (beginCombo("Ship Hull", if (selectedHull2 == null) "-" else selectedHull2.toString(), 0)) {
+													
+													empire.shipHulls.filter{ it == tooledHull || it.parentHull == tooledHull }.forEach { empireHull ->
+														
+														val selected = empireHull == selectedHull2
+														
+														if (selectable(empireHull.toString(), selected)) {
+															selectedHull = empireHull
+														}
+														
+														if (selected) {
+															setItemDefaultFocus()
+														}
+													}
+													
+													endCombo()
+												}
+												
+												 if (selectedHull2 == null) {
+													 pushItemFlag(ItemFlag.Disabled.i, true)
+													 pushStyleVar(StyleVar.Alpha, style.alpha * 0.5f)
+												 }
+												
+												if (button("Build") && selectedHull2 != null) {
+													slipway.build(selectedHull2)
+												}
+
+												if (selectedHull2 == null) {
+													popItemFlag()
+													popStyleVar()
+												}
 											}
 											
 										} else if (shipyard != null) {
 											
+											val modification = shipyard.modificationActivity
 											
-										} else 
+											if (modification != null) {
+												
+												alignTextToFramePadding()
+												text("${modification.getDescription()}")
+												sameLine()
+												
+												if (button("Cancel")) {
+													
+													colony.addCargo(Resource.GENERIC, shipyard.modificationProgress)
+													
+													shipyard.modificationActivity = null
+													shipyard.modificationProgress = 0L
+													
+												} else {
+													
+													text("Used/Remaining resources:")
+													text(Resource.GENERIC.name)
+													sameLine()
+													text(Units.massToString(shipyard.modificationProgress))
+													sameLine()
+													text("/")
+													sameLine()
+													text(Units.massToString(modification.getCost(shipyard)))
+												}
+												
+											} else {
+												
+												val selectedModification = selectedShipyardModification
+												
+												if (beginCombo("Modification", if (selectedModification == null) "-" else selectedModification.name, 0)) {
+													
+													ShipyardModifications.values().forEach { possibleModification ->
+														val selected = possibleModification == selectedModification
+														
+														if (selectable(possibleModification.name, selected)) {
+															selectedShipyardModification = possibleModification
+														}
+														
+														if (selected) {
+															setItemDefaultFocus()
+														}
+													}
+													
+													endCombo()
+												}
+												
+												if (selectedShipyardModification == ShipyardModifications.RETOOL) {
+													
+													val selectedHull2 = selectedHull
+													
+													if (beginCombo("Ship Hull", if (selectedHull2 == null) "-" else selectedHull2.toString(), 0)) {
+													
+														empire.shipHulls.forEach { empireHull ->
+															val selected = empireHull == selectedHull2
+															
+															if (selectable(empireHull.toString(), selected)) {
+																selectedHull = empireHull
+															}
+															
+															if (selected) {
+																setItemDefaultFocus()
+															}
+														}
+														
+														endCombo()
+													}
+													
+													 if (selectedHull2 == null) {
+														 pushItemFlag(ItemFlag.Disabled.i, true)
+														 pushStyleVar(StyleVar.Alpha, style.alpha * 0.5f)
+													 }
+													
+													if (button("Retool") && selectedHull2 != null) {
+														
+														shipyard.modificationActivity = ShipyardModificationRetool(selectedHull2)
+														shipyard.modificationProgress = 0
+													}
+	
+													if (selectedHull2 == null) {
+														popItemFlag()
+														popStyleVar()
+													}
+													
+												}
+												
+											}
+										}
 										
 										endTabItem()
 									}
@@ -582,7 +718,25 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 									
 									if (beginTabItem("Mining")) {
 										
-										text("todo")
+										text("Resources:")
+										group {
+											colony.resources.forEach { entry ->
+												text(entry.key.name)
+											}
+										}
+										sameLine()
+										group {
+											var maxWidth = 0f
+											colony.resources.forEach { entry ->
+												maxWidth = kotlin.math.max(maxWidth, calcTextSize(Units.massToString(entry.value)).x)
+											}
+											colony.resources.forEach { entry ->
+												val string = Units.massToString(entry.value)
+												ImGui.cursorPosX = ImGui.cursorPosX + maxWidth - calcTextSize(string).x - ImGui.scrollX
+												text(string)
+											}
+										}
+										
 										endTabItem()
 									}
 								}

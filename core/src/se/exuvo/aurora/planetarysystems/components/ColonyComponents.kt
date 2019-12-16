@@ -7,15 +7,17 @@ import se.exuvo.aurora.galactic.Resource
 import java.security.InvalidParameterException
 import java.lang.IllegalStateException
 import se.exuvo.aurora.utils.Units
+import se.exuvo.aurora.galactic.MunitionHull
 
 
 class ColonyComponent() : Component() {
 	var population: Long = 0
 	val resources = LinkedHashMap<Resource, Long>()
+	val munitions = LinkedHashMap<MunitionHull, Int>()
 	val shipyards = ArrayList<Shipyard>()
 	
 	init {
-		Resource.values().forEach { r -> resources[r] = 0L }
+		Resource.values().forEach { r -> resources[r] = 10000000L }
 	}
 	
 	fun set(population: Long): ColonyComponent {
@@ -23,8 +25,32 @@ class ColonyComponent() : Component() {
 		return this
 	}
 	
+	fun getCargoAmount(resource: Resource): Long = resources[resource]!!
+	
+	fun getCargoAmount(munitionClass: MunitionHull): Int {
+
+		var available = munitions[munitionClass]
+
+		if (available != null) {
+			return available
+		}
+
+		return 0
+	}
+	
 	fun addCargo(resource: Resource, amount: Long) {
 		resources[resource] = resources[resource]!! + amount
+	}
+	
+	fun addCargo(munitionClass: MunitionHull, amount: Int) {
+		
+		var stored = munitions[munitionClass]
+
+		if (stored == null) {
+			stored = 0
+		}
+		
+		munitions[munitionClass] = stored + amount
 	}
 	
 	fun retrieveCargo(resource: Resource, amount: Long): Long {
@@ -45,6 +71,25 @@ class ColonyComponent() : Component() {
 
 		return retrievedAmount
 	}
+	
+	fun retrieveCargo(munitionClass: MunitionHull, amount: Int): Int {
+
+		val available = munitions[munitionClass]
+
+		if (available == null || available == 0) {
+			return 0
+		}
+
+		var retrievedAmount = amount
+
+		if (available < amount) {
+			retrievedAmount = available
+		}
+
+		munitions[munitionClass] = available - retrievedAmount
+
+		return retrievedAmount
+	}
 }
 
 class Shipyard (
@@ -53,12 +98,12 @@ class Shipyard (
 ) {
 	var capacity = 1000L // In cm³
 	var fuelCostPerMass = 0.0 //kg fuel per kg of hull to launch into space
-	var buildRate = 1 // kg per day
+	var buildRate = location.baseBuildrate // kg per day
 	var tooledHull: ShipHull? = null
 	val slipways = ArrayList<ShipyardSlipway>()
 	
 	var modificationActivity: ShipyardModification? = null
-	var modificationRate = 1;
+	var modificationRate = 1000;
 	var modificationProgress = 0L
 	
 	init {
@@ -100,14 +145,20 @@ class ShipyardSlipway() {
 	}
 }
 
-enum class ShipyardLocation(val short: String) {
-	ORBITAL("ORB"),
-	TERRESTIAL("GND") // Cheaper to modify shipyard, quicker to build ships, needs fuel to launch ships into space
+enum class ShipyardLocation(val short: String, val baseBuildrate: Long, val modificationMultiplier: Long) {
+	ORBITAL(   "ORB", 100, 120),
+	TERRESTIAL("GND", 100, 100) // Cheaper to modify shipyard, quicker to build ships, needs fuel to launch ships into space
 }
 
 enum class ShipyardType(val short: String, val modificationMultiplier: Long) {
-	CIVILIAN("CIV", 100), // Cheaper to build and expand
-	MILITARY("MIL", 150)
+	CIVILIAN("CIV", 100),
+	MILITARY("MIL", 150) // More expensive to build and expand due to need to handle explosives
+}
+
+enum class ShipyardModifications(name: String) {
+	RETOOL("Retool"),
+	EXPAND_CAPACITY("Expand capacity"),
+	ADD_SLIPWAY("Add slipway")
 }
 
 interface ShipyardModification {
@@ -117,7 +168,7 @@ interface ShipyardModification {
 }
 
 class ShipyardModificationExpandCapacity(val addedCapacity: Long): ShipyardModification {
-	override fun getCost(shipyard: Shipyard) = (addedCapacity * shipyard.slipways.size * shipyard.type.modificationMultiplier) / 100
+	override fun getCost(shipyard: Shipyard) = (addedCapacity * shipyard.slipways.size * shipyard.type.modificationMultiplier * shipyard.location.modificationMultiplier) / 10L
 	override fun complete(shipyard: Shipyard) {
 		shipyard.capacity += addedCapacity
 	}
@@ -127,10 +178,10 @@ class ShipyardModificationExpandCapacity(val addedCapacity: Long): ShipyardModif
 class ShipyardModificationRetool(val assignedHull: ShipHull): ShipyardModification {
 	override fun getCost(shipyard: Shipyard): Long {
 		if (assignedHull.parentHull == shipyard.tooledHull) {
-			return (shipyard.capacity * shipyard.slipways.size * shipyard.type.modificationMultiplier) / 200
+			return (shipyard.capacity * shipyard.slipways.size * shipyard.type.modificationMultiplier * shipyard.location.modificationMultiplier) / 200L
 		}
 		
-		return (shipyard.capacity * shipyard.slipways.size * shipyard.type.modificationMultiplier) / 100
+		return (shipyard.capacity * shipyard.slipways.size * shipyard.type.modificationMultiplier * shipyard.location.modificationMultiplier) / 100L
 	}
 	override fun complete(shipyard: Shipyard) {
 		shipyard.tooledHull = assignedHull
@@ -139,7 +190,7 @@ class ShipyardModificationRetool(val assignedHull: ShipHull): ShipyardModificati
 }
 
 class ShipyardModificationAddSlipway(): ShipyardModification {
-	override fun getCost(shipyard: Shipyard) = (shipyard.capacity * shipyard.type.modificationMultiplier) / 100
+	override fun getCost(shipyard: Shipyard) = (shipyard.capacity * shipyard.type.modificationMultiplier * shipyard.location.modificationMultiplier) / 10L
 	override fun complete(shipyard: Shipyard) {
 		shipyard.slipways + ShipyardSlipway()
 	}

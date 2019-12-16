@@ -26,6 +26,7 @@ companion object {
 	val parts = ArrayList<Part>()
 	val researchTeams = ArrayList<ResearchTeam>()
 	val practicalTheory = HashMap<PracticalTheory, Int>()
+	val shipHulls = ArrayList<ShipHull>()
 	val hullClasses = ArrayList<ShipHullClass>()
 
 	init {

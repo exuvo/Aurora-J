@@ -96,7 +96,7 @@ class ShipComponent() : Component() {
 
 			if (partRef.part is AmmunitionPart) {
 				val ammoState = AmmunitionPartState()
-				ammoState.type = hull.preferredMunitions[partRef]
+				ammoState.type = hull.preferredPartMunitions[partRef]
 				state.put(ammoState)
 			}
 

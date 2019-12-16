@@ -18,8 +18,9 @@ class ShipHull {
 	private val partRefs: MutableList<PartRef<Part>> = ArrayList()
 	var armorLayers = 1 // Centimeters of armor
 	var armorBlockHP = 100
-	val preferredCargo: Map<Resource, Int> = LinkedHashMap()
-	val preferredMunitions: MutableMap<PartRef<out Part>, MunitionHull> = LinkedHashMap()
+	val preferredCargo: Map<Resource, Long> = LinkedHashMap()
+	val preferredMunitions: Map<MunitionHull, Int> = LinkedHashMap()
+	val preferredPartMunitions: MutableMap<PartRef<out Part>, MunitionHull> = LinkedHashMap()
 	var powerScheme: PowerScheme = PowerScheme.SOLAR_BATTERY_REACTOR
 	val defaultWeaponAssignments: MutableMap<PartRef<TargetingComputer>, List<PartRef<Part>>> = LinkedHashMap()
 	

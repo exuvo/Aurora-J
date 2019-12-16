@@ -83,6 +83,8 @@ import se.exuvo.aurora.empires.components.Shipyard
 import se.exuvo.aurora.empires.components.ShipyardSlipway
 import se.exuvo.aurora.planetarysystems.components.EntityReference
 import se.exuvo.aurora.empires.components.ShipyardModificationExpandCapacity
+import se.exuvo.aurora.planetarysystems.systems.ColonySystem
+import se.exuvo.aurora.planetarysystems.components.OwnerComponent
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener, Disposable {
 	companion object {
@@ -119,6 +121,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 	lateinit private var moveToEntityMapper: ComponentMapper<MoveToEntityComponent>
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
 	lateinit private var colonyMapper: ComponentMapper<ColonyComponent>
+	lateinit private var ownerMapper: ComponentMapper<OwnerComponent>
 
 	init {
 		galaxy.world.getMapper(GalacticPositionComponent::class.java).create(galacticEntityID).set(initialPosition)
@@ -131,6 +134,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		worldBuilder.with(EventSystem(PooledFastEventDispatcher(), SubscribeAnnotationFinder()))
 		worldBuilder.with(GroupSystem())
 		worldBuilder.with(OrbitSystem())
+		worldBuilder.with(ColonySystem())
 		worldBuilder.with(ShipSystem())
 		worldBuilder.with(MovementSystem())
 		worldBuilder.with(SolarIrradianceSystem())
@@ -235,12 +239,12 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		val railgun = Railgun(2 * Units.MEGA, 7, 5 * Units.MEGA, 5)
 		shipHull.addPart(railgun)
 		val railgunRef = shipHull[Railgun::class][0]
-		shipHull.preferredMunitions[railgunRef] = sabot
+		shipHull.preferredPartMunitions[railgunRef] = sabot
 
 		val missileLauncher = MissileLauncher(200 * Units.KILO, 13, 3, 10)
 		shipHull.addPart(missileLauncher)
 		val missileLauncherRef = shipHull[MissileLauncher::class][0]
-		shipHull.preferredMunitions[missileLauncherRef] = missile
+		shipHull.preferredPartMunitions[missileLauncherRef] = missile
 
 		val beam = BeamWeapon(1 * Units.MEGA, BeamWavelength.Microwaves, 0.0, 10 * Units.MEGA)
 		shipHull.addPart(beam)
@@ -260,6 +264,9 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		shipHull2.parentHull = shipHull
 		
 		shipHull.derivatives += shipHull2
+		
+		empire1.shipHulls += shipHull
+		empire1.shipHulls += shipHull2
 
 		val entity1 = createEntity(Empire.GAIA)
 		timedMovementMapper.create(entity1).set(0, 0, 0f, 0f, 0)
@@ -272,10 +279,11 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		strategicIconMapper.create(entity1).set(Assets.textures.findRegion("strategic/sun"))
 
 		val entity2 = createEntity(empire1)
+		ownerMapper.create(entity2).set(empire1)
+		nameMapper.create(entity2).set(name = "Earth")
 		timedMovementMapper.create(entity2)
 		renderMapper.create(entity2)
 		circleMapper.create(entity2).set(radius = 6371f)
-		nameMapper.create(entity2).set(name = "Earth")
 		massMapper.create(entity2).set(mass = 5.972e24)
 		orbitMapper.create(entity2).set(parent = entity1, a_semiMajorAxis = 1f, e_eccentricity = 0f, w_argumentOfPeriapsis = -45f, M_meanAnomaly = 0f)
 		tintMapper.create(entity2).set(Color.GREEN)
@@ -312,6 +320,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		emissionsMapper.create(entity3).set(mapOf(Spectrum.Electromagnetic to 5e9, Spectrum.Thermal to 5e9))
 
 		val entity4 = createEntity(empire1)
+		ownerMapper.create(entity4).set(empire1)
 		timedMovementMapper.create(entity4).apply { previous.value.position.set((Units.AU * 1000L * 1L).toLong(), 0).rotate(45f) } //; previous.value.velocity.set(-1000000f, 0f)
 		renderMapper.create(entity4)
 		solarIrradianceMapper.create(entity4)
@@ -336,10 +345,54 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		}
 	}
 	
-	override fun dispose() {
-		world.dispose()
-	}
+	fun createShip(hull: ShipHull, colonyEntity: Int?, empire: Empire): Int {
+		
+		val shipEntity = createEntity(empire)
+		
+		val shipMovement = timedMovementMapper.create(shipEntity)
+		renderMapper.create(shipEntity)
+		circleMapper.create(shipEntity).set(radius = 10f)
+		nameMapper.create(shipEntity).set(name = "New Ship")
+		tintMapper.create(shipEntity).set(Color.ORANGE)
+		strategicIconMapper.create(shipEntity).set(Assets.textures.findRegion("strategic/ship"))
+		emissionsMapper.create(shipEntity).set(mapOf(Spectrum.Electromagnetic to 0.0, Spectrum.Thermal to 0.0))
+		
+		if (hull[SolarPanel::class].isNotEmpty()) {
+			solarIrradianceMapper.create(shipEntity)
+		}
 
+		val shipComponent = shipMapper.create(shipEntity).set(hull, galaxy.time)
+		
+		if (colonyEntity != null) {
+			
+			val colony = colonyMapper.get(colonyEntity)
+			val colonyMovement = timedMovementMapper.get(colonyEntity)
+			val colonyPos = colonyMovement.get(galaxy.time)
+			
+			shipMovement.previous = colonyPos
+			
+			hull.preferredCargo.forEach{ resource, amount ->
+				shipComponent.addCargo(resource, colony.retrieveCargo(resource, amount))
+			}
+			
+			hull.preferredMunitions.forEach{ munitionHull, amount ->
+				shipComponent.addCargo(munitionHull, colony.retrieveCargo(munitionHull, amount))
+			}
+			
+		} else {
+			
+			hull.preferredCargo.forEach{ resource, amount ->
+				shipComponent.addCargo(resource, amount)
+			}
+			
+			hull.preferredMunitions.forEach{ munitionHull, amount ->
+				shipComponent.addCargo(munitionHull, amount)
+			}
+		}
+		
+		return shipEntity
+	}
+	
 	fun createEntity(empire: Empire): Int {
 		val entityID = world.create()
 		solarSystemMapper.create(entityID).set(this)
@@ -383,5 +436,9 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 
 	private fun getNewEntitityID(): Long {
 		return entityUIDGenerator.incrementAndGet();
+	}
+	
+	override fun dispose() {
+		world.dispose()
 	}
 }
