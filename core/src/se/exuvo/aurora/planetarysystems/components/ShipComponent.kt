@@ -174,13 +174,13 @@ class ShipComponent() : Component() {
 		return 0
 	}
 	
-	fun getCargoAmount(munitionClass: MunitionHull): Int {
+	fun getCargoAmount(munitionHull: MunitionHull): Int {
 
-		val shipCargo = cargo[munitionClass.storageType]
+		val shipCargo = cargo[munitionHull.storageType]
 
 		if (shipCargo != null) {
 
-			var available = munitionCargo[munitionClass]
+			var available = munitionCargo[munitionHull]
 
 			if (available != null) {
 				return available
@@ -291,29 +291,29 @@ class ShipComponent() : Component() {
 		return false
 	}
 
-	fun addCargo(munitionClass: MunitionHull, amount: Int): Boolean {
+	fun addCargo(munitionHull: MunitionHull, amount: Int): Boolean {
 
-		val shipCargo = cargo[munitionClass.storageType]
+		val shipCargo = cargo[munitionHull.storageType]
 
 		if (shipCargo != null) {
 
-			val volumeToBeStored = amount * munitionClass.getVolume()
+			val volumeToBeStored = amount * munitionHull.getVolume()
 
 			if (shipCargo.usedVolume + volumeToBeStored > shipCargo.maxVolume) {
 				return false;
 			}
 			
 			shipCargo.usedVolume += volumeToBeStored
-			val storedMass = shipCargo.contents[munitionClass.storageType]!!
-			shipCargo.contents[munitionClass.storageType] = storedMass + munitionClass.getMass() * amount
+			val storedMass = shipCargo.contents[munitionHull.storageType]!!
+			shipCargo.contents[munitionHull.storageType] = storedMass + munitionHull.getMass() * amount
 			
-			var stored = munitionCargo[munitionClass]
+			var stored = munitionCargo[munitionHull]
 
 			if (stored == null) {
 				stored = 0
 			}
 			
-			munitionCargo[munitionClass] = stored + amount
+			munitionCargo[munitionHull] = stored + amount
 
 			return true
 		}
@@ -352,9 +352,9 @@ class ShipComponent() : Component() {
 		return 0
 	}
 
-	fun retrieveCargo(munitionClass: MunitionHull, amount: Int): Int {
+	fun retrieveCargo(munitionHull: MunitionHull, amount: Int): Int {
 
-		var available = munitionCargo[munitionClass]
+		var available = munitionCargo[munitionHull]
 
 		if (available == null || available == 0) {
 			return 0
@@ -366,13 +366,13 @@ class ShipComponent() : Component() {
 			retrievedAmount = available
 		}
 
-		munitionCargo[munitionClass] = available - retrievedAmount
+		munitionCargo[munitionHull] = available - retrievedAmount
 		
-		val shipCargo = cargo[munitionClass.storageType]!!
-		val storedMass = shipCargo.contents[munitionClass.storageType]!!
+		val shipCargo = cargo[munitionHull.storageType]!!
+		val storedMass = shipCargo.contents[munitionHull.storageType]!!
 		
-		shipCargo.contents[munitionClass.storageType] = storedMass - retrievedAmount * munitionClass.getMass()
-		shipCargo.usedVolume -= retrievedAmount * munitionClass.getVolume()
+		shipCargo.contents[munitionHull.storageType] = storedMass - retrievedAmount * munitionHull.getMass()
+		shipCargo.usedVolume -= retrievedAmount * munitionHull.getVolume()
 
 		return retrievedAmount
 	}

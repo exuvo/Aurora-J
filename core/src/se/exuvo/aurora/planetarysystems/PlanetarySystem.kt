@@ -258,15 +258,19 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		val chemicalThruster = FueledThruster(10f * 9.82f * 1000f, 1)
 		shipHull.addPart(chemicalThruster)
 		
-		val shipHull2 = ShipHull()
+		shipHull.preferredCargo[Resource.NUCLEAR_FISSION] = 100
+		shipHull.preferredCargo[Resource.ROCKET_FUEL] = 10000
+		shipHull.preferredMunitions[sabot] = 100
+		shipHull.preferredMunitions[missile] = 50
+		
+		val shipHull2 = ShipHull(shipHull)
 		shipHull2.name = "Elodin"
 		shipHull2.designDay = galaxy.day + 700
-		shipHull2.parentHull = shipHull
 		
-		shipHull.derivatives += shipHull2
-		
-		empire1.shipHulls += shipHull
-		empire1.shipHulls += shipHull2
+		if (empire1.shipHulls.size == 0) {
+			empire1.shipHulls += shipHull
+			empire1.shipHulls += shipHull2
+		}
 
 		val entity1 = createEntity(Empire.GAIA)
 		timedMovementMapper.create(entity1).set(0, 0, 0f, 0f, 0)
@@ -305,6 +309,9 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 					build(shipHull)
 				}
 			}
+			
+			addCargo(sabot, 1000)
+			addCargo(missile, 1000)
 		}
 		
 		empire1.colonies += EntityReference(this, entity2)
@@ -356,6 +363,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		tintMapper.create(shipEntity).set(Color.ORANGE)
 		strategicIconMapper.create(shipEntity).set(Assets.textures.findRegion("strategic/ship"))
 		emissionsMapper.create(shipEntity).set(mapOf(Spectrum.Electromagnetic to 0.0, Spectrum.Thermal to 0.0))
+		ownerMapper.create(shipEntity).set(empire)
 		
 		if (hull[SolarPanel::class].isNotEmpty()) {
 			solarIrradianceMapper.create(shipEntity)
@@ -369,7 +377,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 			val colonyMovement = timedMovementMapper.get(colonyEntity)
 			val colonyPos = colonyMovement.get(galaxy.time)
 			
-			shipMovement.previous = colonyPos
+			shipMovement.set(colonyPos.value.position, shipMovement.previous.value.velocity, galaxy.time)
 			
 			hull.preferredCargo.forEach{ resource, amount ->
 				shipComponent.addCargo(resource, colony.retrieveCargo(resource, amount))

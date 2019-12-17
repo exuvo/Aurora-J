@@ -7,7 +7,7 @@ import se.exuvo.aurora.utils.sumByLong
 import se.exuvo.aurora.empires.components.ShipyardType
 import se.exuvo.aurora.utils.Units
 
-class ShipHull {
+class ShipHull() {
 	var name: String = ""
 	var hullClass: ShipHullClass = ShipHullClass.NONE
 	var designDay: Int = 0
@@ -18,8 +18,8 @@ class ShipHull {
 	private val partRefs: MutableList<PartRef<Part>> = ArrayList()
 	var armorLayers = 1 // Centimeters of armor
 	var armorBlockHP = 100
-	val preferredCargo: Map<Resource, Long> = LinkedHashMap()
-	val preferredMunitions: Map<MunitionHull, Int> = LinkedHashMap()
+	val preferredCargo: MutableMap<Resource, Long> = LinkedHashMap()
+	val preferredMunitions: MutableMap<MunitionHull, Int> = LinkedHashMap()
 	val preferredPartMunitions: MutableMap<PartRef<out Part>, MunitionHull> = LinkedHashMap()
 	var powerScheme: PowerScheme = PowerScheme.SOLAR_BATTERY_REACTOR
 	val defaultWeaponAssignments: MutableMap<PartRef<TargetingComputer>, List<PartRef<Part>>> = LinkedHashMap()
@@ -28,6 +28,39 @@ class ShipHull {
 	val derivatives: MutableList<ShipHull> = ArrayList()
 	
 	var comment: String = ""
+	
+	constructor(parentHull: ShipHull): this() {
+		this.parentHull = parentHull
+		
+		name = parentHull.name
+		hullClass = parentHull.hullClass
+		requiredShipYardType = parentHull.requiredShipYardType
+		armorLayers = parentHull.armorLayers
+		armorBlockHP = parentHull.armorBlockHP
+		powerScheme = parentHull.powerScheme
+		
+		parentHull.getParts().forEach{ part ->
+			addPart(part)
+		}
+		
+		parentHull.preferredCargo.forEach{ resource, amount ->
+			preferredCargo[resource] = amount
+		}
+		
+		parentHull.preferredMunitions.forEach{ munitionHull, amount ->
+			preferredMunitions[munitionHull] = amount
+		}
+		
+		parentHull.preferredPartMunitions.forEach{ partRef, munitionHull ->
+			preferredPartMunitions[partRef] = munitionHull
+		}
+		
+		parentHull.defaultWeaponAssignments.forEach{ partRef, partRefs ->
+			defaultWeaponAssignments[partRef] = ArrayList(partRefs)
+		}
+		
+		parentHull.derivatives += this
+	}
 
 	@Suppress("UNCHECKED_CAST")
 	operator fun <T: Part> get(partClass: KClass<T>) : List<PartRef<T>> = partRefs.filter { partClass.isInstance(it.part) } as List<PartRef<T>>

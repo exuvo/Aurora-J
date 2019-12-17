@@ -77,25 +77,25 @@ public class Units {
 		}
 	}
 
-	public static String massToString(long mass) {
+	public static String massToString(long mass) { // Base mass is in kg
 
 		if (mass < KILO) {
-			return String.format("%d g", mass);
+			return String.format("%d kg", mass);
 
 		} else if (mass < MEGA) {
-			return String.format("%d.%02d kg", mass / KILO, mass % KILO / 10);
+			return String.format("%d.%02d Mg", mass / KILO, mass % KILO / 10);
 
 		} else if (mass < GIGA) {
-			return String.format("%d.%02d Mg", mass / MEGA, mass % MEGA / 10 / KILO);
+			return String.format("%d.%02d Gg", mass / MEGA, mass % MEGA / 10 / KILO);
 
 		} else if (mass < TERA) {
-			return String.format("%d.%02d Gg", mass / GIGA, mass % GIGA / 10 / MEGA);
+			return String.format("%d.%02d Tg", mass / GIGA, mass % GIGA / 10 / MEGA);
 
 		} else if (mass < 1000 * TERA) {
-			return String.format("%d.%02d Tg", mass / TERA, mass % TERA / 10 / GIGA);
+			return String.format("%d.%02d Pg", mass / TERA, mass % TERA / 10 / GIGA);
 
 		} else {
-			return String.format("%d Tg", mass / TERA);
+			return String.format("%d Pg", mass / TERA);
 		}
 	}
 	

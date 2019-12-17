@@ -80,6 +80,8 @@ import imgui.StyleVar
 import imgui.internal.ItemFlag
 import se.exuvo.aurora.empires.components.ShipyardModificationRetool
 import se.exuvo.aurora.empires.components.ShipyardModifications
+import se.exuvo.aurora.empires.components.ShipyardModificationAddSlipway
+import se.exuvo.aurora.empires.components.ShipyardModificationExpandCapacity
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
@@ -298,8 +300,10 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	var selectedColony: EntityReference? = null
 	var selectedShipyard: Shipyard? = null
 	var selectedSlipway: ShipyardSlipway? = null
-	var selectedHull: ShipHull? = null
+	var selectedRetoolHull: ShipHull? = null
+	var selectedBuildHull: ShipHull? = null
 	var selectedShipyardModification: ShipyardModifications? = null
+	var shipyardExpandCapacity: Int = 0
 	
 	private fun colonyManager() {
 		
@@ -426,7 +430,6 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 												if (selectable("${shipyard.type.short} - ${shipyard.location.short}", shipyardSelected, SelectableFlag.SpanAllColumns.i)) {
 													selectedShipyard = shipyard
 													selectedSlipway = null
-													selectedHull = null
 												}
 												
 												nextColumn()
@@ -450,7 +453,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 													}
 													nextColumn()
 													
-													val daysToCompletion = (modActivity.getCost(shipyard) - shipyard.modificationProgress) / shipyard.modificationRate
+													val daysToCompletion = (modActivity.getCost(shipyard) - shipyard.modificationProgress) / (24 * shipyard.modificationRate)
 													
 													rightAlignedColumnText(Units.daysToRemaining(daysToCompletion.toInt()))
 													nextColumn()
@@ -478,7 +481,6 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 														if (selectable("##" + slipway.hashCode().toString(), slipwaySelected, SelectableFlag.SpanAllColumns.i)) {
 															selectedShipyard = shipyard
 															selectedSlipway = slipway
-															selectedHull = null
 														}
 														
 														if (hull != null) {
@@ -492,7 +494,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 															nextColumn()
 															text("${slipway.progress()}%")
 															nextColumn()
-															val daysToCompletion = (slipway.totalCost() - slipway.usedResources()) / shipyard.buildRate
+															val daysToCompletion = (slipway.totalCost() - slipway.usedResources()) / (24 * shipyard.buildRate)
 															rightAlignedColumnText(Units.daysToRemaining(daysToCompletion.toInt()))
 															nextColumn()
 															text(Units.daysToDate(galaxy.day + daysToCompletion.toInt()))
@@ -524,7 +526,6 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 										if (shipyard != null && slipway != null) {
 											
 											val hull = slipway.hull
-											val tooledHull = shipyard.tooledHull
 											
 											if (hull != null) {
 												
@@ -576,42 +577,6 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 															text(string)
 														}
 													}
-												}
-												
-											} else if (tooledHull != null) {
-												
-												val selectedHull2 = selectedHull
-												
-												if (beginCombo("Ship Hull", if (selectedHull2 == null) "-" else selectedHull2.toString(), 0)) {
-													
-													empire.shipHulls.filter{ it == tooledHull || it.parentHull == tooledHull }.forEach { empireHull ->
-														
-														val selected = empireHull == selectedHull2
-														
-														if (selectable(empireHull.toString(), selected)) {
-															selectedHull = empireHull
-														}
-														
-														if (selected) {
-															setItemDefaultFocus()
-														}
-													}
-													
-													endCombo()
-												}
-												
-												 if (selectedHull2 == null) {
-													 pushItemFlag(ItemFlag.Disabled.i, true)
-													 pushStyleVar(StyleVar.Alpha, style.alpha * 0.5f)
-												 }
-												
-												if (button("Build") && selectedHull2 != null) {
-													slipway.build(selectedHull2)
-												}
-
-												if (selectedHull2 == null) {
-													popItemFlag()
-													popStyleVar()
 												}
 											}
 											
@@ -665,45 +630,122 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 													endCombo()
 												}
 												
-												if (selectedShipyardModification == ShipyardModifications.RETOOL) {
+												when (selectedShipyardModification) {
+													ShipyardModifications.RETOOL -> {
+														
+														if (beginCombo("Retool Hull", if (selectedRetoolHull == null) "-" else selectedRetoolHull.toString(), 0)) {
+														
+															empire.shipHulls.forEach { empireHull ->
+																if (empireHull != shipyard.tooledHull && empireHull.parentHull == null) {
+																	val selected = empireHull == selectedRetoolHull
+																	
+																	if (selectable(empireHull.toString(), selected)) {
+																		selectedRetoolHull = empireHull
+																	}
+																	
+																	if (selected) {
+																		setItemDefaultFocus()
+																	}
+																}
+															}
+															
+															endCombo()
+														}
+														
+														val valid = selectedRetoolHull != null && selectedRetoolHull != shipyard.tooledHull
+														
+														if (!valid) {
+															pushItemFlag(ItemFlag.Disabled.i, true)
+															pushStyleVar(StyleVar.Alpha, style.alpha * 0.5f)
+														}
+														
+														if (button("Retool") && valid) {
+															shipyard.modificationActivity = ShipyardModificationRetool(selectedRetoolHull as ShipHull)
+															shipyard.modificationProgress = 0
+														}
+		
+														if (!valid) {
+															popItemFlag()
+															popStyleVar()
+														}
+													}
+													ShipyardModifications.EXPAND_CAPACITY -> {
+														
+														inputInt("Expand capacity by", ::shipyardExpandCapacity)
+														
+														val valid = shipyardExpandCapacity > 0
+														
+														if (!valid) {
+															pushItemFlag(ItemFlag.Disabled.i, true)
+															pushStyleVar(StyleVar.Alpha, style.alpha * 0.5f)
+														}
+														
+														if (button("Expand") && valid) {
+															shipyard.modificationActivity = ShipyardModificationExpandCapacity(shipyardExpandCapacity.toLong())
+															shipyard.modificationProgress = 0
+														}
+		
+														if (!valid) {
+															popItemFlag()
+															popStyleVar()
+														}
+													}
+													ShipyardModifications.ADD_SLIPWAY -> {
+														if (button("Build")) {
+															shipyard.modificationActivity = ShipyardModificationAddSlipway()
+															shipyard.modificationProgress = 0
+														}
+													}
+												}
+											}
+											
+											val tooledHull = shipyard.tooledHull
+											
+											if (tooledHull != null) {
+												
+												if (beginCombo("Ship Hull", if (selectedBuildHull == null) "-" else selectedBuildHull.toString(), 0)) {
 													
-													val selectedHull2 = selectedHull
-													
-													if (beginCombo("Ship Hull", if (selectedHull2 == null) "-" else selectedHull2.toString(), 0)) {
-													
-														empire.shipHulls.forEach { empireHull ->
-															val selected = empireHull == selectedHull2
+													empire.shipHulls.forEach { empireHull ->
+														if (empireHull == tooledHull || empireHull.parentHull == tooledHull) {
+															val selected = empireHull == selectedBuildHull
 															
 															if (selectable(empireHull.toString(), selected)) {
-																selectedHull = empireHull
+																selectedBuildHull = empireHull
 															}
 															
 															if (selected) {
 																setItemDefaultFocus()
 															}
 														}
-														
-														endCombo()
 													}
 													
-													 if (selectedHull2 == null) {
-														 pushItemFlag(ItemFlag.Disabled.i, true)
-														 pushStyleVar(StyleVar.Alpha, style.alpha * 0.5f)
-													 }
-													
-													if (button("Retool") && selectedHull2 != null) {
-														
-														shipyard.modificationActivity = ShipyardModificationRetool(selectedHull2)
-														shipyard.modificationProgress = 0
-													}
-	
-													if (selectedHull2 == null) {
-														popItemFlag()
-														popStyleVar()
-													}
-													
+													endCombo()
 												}
 												
+												var freeSlipway: ShipyardSlipway? = null
+												
+												for (shipyardSlipway in shipyard.slipways) {
+													if (shipyardSlipway.hull == null) {
+														freeSlipway = shipyardSlipway
+														break
+													}
+												}
+												
+												val valid = selectedBuildHull != null && freeSlipway != null
+												
+												if (!valid) {
+													pushItemFlag(ItemFlag.Disabled.i, true)
+													pushStyleVar(StyleVar.Alpha, style.alpha * 0.5f)
+												}
+												
+												if (button("Build") && valid) {
+													(freeSlipway as ShipyardSlipway).build(selectedBuildHull as ShipHull)
+												}
+
+												if (!valid) {
+													popItemFlag()
+													popStyleVar()
+												}
 											}
 										}
 										
@@ -712,7 +754,25 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 									
 									if (beginTabItem("Industry")) {
 										
-										text("todo")
+										text("Munitions:")
+										group {
+											colony.munitions.forEach { hull, _ ->
+												text(hull.name)
+											}
+										}
+										sameLine()
+										group {
+											var maxWidth = 0f
+											colony.munitions.forEach { _, amount ->
+												maxWidth = kotlin.math.max(maxWidth, calcTextSize(amount.toString()).x)
+											}
+											colony.munitions.forEach { _, amount ->
+												val string = amount.toString()
+												ImGui.cursorPosX = ImGui.cursorPosX + maxWidth - calcTextSize(string).x - ImGui.scrollX
+												text(string)
+											}
+										}
+										
 										endTabItem()
 									}
 									

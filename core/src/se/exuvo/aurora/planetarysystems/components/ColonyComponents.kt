@@ -17,7 +17,12 @@ class ColonyComponent() : Component() {
 	val shipyards = ArrayList<Shipyard>()
 	
 	init {
-		Resource.values().forEach { r -> resources[r] = 10000000L }
+		val exludedResources = listOf(Resource.MISSILES, Resource.SABOTS)
+		Resource.values().forEach { r ->
+			if (!exludedResources.contains(r)) {
+				resources[r] = 10000000L
+			}
+		}
 	}
 	
 	fun set(population: Long): ColonyComponent {
@@ -27,9 +32,9 @@ class ColonyComponent() : Component() {
 	
 	fun getCargoAmount(resource: Resource): Long = resources[resource]!!
 	
-	fun getCargoAmount(munitionClass: MunitionHull): Int {
+	fun getCargoAmount(munitionHull: MunitionHull): Int {
 
-		var available = munitions[munitionClass]
+		var available = munitions[munitionHull]
 
 		if (available != null) {
 			return available
@@ -42,15 +47,15 @@ class ColonyComponent() : Component() {
 		resources[resource] = resources[resource]!! + amount
 	}
 	
-	fun addCargo(munitionClass: MunitionHull, amount: Int) {
+	fun addCargo(munitionHull: MunitionHull, amount: Int) {
 		
-		var stored = munitions[munitionClass]
+		var stored = munitions[munitionHull]
 
 		if (stored == null) {
 			stored = 0
 		}
 		
-		munitions[munitionClass] = stored + amount
+		munitions[munitionHull] = stored + amount
 	}
 	
 	fun retrieveCargo(resource: Resource, amount: Long): Long {
@@ -72,9 +77,9 @@ class ColonyComponent() : Component() {
 		return retrievedAmount
 	}
 	
-	fun retrieveCargo(munitionClass: MunitionHull, amount: Int): Int {
+	fun retrieveCargo(munitionHull: MunitionHull, amount: Int): Int {
 
-		val available = munitions[munitionClass]
+		val available = munitions[munitionHull]
 
 		if (available == null || available == 0) {
 			return 0
@@ -86,7 +91,7 @@ class ColonyComponent() : Component() {
 			retrievedAmount = available
 		}
 
-		munitions[munitionClass] = available - retrievedAmount
+		munitions[munitionHull] = available - retrievedAmount
 
 		return retrievedAmount
 	}
@@ -98,12 +103,12 @@ class Shipyard (
 ) {
 	var capacity = 1000L // In cm³
 	var fuelCostPerMass = 0.0 //kg fuel per kg of hull to launch into space
-	var buildRate = location.baseBuildrate // kg per day
+	var buildRate = location.baseBuildrate // kg per hour
 	var tooledHull: ShipHull? = null
 	val slipways = ArrayList<ShipyardSlipway>()
 	
 	var modificationActivity: ShipyardModification? = null
-	var modificationRate = 1000;
+	var modificationRate = 1000; // kg per hour
 	var modificationProgress = 0L
 	
 	init {
@@ -177,10 +182,6 @@ class ShipyardModificationExpandCapacity(val addedCapacity: Long): ShipyardModif
 
 class ShipyardModificationRetool(val assignedHull: ShipHull): ShipyardModification {
 	override fun getCost(shipyard: Shipyard): Long {
-		if (assignedHull.parentHull == shipyard.tooledHull) {
-			return (shipyard.capacity * shipyard.slipways.size * shipyard.type.modificationMultiplier * shipyard.location.modificationMultiplier) / 200L
-		}
-		
 		return (shipyard.capacity * shipyard.slipways.size * shipyard.type.modificationMultiplier * shipyard.location.modificationMultiplier) / 100L
 	}
 	override fun complete(shipyard: Shipyard) {
@@ -192,7 +193,7 @@ class ShipyardModificationRetool(val assignedHull: ShipHull): ShipyardModificati
 class ShipyardModificationAddSlipway(): ShipyardModification {
 	override fun getCost(shipyard: Shipyard) = (shipyard.capacity * shipyard.type.modificationMultiplier * shipyard.location.modificationMultiplier) / 10L
 	override fun complete(shipyard: Shipyard) {
-		shipyard.slipways + ShipyardSlipway()
+		shipyard.slipways += ShipyardSlipway()
 	}
 	override fun getDescription() = "Adding slipway"
 }
