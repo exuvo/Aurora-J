@@ -1139,7 +1139,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 			commandMenuOpen = false
 		}
 		
-		if (BeginPiePopup("CommandMenu", 1)) {
+		if (BeginPiePopup("CommandMenu", imgui.MouseButton.Left)) {
 			
 			if (commandMenuClose) {
 				ImGui.closeCurrentPopup();

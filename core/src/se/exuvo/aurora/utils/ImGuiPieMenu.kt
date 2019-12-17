@@ -65,7 +65,7 @@ data class PieMenuContext(
 	var m_iMaxIndex: Int = 0,
 	var m_iLastFrame: Int = 0,
 	var m_oCenter: Vec2 = Vec2(),
-	var m_iMouseButton: Int = 0,
+	var m_iMouseButton: MouseButton = MouseButton.None,
 	var m_bClose: Boolean = false
 ) {}
 
@@ -98,7 +98,7 @@ fun EndPieMenuEx(): Unit {
 	--s_oPieMenuContext.m_iCurrentIndex;
 }
 
-fun BeginPiePopup(pName: String, iMouseButton: Int): Boolean {
+fun BeginPiePopup(pName: String, iMouseButton: MouseButton): Boolean {
 	if (isPopupOpen(pName)) {
 		pushStyleColor(Col.WindowBg, Vec4(0, 0, 0, 0));
 		pushStyleColor(Col.Border, Vec4(0, 0, 0, 0));
