@@ -71,6 +71,7 @@ import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.plusAssign
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantReadWriteLock
@@ -89,16 +90,16 @@ import se.exuvo.aurora.planetarysystems.components.OwnerComponent
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener, Disposable {
 	companion object {
 		val planetarySystemIDGenerator = AtomicInteger()
+		val UUID_ASPECT = Aspect.all(UUIDComponent::class.java)
 	}
-
+	
 	val log = LogManager.getLogger(this.javaClass)
 	var updateTime = 0L
-	val entityUIDGenerator = AtomicLong()
 
+	private var entityUIDGenerator = 1L
 	private val galaxy = GameServices[Galaxy::class]
 	private val history = GameServices[History::class]
 	val sid = planetarySystemIDGenerator.getAndIncrement()
-	@EntityId
 	val galacticEntityID: Int = galaxy.world.create()
 
 	val lock = ReentrantReadWriteLock()
@@ -236,7 +237,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		missile.name = "A missile"
 		missile.addPart(dummyMass2)
 
-		val railgun = Railgun(2 * Units.MEGA, 7, 5 * Units.MEGA, 5)
+		val railgun = Railgun(2 * Units.MEGA, 7, 5 * Units.MEGA, 5, 3)
 		shipHull.addPart(railgun)
 		val railgunRef = shipHull[Railgun::class][0]
 		shipHull.preferredPartMunitions[railgunRef] = sabot
@@ -314,7 +315,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 			addCargo(missile, 1000)
 		}
 		
-		empire1.colonies += EntityReference(this, entity2)
+		empire1.colonies += getEntityReference(entity2)
 
 		val entity3 = createEntity(empire1)
 		timedMovementMapper.create(entity3)
@@ -409,10 +410,39 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		history.entityCreated(entityID, world)
 		return entityID
 	}
-
+	
 	fun destroyEntity(entityID: Int) {
 		history.entityDestroyed(entityID, world)
 		world.delete(entityID)
+	}
+	
+	fun getEntityReference(entityID: Int): EntityReference {
+		
+		return EntityReference(this, entityID, uuidMapper.get(entityID).uuid)
+	}
+	
+	fun isEntityReferenceValid(entityReference: EntityReference): Boolean {
+		
+		if (entityReference.system != this || !world.getEntityManager().isActive(entityReference.entityID)) {
+			return false
+		}
+		
+		val uuid = uuidMapper.get(entityReference.entityID).uuid
+		
+		return entityReference.entityUUID.hashCode() == uuid.hashCode()
+	}
+
+	fun getEntityByUUID(entityUUID: EntityUUID): Int? {
+		
+		world.getAspectSubscriptionManager().get(UUID_ASPECT).getEntities().forEach{ entityID ->
+			val uuid = uuidMapper.get(entityID).uuid
+			
+			if (uuid.hashCode() == entityUUID.hashCode()) {
+				return entityID
+			}
+		}
+		
+		return null
 	}
 
 	override fun inserted(entityIDs: IntBag) {
@@ -443,7 +473,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 	}
 
 	private fun getNewEntitityID(): Long {
-		return entityUIDGenerator.incrementAndGet();
+		return entityUIDGenerator++
 	}
 	
 	override fun dispose() {

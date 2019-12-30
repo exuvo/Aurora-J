@@ -83,9 +83,6 @@ interface AmmunitionPart {
 	val ammunitionAmount: Int
 	val ammunitionType: Resource
 	val ammunitionSize: Int // In cm radius
-}
-
-interface ReloadablePart {
 	val reloadTime: Int
 }
 
@@ -101,8 +98,7 @@ class FuelWastePartImpl(override val waste: Resource) : FuelWastePart
 class PoweringPartImpl(override val power: Long) : PoweringPart
 class PoweredPartImpl(override val powerConsumption: Long) : PoweredPart
 class ChargedPartImpl(override val capacitor: Long) : ChargedPart
-class AmmunitionPartImpl(override val ammunitionAmount: Int, override val ammunitionType: Resource, override val ammunitionSize: Int) : AmmunitionPart
-class ReloadablePartImpl(override val reloadTime: Int) : ReloadablePart
+class AmmunitionPartImpl(override val ammunitionAmount: Int, override val ammunitionType: Resource, override val ammunitionSize: Int, override val reloadTime: Int) : AmmunitionPart
 class ThrustingPartImpl(override val thrust: Float) : ThrustingPart
 
 
@@ -205,12 +201,13 @@ class BeamWeapon(powerConsumption: Long = 0,
 class Railgun(powerConsumption: Long = 0,
 							ammunitionSize: Int,
 							capacitor: Long,
-							ammunitionAmount: Int
+							ammunitionAmount: Int,
+							reloadTime: Int
 ) : Part(),
 		WeaponPart,
 		PoweredPart by PoweredPartImpl(powerConsumption),
 		ChargedPart by ChargedPartImpl(capacitor),
-		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.SABOTS, ammunitionSize)
+		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.SABOTS, ammunitionSize, reloadTime)
 
 class MissileLauncher(powerConsumption: Long = 0,
 								 			ammunitionSize: Int,
@@ -219,8 +216,7 @@ class MissileLauncher(powerConsumption: Long = 0,
 ) : Part(),
 		WeaponPart,
 		PoweredPart by PoweredPartImpl(powerConsumption),
-		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.MISSILES, ammunitionSize),
-		ReloadablePart by ReloadablePartImpl(reloadTime)
+		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.MISSILES, ammunitionSize, reloadTime)
 
 class TargetingComputer(val maxWeapons: Int,
 												val lockingTime: Int,

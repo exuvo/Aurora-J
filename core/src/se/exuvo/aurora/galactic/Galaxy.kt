@@ -29,7 +29,10 @@ import se.unlogic.standardutils.threads.ThreadUtils
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
+import kotlin.concurrent.read
 import se.exuvo.aurora.utils.Storage
+import se.exuvo.aurora.planetarysystems.components.EntityReference
+import se.exuvo.aurora.planetarysystems.components.EntityUUID
 
 class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, Disposable {
 	val log = LogManager.getLogger(this.javaClass)
@@ -155,6 +158,32 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		return ComponentMapper.getFor(PlanetarySystemComponent::class.java, entity.world).get(entity).system
 	}
 	
+	fun resolveEntityReference(entityReference: EntityReference): EntityReference? {
+		
+		entityReference.system.lock.read {
+			if (entityReference.system.isEntityReferenceValid(entityReference)) {
+				return entityReference
+			}
+		}
+		
+		return getEntityReferenceByUUID(entityReference.entityUUID)
+	}
+	
+	fun getEntityReferenceByUUID(entityUUID: EntityUUID): EntityReference? {
+		
+		systems.forEach{ system ->
+			system.lock.read {
+				val entityID = system.getEntityByUUID(entityUUID)
+				
+				if (entityID != null) {
+					return system.getEntityReference(entityID)
+				}
+			}
+		}
+		
+		return null
+	}
+	
 	fun entityAdded(world: World, entityID: Int) {
 		groupSystem.inserted(world.getEntity(entityID))
 	}
@@ -202,6 +231,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 					
 					if (accumulator >= speed) {
 
+						//TODO automatically adjust based on computer speed
 						tickSize = if (speed >= Units.NANO_MILLI) 1 else (Units.NANO_MILLI / speed).toInt()
 
 						// max sensible tick size is 1 minute, unless there is combat..

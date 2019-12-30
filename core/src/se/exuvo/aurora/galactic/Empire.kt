@@ -7,6 +7,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 import com.artemis.utils.Sort
 import se.exuvo.aurora.planetarysystems.components.EntityUUID
 import se.exuvo.aurora.planetarysystems.components.EntityReference
+import com.artemis.utils.Bag
 
 
 class Empire(var name: String) {
@@ -20,14 +21,15 @@ companion object {
 	val lock = ReentrantReadWriteLock()
 
 	var funds: Long = 0
-	val colonies = ArrayList<EntityReference>()
-	val stations = ArrayList<EntityReference>()
+	val colonies = Bag<EntityReference>()
+	val stations = Bag<EntityReference>()
 	val technologies = HashMap<String, Technology>()
 	val parts = ArrayList<Part>()
 	val researchTeams = ArrayList<ResearchTeam>()
 	val practicalTheory = HashMap<PracticalTheory, Int>()
 	val shipHulls = ArrayList<ShipHull>()
 	val hullClasses = ArrayList<ShipHullClass>()
+	val orders = Bag<EntityReference>()
 
 	init {
 		hullClasses.add(ShipHullClass("Dreadnought", "BA"))

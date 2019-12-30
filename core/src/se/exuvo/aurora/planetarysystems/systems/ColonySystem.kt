@@ -29,7 +29,7 @@ import se.exuvo.aurora.galactic.Resource
 import se.exuvo.aurora.planetarysystems.PlanetarySystem
 import com.artemis.annotations.Wire
 
-class ColonySystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 3) { // hourly? DailyIteratingSystem
+class ColonySystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 60 * 60) { // hourly? DailyIteratingSystem
 	companion object {
 		val FAMILY = Aspect.all(ColonyComponent::class.java)
 	}

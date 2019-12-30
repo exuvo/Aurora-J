@@ -13,7 +13,6 @@ import se.exuvo.aurora.galactic.PoweredPart
 import se.exuvo.aurora.galactic.ChargedPart
 import se.exuvo.aurora.galactic.AmmunitionPart
 import com.badlogic.gdx.utils.Queue
-import se.exuvo.aurora.galactic.ReloadablePart
 import se.exuvo.aurora.galactic.FueledPart
 import se.exuvo.aurora.galactic.PoweringPart
 import kotlin.reflect.KClass
@@ -98,10 +97,6 @@ class ShipComponent() : Component() {
 				val ammoState = AmmunitionPartState()
 				ammoState.type = hull.preferredPartMunitions[partRef]
 				state.put(ammoState)
-			}
-
-			if (partRef.part is ReloadablePart) {
-				state.put(ReloadablePartState())
 			}
 
 			if (partRef.part is FueledPart) {
@@ -425,10 +420,7 @@ data class PassiveSensorState(var lastScan: Long = 0
 data class ChargedPartState(var charge: Long = 0)
 
 data class AmmunitionPartState(var type: MunitionHull? = null,
-															 var amount: Int = 0
-)
-
-data class ReloadablePartState(var loaded: Boolean = false,
+															 var amount: Int = 0,
 															 var reloadPowerRemaining: Long = 0
 )
 

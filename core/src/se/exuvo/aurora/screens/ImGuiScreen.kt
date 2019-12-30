@@ -26,7 +26,6 @@ import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.galactic.PassiveSensor
 import se.exuvo.aurora.galactic.PoweredPart
 import se.exuvo.aurora.galactic.PoweringPart
-import se.exuvo.aurora.galactic.ReloadablePart
 import se.exuvo.aurora.galactic.Resource
 import se.exuvo.aurora.galactic.TargetingComputer
 import se.exuvo.aurora.planetarysystems.components.AmmunitionPartState
@@ -36,7 +35,6 @@ import se.exuvo.aurora.planetarysystems.components.PassiveSensorState
 import se.exuvo.aurora.planetarysystems.components.PowerComponent
 import se.exuvo.aurora.planetarysystems.components.PoweredPartState
 import se.exuvo.aurora.planetarysystems.components.PoweringPartState
-import se.exuvo.aurora.planetarysystems.components.ReloadablePartState
 import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
 import se.exuvo.aurora.planetarysystems.components.TargetingComputerState
@@ -47,6 +45,7 @@ import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.keys.KeyActions_ImGuiScreen
 import se.exuvo.aurora.utils.keys.KeyMappings
 import se.exuvo.aurora.utils.printID
+import se.exuvo.aurora.utils.isNotEmpty
 import se.unlogic.standardutils.reflection.ReflectionUtils
 import uno.glfw.GlfwWindow
 import uno.glfw.GlfwWindowHandle
@@ -175,9 +174,9 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 	private var demoVisible = false
 	private var mainDebugVisible = false
-	private var shipDebugVisible = false
+	private var shipDebugVisible = true
 	private var shipDesignerVisible = false
-	private var colonyManagerVisible = true
+	private var colonyManagerVisible = false
 
 	var slider = 1f
 	var stringbuf = CharArray(10)
@@ -322,7 +321,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 						// windowContentRegionWidth * 0.3f
 						child("Colonies", Vec2(200, 0), true, WindowFlag.None.i) {
 							
-							collapsingHeader("Colonies ${empire.colonies.size}", TreeNodeFlag.DefaultOpen.i) {
+							collapsingHeader("Colonies ${empire.colonies.size()}", TreeNodeFlag.DefaultOpen.i) {
 								
 								val systemColonyMap = empire.colonies.groupBy { ref -> ref.system }
 								
@@ -908,13 +907,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 										if (partRef.part is AmmunitionPart) {
 											val state = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
-											ImGui.text("amount ${state.amount}")
 											ImGui.text("type ${state.type?.name}")
-										}
-
-										if (partRef.part is ReloadablePart) {
-											val state = shipComponent.getPartState(partRef)[ReloadablePartState::class]
-											ImGui.text("loaded ${state.loaded}")
+											ImGui.text("amount ${state.amount}/${partRef.part.ammunitionAmount}")
 											ImGui.text("reloadPowerRemaining ${Units.powerToString(state.reloadPowerRemaining)}")
 										}
 
@@ -1139,7 +1133,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 			commandMenuOpen = false
 		}
 		
-		if (BeginPiePopup("CommandMenu", imgui.MouseButton.Left)) {
+		if (BeginPiePopup("CommandMenu", imgui.MouseButton.Right)) {
 			
 			if (commandMenuClose) {
 				ImGui.closeCurrentPopup();

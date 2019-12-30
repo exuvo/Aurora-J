@@ -38,6 +38,7 @@ import se.exuvo.aurora.utils.*
 import se.exuvo.settings.Settings
 import com.artemis.utils.IntBag
 import se.exuvo.aurora.AuroraGame
+import se.exuvo.aurora.galactic.Player
 
 class RenderSystem : IteratingSystem(FAMILY) {
 	companion object {
@@ -81,7 +82,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	override fun process(entityID: Int) {}
 
-	fun drawEntities(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
+	private final fun drawEntities(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val zoom = (viewport.camera as OrthographicCamera).zoom
@@ -108,7 +109,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 
-	fun drawEntityCenters(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
+	private final fun drawEntityCenters(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val zoom = (viewport.camera as OrthographicCamera).zoom
@@ -142,7 +143,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		return radius / zoom < 5f
 	}
 
-	fun drawStrategicEntities(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
+	private final fun drawStrategicEntities(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val spriteBatch = AuroraGame.currentWindow.spriteBatch
 		val zoom = (viewport.camera as OrthographicCamera).zoom
@@ -189,7 +190,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		spriteBatch.end()
 	}
 
-	fun drawSelections(selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
+	private final fun drawSelections(selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val zoom = (viewport.camera as OrthographicCamera).zoom
@@ -221,7 +222,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 
-	fun drawTimedMovement(entityIDs: IntBag, selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
+	private final fun drawTimedMovement(entityIDs: IntBag, selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val zoom = (viewport.camera as OrthographicCamera).zoom
@@ -279,7 +280,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 
-	fun drawSelectionMoveTargets(selectedEntityIDs: List<Int>, cameraOffset: Vector2L) {
+	private final fun drawSelectionMoveTargets(selectedEntityIDs: List<Int>, cameraOffset: Vector2L) {
 
 		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		
@@ -311,7 +312,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 
-	fun drawAttackTargets(selectedEntityIDs: List<Int>, cameraOffset: Vector2L) {
+	private final fun drawAttackTargets(selectedEntityIDs: List<Int>, cameraOffset: Vector2L) {
 
 		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		
@@ -349,8 +350,28 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 		shapeRenderer.end()
 	}
+	
+	private final fun drawOrders(viewport: Viewport, cameraOffset: Vector2L) {
 
-	fun drawDetections(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
+		val empire = Player.current.empire;
+		if (empire != null) {
+			
+			val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
+
+			shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+			shapeRenderer.color = Color(0.8f, 0f, 0f, 0.5f)
+
+			val zoom = (viewport.camera as OrthographicCamera).zoom
+
+			empire.orders.forEach {
+
+			}
+
+			shapeRenderer.end()
+		}
+	}
+
+	private final fun drawDetections(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val zoom = (viewport.camera as OrthographicCamera).zoom
@@ -476,7 +497,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 	}
 
-	fun drawSelectionDetectionZones(selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
+	private final fun drawSelectionDetectionZones(selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val zoom = (viewport.camera as OrthographicCamera).zoom
@@ -533,7 +554,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 
-	fun drawSelectionDetectionStrength(selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
+	private final fun drawSelectionDetectionStrength(selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val spriteBatch = AuroraGame.currentWindow.spriteBatch
 		val screenPosition = Vector3()
@@ -591,7 +612,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 	}
 
-	fun drawNames(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
+	private final fun drawNames(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val spriteBatch = AuroraGame.currentWindow.spriteBatch
 		val zoom = (viewport.camera as OrthographicCamera).zoom
@@ -628,7 +649,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 	}
 
-	fun drawMovementTimes(entityIDs: IntBag, selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
+	private final fun drawMovementTimes(entityIDs: IntBag, selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val spriteBatch = AuroraGame.currentWindow.spriteBatch
 		val zoom = (viewport.camera as OrthographicCamera).zoom
@@ -686,7 +707,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 	}
 
-	fun render(viewport: Viewport, cameraOffset: Vector2L) {
+	final fun render(viewport: Viewport, cameraOffset: Vector2L) {
 
 		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val spriteBatch = AuroraGame.currentWindow.spriteBatch
@@ -704,6 +725,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 		if (Gdx.input.isKeyPressed(Input.Keys.C)) {
 			drawSelectionDetectionZones(selectedEntityIDs, viewport, cameraOffset)
+		}
+		
+		if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+			drawOrders(viewport, cameraOffset)
 		}
 
 		orbitSystem.render(cameraOffset)

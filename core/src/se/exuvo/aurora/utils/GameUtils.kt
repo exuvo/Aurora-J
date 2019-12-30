@@ -15,6 +15,7 @@ import com.artemis.ComponentMapper
 import com.artemis.utils.IntBag
 import com.badlogic.gdx.Gdx
 import org.apache.logging.log4j.LogManager
+import com.artemis.utils.Bag
 
 
 private val log = LogManager.getLogger("se.exuvo.aurora.utils")
@@ -23,6 +24,13 @@ inline fun IntBag.forEach(action: (entityID: Int) -> Unit) {
 	for (i in 0 .. size() - 1) {
 		action(data[i])
 	}
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun <T> Bag<T>.isNotEmpty(): Boolean = !isEmpty()
+
+operator fun <T> Bag<T>.plusAssign(element: T): Unit  {
+	add(element)
 }
 
 fun Entity.getUUID(): String {

@@ -176,7 +176,7 @@ class Technology(val code: String,
 			Technology("Launchers 1", ResearchCategory.LAUNCHERS, 10, emptyList(), "", "")
 			Technology("Explosive Warheads 1", ResearchCategory.WARHEADS, 10, emptyList(), "", "")
 			Technology("EMP Warheads 1", ResearchCategory.WARHEADS, 10, emptyList(), "", "")
-			Technology("Magazines 1", ResearchCategory.MAGAZINES, 10, emptyList(), "", "")
+			Technology("Burst Magazines 1", ResearchCategory.MAGAZINES, 10, emptyList(), "", "")
 
 			// Lasers
 			Technology("Collimating lense 1", ResearchCategory.LENSES, 10, emptyList(), "", "")

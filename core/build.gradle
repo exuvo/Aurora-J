@@ -51,6 +51,8 @@ task explodeForWeave(type: Sync) {
 	into ("assets") {
 		from files(project.assetsDir)
 	}
+	
+	//TODO remove weird architecture natives for sqllite
 }
 
 // artemis-odb: weaving settings.

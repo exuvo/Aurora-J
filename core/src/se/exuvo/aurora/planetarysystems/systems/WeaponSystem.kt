@@ -15,13 +15,11 @@ import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.galactic.MissileLauncher
 import se.exuvo.aurora.galactic.PoweredPart
 import se.exuvo.aurora.galactic.Railgun
-import se.exuvo.aurora.galactic.ReloadablePart
 import se.exuvo.aurora.galactic.TargetingComputer
 import se.exuvo.aurora.planetarysystems.components.AmmunitionPartState
 import se.exuvo.aurora.planetarysystems.components.ChargedPartState
 import se.exuvo.aurora.planetarysystems.components.NameComponent
 import se.exuvo.aurora.planetarysystems.components.PoweredPartState
-import se.exuvo.aurora.planetarysystems.components.ReloadablePartState
 import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.TargetingComputerState
 import se.exuvo.aurora.planetarysystems.components.UUIDComponent
@@ -85,6 +83,8 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			val weaponsComponent = weaponsComponentMapper.get(entityID)
 			val tcs = weaponsComponent.targetingComputers
 
+			var powerChanged = false
+			
 			for (tc in tcs) {
 				val tcState = ship.getPartState(tc)[TargetingComputerState::class]
 
@@ -109,47 +109,51 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 
 								if (ammoState.type!!.getRadius() != part.ammunitionSize) {
 									log.warn("Wrong ammo size for $part: ${ammoState.type!!.getRadius()} != ${part.ammunitionSize}")
-								}
+									
+								} else {
+									
+									var freeSpace = part.ammunitionAmount - ammoState.amount
 
-								val freeSpace = part.ammunitionAmount - ammoState.amount
+									if (freeSpace > 0) {
+										
+										if (ammoState.reloadPowerRemaining >= 0L) {
+											
+											ammoState.reloadPowerRemaining -= Math.min(poweredState.givenPower, ammoState.reloadPowerRemaining)
 
-								if (freeSpace > 0) {
-									val removedAmmo = ship.retrieveCargo(ammoState.type!!, freeSpace)
+											if (ammoState.reloadPowerRemaining == 0L) {
 
-									if (removedAmmo > 0) {
-										ammoState.amount += removedAmmo
+												ammoState.amount += 1
+												freeSpace -= 1
+												ammoState.reloadPowerRemaining = -1
 
-									} else if (ammoState.amount == 0 && (!(part is ReloadablePart) || !ship.getPartState(weapon)[ReloadablePartState::class].loaded)) {
+											} else {
 
-										powerWanted = false
-
-										if (poweredState.requestedPower != 0L) {
-											println("Unpowering $part due to no more ammo")
+												powerWanted = true
+											}
 										}
-									}
-								}
 
-								if (part is ReloadablePart) {
+										if (ammoState.reloadPowerRemaining == -1L && freeSpace > 0) {
 
-									val reloadState = ship.getPartState(weapon)[ReloadablePartState::class]
+											// Take ammo from storage now to avoid multiple launchers trying to reload with the same last ordenance
+											val removedAmmo = ship.retrieveCargo(ammoState.type!!, 1)
 
-									if (!reloadState.loaded && ammoState.amount > 0) {
+											if (removedAmmo > 0) {
 
-										if (reloadState.reloadPowerRemaining == -1L) {
-											reloadState.reloadPowerRemaining = part.reloadTime * part.powerConsumption
+												powerWanted = true
+												ammoState.reloadPowerRemaining = part.reloadTime * part.powerConsumption
 
-										} else if (reloadState.reloadPowerRemaining >= 0L) {
+											} else if (ammoState.amount == 0) {
 
-											reloadState.reloadPowerRemaining -= Math.min(poweredState.givenPower, reloadState.reloadPowerRemaining)
+												powerWanted = false
 
-											if (reloadState.reloadPowerRemaining == 0L) {
-												reloadState.loaded = true
-												reloadState.reloadPowerRemaining = -1
-												ammoState.amount -= 1
+												if (poweredState.requestedPower != 0L) {
+													println("Unpowering $part due to no more ammo")
+												}
 											}
 										}
 									}
 								}
+
 							} else {
 								powerWanted = false
 							}
@@ -166,27 +170,27 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 									val wantedPower = Math.min(part.powerConsumption, part.capacitor - chargedState.charge)
 									if (poweredState.requestedPower != wantedPower) {
 										poweredState.requestedPower = wantedPower
-										events.dispatch(getEvent(PowerEvent::class).set(entityID))
+										powerChanged = true
 									}
 								} else {
 									if (poweredState.requestedPower != idlePower) {
 										poweredState.requestedPower = idlePower
-										events.dispatch(getEvent(PowerEvent::class).set(entityID))
+										powerChanged = true
 									}
 								}
 
-							} else if (part is ReloadablePart) {
-								val reloadState = ship.getPartState(weapon)[ReloadablePartState::class]
+							} else if (part is AmmunitionPart) {
+								val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
 
-								if (!reloadState.loaded) {
+								if (ammoState.reloadPowerRemaining >= 0) {
 									if (poweredState.requestedPower != part.powerConsumption) {
 										poweredState.requestedPower = part.powerConsumption
-										events.dispatch(getEvent(PowerEvent::class).set(entityID))
+										powerChanged = true
 									}
 								} else {
 									if (poweredState.requestedPower != idlePower) {
 										poweredState.requestedPower = idlePower
-										events.dispatch(getEvent(PowerEvent::class).set(entityID))
+										powerChanged = true
 									}
 								}
 							}
@@ -195,7 +199,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 
 							if (poweredState.requestedPower != 0L) {
 								poweredState.requestedPower = 0
-								events.dispatch(getEvent(PowerEvent::class).set(entityID))
+								powerChanged = true
 
 								if (part is ChargedPart) {
 									val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
@@ -205,6 +209,11 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 						}
 					}
 				}
+			}
+			
+			if (powerChanged) {
+				//TODO fix null on first run
+				events.dispatch(getEvent(PowerEvent::class).set(entityID))
 			}
 		}
 	}
@@ -250,11 +259,10 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 							}
 							is MissileLauncher -> {
 								val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
-								val reloadState = ship.getPartState(weapon)[ReloadablePartState::class]
 
-								if (reloadState.loaded) {
-									reloadState.loaded = false
-
+								if (ammoState.amount > 0) {
+									ammoState.amount -= 1
+									
 									//TODO fire
 									val munitionClass = ammoState.type
 								}

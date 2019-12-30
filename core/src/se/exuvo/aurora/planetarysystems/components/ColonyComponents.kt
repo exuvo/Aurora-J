@@ -9,7 +9,7 @@ import java.lang.IllegalStateException
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.galactic.MunitionHull
 
-
+//TODO part storage
 class ColonyComponent() : Component() {
 	var population: Long = 0
 	val resources = LinkedHashMap<Resource, Long>()
@@ -118,6 +118,7 @@ class Shipyard (
 	}
 }
 
+//TODO build hull and armor with resources, handle parts separetely for cancelling, reworks and storage
 class ShipyardSlipway() {
 	var hull: ShipHull? = null // If set, being built
 	var hullCost: Map<Resource, Long> = emptyMap()

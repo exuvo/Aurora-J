@@ -10,102 +10,86 @@ import se.exuvo.aurora.goap.interfaces.ReGoapState
 import java.util.ArrayDeque
 import com.artemis.utils.Bag
 import com.artemis.utils.ImmutableBag
+import se.exuvo.aurora.utils.Vector2L
+import com.artemis.utils.IntBag
 
 // can be shared between multiple ships
-interface Order {
-	
+abstract class Order {
+	val ships = IntBag()
+	var nextOrder: Order? = null
+	val previousOrders = Bag<Order>()
+}
+
+abstract class DestinationOrder: Order() {
+	var targetPosition: Vector2L? = null
+	var targetEntity: EntityReference? = null
 }
 
 enum class ShipWorldState {
 	FUEL_LOW,
-	IN_WEAPONS_RANGE
+	IN_WEAPONS_RANGE,
+	SHIELDS_UP,
+	POSITION,
+	PLANETARY_SYSTEM
 }
 
-class ShipMemory<T, W>: IReGoapMemory<T, W> {
-	val goapState: ReGoapState<T, W> = ReGoapState.instantiate()
+class ShipMemory<T>: IReGoapMemory<T, Any?> {
+	val goapState: ReGoapState<T, Any?> = ReGoapState.instantiate()
 	
 	override fun getWorldState() = goapState
 }
 
-class ShipOrdersComponent<T, W> : Component(), IReGoapAgent<T, W> where T: ShipWorldState, W: Boolean?  {
+class ShipOrdersComponent<T: ShipWorldState> : Component(), IReGoapAgent<T, Any?> {
 	var currentOrder: Order? = null
-	val orderQueue = ArrayDeque<Order>()
 	
-	val allGoals = Bag<IReGoapGoal<T, W>>()
-	var goalsChanged = true
-	val blacklistedGoalMap = HashMap<IReGoapGoal<T, W>, Long>()
-	val blacklistedGoals = Bag<IReGoapGoal<T, W>>()
-	var activeGoals: ImmutableBag<IReGoapGoal<T, W>> = allGoals
+	val automaticGoals = Bag<IReGoapGoal<T, Any?>>()
+	val blacklistedGoalsMap = HashMap<IReGoapGoal<T, Any?>, Long>()
+	val allowedGoals = Bag<IReGoapGoal<T, Any?>>()
+	var possibleGoals: ImmutableBag<IReGoapGoal<T, Any?>> = automaticGoals
+	var allowedGoalsDirty = true
 	
-	val actions = Bag<IReGoapAction<T, W>>()
-	val memory = ShipMemory<T, W>()
+	val possibleActions = Bag<IReGoapAction<T, Any?>>()
+	val memory = ShipMemory<T>()
 	
 	@JvmField
-	var currentGoal: IReGoapGoal<T, W>? = null
-	val planValues = HashMap<T, W>()
+	var currentGoal: IReGoapGoal<T, Any?>? = null
+	var currentPlan: MutableList<ReGoapActionState<T, Any?>>? = null
+	val planValues = HashMap<T, Any?>()
+	var currentActionState: ReGoapActionState<T, Any?>? = null
+	var abortOnNextActionTransition = false
+	var needsPlanning = false
+	var lastPlanning = -1000L
 	
-	fun updateActiveGoals(galacticTime: Long) {
-		goalsChanged = false;
-		
-		if (blacklistedGoalMap.isNotEmpty()) {
-			blacklistedGoals.clear();
-
-			for (goal in allGoals) {
-				val blackListedGoalTime = blacklistedGoalMap.get(goal)
-				
-				if (blackListedGoalTime == null) {
-					blacklistedGoals.add(goal);
-					
-				} else if (blackListedGoalTime < galacticTime) {
-					blacklistedGoalMap.remove(goal);
-					blacklistedGoals.add(goal);
-				}
-			}
-			
-			activeGoals = blacklistedGoals;
-			
-		} else {
-			activeGoals = allGoals;
-		}
-	}
-	
-	override fun getCurrentGoal(): IReGoapGoal<T, W>? = currentGoal
+	override fun getCurrentGoal(): IReGoapGoal<T, Any?>? = currentGoal
 
 	override fun isActive() = true
 
-	override fun getActionsSet(): MutableList<IReGoapAction<T, W>>? {
+	override fun getActionsSet(): MutableList<IReGoapAction<T, Any?>>? {
 		TODO()
 	}
 
-	override fun getMemory(): IReGoapMemory<T, W>? = memory
+	override fun getMemory(): IReGoapMemory<T, Any?>? = memory
 
 	override fun hasPlanValue(target: T) = planValues.containsKey(target)
 
 	override fun getPlanValue(key: T) = planValues.get(key)
 	
-	override fun instantiateNewState(): ReGoapState<T, W>? {
+	override fun instantiateNewState(): ReGoapState<T, Any?>? {
 		TODO()
 	}
 
-	override fun getGoalsSet(): MutableList<IReGoapGoal<T, W>>? {
+	override fun getGoalsSet(): MutableList<IReGoapGoal<T, Any?>>? {
 		TODO()
 	}
 
-	override fun setPlanValue(key: T, value: W) {
+	override fun setPlanValue(key: T, value: Any?) {
 		planValues[key] = value
 	}
 
-	override fun warnPossibleGoal(goal: IReGoapGoal<T, W>?) {
+	override fun warnPossibleGoal(goal: IReGoapGoal<T, Any?>?) {
 		TODO()
 	}
 
-	override fun getStartingPlan(): MutableList<ReGoapActionState<T, W>>? {
-		TODO()
-	}
+	override fun getStartingPlan(): MutableList<ReGoapActionState<T, Any?>>? = currentPlan
 	
-}
-
-class FleetOrdersComponent() : Component() {
-	var currentOrder: Order? = null
-	val orderQueue = ArrayDeque<Order>()
 }

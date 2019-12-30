@@ -8,7 +8,6 @@ import net.mostlyoriginal.api.utils.pooling.PoolsCollection;
 
 public class ReGoapState<T, W> {
 
-	// can change to object
 	private Map<T, W> values;
 	private final Map<T, W> bufferA;
 	private final Map<T, W> bufferB;

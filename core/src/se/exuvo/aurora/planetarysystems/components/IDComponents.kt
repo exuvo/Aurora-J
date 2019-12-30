@@ -31,7 +31,7 @@ data class EntityUUID(val planetarySystemID: Int, val empireID: Int, val entityU
 	val dispersedHash: Int by lazy (LazyThreadSafetyMode.NONE) { GameUtils.stringDigester.digest(toString()).hashCode() }
 }
 
-data class EntityReference(var system: PlanetarySystem, var entityID: Int) {
+data class EntityReference(var system: PlanetarySystem, var entityID: Int, var entityUUID: EntityUUID) {
 	
 	override fun toString(): String = "$system:$entityID"
 
@@ -39,6 +39,7 @@ data class EntityReference(var system: PlanetarySystem, var entityID: Int) {
 		var hash = 1
 		hash = 37 * hash + system.sid
 		hash = 37 * hash + entityID
+		hash = 37 * hash + entityUUID.hashCode()
 		hash
 	}
 
