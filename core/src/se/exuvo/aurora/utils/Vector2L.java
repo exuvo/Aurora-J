@@ -444,9 +444,9 @@ public class Vector2L implements Serializable {
 		return dot(vector).isZero();
 	}
 
-	public boolean isPerpendicular(Vector2L vector, float epsilon) {
-		return dot(vector).isZero();
-	}
+//	public boolean isPerpendicular(Vector2L vector, float epsilon) {
+//		return dot(vector).isZero();
+//	}
 
 	public boolean hasSameDirection(Vector2L vector) {
 		return dot(vector).compareTo(BigInt.ZERO) == 1;

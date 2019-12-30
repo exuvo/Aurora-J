@@ -3,6 +3,7 @@ package se.exuvo.aurora.utils;
 import java.io.Serializable;
 
 import com.badlogic.gdx.math.Interpolation;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.badlogic.gdx.utils.NumberUtils;
 
@@ -46,6 +47,10 @@ public class Vector2D implements Serializable {
 	 */
 	public Vector2D(Vector2D v) {
 		set(v);
+	}
+	
+	public Vector2D(Vector2 v) {
+		set(v.x, v.y);
 	}
 
 	public Vector2D cpy() {

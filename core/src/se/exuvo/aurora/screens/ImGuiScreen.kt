@@ -920,7 +920,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 										if (partRef.part is TargetingComputer) {
 											val state = shipComponent.getPartState(partRef)[TargetingComputerState::class]
-											ImGui.text("target ${state.target?.printID()}")
+											ImGui.text("target ${state.target?.entityID}")
 											ImGui.text("lockCompletionAt ${state.lockCompletionAt}")
 											
 											if (ImGui.treeNode("linkedWeapons ${state.linkedWeapons.size}")) {

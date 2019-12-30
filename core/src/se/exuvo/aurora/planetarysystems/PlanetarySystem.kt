@@ -86,6 +86,9 @@ import se.exuvo.aurora.planetarysystems.components.EntityReference
 import se.exuvo.aurora.empires.components.ShipyardModificationExpandCapacity
 import se.exuvo.aurora.planetarysystems.systems.ColonySystem
 import se.exuvo.aurora.planetarysystems.components.OwnerComponent
+import net.mostlyoriginal.api.utils.pooling.PoolsCollection
+import kotlin.reflect.KClass
+import net.mostlyoriginal.api.event.common.Event
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener, Disposable {
 	companion object {
@@ -105,6 +108,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 	val lock = ReentrantReadWriteLock()
 	val world: World
 	val random = RandomXS128()
+	val pools = PoolsCollection()
 
 	lateinit private var solarSystemMapper: ComponentMapper<PlanetarySystemComponent>
 	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
@@ -132,7 +136,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 
 		val worldBuilder = WorldConfigurationBuilder()
 //		worldBuilder.dependsOn(ProfilerPlugin::class.java)
-		worldBuilder.with(EventSystem(PooledFastEventDispatcher(), SubscribeAnnotationFinder()))
+		worldBuilder.with(EventSystem(PooledFastEventDispatcher(pools), SubscribeAnnotationFinder()))
 		worldBuilder.with(GroupSystem())
 		worldBuilder.with(OrbitSystem())
 		worldBuilder.with(ColonySystem())
@@ -205,7 +209,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		nuclearStorage.cost[Resource.GENERIC] = 100
 		shipHull.addPart(nuclearStorage)
 
-		val ammoStorage = AmmoContainerPart(1000000)
+		val ammoStorage = AmmoContainerPart(100000000)
 		ammoStorage.name = "Munitions Cargo"
 		ammoStorage.cost[Resource.GENERIC] = 100
 		shipHull.addPart(ammoStorage)
@@ -219,30 +223,36 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		battery.name = "Battery"
 		shipHull.addPart(battery)
 
-		val targetingComputer = TargetingComputer(2, 10, 0f, 10 * Units.KILO)
+		val targetingComputer = TargetingComputer(2, 1, 0f, 10 * Units.KILO)
 		targetingComputer.name = "TC 2-10"
 		shipHull.addPart(targetingComputer)
 
 		val dummyMass1 = Battery(10 * Units.KILO, 50 * Units.KILO, 0.8f, 1 * Units.GIGA)
 		dummyMass1.cost[Resource.GENERIC] = 10
-
-		val dummyMass2 = Battery(10 * Units.KILO, 50 * Units.KILO, 0.8f, 1 * Units.GIGA)
-		dummyMass2.cost[Resource.GENERIC] = 100
-
+		
 		val sabot = MunitionHull(Resource.SABOTS)
 		sabot.name = "A sabot"
 		sabot.addPart(dummyMass1)
 
+		val missileBattery = Battery(10 * Units.KILO, 50 * Units.KILO, 0.8f, 1 * Units.GIGA)
+		missileBattery.cost[Resource.GENERIC] = 500
+		
+//		val missileIonThruster = ElectricalThruster(10 * 100f, 1 * Units.KILO)
+		val missileChemicalThruster = FueledThruster(2900 * 1000f, 1)
+		val missileFuelPart = FuelContainerPart(5000)
+		
 		val missile = MunitionHull(Resource.MISSILES)
-		missile.name = "A missile"
-		missile.addPart(dummyMass2)
+		missile.name = "Sprint missile"
+		missile.addPart(missileBattery)
+		missile.addPart(missileChemicalThruster)
+		missile.addPart(missileFuelPart)
 
-		val railgun = Railgun(2 * Units.MEGA, 7, 5 * Units.MEGA, 5, 3)
+		val railgun = Railgun(2 * Units.MEGA, 5, 5 * Units.MEGA, 5, 3, 20)
 		shipHull.addPart(railgun)
 		val railgunRef = shipHull[Railgun::class][0]
 		shipHull.preferredPartMunitions[railgunRef] = sabot
 
-		val missileLauncher = MissileLauncher(200 * Units.KILO, 13, 3, 10)
+		val missileLauncher = MissileLauncher(200 * Units.KILO, 14, 3, 10, 1000f)
 		shipHull.addPart(missileLauncher)
 		val missileLauncherRef = shipHull[MissileLauncher::class][0]
 		shipHull.preferredPartMunitions[missileLauncherRef] = missile
@@ -339,7 +349,6 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		strategicIconMapper.create(entity4).set(Assets.textures.findRegion("strategic/ship"))
 		emissionsMapper.create(entity4).set(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10))
 		
-
 		val shipComponent = shipMapper.create(entity4).set(shipHull, galaxy.time)
 		shipComponent.addCargo(Resource.NUCLEAR_FISSION, 100)
 		shipComponent.addCargo(Resource.ROCKET_FUEL, 10000)
@@ -475,6 +484,8 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 	private fun getNewEntitityID(): Long {
 		return entityUIDGenerator++
 	}
+	
+	fun <T: Event> getEvent(eventClass: KClass<T>) = pools.obtain(eventClass.java)
 	
 	override fun dispose() {
 		world.dispose()

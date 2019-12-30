@@ -24,9 +24,20 @@ import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.TargetingComputerState
 import se.exuvo.aurora.planetarysystems.components.UUIDComponent
 import se.exuvo.aurora.planetarysystems.events.PowerEvent
-import se.exuvo.aurora.planetarysystems.events.getEvent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.Vector2L
+import com.badlogic.gdx.math.Vector2
+import se.exuvo.aurora.utils.Vector2D
+import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
+import se.exuvo.aurora.planetarysystems.PlanetarySystem
+import com.artemis.annotations.Wire
+import se.exuvo.aurora.planetarysystems.components.MovementValues
+import se.exuvo.aurora.utils.Units
+import org.apache.commons.math3.analysis.solvers.PegasusSolver
+import org.apache.commons.math3.analysis.polynomials.PolynomialFunction
+import org.apache.commons.math3.analysis.solvers.LaguerreSolver
+import org.apache.commons.math3.exception.TooManyEvaluationsException
 
 class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -40,9 +51,23 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
 	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
 	lateinit private var nameMapper: ComponentMapper<NameComponent>
+	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>
 	lateinit private var events: EventSystem
 
+	@Wire
+	lateinit private var planetarySystem: PlanetarySystem
+	
 	private val galaxy = GameServices[Galaxy::class]
+	
+	val polynomialSolver: LaguerreSolver
+
+	init {
+//		val relativeAccuracy = 1.0e-12
+//		val absoluteAccuracy = 1.0e-8
+//		val functionValueAccuracy = ?
+//		polynomialSolver = LaguerreSolver(relativeAccuracy, absoluteAccuracy)
+		polynomialSolver = LaguerreSolver()
+	}
 
 	override fun initialize() {
 		super.initialize()
@@ -108,7 +133,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 							if (ammoState.type != null) {
 
 								if (ammoState.type!!.getRadius() != part.ammunitionSize) {
-									log.warn("Wrong ammo size for $part: ${ammoState.type!!.getRadius()} != ${part.ammunitionSize}")
+									log.error("Wrong ammo size for $part: ${ammoState.type!!.getRadius()} != ${part.ammunitionSize}")
 									
 								} else {
 									
@@ -136,7 +161,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 
 											// Take ammo from storage now to avoid multiple launchers trying to reload with the same last ordenance
 											val removedAmmo = ship.retrieveCargo(ammoState.type!!, 1)
-
+											
 											if (removedAmmo > 0) {
 
 												powerWanted = true
@@ -212,8 +237,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			}
 			
 			if (powerChanged) {
-				//TODO fix null on first run
-				events.dispatch(getEvent(PowerEvent::class).set(entityID))
+				events.dispatch(planetarySystem.getEvent(PowerEvent::class).set(entityID))
 			}
 		}
 	}
@@ -222,62 +246,237 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 
 		val ship = shipMapper.get(entityID)
 		val weaponsComponent = weaponsComponentMapper.get(entityID)
+		val shipMovement = movementMapper.get(entityID).get(galaxy.time)
 
 		val tcs = weaponsComponent.targetingComputers
 
 		for (tc in tcs) {
 			val tcState = ship.getPartState(tc)[TargetingComputerState::class]
 
+			val target = tcState.target
+			
 			// Fire
-			if (tcState.target != null && galaxy.time > tcState.lockCompletionAt) {
-
-				for (weapon in tcState.linkedWeapons) {
-					if (ship.isPartEnabled(weapon)) {
-						val part = weapon.part
-
-						when (part) {
-							is BeamWeapon -> {
-								val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
-
-								if (chargedState.charge >= part.capacitor) {
-									chargedState.charge = 0
-
-									//TODO calculate intercept angle, fire
+			if (target!= null) {
+				
+				if (!planetarySystem.isEntityReferenceValid(target)) {
+					
+					tcState.target = null
+					log.warn("Target ${target} is no longer valid for ${tc}")
+					
+				} else if (galaxy.time > tcState.lockCompletionAt) {
+				
+					val targetMovement = movementMapper.get(target.entityID).get(galaxy.time)
+	
+					for (weapon in tcState.linkedWeapons) {
+						if (ship.isPartEnabled(weapon)) {
+							val part = weapon.part
+	
+							when (part) {
+								is BeamWeapon -> {
+									val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
+	
+									if (chargedState.charge >= part.capacitor) {
+										chargedState.charge = 0
+	
+										val projectileSpeed = Units.C * 1000
+										val result = getInterceptionPosition(shipMovement.value, projectileSpeed, targetMovement.value)
+										
+										if (result == null) {
+											
+											log.error("Unable to find intercept for laser and target ${target.entityID}, projectileSpeed $projectileSpeed")
+											
+										} else {
+										
+											val (normalisedDirection, timeToIntercept, interceptPosition) = result
+											val galacticTime = timeToIntercept + galaxy.time
+											val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
+											println("laser projectileSpeed ${projectileSpeed}m/s, interceptPosition $interceptPosition, timeToIntercept ${timeToIntercept}s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}, normalisedDirection $normalisedDirection")
+										}
+										
+										//TODO fire
+									}
 								}
-							}
-							is Railgun -> {
-								val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
-								val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
-
-								if (chargedState.charge >= part.capacitor && ammoState.amount > 0) {
-									chargedState.charge = 0
-									ammoState.amount -= 1
-
-									//TODO calculate intercept angle, fire
-									val munitionClass = ammoState.type
+								is Railgun -> {
+									val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
+									val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
+	
+									if (chargedState.charge >= part.capacitor && ammoState.amount > 0) {
+	
+										val munitionClass = ammoState.type!!
+										
+										val projectileSpeed = (chargedState.charge * part.efficiency) / (100L * munitionClass.getMass())
+										val result = getInterceptionPosition(shipMovement.value, projectileSpeed.toDouble(), targetMovement.value)
+										
+										if (result == null) {
+											
+											log.error("Unable to find intercept for railgun $part and target ${target.entityID}, projectileSpeed $projectileSpeed")
+											
+										} else {
+										
+											val (normalisedDirection, timeToIntercept, interceptPosition) = result
+											val galacticTime = timeToIntercept + galaxy.time
+											val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
+											
+											println("railgun projectileSpeed ${projectileSpeed}m/s, interceptPosition $interceptPosition, timeToIntercept ${timeToIntercept}s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}, normalisedDirection $normalisedDirection")
+										}
+										
+										//TODO fire
+										
+										chargedState.charge = 0
+										ammoState.amount -= 1
+									}
 								}
-							}
-							is MissileLauncher -> {
-								val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
-
-								if (ammoState.amount > 0) {
-									ammoState.amount -= 1
-									
-									//TODO fire
-									val munitionClass = ammoState.type
+								is MissileLauncher -> {
+									val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
+	
+									if (ammoState.amount > 0) {
+										
+										//TODO handle multi stage missiles
+										// Arrow 3 can be launched into an area of space before it is known where the target missile is going.
+										// When the target and its course are identified, the Arrow interceptor is redirected using its thrust-vectoring nozzle to close the gap and conduct a "body-to-body" interception.
+										
+										val munitionClass = ammoState.type!!
+										
+										val targetAcceleration = Vector2D()
+										val missileAcceleration = munitionClass.getAverageAcceleration().toDouble()
+										val missileLaunchSpeed = part.launchSpeed
+										
+										val result = getInterceptionPosition(shipMovement.value, targetMovement.value, targetAcceleration, missileLaunchSpeed.toDouble(), missileAcceleration)
+										
+										if (result == null) {
+											
+											log.error("Unable to find intercept for missile $munitionClass and target ${target.entityID}")
+											
+										} else {
+											
+											val (normalisedDirection, timeToIntercept, interceptPosition) = result
+											
+											val galacticTime = timeToIntercept + galaxy.time
+											val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
+											val impactVelocity = missileLaunchSpeed + missileAcceleration * timeToIntercept
+											
+											println("missile missileAcceleration ${missileAcceleration}m/s², impactVelocity ${impactVelocity}m/s, interceptPosition $interceptPosition, thrustTime ${munitionClass.getThrustTime()}, timeToIntercept ${timeToIntercept}s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}, normalisedDirection $normalisedDirection")
+											
+											if (timeToIntercept <= munitionClass.getThrustTime()) {
+												
+												normalisedDirection.scl(missileLaunchSpeed)
+												
+												//TODO fire
+												
+												ammoState.amount -= 1
+												
+											} else {
+												
+												log.error("Unable to find intercept inside thrust time for missile $munitionClass and target ${target.entityID}")
+											}
+										}
+									}
 								}
+								else -> RuntimeException("Unsupported weapon")
 							}
-							else -> RuntimeException("Unsupported weapon")
 						}
 					}
 				}
 			}
 		}
-
-		/* Determine closest approach
-      * https://math.stackexchange.com/questions/1256660/shortest-distance-between-two-moving-points
-      * https://stackoverflow.com/questions/32218356/how-to-calculate-shortest-distance-between-two-moving-objects
-     */
-
 	}
+	
+	fun getInterceptionPosition(shooterMovement: MovementValues,
+	                            targetMovement: MovementValues,
+	                            targetAcceleration: Vector2D,
+															missileLaunchSpeed: Double,
+	                            missileAcceleration: Double
+	): Triple<Vector2, Long, Vector2L>? {
+		
+			/**
+			TODO calculate intercept
+			https://www.gamedev.net/forums/topic/579481-advanced-intercept-equation
+			https://www.gamedev.net/forums/?topic_id=401165&page=2
+			https://www.gamedev.net/forums/topic/621460-need-help-with-interception-of-accelerated-target/
+			**/
+			
+		val relativeVelocity = Vector2D((targetMovement.velocity.x - shooterMovement.velocity.x).toDouble(), (targetMovement.velocity.y - shooterMovement.velocity.y).toDouble())
+		val relativePosition = Vector2D((targetMovement.position.x - shooterMovement.position.x).toDouble(), (targetMovement.position.y - shooterMovement.position.y).toDouble())
+		
+		val coefs = DoubleArray(5)
+		coefs[4] = targetAcceleration.dot(targetAcceleration) / 4.0 - Math.pow(missileAcceleration, 2.0) / 4.0
+		coefs[3] = relativeVelocity.dot(targetAcceleration) /* / 2.0 */ - missileLaunchSpeed * missileAcceleration
+		coefs[2] = relativePosition.dot(targetAcceleration) + relativeVelocity.dot(relativeVelocity) - Math.pow(missileLaunchSpeed, 2.0)
+		coefs[1] = 2 * relativePosition.dot(relativeVelocity)
+		coefs[0] = relativePosition.dot(relativePosition)
+		
+		try {
+			val complexRoots = polynomialSolver.solveAllComplex(coefs, 1.0)
+			
+			var solvedTime: Double? = null
+			
+			if (complexRoots != null) {
+				for (root in complexRoots) {
+//					println("complex root $root")
+					if (root.getImaginary() == 0.0 && root.getReal() > 0 && (solvedTime == null || root.getReal() < solvedTime)) {
+						solvedTime = root.getReal()
+					}
+				}
+			}
+			
+//			println("solvedTime $solvedTime")
+			
+			if (solvedTime != null) {
+				
+				relativeVelocity.scl(solvedTime)
+				targetAcceleration.scl(0.5 * Math.pow(solvedTime, 2.0))
+				
+				val interceptPosition = shooterMovement.position.cpy()
+				interceptPosition.add(relativeVelocity.x.toLong(), relativeVelocity.y.toLong())
+				interceptPosition.add(targetAcceleration.x.toLong(), targetAcceleration.y.toLong())
+				
+				val normalisedDirection = Vector2(interceptPosition.x.toFloat(), interceptPosition.y.toFloat()).nor()
+				
+				return Triple(normalisedDirection, Math.round(solvedTime), interceptPosition)
+			}
+			
+		} catch (e: TooManyEvaluationsException) {
+			log.error("Unable to solve intercept polynomial", e)
+		}
+		
+		return null
+	}
+	
+	// https://www.gamedev.net/forums/?topic_id=401165
+	fun getInterceptionPosition(shooterMovement: MovementValues, projectileSpeed: Double, targetMovement: MovementValues): Triple<Vector2, Long, Vector2L>? {
+		
+		val relativeVelocity = Vector2D((targetMovement.velocity.x - shooterMovement.velocity.x).toDouble(), (targetMovement.velocity.y - shooterMovement.velocity.y).toDouble())
+		val relativePosition = targetMovement.position.cpy().sub(shooterMovement.position)
+		
+		val a: Double = projectileSpeed * projectileSpeed - relativeVelocity.dot(relativeVelocity)
+		val b: Double = -2 * relativeVelocity.dot(relativePosition.x.toDouble(), relativePosition.y.toDouble())
+		val c: Double = relativePosition.dot(-relativePosition.x, -relativePosition.y).toDouble()
+		
+		val root = getLargestRootOfQuadraticEquation(a, b, c)
+		
+		if (root == null || root < 0) { // Intercept is not possible
+			return null
+		}
+		
+//		println("simple root $root")
+		
+		relativeVelocity.scl(root)
+		
+		val interceptPosition = relativePosition.set(shooterMovement.position)
+		interceptPosition.add(relativeVelocity.x.toLong(), relativeVelocity.y.toLong())
+		
+		val normalisedDirection = Vector2(interceptPosition.x.toFloat(), interceptPosition.y.toFloat()).nor()
+		
+		return Triple(normalisedDirection, Math.round(root), interceptPosition)
+	}
+	
+	fun getLargestRootOfQuadraticEquation(a: Double, b: Double, c: Double): Double? {
+		val tmp = b * b - 4 * a * c
+		
+		if (tmp < 0) {
+			return null
+		}
+		
+		return (b + Math.sqrt(tmp)) / (2 * a)
+	} 
 }

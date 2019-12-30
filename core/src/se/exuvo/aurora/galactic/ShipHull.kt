@@ -8,6 +8,10 @@ import se.exuvo.aurora.empires.components.ShipyardType
 import se.exuvo.aurora.utils.Units
 
 class ShipHull() {
+	companion object {
+		const val lengthToDiameterRatio = 2.0
+	}
+	
 	var name: String = ""
 	var hullClass: ShipHullClass = ShipHullClass.NONE
 	var designDay: Int = 0
@@ -106,7 +110,6 @@ class ShipHull() {
 		val volume = getVolume()
 
 		// V = πr^2h, http://mathhelpforum.com/geometry/170076-how-find-cylinder-dimensions-volume-aspect-ratio.html
-		val lengthToDiameterRatio = 2.0
 		val length = Math.pow(Math.pow(2.0, 2 * lengthToDiameterRatio) * volume / Math.PI, 1.0 / 3)
 		val radius = Math.sqrt(volume / Math.PI / length)
 

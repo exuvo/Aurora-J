@@ -15,9 +15,10 @@ import se.exuvo.aurora.planetarysystems.components.PoweredPartState
 import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.events.PowerEvent
-import se.exuvo.aurora.planetarysystems.events.getEvent
 import se.exuvo.aurora.utils.consumeFuel
 import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.planetarysystems.PlanetarySystem
+import com.artemis.annotations.Wire
 
 class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -31,6 +32,9 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 	lateinit private var thrustMapper: ComponentMapper<ThrustComponent>
 	lateinit private var nameMapper: ComponentMapper<NameComponent>
 	lateinit private var events: EventSystem
+	
+	@Wire
+	lateinit private var planetarySystem: PlanetarySystem
 
 	override fun preProcessSystem() {
 		subscription.getEntities().forEach { entityID ->
@@ -47,12 +51,12 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 					if (thrustComponent != null && thrustComponent.thrusting) {
 						if (poweredState.requestedPower != part.powerConsumption) {
 							poweredState.requestedPower = part.powerConsumption
-							events.dispatch(getEvent(PowerEvent::class).set(entityID))
+							events.dispatch(planetarySystem.getEvent(PowerEvent::class).set(entityID))
 						}
 					} else {
 						if (poweredState.requestedPower > 0) {
 							poweredState.requestedPower = 0
-							events.dispatch(getEvent(PowerEvent::class).set(entityID))
+							events.dispatch(planetarySystem.getEvent(PowerEvent::class).set(entityID))
 						}
 					}
 				}

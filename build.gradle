@@ -104,6 +104,8 @@ project(":core") {
 		//compile "net.mostlyoriginal.artemis-odb:contrib-plugin-operations:$artemisContribVersion"
 		//compile "net.mostlyoriginal.artemis-odb:contrib-plugin-profiler:$artemisContribVersion"
 		
+		compile "org.apache.commons:commons-math3:3.6.1"
+		
 		compile "org.lwjgl:lwjgl:$lwjglVersion"
 		compile "org.lwjgl:lwjgl-glfw:$lwjglVersion"
 		compile "org.lwjgl:lwjgl-jemalloc:$lwjglVersion"

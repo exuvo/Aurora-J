@@ -39,6 +39,8 @@ import se.exuvo.settings.Settings
 import com.artemis.utils.IntBag
 import se.exuvo.aurora.AuroraGame
 import se.exuvo.aurora.galactic.Player
+import se.exuvo.aurora.planetarysystems.PlanetarySystem
+import com.artemis.annotations.Wire
 
 class RenderSystem : IteratingSystem(FAMILY) {
 	companion object {
@@ -66,6 +68,9 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	private val galaxy = GameServices[Galaxy::class]
+	
+	@Wire
+	lateinit private var planetarySystem: PlanetarySystem
 	
 	lateinit private var groupSystem: GroupSystem
 	lateinit private var orbitSystem: OrbitSystem
@@ -319,7 +324,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color(0.8f, 0f, 0f, 0.5f)
 
-		val usedTargets = HashSet<Entity>()
+		val usedTargets = HashSet<Int>()
 
 		for (entityID in selectedEntityIDs) {
 			if (weaponsComponentMapper.has(entityID)) {
@@ -337,9 +342,9 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					val tcState = ship.getPartState(tc)[TargetingComputerState::class]
 					val target = tcState.target
 
-					if (target != null && usedTargets.add(target)) {
+					if (target != null && planetarySystem.isEntityReferenceValid(target) && usedTargets.add(target.entityID)) {
 
-						val targetMovement = movementMapper.get(target).get(galaxy.time).value
+						val targetMovement = movementMapper.get(target.entityID).get(galaxy.time).value
 						val x2 = (targetMovement.getXinKM() - cameraOffset.x).toFloat()
 						val y2 = (targetMovement.getYinKM() - cameraOffset.y).toFloat()
 						shapeRenderer.line(x, y, x2, y2)
@@ -739,6 +744,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 		drawSelections(selectedEntityIDs, viewport, cameraOffset)
 		drawSelectionMoveTargets(selectedEntityIDs, cameraOffset)
+		//TODO draw selection weapon ranges
 		drawAttackTargets(selectedEntityIDs, cameraOffset)
 
 		spriteBatch.projectionMatrix = viewport.camera.combined

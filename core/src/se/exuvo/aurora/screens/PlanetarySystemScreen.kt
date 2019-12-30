@@ -377,7 +377,12 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 										for (tc in weaponsComponent.targetingComputers) {
 											val tcState = ship.getPartState(tc)[TargetingComputerState::class]
 
-											tcState.target = target
+											if (target != null) {
+												tcState.target = system.getEntityReference(target.getId())
+												
+											} else {
+												tcState.target = null
+											}
 										}
 									}
 								}

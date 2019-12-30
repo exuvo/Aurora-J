@@ -202,7 +202,8 @@ class Railgun(powerConsumption: Long = 0,
 							ammunitionSize: Int,
 							capacitor: Long,
 							ammunitionAmount: Int,
-							reloadTime: Int
+							reloadTime: Int,
+							val efficiency: Int = 20 // Percent Energy to velocity
 ) : Part(),
 		WeaponPart,
 		PoweredPart by PoweredPartImpl(powerConsumption),
@@ -212,7 +213,8 @@ class Railgun(powerConsumption: Long = 0,
 class MissileLauncher(powerConsumption: Long = 0,
 								 			ammunitionSize: Int,
 								 			ammunitionAmount: Int,
-											reloadTime: Int
+											reloadTime: Int,
+											val launchSpeed: Float = 0f
 ) : Part(),
 		WeaponPart,
 		PoweredPart by PoweredPartImpl(powerConsumption),

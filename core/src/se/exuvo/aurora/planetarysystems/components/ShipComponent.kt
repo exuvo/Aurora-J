@@ -424,7 +424,7 @@ data class AmmunitionPartState(var type: MunitionHull? = null,
 															 var reloadPowerRemaining: Long = 0
 )
 
-data class TargetingComputerState(var target: Entity? = null,
+data class TargetingComputerState(var target: EntityReference? = null,
 																	var lockCompletionAt: Long = 0,
 																	var linkedWeapons: MutableList<PartRef<Part>> = ArrayList()
 )

@@ -6,6 +6,7 @@ import net.mostlyoriginal.api.event.common.Event;
 import net.mostlyoriginal.api.event.common.EventDispatchStrategy;
 import net.mostlyoriginal.api.event.common.EventListener;
 import net.mostlyoriginal.api.utils.ClassHierarchy;
+import net.mostlyoriginal.api.utils.pooling.PoolsCollection;
 import net.mostlyoriginal.api.utils.BagUtils;
 
 import java.util.IdentityHashMap;
@@ -26,6 +27,13 @@ public class PooledFastEventDispatcher implements EventDispatchStrategy {
 
 	/** Listeners flattened to include full hierarchy per calling event. */
 	final IdentityHashMap<Class<?>, Bag<EventListener>> hierarchicalListenerCache = new IdentityHashMap<>();
+
+	private final PoolsCollection pools;
+	
+	public PooledFastEventDispatcher(PoolsCollection pools) {
+		super();
+		this.pools = pools;
+	}
 
 	@Override
 	public void register(EventListener listener) {
@@ -135,7 +143,7 @@ public class PooledFastEventDispatcher implements EventDispatchStrategy {
 			}
 		}
 		
-		se.exuvo.aurora.planetarysystems.events.EventsKt.getPools().free(event);
+		pools.free(event);
 	}
 
 	@Override
