@@ -8,13 +8,13 @@ import com.artemis.annotations.PooledWeaver
 
 // In N and degrees
 class ThrustComponent() : Component() {
-	var thrust: Float = 0f
-	var maxThrust: Float = 0f
+	var thrust: Long = 0
+	var maxThrust: Long = 0
 	var thrustAngle: Float = 0f
 	var thrusting: Boolean = false
 
-	fun set(thrust: Float,
-					maxThrust: Float,
+	fun set(thrust: Long,
+					maxThrust: Long,
 					thrustAngle: Float,
 					thrusting: Boolean
 	): ThrustComponent {

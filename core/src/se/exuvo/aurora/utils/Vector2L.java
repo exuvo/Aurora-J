@@ -2,6 +2,8 @@ package se.exuvo.aurora.utils;
 
 import java.io.Serializable;
 
+import org.apache.commons.math3.util.FastMath;
+
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.GdxRuntimeException;
@@ -47,11 +49,11 @@ public class Vector2L implements Serializable {
 	}
 
 	public static double len(long x, long y) {
-		return Math.hypot(x, y);
+		return FastMath.hypot(x, y);
 	}
 
 	public double len() {
-		return Math.hypot(x, y);
+		return FastMath.hypot(x, y);
 	}
 
 	public Vector2L set(Vector2L v) {
@@ -146,6 +148,11 @@ public class Vector2L implements Serializable {
 		y = (divider / 2 + y) / divider;
 		return this;
 	}
+	
+	public Vector2L div(double divider) {
+		scl(1.0 / divider);
+		return this;
+	}
 
 	/**
 	 * Multiplies this vector by a scalar
@@ -179,13 +186,13 @@ public class Vector2L implements Serializable {
 	public static double dst(long x1, long y1, long x2, long y2) {
 		final long x_d = x2 - x1;
 		final long y_d = y2 - y1;
-		return Math.hypot(x_d, y_d);
+		return FastMath.hypot(x_d, y_d);
 	}
 
 	public double dst(Vector2L v) {
 		final long x_d = v.x - x;
 		final long y_d = v.y - y;
-		return Math.hypot(x_d, y_d);
+		return FastMath.hypot(x_d, y_d);
 	}
 
 	/**
@@ -196,13 +203,13 @@ public class Vector2L implements Serializable {
 	public double dst(long x, long y) {
 		final long x_d = x - this.x;
 		final long y_d = y - this.y;
-		return Math.hypot(x_d, y_d);
+		return FastMath.hypot(x_d, y_d);
 	}
 
 	public Vector2L limit(long limit) {
 		double len = len();
 		if (len > limit) {
-			return scl(Math.sqrt(limit / len));
+			return scl(FastMath.sqrt(limit / len));
 		}
 		return this;
 	}
@@ -210,14 +217,14 @@ public class Vector2L implements Serializable {
 	public Vector2L clamp(long min, long max) {
 		double len = len();
 		if (len == 0) return this;
-		if (len > max) return scl(Math.sqrt(max / len));
-		if (len < min) return scl(Math.sqrt(min / len));
+		if (len > max) return scl(FastMath.sqrt(max / len));
+		if (len < min) return scl(FastMath.sqrt(min / len));
 		return this;
 	}
 
 	public Vector2L setLength(long len) {
 		double oldLen = len();
-		return (oldLen == 0 || oldLen == len) ? this : scl(Math.sqrt(len / oldLen));
+		return (oldLen == 0 || oldLen == len) ? this : scl(FastMath.sqrt(len / oldLen));
 	}
 
 	/**
@@ -291,7 +298,7 @@ public class Vector2L implements Serializable {
 	 *         counter-clockwise) and between 0 and 360.
 	 */
 	public double angle() {
-		double angle = Math.toDegrees(Math.atan2(y, x));
+		double angle = FastMath.toDegrees(FastMath.atan2(y, x));
 		if (angle < 0) angle += 360;
 		return angle;
 	}
@@ -301,7 +308,7 @@ public class Vector2L implements Serializable {
 	 *         counter-clockwise.) between -180 and +180
 	 */
 	public double angle(Vector2L reference) {
-		return Math.toDegrees(angleRad(reference));
+		return FastMath.toDegrees(angleRad(reference));
 	}
 
 	/**
@@ -309,7 +316,7 @@ public class Vector2L implements Serializable {
 	 *         counter-clockwise)
 	 */
 	public double angleRad() {
-		return Math.atan2(y, x);
+		return FastMath.atan2(y, x);
 	}
 
 	/**
@@ -317,7 +324,7 @@ public class Vector2L implements Serializable {
 	 *         counter-clockwise.)
 	 */
 	public double angleRad(Vector2L reference) {
-		return Math.atan2(crs(reference).doubleValue(), dot(reference).doubleValue());
+		return FastMath.atan2(crs(reference).doubleValue(), dot(reference).doubleValue());
 	}
 
 	/**
@@ -328,6 +335,15 @@ public class Vector2L implements Serializable {
 	public Vector2L setAngle(float degrees) {
 		return setAngleRad(degrees * MathUtils.degreesToRadians);
 	}
+	
+	/**
+	 * Sets the angle of the vector in degrees relative to the x-axis, towards the positive y-axis (typically counter-clockwise).
+	 * 
+	 * @param degrees The angle in degrees to set.
+	 */
+	public Vector2L setAngle(double degrees) {
+		return setAngleRad(Math.toRadians(degrees));
+	}
 
 	/**
 	 * Sets the angle of the vector in radians relative to the x-axis, towards the positive y-axis (typically counter-clockwise).
@@ -335,9 +351,17 @@ public class Vector2L implements Serializable {
 	 * @param radians The angle in radians to set.
 	 */
 	public Vector2L setAngleRad(float radians) {
-		this.set((long) len(), 0);
-		this.rotateRad(radians);
-
+		this.rotateRad(radians - angleRad());
+		return this;
+	}
+	
+	/**
+	 * Sets the angle of the vector in radians relative to the x-axis, towards the positive y-axis (typically counter-clockwise).
+	 * 
+	 * @param radians The angle in radians to set.
+	 */
+	public Vector2L setAngleRad(double radians) {
+		this.rotateRad(radians - angleRad());
 		return this;
 	}
 	
@@ -349,6 +373,15 @@ public class Vector2L implements Serializable {
 	public Vector2L rotate(float degrees) {
 		return rotateRad(degrees * MathUtils.degreesToRadians);
 	}
+	
+	/**
+	 * Rotates the Vector2L by the given angle, counter-clockwise assuming the y-axis points up.
+	 * 
+	 * @param degrees the angle in degrees
+	 */
+	public Vector2L rotate(double degrees) {
+		return rotateRad(Math.toRadians(degrees));
+	}
 
 	/**
 	 * Rotates the Vector2L by the given angle, counter-clockwise assuming the y-axis points up.
@@ -356,8 +389,8 @@ public class Vector2L implements Serializable {
 	 * @param radians the angle in radians
 	 */
 	public Vector2L rotateRad(double radians) {
-		double cos = Math.cos(radians);
-		double sin = Math.sin(radians);
+		double cos = FastMath.cos(radians);
+		double sin = FastMath.sin(radians);
 
 		double newX = this.x * cos - this.y * sin;
 		double newY = this.x * sin + this.y * cos;

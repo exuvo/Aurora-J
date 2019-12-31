@@ -74,8 +74,8 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 
 		val ship = shipMapper.get(entityID)
 
-		var thrust = 0f
-		var maxThrust = 0f
+		var thrust = 0L
+		var maxThrust = 0L
 		val thrusters = ship.hull.getPartRefs().filter({ it.part is ThrustingPart })
 
 		if (thrusters.isNotEmpty()) {
@@ -113,7 +113,7 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 			}
 		}
 
-		if (maxThrust == 0f) {
+		if (maxThrust == 0L) {
 
 			if (thrustMapper.has(entityID)) {
 				thrustMapper.remove(entityID)

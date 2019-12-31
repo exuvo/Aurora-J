@@ -24,5 +24,5 @@ class GalacticPositionComponent() : Component() {
 	}
 }
 
-// In light years/s
-data class GalacticVelocityComponent(var velocity: Vector2 = Vector2(), var thrustAngle: Float = 0f) : Component()
+// In milli light years/s
+data class GalacticVelocityComponent(var velocity: Vector2L = Vector2L(), var thrustAngle: Float = 0f) : Component()

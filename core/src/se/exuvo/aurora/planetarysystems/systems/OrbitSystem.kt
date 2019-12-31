@@ -141,7 +141,6 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 
 	var tempPosition = Vector2D()
 	var oldPosition = Vector2L()
-	var tempVelocity = Vector2()
 	
 	//TODO set timemovement next to next days position to use linear interpolation during the day
 	override fun process(entityID: Int) {
@@ -169,9 +168,9 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 		position.set(parentPosition.x + tempPosition.x.toLong(), parentPosition.y + tempPosition.y.toLong())
 		
 		oldPosition.sub(position)
-		tempVelocity.set(oldPosition.x.toFloat(), oldPosition.y.toFloat()).scl(1f / interval)
+		oldPosition.scl(1.0 / interval)
 		
-		movement.value.velocity.set(tempVelocity)
+		movement.value.velocity.set(oldPosition)
 		movement.time = galaxy.time
 	}
 

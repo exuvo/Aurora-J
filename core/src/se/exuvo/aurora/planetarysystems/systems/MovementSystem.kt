@@ -20,6 +20,7 @@ import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEach
+import org.apache.commons.math3.util.FastMath
 
 class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -131,10 +132,10 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 	}
 
 	private val tempPosition = Vector2L()
-	private val tempVelocity = Vector2()
+	private val tempVelocity = Vector2L()
 
 	override fun process(entityID: Int) {
-		val deltaGameTime = world.getDelta()
+		val deltaGameTime = world.getDelta().toLong()
 
 		val movement = movementMapper.get(entityID)
 
@@ -149,9 +150,10 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 		}
 
 		val mass = massMapper.get(entityID).mass
+		val massL = mass.toLong()
 		val thrustComponent = thrustMapper.get(entityID)
-		val acceleration = thrustComponent.thrust / mass
-		val maxAcceleration = thrustComponent.maxThrust / mass
+		val acceleration = thrustComponent.thrust / massL
+		val maxAcceleration = thrustComponent.maxThrust / massL
 		val tickAcceleration = acceleration * deltaGameTime
 		val maxTickAcceleration = maxAcceleration * deltaGameTime
 
@@ -166,11 +168,14 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 
 				} else {
 
-					tempVelocity.set(velocity).nor().scl(tickAcceleration.toFloat())
+					// Apply breaking in same direction as travel
+					tempVelocity.set(velocity)
+					tempVelocity.scl(tickAcceleration).div(velocityMagnitute)
 					velocity.sub(tempVelocity)
-					thrustComponent.thrustAngle = tempVelocity.angle() + 180
+					
+					thrustComponent.thrustAngle = tempVelocity.angle().toFloat() + 180
 					tempVelocity.set(velocity).scl(deltaGameTime)
-					position.add(tempVelocity.x.toLong(), tempVelocity.y.toLong())
+					position.add(tempVelocity.x, tempVelocity.y)
 					movement.previous.time = galaxy.time
 				}
 
@@ -240,7 +245,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 
 		// t = sqrt(2d / a)
 		// d = ut + 1/2at^2
-		val timeToTraverseFrom0Velocity = 2 * Math.sqrt(distance / maxTickAcceleration) // Base formula = t = sqrt(2d / a), Inital speed 0 and reaches target at speed 
+		val timeToTraverseFrom0Velocity = 2 * FastMath.sqrt(distance / maxTickAcceleration) // Base formula = t = sqrt(2d / a), Inital speed 0 and reaches target at speed 
 
 //		println("timeToTraverseFrom0Velocity ${TimeUnits.secondsToString(timeToTraverseFrom0Velocity.toLong())}")
 
@@ -252,14 +257,15 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 			return
 		}
 
-		val targetVelocity = if (targetMovement != null) targetMovement.velocity else Vector2.Zero
+		val targetVelocity = if (targetMovement != null) targetMovement.velocity else Vector2L.Zero
 		val targetVelocityMagnitude = targetVelocity.len()
-		val angleToTarget = position.angleTo(targetPosition).toFloat()
+		val angleToTarget = position.angleTo(targetPosition)
 		val velocityAngle = velocity.angle();
 		val targetVelocityAngle = targetVelocity.angle()
 		val velocityAngleScale = (targetVelocityAngle - velocityAngle) / 180
 		val velocityMagnitute = velocity.len()
 		val timeToTargetWithCurrentSpeed = distance / (velocityMagnitute + maxAcceleration)
+		val positionDiffMagnitude = tempPosition.len()
 //		println("angleToTarget, $angleToTarget , velocityAngle $velocityAngle")
 
 		when (approach) {
@@ -288,34 +294,33 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 						return
 					}
 
-					tempVelocity.set(velocity).nor().scl(tickAcceleration.toFloat())
+					tempVelocity.set(velocity).scl(tickAcceleration).div(velocityMagnitute)
 					velocity.sub(tempVelocity)
 
-					thrustComponent.thrustAngle = tempVelocity.angle() - 180
+					thrustComponent.thrustAngle = tempVelocity.angle().toFloat() - 180
 					if (thrustComponent.thrustAngle < 0) thrustComponent.thrustAngle += 360;
 
 				} else {
 
 					nameMapper.get(entityID).name = "a " + velocityMagnitute
 
-					tempVelocity.set(tempPosition.x.toFloat(), tempPosition.y.toFloat()).nor()
-					tempVelocity.scl(tickAcceleration.toFloat())
+					tempVelocity.set(tempPosition).scl(tickAcceleration).div(positionDiffMagnitude)
 
 					if (velocityMagnitute > 10 * acceleration) {
-						if (Math.abs(angleToTarget - velocityAngle) <= 90) {
+						if (FastMath.abs(angleToTarget - velocityAngle) <= 90) {
 							tempVelocity.rotate(angleToTarget - velocityAngle)
 
-						} else if (Math.abs(angleToTarget - velocityAngle) > 90) {
+						} else if (FastMath.abs(angleToTarget - velocityAngle) > 90) {
 							tempVelocity.rotate(180 - (angleToTarget - velocityAngle))
 						}
 					}
 
 					velocity.add(tempVelocity)
-					thrustComponent.thrustAngle = tempVelocity.angle()
+					thrustComponent.thrustAngle = tempVelocity.angle().toFloat()
 				}
 
 				tempVelocity.set(velocity).scl(deltaGameTime)
-				position.add(tempVelocity.x.toLong(), tempVelocity.y.toLong())
+				position.add(tempVelocity.x, tempVelocity.y)
 
 //			println("acceleration $acceleration m/s, tempVelocity $tempVelocity, velocity $velocity, distance $distance")
 
@@ -324,36 +329,32 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 
 				nameMapper.get(entityID).name = "a " + velocityMagnitute
 
-				if (movement.next == null && targetEntityID == null && Math.abs(angleToTarget - velocityAngle) < 5) {
+				if (movement.next == null && targetEntityID == null && FastMath.abs(angleToTarget - velocityAngle) < 5) {
 
 					println("Movement: ballistic prediction to target")
-					val finalVelocity = Math.sqrt(velocityMagnitute * velocityMagnitute + 2 * maxAcceleration * distance)
 
 					val timeToTarget: Double
 
-					if (velocityMagnitute == 0f) {
+					if (velocityMagnitute == 0.0) {
 
-						timeToTarget = Math.sqrt(2 * distance / maxAcceleration)
+						timeToTarget = FastMath.sqrt(2 * distance / maxAcceleration)
 
 					} else {
 
-						// Quadric formula https://en.wikipedia.org/wiki/Quadratic_equation#Quadratic_formula_and_its_derivation
-						val a = maxAcceleration / 2
+						val a = maxAcceleration.toDouble() / 2
 						val b = velocityMagnitute
 						val c = -distance
-						val pos = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a)
-						val neg = (-b - Math.sqrt(b * b - 4 * a * c)) / (2 * a)
-
-//						println("+$pos $neg")
-						timeToTarget = Math.max(pos, neg)
+						timeToTarget = WeaponSystem.getPositiveRootOfQuadraticEquation(a, b, c)
 					}
 
-//					println("timeToTarget $timeToTarget, final velocity $finalVelocity, distance $distance, acceleration $acceleration")
-
-					tempVelocity.set(1f, 0f).rotate(angleToTarget).scl(finalVelocity.toFloat())
+					val finalVelocity = velocityMagnitute + maxAcceleration * timeToTarget
+					
+					println("timeToTarget $timeToTarget, final velocity $finalVelocity, distance $distance, acceleration $acceleration")
+					
+					tempVelocity.set(finalVelocity.toLong(), 0).rotate(angleToTarget)
 					movement.previous.time = galaxy.time
-					movement.setPredictionBallistic(MovementValues(targetPosition.cpy(), tempVelocity.cpy()), maxAcceleration, maxAcceleration, galaxy.time + timeToTarget.toLong())
-					thrustComponent.thrustAngle = angleToTarget
+					movement.setPredictionBallistic(MovementValues(targetPosition.cpy(), tempVelocity.cpy()), maxAcceleration, maxAcceleration, galaxy.time + FastMath.round(timeToTarget))
+					thrustComponent.thrustAngle = angleToTarget.toFloat()
 
 					return
 				}
@@ -368,23 +369,22 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 					return
 				}
 
-				tempVelocity.set(tempPosition.x.toFloat(), tempPosition.y.toFloat()).nor()
-				tempVelocity.scl(tickAcceleration.toFloat())
+				tempVelocity.set(tempPosition).scl(tickAcceleration).div(positionDiffMagnitude)
 
 				if (velocityMagnitute > 10 * acceleration) {
-					if (Math.abs(angleToTarget - velocityAngle) <= 90) {
+					if (FastMath.abs(angleToTarget - velocityAngle) <= 90) {
 						tempVelocity.rotate(angleToTarget - velocityAngle)
 
-					} else if (Math.abs(angleToTarget - velocityAngle) > 90) {
+					} else if (FastMath.abs(angleToTarget - velocityAngle) > 90) {
 						tempVelocity.rotate(180 - (angleToTarget - velocityAngle))
 					}
 				}
 
 				velocity.add(tempVelocity)
-				thrustComponent.thrustAngle = tempVelocity.angle()
+				thrustComponent.thrustAngle = tempVelocity.angle().toFloat()
 
 				tempVelocity.set(velocity).scl(deltaGameTime)
-				position.add(tempVelocity.x.toLong(), tempVelocity.y.toLong())
+				position.add(tempVelocity)
 
 			}
 //			else -> {

@@ -99,7 +99,7 @@ abstract class InterpolatedComponent<T>(initial: TimedValue<T>) : TimedComponent
 }
 
 // In m
-data class MovementValues(val position: Vector2L, val velocity: Vector2) {
+data class MovementValues(val position: Vector2L, val velocity: Vector2L) {
 	fun getXinKM(): Long {
 		return (500 + position.x) / 1000L
 	}
@@ -109,17 +109,17 @@ data class MovementValues(val position: Vector2L, val velocity: Vector2) {
 	}
 }
 
-class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValue(MovementValues(Vector2L(), Vector2()), 0L)) {
+class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValue(MovementValues(Vector2L(), Vector2L()), 0L)) {
 	var approach: ApproachType? = null
-	var startAcceleration: Double? = null
-	var finalAcceleration: Double? = null
+	var startAcceleration: Long? = null
+	var finalAcceleration: Long? = null
 
 	override protected fun setValue(timedValue: TimedValue<MovementValues>, newValue: MovementValues) {
 		timedValue.value.position.set(newValue.position)
 		timedValue.value.velocity.set(newValue.velocity)
 	}
 	
-	fun set(x: Long, y: Long, vx: Float, vy: Float, time: Long): TimedMovementComponent {
+	fun set(x: Long, y: Long, vx: Long, vy: Long, time: Long): TimedMovementComponent {
 
 		if (previous.time > time) {
 			return this
@@ -137,7 +137,7 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 		return this
 	}
 	
-	fun set(position: Vector2L, velocity: Vector2, time: Long): TimedMovementComponent {
+	fun set(position: Vector2L, velocity: Vector2L, time: Long): TimedMovementComponent {
 
 		if (previous.time > time) {
 			return this
@@ -168,7 +168,7 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 		return updated
 	}
 
-	fun setPredictionBrachistocrone(value: MovementValues, startAcceleration: Double, finalAcceleration: Double, time: Long): Boolean {
+	fun setPredictionBrachistocrone(value: MovementValues, startAcceleration: Long, finalAcceleration: Long, time: Long): Boolean {
 
 		if (setPrediction(value, time)) {
 			approach = ApproachType.BRACHISTOCHRONE;
@@ -181,7 +181,7 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 	}
 
 	// Only works with static targets and initial velocity in the target direction
-	fun setPredictionBallistic(value: MovementValues, startAcceleration: Double, finalAcceleration: Double, time: Long): Boolean {
+	fun setPredictionBallistic(value: MovementValues, startAcceleration: Long, finalAcceleration: Long, time: Long): Boolean {
 
 		if (setPrediction(value, time)) {
 			approach = ApproachType.BALLISTIC;
@@ -198,7 +198,7 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 		var interpolated = this.interpolated
 
 		if (interpolated == null) {
-			interpolated = TimedValue(MovementValues(Vector2L(), Vector2()), time)
+			interpolated = TimedValue(MovementValues(Vector2L(), Vector2L()), time)
 			this.interpolated = interpolated
 		}
 
@@ -226,7 +226,7 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 		when (approach) {
 			ApproachType.BALLISTIC -> {
 				val acceleration = startAcceleration + (finalAcceleration - startAcceleration) * (traveledTime / travelTime)
-				var distanceTraveled = startVelocity.len().toDouble() * traveledTime.toDouble() + 0.5 * acceleration * traveledTime * traveledTime
+				var distanceTraveled = startVelocity.len() * traveledTime + 0.5 * acceleration * traveledTime * traveledTime
 
 				position.set(startPosition).sub(endPosition)
 				val angle = position.angleRad() + Math.PI
@@ -234,7 +234,7 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 				position.set(distanceTraveled.toLong(), 0).rotateRad(angle)
 				position.add(startPosition)
 
-				velocity.set(1f, 0f).rotateRad(angle.toFloat()).scl((acceleration * traveledTime).toFloat()).add(startVelocity)
+				velocity.set(acceleration * traveledTime, 0).rotateRad(angle).add(startVelocity)
 			}
 			ApproachType.BRACHISTOCHRONE -> {
 				//TODO implement

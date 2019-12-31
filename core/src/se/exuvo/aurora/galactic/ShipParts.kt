@@ -90,7 +90,7 @@ interface AmmunitionPart {
 
 // thrust in N
 interface ThrustingPart {
-	val thrust: Float
+	val thrust: Long
 }
 
 interface WeaponPart
@@ -101,7 +101,7 @@ class PoweringPartImpl(override val power: Long) : PoweringPart
 class PoweredPartImpl(override val powerConsumption: Long) : PoweredPart
 class ChargedPartImpl(override val capacitor: Long) : ChargedPart
 class AmmunitionPartImpl(override val ammunitionAmount: Int, override val ammunitionType: Resource, override val ammunitionSize: Int, override val reloadTime: Int) : AmmunitionPart
-class ThrustingPartImpl(override val thrust: Float) : ThrustingPart
+class ThrustingPartImpl(override val thrust: Long) : ThrustingPart
 
 
 class Battery(powerConsumption: Long = 0,
@@ -140,7 +140,7 @@ class FusionReactor(power: Long = 1000000, // Min 1MW
 
 
 // Electrical https://en.wikipedia.org/wiki/Electrically_powered_spacecraft_propulsion#Types
-class ElectricalThruster(thrust: Float,
+class ElectricalThruster(thrust: Long,
 												 powerConsumption: Long
 ) : Part(),
 		ThrustingPart by ThrustingPartImpl(thrust),
@@ -148,7 +148,7 @@ class ElectricalThruster(thrust: Float,
 
 // Chemical: Hybrid, Bipropellant, Tripropellant. https://en.wikipedia.org/wiki/Rocket_engine#Chemically_powered
 // Nuclear https://en.wikipedia.org/wiki/Nuclear_pulse_propulsion
-class FueledThruster(thrust: Float,
+class FueledThruster(thrust: Long,
 										 fuelConsumption: Int,
 										 fuel: Resource = Resource.ROCKET_FUEL
 ) : Part(),

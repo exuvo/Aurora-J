@@ -45,15 +45,19 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		val FAMILY = Aspect.all(WeaponsComponent::class.java)
 		val SHIP_FAMILY = Aspect.all(ShipComponent::class.java)
 		
+		// Quadric formula https://en.wikipedia.org/wiki/Quadratic_equation#Quadratic_formula_and_its_derivation
 		@JvmStatic
-		fun getPositiveRootOfQuadraticEquation(a: Double, b: Double, c: Double): Double? {
+		fun getPositiveRootOfQuadraticEquation(a: Double, b: Double, c: Double) = (-b + FastMath.sqrt(b * b - 4 * a * c)) / (2 * a)
+		
+		@JvmStatic
+		fun getPositiveRootOfQuadraticEquationSafe(a: Double, b: Double, c: Double): Double? {
 			val tmp = b * b - 4 * a * c
 			
-			if (tmp < 0) {
+			if (tmp < 0) { // square root of a negative number, no interception is possible
 				return null
 			}
 			
-			return (b + FastMath.sqrt(tmp)) / (2 * a)
+			return (-b + FastMath.sqrt(tmp)) / (2 * a)
 		}
 	}
 
@@ -470,10 +474,10 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		val relativePosition = targetMovement.position.cpy().sub(shooterMovement.position)
 		
 		val a: Double = projectileSpeed * projectileSpeed - relativeVelocity.dot(relativeVelocity)
-		val b: Double = -2 * relativeVelocity.dot(relativePosition.x.toDouble(), relativePosition.y.toDouble())
+		val b: Double = 2 * relativeVelocity.dot(relativePosition.x.toDouble(), relativePosition.y.toDouble())
 		val c: Double = relativePosition.dot(-relativePosition.x, -relativePosition.y).toDouble()
 		
-		val root = getPositiveRootOfQuadraticEquation(a, b, c)
+		val root = getPositiveRootOfQuadraticEquationSafe(a, b, c)
 		
 		if (root == null || root < 0) { // Intercept is not possible
 			return null

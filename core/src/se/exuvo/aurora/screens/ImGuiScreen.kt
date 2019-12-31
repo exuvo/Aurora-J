@@ -990,24 +990,15 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 												val b: Double = missileLaunchSpeed.toDouble()
 												val c: Double = -weaponTestDistance
 												
-												val root = WeaponSystem.getPositiveRootOfQuadraticEquation(a, b, c)
+												val timeToIntercept = FastMath.ceil(WeaponSystem.getPositiveRootOfQuadraticEquation(a, b, c)).toLong()
 												
-												if (root != null && root >= 0) {
-													
-													val timeToIntercept = FastMath.ceil(root).toLong()
-													
-													val galacticTime = timeToIntercept + galaxy.time
-													val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
-													val impactVelocity = missileLaunchSpeed + missileAcceleration * FastMath.min(timeToIntercept, munitionClass.getThrustTime().toLong())
-													
-													ImGui.text("impactVelocity ${impactVelocity} m/s")
-													ImGui.text("timeToIntercept ${timeToIntercept} s / thrustTime ${munitionClass.getThrustTime()} s")
-													ImGui.text("interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
-													
-												} else {
-													
-													ImGui.text("Error calculating intercept")
-												}
+												val galacticTime = timeToIntercept + galaxy.time
+												val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
+												val impactVelocity = missileLaunchSpeed + missileAcceleration * FastMath.min(timeToIntercept, munitionClass.getThrustTime().toLong())
+												
+												ImGui.text("impactVelocity ${impactVelocity} m/s")
+												ImGui.text("timeToIntercept ${timeToIntercept} s / thrustTime ${munitionClass.getThrustTime()} s")
+												ImGui.text("interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
 											}
 										}
 

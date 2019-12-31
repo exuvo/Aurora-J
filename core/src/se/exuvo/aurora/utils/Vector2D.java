@@ -2,6 +2,8 @@ package se.exuvo.aurora.utils;
 
 import java.io.Serializable;
 
+import org.apache.commons.math3.util.FastMath;
+
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.GdxRuntimeException;
@@ -58,11 +60,11 @@ public class Vector2D implements Serializable {
 	}
 
 	public static double len(double x, double y) {
-		return (double) Math.sqrt(x * x + y * y);
+		return (double) FastMath.sqrt(x * x + y * y);
 	}
 
 	public double len() {
-		return (double) Math.sqrt(x * x + y * y);
+		return (double) FastMath.sqrt(x * x + y * y);
 	}
 
 	public static double len2(double x, double y) {
@@ -189,13 +191,13 @@ public class Vector2D implements Serializable {
 	public static double dst(double x1, double y1, double x2, double y2) {
 		final double x_d = x2 - x1;
 		final double y_d = y2 - y1;
-		return (double) Math.sqrt(x_d * x_d + y_d * y_d);
+		return (double) FastMath.sqrt(x_d * x_d + y_d * y_d);
 	}
 
 	public double dst(Vector2D v) {
 		final double x_d = v.x - x;
 		final double y_d = v.y - y;
-		return (double) Math.sqrt(x_d * x_d + y_d * y_d);
+		return (double) FastMath.sqrt(x_d * x_d + y_d * y_d);
 	}
 
 	/**
@@ -206,7 +208,7 @@ public class Vector2D implements Serializable {
 	public double dst(double x, double y) {
 		final double x_d = x - this.x;
 		final double y_d = y - this.y;
-		return (double) Math.sqrt(x_d * x_d + y_d * y_d);
+		return (double) FastMath.sqrt(x_d * x_d + y_d * y_d);
 	}
 
 	public static double dst2(double x1, double y1, double x2, double y2) {
@@ -239,7 +241,7 @@ public class Vector2D implements Serializable {
 	public Vector2D limit2(double limit2) {
 		double len2 = len2();
 		if (len2 > limit2) {
-			return scl((double) Math.sqrt(limit2 / len2));
+			return scl((double) FastMath.sqrt(limit2 / len2));
 		}
 		return this;
 	}
@@ -248,9 +250,9 @@ public class Vector2D implements Serializable {
 		final double len2 = len2();
 		if (len2 == 0f) return this;
 		double max2 = max * max;
-		if (len2 > max2) return scl((double) Math.sqrt(max2 / len2));
+		if (len2 > max2) return scl((double) FastMath.sqrt(max2 / len2));
 		double min2 = min * min;
-		if (len2 < min2) return scl((double) Math.sqrt(min2 / len2));
+		if (len2 < min2) return scl((double) FastMath.sqrt(min2 / len2));
 		return this;
 	}
 
@@ -260,7 +262,7 @@ public class Vector2D implements Serializable {
 
 	public Vector2D setLength2(double len2) {
 		double oldLen2 = len2();
-		return (oldLen2 == 0 || oldLen2 == len2) ? this : scl((double) Math.sqrt(len2 / oldLen2));
+		return (oldLen2 == 0 || oldLen2 == len2) ? this : scl((double) FastMath.sqrt(len2 / oldLen2));
 	}
 
 	/**
@@ -319,7 +321,7 @@ public class Vector2D implements Serializable {
 	 *         counter-clockwise) and between 0 and 360.
 	 */
 	public double angle() {
-		double angle = (double) Math.atan2(y, x) * 180.0 / Math.PI;
+		double angle = (double) FastMath.atan2(y, x) * 180.0 / FastMath.PI;
 		if (angle < 0) angle += 360;
 		return angle;
 	}
@@ -329,7 +331,7 @@ public class Vector2D implements Serializable {
 	 *         counter-clockwise.) between -180 and +180
 	 */
 	public double angle(Vector2D reference) {
-		return (double) Math.atan2(crs(reference), dot(reference)) * 180.0 / Math.PI;
+		return (double) FastMath.atan2(crs(reference), dot(reference)) * 180.0 / FastMath.PI;
 	}
 
 	/**
@@ -337,7 +339,7 @@ public class Vector2D implements Serializable {
 	 *         counter-clockwise)
 	 */
 	public double angleRad() {
-		return (double) Math.atan2(y, x);
+		return (double) FastMath.atan2(y, x);
 	}
 
 	/**
@@ -345,7 +347,7 @@ public class Vector2D implements Serializable {
 	 *         counter-clockwise.)
 	 */
 	public double angleRad(Vector2D reference) {
-		return (double) Math.atan2(crs(reference), dot(reference));
+		return (double) FastMath.atan2(crs(reference), dot(reference));
 	}
 
 	/**
@@ -354,7 +356,7 @@ public class Vector2D implements Serializable {
 	 * @param degrees The angle in degrees to set.
 	 */
 	public Vector2D setAngle(double degrees) {
-		return setAngleRad(degrees * Math.PI / 180.0);
+		return setAngleRad(degrees * FastMath.PI / 180.0);
 	}
 
 	/**
@@ -375,7 +377,7 @@ public class Vector2D implements Serializable {
 	 * @param degrees the angle in degrees
 	 */
 	public Vector2D rotate(double degrees) {
-		return rotateRad(degrees * Math.PI / 180.0);
+		return rotateRad(degrees * FastMath.PI / 180.0);
 	}
 
 	/**
@@ -384,8 +386,8 @@ public class Vector2D implements Serializable {
 	 * @param radians the angle in radians
 	 */
 	public Vector2D rotateRad(double radians) {
-		double cos = (double) Math.cos(radians);
-		double sin = (double) Math.sin(radians);
+		double cos = (double) FastMath.cos(radians);
+		double sin = (double) FastMath.sin(radians);
 
 		double newX = this.x * cos - this.y * sin;
 		double newY = this.x * sin + this.y * cos;
@@ -421,8 +423,8 @@ public class Vector2D implements Serializable {
 	}
 
 	public Vector2D setToRandomDirection() {
-		double theta = Math.random() * 2 * Math.PI;
-		return this.set(Math.cos(theta), Math.sin(theta));
+		double theta = FastMath.random() * 2 * FastMath.PI;
+		return this.set(FastMath.cos(theta), FastMath.sin(theta));
 	}
 
 	public int hashCode() {
@@ -445,8 +447,8 @@ public class Vector2D implements Serializable {
 
 	public boolean epsilonEquals(Vector2D other, double epsilon) {
 		if (other == null) return false;
-		if (Math.abs(other.x - x) > epsilon) return false;
-		if (Math.abs(other.y - y) > epsilon) return false;
+		if (FastMath.abs(other.x - x) > epsilon) return false;
+		if (FastMath.abs(other.y - y) > epsilon) return false;
 		return true;
 	}
 
@@ -456,8 +458,8 @@ public class Vector2D implements Serializable {
 	 * @return whether the vectors are the same.
 	 */
 	public boolean epsilonEquals(double x, double y, double epsilon) {
-		if (Math.abs(x - this.x) > epsilon) return false;
-		if (Math.abs(y - this.y) > epsilon) return false;
+		if (FastMath.abs(x - this.x) > epsilon) return false;
+		if (FastMath.abs(y - this.y) > epsilon) return false;
 		return true;
 	}
 
@@ -466,7 +468,7 @@ public class Vector2D implements Serializable {
 	}
 
 	public boolean isUnit(final double margin) {
-		return Math.abs(len2() - 1f) < margin;
+		return FastMath.abs(len2() - 1f) < margin;
 	}
 
 	public boolean isZero() {
@@ -524,7 +526,7 @@ public class Vector2D implements Serializable {
 	}
 
 	static public boolean isDoubleAlmostZero(double value) {
-		return Math.abs(value) <= DOUBLE_ROUNDING_ERROR;
+		return FastMath.abs(value) <= DOUBLE_ROUNDING_ERROR;
 	}
 
 	/**
@@ -533,6 +535,6 @@ public class Vector2D implements Serializable {
 	 * @param tolerance represent an upper bound below which the value is considered zero.
 	 */
 	static public boolean isDoubleAlmostZero(double value, double tolerance) {
-		return Math.abs(value) <= tolerance;
+		return FastMath.abs(value) <= tolerance;
 	}
 }

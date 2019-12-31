@@ -238,7 +238,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		missileBattery.cost[Resource.GENERIC] = 500
 		
 //		val missileIonThruster = ElectricalThruster(10 * 100f, 1 * Units.KILO)
-		val missileChemicalThruster = FueledThruster(2900 * 1000f, 1)
+		val missileChemicalThruster = FueledThruster(2900 * 1000, 1)
 		val missileFuelPart = FuelContainerPart(5000)
 		
 		val missile = MunitionHull(Resource.MISSILES)
@@ -263,10 +263,10 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		val tcRef: PartRef<TargetingComputer> = shipHull[TargetingComputer::class][0]
 		shipHull.defaultWeaponAssignments[tcRef] = shipHull.getPartRefs().filter({ it.part is WeaponPart })
 
-		val ionThruster = ElectricalThruster(1f * 9.82f * 1000f, 1 * Units.MEGA)
+		val ionThruster = ElectricalThruster(10 * 982, 1 * Units.MEGA)
 		shipHull.addPart(ionThruster)
 
-		val chemicalThruster = FueledThruster(10f * 9.82f * 1000f, 1)
+		val chemicalThruster = FueledThruster(100 * 982, 1)
 		shipHull.addPart(chemicalThruster)
 		
 		shipHull.preferredCargo[Resource.NUCLEAR_FISSION] = 100
@@ -284,7 +284,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		}
 
 		val entity1 = createEntity(Empire.GAIA)
-		timedMovementMapper.create(entity1).set(0, 0, 0f, 0f, 0)
+		timedMovementMapper.create(entity1).set(0, 0, 0, 0, 0)
 		renderMapper.create(entity1)
 		circleMapper.create(entity1).set(radius = 695700f)
 		massMapper.create(entity1).set(mass = 1.988e30)
