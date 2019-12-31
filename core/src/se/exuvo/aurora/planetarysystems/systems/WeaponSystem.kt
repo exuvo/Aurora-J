@@ -38,11 +38,23 @@ import org.apache.commons.math3.analysis.solvers.PegasusSolver
 import org.apache.commons.math3.analysis.polynomials.PolynomialFunction
 import org.apache.commons.math3.analysis.solvers.LaguerreSolver
 import org.apache.commons.math3.exception.TooManyEvaluationsException
+import org.apache.commons.math3.util.FastMath
 
 class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
 		val FAMILY = Aspect.all(WeaponsComponent::class.java)
 		val SHIP_FAMILY = Aspect.all(ShipComponent::class.java)
+		
+		@JvmStatic
+		fun getPositiveRootOfQuadraticEquation(a: Double, b: Double, c: Double): Double? {
+			val tmp = b * b - 4 * a * c
+			
+			if (tmp < 0) {
+				return null
+			}
+			
+			return (b + FastMath.sqrt(tmp)) / (2 * a)
+		}
 	}
 
 	val log = LogManager.getLogger(this.javaClass)
@@ -143,7 +155,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										
 										if (ammoState.reloadPowerRemaining >= 0L) {
 											
-											ammoState.reloadPowerRemaining -= Math.min(poweredState.givenPower, ammoState.reloadPowerRemaining)
+											ammoState.reloadPowerRemaining -= FastMath.min(poweredState.givenPower, ammoState.reloadPowerRemaining)
 
 											if (ammoState.reloadPowerRemaining == 0L) {
 
@@ -192,7 +204,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 								val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
 
 								if (chargedState.charge < part.capacitor) {
-									val wantedPower = Math.min(part.powerConsumption, part.capacitor - chargedState.charge)
+									val wantedPower = FastMath.min(part.powerConsumption, part.capacitor - chargedState.charge)
 									if (poweredState.requestedPower != wantedPower) {
 										poweredState.requestedPower = wantedPower
 										powerChanged = true
@@ -267,6 +279,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				
 					val targetMovement = movementMapper.get(target.entityID).get(galaxy.time)
 	
+					//TODO cache intercepts per firecontrol and weapon type/ordenance
 					for (weapon in tcState.linkedWeapons) {
 						if (ship.isPartEnabled(weapon)) {
 							val part = weapon.part
@@ -283,17 +296,25 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										
 										if (result == null) {
 											
-											log.error("Unable to find intercept for laser and target ${target.entityID}, projectileSpeed $projectileSpeed")
+											log.warn("Unable to find intercept for laser and target ${target.entityID}, projectileSpeed $projectileSpeed")
 											
 										} else {
 										
-											val (normalisedDirection, timeToIntercept, interceptPosition) = result
-											val galacticTime = timeToIntercept + galaxy.time
-											val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
-											println("laser projectileSpeed ${projectileSpeed}m/s, interceptPosition $interceptPosition, timeToIntercept ${timeToIntercept}s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}, normalisedDirection $normalisedDirection")
+//											if (beamDivergance is sensible at timeToIntercept) {
+											
+												val (normalisedDirection, timeToIntercept, interceptPosition) = result
+												val galacticTime = timeToIntercept + galaxy.time
+												val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
+												println("laser projectileSpeed ${projectileSpeed} m/s, interceptPosition $interceptPosition, timeToIntercept ${timeToIntercept}s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}, normalisedDirection $normalisedDirection")
+												
+//											} else {
+												
+//												log.error("Unable to find effective intercept for laser $part and target ${target.entityID}")
+//											}
 										}
 										
 										//TODO fire
+										//TODO heat ship
 									}
 								}
 								is Railgun -> {
@@ -309,7 +330,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										
 										if (result == null) {
 											
-											log.error("Unable to find intercept for railgun $part and target ${target.entityID}, projectileSpeed $projectileSpeed")
+											log.warn("Unable to find intercept for railgun $part and target ${target.entityID}, projectileSpeed $projectileSpeed")
 											
 										} else {
 										
@@ -317,10 +338,11 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 											val galacticTime = timeToIntercept + galaxy.time
 											val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
 											
-											println("railgun projectileSpeed ${projectileSpeed}m/s, interceptPosition $interceptPosition, timeToIntercept ${timeToIntercept}s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}, normalisedDirection $normalisedDirection")
+											println("railgun projectileSpeed ${projectileSpeed} m/s, interceptPosition $interceptPosition, timeToIntercept ${timeToIntercept} s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}, normalisedDirection $normalisedDirection")
 										}
 										
 										//TODO fire
+										//TODO heat ship
 										
 										chargedState.charge = 0
 										ammoState.amount -= 1
@@ -339,13 +361,13 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										
 										val targetAcceleration = Vector2D()
 										val missileAcceleration = munitionClass.getAverageAcceleration().toDouble()
-										val missileLaunchSpeed = part.launchSpeed
+										val missileLaunchSpeed = part.launchForce / munitionClass.getLoadedMass()
 										
 										val result = getInterceptionPosition(shipMovement.value, targetMovement.value, targetAcceleration, missileLaunchSpeed.toDouble(), missileAcceleration)
 										
 										if (result == null) {
 											
-											log.error("Unable to find intercept for missile $munitionClass and target ${target.entityID}")
+											log.warn("Unable to find intercept for missile $munitionClass and target ${target.entityID}")
 											
 										} else {
 											
@@ -353,13 +375,13 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 											
 											val galacticTime = timeToIntercept + galaxy.time
 											val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
-											val impactVelocity = missileLaunchSpeed + missileAcceleration * timeToIntercept
+											val impactVelocity = missileLaunchSpeed + missileAcceleration * FastMath.min(timeToIntercept, munitionClass.getThrustTime().toLong())
 											
-											println("missile missileAcceleration ${missileAcceleration}m/s², impactVelocity ${impactVelocity}m/s, interceptPosition $interceptPosition, thrustTime ${munitionClass.getThrustTime()}, timeToIntercept ${timeToIntercept}s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}, normalisedDirection $normalisedDirection")
+											println("missile missileAcceleration ${missileAcceleration} m/s², impactVelocity ${impactVelocity} m/s, interceptPosition $interceptPosition, thrustTime ${munitionClass.getThrustTime()} s, timeToIntercept ${timeToIntercept} s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}, normalisedDirection $normalisedDirection")
 											
 											if (timeToIntercept <= munitionClass.getThrustTime()) {
 												
-												normalisedDirection.scl(missileLaunchSpeed)
+												normalisedDirection.scl(missileLaunchSpeed.toFloat())
 												
 												//TODO fire
 												
@@ -367,7 +389,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 												
 											} else {
 												
-												log.error("Unable to find intercept inside thrust time for missile $munitionClass and target ${target.entityID}")
+												log.warn("Unable to find intercept inside thrust time for missile $munitionClass and target ${target.entityID}")
 											}
 										}
 									}
@@ -384,24 +406,23 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	fun getInterceptionPosition(shooterMovement: MovementValues,
 	                            targetMovement: MovementValues,
 	                            targetAcceleration: Vector2D,
-															missileLaunchSpeed: Double,
+	                            missileLaunchSpeed: Double,
 	                            missileAcceleration: Double
 	): Triple<Vector2, Long, Vector2L>? {
 		
-			/**
-			TODO calculate intercept
-			https://www.gamedev.net/forums/topic/579481-advanced-intercept-equation
-			https://www.gamedev.net/forums/?topic_id=401165&page=2
-			https://www.gamedev.net/forums/topic/621460-need-help-with-interception-of-accelerated-target/
-			**/
-			
+		/**
+		https://www.gamedev.net/forums/topic/579481-advanced-intercept-equation
+		https://www.gamedev.net/forums/?topic_id=401165&page=2
+		https://www.gamedev.net/forums/topic/621460-need-help-with-interception-of-accelerated-target/
+		**/
+		
 		val relativeVelocity = Vector2D((targetMovement.velocity.x - shooterMovement.velocity.x).toDouble(), (targetMovement.velocity.y - shooterMovement.velocity.y).toDouble())
 		val relativePosition = Vector2D((targetMovement.position.x - shooterMovement.position.x).toDouble(), (targetMovement.position.y - shooterMovement.position.y).toDouble())
 		
 		val coefs = DoubleArray(5)
-		coefs[4] = targetAcceleration.dot(targetAcceleration) / 4.0 - Math.pow(missileAcceleration, 2.0) / 4.0
+		coefs[4] = targetAcceleration.dot(targetAcceleration) / 4.0 - FastMath.pow(missileAcceleration, 2.0) / 4.0
 		coefs[3] = relativeVelocity.dot(targetAcceleration) /* / 2.0 */ - missileLaunchSpeed * missileAcceleration
-		coefs[2] = relativePosition.dot(targetAcceleration) + relativeVelocity.dot(relativeVelocity) - Math.pow(missileLaunchSpeed, 2.0)
+		coefs[2] = relativePosition.dot(targetAcceleration) + relativeVelocity.dot(relativeVelocity) - FastMath.pow(missileLaunchSpeed, 2.0)
 		coefs[1] = 2 * relativePosition.dot(relativeVelocity)
 		coefs[0] = relativePosition.dot(relativePosition)
 		
@@ -424,7 +445,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			if (solvedTime != null) {
 				
 				relativeVelocity.scl(solvedTime)
-				targetAcceleration.scl(0.5 * Math.pow(solvedTime, 2.0))
+				targetAcceleration.scl(0.5 * FastMath.pow(solvedTime, 2.0))
 				
 				val interceptPosition = shooterMovement.position.cpy()
 				interceptPosition.add(relativeVelocity.x.toLong(), relativeVelocity.y.toLong())
@@ -432,7 +453,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				
 				val normalisedDirection = Vector2(interceptPosition.x.toFloat(), interceptPosition.y.toFloat()).nor()
 				
-				return Triple(normalisedDirection, Math.round(solvedTime), interceptPosition)
+				return Triple(normalisedDirection, FastMath.ceil(solvedTime).toLong(), interceptPosition)
 			}
 			
 		} catch (e: TooManyEvaluationsException) {
@@ -452,7 +473,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		val b: Double = -2 * relativeVelocity.dot(relativePosition.x.toDouble(), relativePosition.y.toDouble())
 		val c: Double = relativePosition.dot(-relativePosition.x, -relativePosition.y).toDouble()
 		
-		val root = getLargestRootOfQuadraticEquation(a, b, c)
+		val root = getPositiveRootOfQuadraticEquation(a, b, c)
 		
 		if (root == null || root < 0) { // Intercept is not possible
 			return null
@@ -467,16 +488,8 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		
 		val normalisedDirection = Vector2(interceptPosition.x.toFloat(), interceptPosition.y.toFloat()).nor()
 		
-		return Triple(normalisedDirection, Math.round(root), interceptPosition)
+		return Triple(normalisedDirection, FastMath.ceil(root).toLong(), interceptPosition)
 	}
 	
-	fun getLargestRootOfQuadraticEquation(a: Double, b: Double, c: Double): Double? {
-		val tmp = b * b - 4 * a * c
-		
-		if (tmp < 0) {
-			return null
-		}
-		
-		return (b + Math.sqrt(tmp)) / (2 * a)
-	} 
+	
 }

@@ -27,9 +27,9 @@ class ShipComponent() : Component() {
 	lateinit var hull: ShipHull
 	var constructionTime: Long = -1
 	var commissionDay: Int? = null
-	lateinit var armor: Array<Int>
-	lateinit var partHealth: Array<Int>
-	lateinit var partEnabled: Array<Boolean>
+	lateinit var armor: Array<ShortArray>
+	lateinit var partHealth: ByteArray
+	lateinit var partEnabled: BooleanArray
 	lateinit var partState: Array<PartState>
 	lateinit var cargo: Map<Resource, ShipCargo>
 	lateinit var munitionCargo: MutableMap<MunitionHull, Int>
@@ -41,9 +41,9 @@ class ShipComponent() : Component() {
 		this.hull = hull
 		this.constructionTime = constructionTime
 
-		armor = Array<Int>(hull.getSurfaceArea(), { hull.armorLayers })
-		partHealth = Array<Int>(hull.getParts().size, { hull[it].part.maxHealth })
-		partEnabled = Array<Boolean>(hull.getParts().size, { true })
+		armor = Array<ShortArray>(hull.getSurfaceArea() / 100, { ShortArray(hull.armorLayers, { hull.armorBlockHP }) }) // 1 armor block per m2
+		partHealth = ByteArray(hull.getParts().size, { hull[it].part.maxHealth })
+		partEnabled = BooleanArray(hull.getParts().size, { true })
 		partState = Array<PartState>(hull.getParts().size, { PartState() })
 		cargo = emptyMap()
 		munitionCargo = LinkedHashMap()
@@ -133,11 +133,11 @@ class ShipComponent() : Component() {
 		return partState[partRef.index]
 	}
 
-	fun getPartHealth(partRef: PartRef<out Part>): Int {
+	fun getPartHealth(partRef: PartRef<out Part>): Byte {
 		return partHealth[partRef.index]
 	}
 
-	fun setPartHealth(partRef: PartRef<out Part>, health: Int) {
+	fun setPartHealth(partRef: PartRef<out Part>, health: Byte) {
 		if (health < 0 || health > partRef.part.maxHealth) {
 			throw IllegalArgumentException()
 		}

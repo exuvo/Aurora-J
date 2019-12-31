@@ -18,6 +18,7 @@ import se.exuvo.aurora.utils.forEach
 import se.exuvo.aurora.utils.getUUID
 import se.exuvo.settings.Settings
 import java.util.Collections
+import org.apache.commons.math3.util.FastMath
 
 //TODO sorted system by no parents first then outwards
 class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
@@ -49,14 +50,14 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 		val apoapsis = a_semiMajorAxis * (1.0 + orbit.e_eccentricity)
 
 		// In seconds
-		val orbitalPeriod = 2 * Math.PI * Math.sqrt(Math.pow(1000.0 * a_semiMajorAxis, 3.0) / (parentMass * gravitationalConstant))
+		val orbitalPeriod = 2 * FastMath.PI * FastMath.sqrt(FastMath.pow(1000.0 * a_semiMajorAxis, 3.0) / (parentMass * gravitationalConstant))
 
 		if (Double.NaN.equals(orbitalPeriod) || orbitalPeriod < 1 * 60 * 60) {
 			throw RuntimeException("orbitalPeriod ${orbitalPeriod}s is invalid for entityID $entityID")
 		}
 
 		// 1 point each day
-		val points = Math.min(Math.max((orbitalPeriod / (24 * 60 * 60)).toInt(), 5), 1000)
+		val points = FastMath.min(FastMath.max((orbitalPeriod / (24 * 60 * 60)).toInt(), 5), 1000)
 		log.debug("Calculating orbit for new entityID ${world.getEntity(entityID).getUUID()} using $points points, orbitalPeriod ${orbitalPeriod / (24 * 60 * 60)} days")
 		val orbitPoints = Array<Vector2D>(points, { Vector2D() })
 
@@ -109,13 +110,13 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 		var attempts = 0
 		while (true) {
 
-			var dE = (E_eccentricAnomaly - orbit.e_eccentricity * Math.sin(E_eccentricAnomaly) - M_meanAnomalyRad) / (1f - orbit.e_eccentricity * Math.cos(E_eccentricAnomaly));
+			var dE = (E_eccentricAnomaly - orbit.e_eccentricity * FastMath.sin(E_eccentricAnomaly) - M_meanAnomalyRad) / (1f - orbit.e_eccentricity * FastMath.cos(E_eccentricAnomaly));
 			E_eccentricAnomaly -= dE;
 
 //			println("dE $dE")
 
 			attempts++;
-			if (Math.abs(dE) < 1e-5) {
+			if (FastMath.abs(dE) < 1e-5) {
 				break
 			} else if (attempts >= 10) {
 				log.warn("Calculating orbital position took more than $attempts attempts")
@@ -129,8 +130,8 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 	private fun calculateOrbitalPositionFromEccentricAnomaly(orbit: OrbitComponent, E_eccentricAnomaly: Double, position: Vector2D) {
 
 		// Coordinates with P+ towards periapsis
-		val P: Double = Units.AU * orbit.a_semiMajorAxis * (Math.cos(E_eccentricAnomaly) - orbit.e_eccentricity)
-		val Q: Double = Units.AU * orbit.a_semiMajorAxis * Math.sin(E_eccentricAnomaly) * Math.sqrt(1 - Math.pow(orbit.e_eccentricity.toDouble(), 2.0))
+		val P: Double = Units.AU * orbit.a_semiMajorAxis * (FastMath.cos(E_eccentricAnomaly) - orbit.e_eccentricity)
+		val Q: Double = Units.AU * orbit.a_semiMajorAxis * FastMath.sin(E_eccentricAnomaly) * FastMath.sqrt(1 - FastMath.pow(orbit.e_eccentricity.toDouble(), 2.0))
 
 //		println("orbitalPeriod ${orbitalPeriod / (24 * 60 * 60)} days, E_eccentricAnomaly $E_eccentricAnomaly, P $P, Q $Q")
 
@@ -142,6 +143,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 	var oldPosition = Vector2L()
 	var tempVelocity = Vector2()
 	
+	//TODO set timemovement next to next days position to use linear interpolation during the day
 	override fun process(entityID: Int) {
 
 		val orbit = orbitMapper.get(entityID)

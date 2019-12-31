@@ -101,6 +101,10 @@ class MunitionHull(val storageType: Resource) {
 			}
 		}
 	}
+	
+	fun getLoadedMass(): Long {
+		return getMass() + getFuelMass()
+	}
 
 	// cm³
 	fun getVolume(): Long {

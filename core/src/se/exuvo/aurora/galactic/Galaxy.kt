@@ -171,6 +171,8 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 	
 	fun getEntityReferenceByUUID(entityUUID: EntityUUID): EntityReference? {
 		
+		//TODO release current write lock during operation and re-aquire after
+		
 		systems.forEach{ system ->
 			system.lock.read {
 				val entityID = system.getEntityByUUID(entityUUID)

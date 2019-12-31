@@ -174,6 +174,7 @@ class Technology(val code: String,
 
 			// Missiles
 			Technology("Launchers 1", ResearchCategory.LAUNCHERS, 10, emptyList(), "", "")
+			Technology("Launch catapults 1", ResearchCategory.LAUNCHERS, 10, emptyList(), "", "")
 			Technology("Explosive Warheads 1", ResearchCategory.WARHEADS, 10, emptyList(), "", "")
 			Technology("EMP Warheads 1", ResearchCategory.WARHEADS, 10, emptyList(), "", "")
 			Technology("Burst Magazines 1", ResearchCategory.MAGAZINES, 10, emptyList(), "", "")
@@ -204,7 +205,7 @@ class Technology(val code: String,
 			Technology("Passive Cooling 1", ResearchCategory.COOLING, 10, emptyList(), "", "")
 			Technology("Active Cooling 1", ResearchCategory.COOLING, 10, emptyList(), "", "")
 
-			// Industry			
+			// Industry
 			Technology("Mining 1", ResearchCategory.MINING, 10, emptyList(), "", "")
 			Technology("Civilian Production 1", ResearchCategory.PRODUCTION, 10, emptyList(), "", "")
 			Technology("Military Production 1", ResearchCategory.PRODUCTION, 10, emptyList(), "", "")

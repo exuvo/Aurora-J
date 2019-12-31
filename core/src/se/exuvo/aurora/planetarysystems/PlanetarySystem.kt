@@ -252,12 +252,12 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		val railgunRef = shipHull[Railgun::class][0]
 		shipHull.preferredPartMunitions[railgunRef] = sabot
 
-		val missileLauncher = MissileLauncher(200 * Units.KILO, 14, 3, 10, 1000f)
+		val missileLauncher = MissileLauncher(200 * Units.KILO, 14, 3, 10, 1000 * 5500)
 		shipHull.addPart(missileLauncher)
 		val missileLauncherRef = shipHull[MissileLauncher::class][0]
 		shipHull.preferredPartMunitions[missileLauncherRef] = missile
 
-		val beam = BeamWeapon(1 * Units.MEGA, BeamWavelength.Microwaves, 0.0, 10 * Units.MEGA)
+		val beam = BeamWeapon(1 * Units.MEGA, 1.0, BeamWavelength.Infrared, 10 * Units.MEGA)
 		shipHull.addPart(beam)
 
 		val tcRef: PartRef<TargetingComputer> = shipHull[TargetingComputer::class][0]

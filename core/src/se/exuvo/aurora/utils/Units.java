@@ -99,6 +99,28 @@ public class Units {
 		}
 	}
 	
+	public static String distanceToString(long distance) { // in m
+
+		if (distance < KILO) {
+			return String.format("%d m", distance);
+
+		} else if (distance < MEGA) {
+			return String.format("%d.%02d km", distance / KILO, distance % KILO / 10);
+
+		} else if (distance < GIGA) {
+			return String.format("%d.%02d Mm", distance / MEGA, distance % MEGA / 10 / KILO);
+
+		} else if (distance < TERA) {
+			return String.format("%d.%02d Gm", distance / GIGA, distance % GIGA / 10 / MEGA);
+
+		} else if (distance < 1000 * TERA) {
+			return String.format("%d.%02d Tm", distance / TERA, distance % TERA / 10 / GIGA);
+
+		} else {
+			return String.format("%d Pm", distance / TERA);
+		}
+	}
+	
 	public static String daysToRemaining(int days) {
 
 		if (days <= 365) {

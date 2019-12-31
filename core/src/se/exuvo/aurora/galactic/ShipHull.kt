@@ -21,7 +21,7 @@ class ShipHull() {
 	private val parts: MutableList<Part> = ArrayList()
 	private val partRefs: MutableList<PartRef<Part>> = ArrayList()
 	var armorLayers = 1 // Centimeters of armor
-	var armorBlockHP = 100
+	var armorBlockHP:Short = 100
 	val preferredCargo: MutableMap<Resource, Long> = LinkedHashMap()
 	val preferredMunitions: MutableMap<MunitionHull, Int> = LinkedHashMap()
 	val preferredPartMunitions: MutableMap<PartRef<out Part>, MunitionHull> = LinkedHashMap()

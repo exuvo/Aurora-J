@@ -81,6 +81,11 @@ import se.exuvo.aurora.empires.components.ShipyardModificationRetool
 import se.exuvo.aurora.empires.components.ShipyardModifications
 import se.exuvo.aurora.empires.components.ShipyardModificationAddSlipway
 import se.exuvo.aurora.empires.components.ShipyardModificationExpandCapacity
+import se.exuvo.aurora.galactic.BeamWeapon
+import se.exuvo.aurora.galactic.Railgun
+import se.exuvo.aurora.galactic.MissileLauncher
+import se.exuvo.aurora.planetarysystems.systems.WeaponSystem
+import org.apache.commons.math3.util.FastMath
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
@@ -830,6 +835,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	var arrayIndex = 0
 	var addResource = Resource.NUCLEAR_FISSION
 	var addResourceAmount = 0
+	var weaponTestDistance = 1000000.0
 	
 	private fun shipDebug() {
 
@@ -856,6 +862,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 						val shipComponent = shipMapper.get(entity)
 
 						ImGui.text("Entity ${entity.printID()}")
+						
+						ImGui.sliderScalar("Weapon test range", imgui.DataType.Double, ::weaponTestDistance, 100.0, Units.AU * 1000, Units.distanceToString(weaponTestDistance.toLong()), 8.0f)
 
 						if (ImGui.collapsingHeader("Components", 0)) {
 
@@ -928,6 +936,78 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 													ImGui.text("$linked")
 												}
 												ImGui.treePop()
+											}
+											
+										} else if (partRef.part is BeamWeapon) {
+											
+											val weaponTestDistanceL = weaponTestDistance.toLong()
+											
+											ImGui.text("radialDivergence ${partRef.part.getRadialDivergence() * 1000} mrad")
+											ImGui.text("beamRadiusAtDistance ${partRef.part.getBeamRadiusAtDistance(weaponTestDistanceL)} m")
+											ImGui.text("beamArea ${partRef.part.getBeamArea(weaponTestDistanceL)} m²")
+											ImGui.text("deliveredEnergyTo1MSquareAtDistance ${Units.powerToString(partRef.part.getDeliveredEnergyTo1MSquareAtDistance(weaponTestDistanceL))}")
+											
+											val projectileSpeed = Units.C * 1000
+											val timeToIntercept = FastMath.ceil(weaponTestDistance / projectileSpeed).toLong()
+											val galacticTime = timeToIntercept + galaxy.time
+											val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
+											
+											ImGui.text("projectileSpeed $projectileSpeed m/s")
+											ImGui.text("timeToIntercept ${timeToIntercept} s, at ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
+											
+										} else if (partRef.part is Railgun) {
+											
+											val ammoState = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
+											
+											val munitionClass = ammoState.type
+											
+											if (munitionClass != null) {
+											
+												val projectileSpeed = (partRef.part.capacitor * partRef.part.efficiency) / (100L * munitionClass.getMass())
+												val weaponTestDistance = weaponTestDistance.toLong()
+												val timeToIntercept = FastMath.max(1, weaponTestDistance / projectileSpeed)
+												val galacticTime = timeToIntercept + galaxy.time
+												val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
+												
+												ImGui.text("projectileSpeed $projectileSpeed m/s")
+												ImGui.text("timeToIntercept ${timeToIntercept} s, at ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
+											}
+											
+										} else if (partRef.part is MissileLauncher) {
+											
+											val ammoState = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
+											
+											val munitionClass = ammoState.type
+											
+											if (munitionClass != null) {
+												
+												val missileAcceleration = munitionClass.getAverageAcceleration()
+												val missileLaunchSpeed = partRef.part.launchForce / munitionClass.getLoadedMass()
+												
+												ImGui.text("launchSpeed $missileLaunchSpeed m/s + acceleration ${missileAcceleration} m/s²")
+												
+												val a: Double = missileAcceleration.toDouble()
+												val b: Double = missileLaunchSpeed.toDouble()
+												val c: Double = -weaponTestDistance
+												
+												val root = WeaponSystem.getPositiveRootOfQuadraticEquation(a, b, c)
+												
+												if (root != null && root >= 0) {
+													
+													val timeToIntercept = FastMath.ceil(root).toLong()
+													
+													val galacticTime = timeToIntercept + galaxy.time
+													val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
+													val impactVelocity = missileLaunchSpeed + missileAcceleration * FastMath.min(timeToIntercept, munitionClass.getThrustTime().toLong())
+													
+													ImGui.text("impactVelocity ${impactVelocity} m/s")
+													ImGui.text("timeToIntercept ${timeToIntercept} s / thrustTime ${munitionClass.getThrustTime()} s")
+													ImGui.text("interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
+													
+												} else {
+													
+													ImGui.text("Error calculating intercept")
+												}
 											}
 										}
 

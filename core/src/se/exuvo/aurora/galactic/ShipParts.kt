@@ -7,7 +7,7 @@ abstract class Part {
 	var name: String = ""
 	var designDay: Int = -1
 	val cost: MutableMap<Resource, Long> = LinkedHashMap() 
-	var maxHealth = 1
+	var maxHealth:Byte = 1
 	var crewRequirement = 1
 	
 	// In kg
@@ -78,6 +78,8 @@ interface PoweredPart {
 interface ChargedPart {
 	val capacitor: Long // Ws
 }
+
+interface HeatingPart
 
 interface AmmunitionPart {
 	val ammunitionAmount: Int
@@ -177,12 +179,13 @@ class PassiveSensor(powerConsumption: Long = 0,
 	}
 }
 
-enum class BeamWavelength(val short: String) {
-	VisibleLight("L"),
-	Infrared("IR"),
-	Ultraviolet("UV"),
-	Microwaves("MW"),
-	Xrays("X");
+enum class BeamWavelength(val short: String, val length: Int) { // Length in nm
+	Microwaves("MW", 500000), // 100000 nm - 25000 nm
+	Infrared("IR", 13750),    //  25000 nm -  2500 nm
+	VisibleLight("L", 575),   //    750 nm -   400 nm
+	Ultraviolet("UV", 200),   //    400 nm -     1 nm
+	Xrays("X", 1);            //      1 nm -     0.001 nm
+	// http://labman.phys.utk.edu/phys222core/modules/m6/The%20EM%20spectrum.html
 	
 	override fun toString() : String {
 		return short
@@ -190,13 +193,37 @@ enum class BeamWavelength(val short: String) {
 }
 
 class BeamWeapon(powerConsumption: Long = 0,
+								 val aperature: Double = 1.0, // in mm diameter
 								 val waveLength: BeamWavelength,
-								 val divergence: Double,
 								 capacitor: Long
 ) : Part(),
 		WeaponPart,
 		PoweredPart by PoweredPartImpl(powerConsumption),
-		ChargedPart by ChargedPartImpl(capacitor)
+		ChargedPart by ChargedPartImpl(capacitor),
+		HeatingPart
+ {
+	
+	// Diffraction limited radial beam divergence in radians
+	// https://www.quora.com/Is-the-light-from-lasers-reduced-by-the-inverse-square-law-as-distance-grows-similar-to-other-light-sources
+	// https://en.wikipedia.org/wiki/Beam_divergence
+	fun getRadialDivergence(): Double = (waveLength.length.toDouble() / 1000000000.0) / (Math.PI * 1000 * aperature / 2)
+	
+	// We are always outside rayleight range so beam width is linear to distance
+	// in m of beam radius
+	fun getBeamRadiusAtDistance(distance: Long): Double = distance.toDouble() * Math.tan(getRadialDivergence())
+	
+	fun getBeamArea(distance: Long) = Math.PI * Math.pow(getBeamRadiusAtDistance(distance), 2.0)
+	
+	fun getDeliveredEnergyTo1MSquareAtDistance(distance: Long): Long { // in watts of delivered energy
+		val beamArea = getBeamArea(distance)
+		
+		if (beamArea <= 1) {
+			return capacitor
+		}
+		
+		return capacitor / beamArea.toLong()
+	}
+}
 
 class Railgun(powerConsumption: Long = 0,
 							ammunitionSize: Int,
@@ -208,13 +235,14 @@ class Railgun(powerConsumption: Long = 0,
 		WeaponPart,
 		PoweredPart by PoweredPartImpl(powerConsumption),
 		ChargedPart by ChargedPartImpl(capacitor),
-		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.SABOTS, ammunitionSize, reloadTime)
+		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.SABOTS, ammunitionSize, reloadTime),
+		HeatingPart
 
 class MissileLauncher(powerConsumption: Long = 0,
 								 			ammunitionSize: Int,
 								 			ammunitionAmount: Int,
 											reloadTime: Int,
-											val launchSpeed: Float = 0f
+											val launchForce: Long = 0 // Newtons
 ) : Part(),
 		WeaponPart,
 		PoweredPart by PoweredPartImpl(powerConsumption),

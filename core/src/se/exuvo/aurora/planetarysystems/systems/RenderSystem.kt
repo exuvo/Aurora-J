@@ -376,6 +376,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 	}
 
+	//TODO draw with shader
 	private final fun drawDetections(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
