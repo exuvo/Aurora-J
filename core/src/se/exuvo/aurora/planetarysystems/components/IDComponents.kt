@@ -4,14 +4,17 @@ import com.artemis.Component
 import se.exuvo.aurora.galactic.Empire
 import se.exuvo.aurora.planetarysystems.PlanetarySystem
 import se.exuvo.aurora.utils.GameUtils
+import com.artemis.PooledComponent
 
-class UUIDComponent() : Component() {
+class UUIDComponent() : PooledComponent() {
 	lateinit var uuid: EntityUUID
 	
 	fun set(uuid: EntityUUID): UUIDComponent {
 		this.uuid = uuid
 		return this
 	}
+	
+	override fun reset(): Unit {}
 }
 
 data class EntityUUID(val planetarySystemID: Int, val empireID: Int, val entityUID: Long) {
@@ -46,11 +49,13 @@ data class EntityReference(var system: PlanetarySystem, var entityID: Int, var e
 	override fun hashCode(): Int = hashcode
 }
 
-class NameComponent() : Component() {
+class NameComponent() : PooledComponent() {
 	lateinit var name: String
 	
 	fun set(name: String): NameComponent {
 		this.name = name
 		return this
 	}
+	
+	override fun reset(): Unit {}
 }

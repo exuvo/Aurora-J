@@ -24,7 +24,7 @@ import se.exuvo.aurora.planetarysystems.components.SolarIrradianceComponent
 import se.exuvo.aurora.planetarysystems.events.PowerEvent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.consumeFuel
-import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.forEachFast
 
 class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -48,7 +48,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 
 		world.getAspectSubscriptionManager().get(SHIP_FAMILY).addSubscriptionListener(object : SubscriptionListener {
 			override fun inserted(entityIDs: IntBag) {
-				entityIDs.forEach { entityID ->
+				entityIDs.forEachFast { entityID ->
 					var powerComponent = powerMapper.get(entityID)
 
 					if (powerComponent == null) {
@@ -57,9 +57,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 
 						powerComponent = powerMapper.create(entityID).set(ship.hull.powerScheme)
 
-						ship.hull.getPartRefs().forEach {
-							val partRef = it
-
+						ship.hull.getPartRefs().forEachFast { partRef ->
 							if (partRef.part is PoweringPart) {
 								powerComponent.poweringParts.add(partRef)
 							}
@@ -94,7 +92,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 	}
 
 	override fun preProcessSystem() {
-		subscription.getEntities().forEach { entityID ->
+		subscription.getEntities().forEachFast { entityID ->
 			val powerComponent = powerMapper.get(entityID)
 			val ship = shipMapper.get(entityID)
 
@@ -103,8 +101,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 			val oldTotalAvailiablePower = powerComponent.totalAvailiablePower
 
 			// Pre checks
-			powerComponent.poweringParts.forEach({
-				val partRef = it
+			powerComponent.poweringParts.forEachFast{ partRef ->
 				val part = partRef.part
 				val poweringState = ship.getPartState(partRef)[PoweringPartState::class]
 
@@ -165,7 +162,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 					powerComponent.totalAvailiablePower += availiablePower - poweringState.availiablePower
 					poweringState.availiablePower = availiablePower
 				}
-			})
+			}
 
 			if (!powerComponent.stateChanged) {
 

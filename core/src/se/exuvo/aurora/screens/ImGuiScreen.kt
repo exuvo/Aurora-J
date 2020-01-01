@@ -46,6 +46,7 @@ import se.exuvo.aurora.utils.keys.KeyActions_ImGuiScreen
 import se.exuvo.aurora.utils.keys.KeyMappings
 import se.exuvo.aurora.utils.printID
 import se.exuvo.aurora.utils.isNotEmpty
+import se.exuvo.aurora.utils.forEachFast
 import se.unlogic.standardutils.reflection.ReflectionUtils
 import uno.glfw.GlfwWindow
 import uno.glfw.GlfwWindowHandle
@@ -86,6 +87,8 @@ import se.exuvo.aurora.galactic.Railgun
 import se.exuvo.aurora.galactic.MissileLauncher
 import se.exuvo.aurora.planetarysystems.systems.WeaponSystem
 import org.apache.commons.math3.util.FastMath
+import se.exuvo.aurora.galactic.AdvancedMunitionHull
+import se.exuvo.aurora.galactic.SimpleMunitionHull
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	companion object {
@@ -869,12 +872,13 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 							val components = entity.getComponents(Bag())
 							
-							for (component in components) {
+							components.forEachFast{ component ->
 
 								if (ImGui.treeNode("${component::class.java.simpleName}")) {
 
 									val fields = ReflectionUtils.getFields(component::class.java)
-									for (field in fields) {
+									
+									fields.forEachFast{ field ->
 										ReflectionUtils.fixFieldAccess(field)
 										ImGui.text("${field.name}: ${field.get(component)}")
 									}
@@ -890,7 +894,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 								
 								ImGui.sliderScalar("Weapon test range", imgui.DataType.Double, ::weaponTestDistance, 100.0, Units.AU * 1000, Units.distanceToString(weaponTestDistance.toLong()), 8.0f)
 
-								for (partRef in shipComponent.hull.getPartRefs()) {
+								shipComponent.hull.getPartRefs().forEachFast{ partRef ->
 									if (ImGui.treeNode("${partRef.part::class.simpleName} ${partRef.part.name}")) {
 
 										if (partRef.part is PoweringPart) {
@@ -962,7 +966,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 											
 											val ammoState = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
 											
-											val munitionClass = ammoState.type
+											val munitionClass = ammoState.type as? SimpleMunitionHull
 											
 											if (munitionClass != null) {
 											
@@ -980,7 +984,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 											
 											val ammoState = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
 											
-											val munitionClass = ammoState.type
+											val munitionClass = ammoState.type as? AdvancedMunitionHull
 											
 											if (munitionClass != null) {
 												

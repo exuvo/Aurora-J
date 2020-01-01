@@ -23,7 +23,7 @@ import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.UUIDComponent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
-import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.forEachFast
 
 class PassiveSensorSystem : IteratingSystem(FAMILY) {
 	companion object {
@@ -61,7 +61,7 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 		})
 		world.getAspectSubscriptionManager().get(SHIP_ASPECT).addSubscriptionListener(object : SubscriptionListener {
 			override fun inserted(entities: IntBag) {
-				entities.forEach { entityID ->
+				entities.forEachFast { entityID ->
 					var sensorComponent = sensorsMapper.get(entityID)
 
 					if (sensorComponent == null) {
@@ -74,13 +74,12 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 							sensorComponent = sensorsMapper.create(entityID)
 							sensorComponent.sensors = sensors
 
-							sensors.forEach({
-								val sensor = it
+							sensors.forEachFast { sensor ->
 								if (ship.isPartEnabled(sensor)) {
 									val poweredState = ship.getPartState(sensor)[PoweredPartState::class]
 									poweredState.requestedPower = sensor.part.powerConsumption
 								}
-							})
+							}
 						}
 					}
 				}
@@ -106,7 +105,7 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 
 				val tempEmitters = ArrayList<Emitter>(emissionEntities.size())
 
-				emissionEntities.forEach { entityID ->
+				emissionEntities.forEachFast { entityID ->
 					var emissions = emissionsMapper.get(entityID)
 					var position = movementMapper.get(entityID).get(galaxy.time).value.position
 

@@ -17,7 +17,7 @@ import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.TintComponent
 import se.exuvo.aurora.planetarysystems.systems.OrbitSystem
-import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.forEachFast
 import java.util.Random
 import kotlin.concurrent.write
 
@@ -48,7 +48,7 @@ class PlanetarySystemGeneration(val system: PlanetarySystem) {
 
 		system.lock.write {
 			
-			world.getAspectSubscriptionManager().get(FAMILY).entities.forEach { entityID ->
+			world.getAspectSubscriptionManager().get(FAMILY).entities.forEachFast { entityID ->
 				system.destroyEntity(entityID)
 			}
 

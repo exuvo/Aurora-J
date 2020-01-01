@@ -21,19 +21,21 @@ import se.exuvo.aurora.galactic.TargetingComputer
 import se.exuvo.aurora.galactic.PartRef
 import kotlin.Suppress
 import se.exuvo.aurora.galactic.MunitionHull
+import se.exuvo.aurora.utils.forEachFast
 import com.artemis.Entity
 
 class ShipComponent() : Component() {
 	lateinit var hull: ShipHull
 	var constructionTime: Long = -1
 	var commissionDay: Int? = null
-	lateinit var armor: Array<ShortArray>
+	lateinit var armor: Array<ShortArray> // [layer][armor column] = hp
 	lateinit var partHealth: ByteArray
 	lateinit var partEnabled: BooleanArray
 	lateinit var partState: Array<PartState>
 	lateinit var cargo: Map<Resource, ShipCargo>
 	lateinit var munitionCargo: MutableMap<MunitionHull, Int>
 	var cargoChanged = true
+	var heat: Long = 0
 
 	fun set(hull: ShipHull,
 					constructionTime: Long
@@ -41,20 +43,20 @@ class ShipComponent() : Component() {
 		this.hull = hull
 		this.constructionTime = constructionTime
 
-		armor = Array<ShortArray>(hull.getSurfaceArea() / 100, { ShortArray(hull.armorLayers, { hull.armorBlockHP }) }) // 1 armor block per m2
+		armor = Array<ShortArray>(hull.armorLayers, { ShortArray(hull.getSurfaceArea() / 1000000, { hull.armorBlockHP }) }) // 1 armor block per m2
 		partHealth = ByteArray(hull.getParts().size, { hull[it].part.maxHealth })
 		partEnabled = BooleanArray(hull.getParts().size, { true })
 		partState = Array<PartState>(hull.getParts().size, { PartState() })
 		cargo = emptyMap()
 		munitionCargo = LinkedHashMap()
 		
-		var containerPartRefs = hull[ContainerPart::class]
+		var containerPartRefs: List<PartRef<ContainerPart>> = hull[ContainerPart::class]
 
 		if (containerPartRefs.isNotEmpty()) {
 
 			val shipCargos = listOf(ShipCargo(CargoType.NORMAL), ShipCargo(CargoType.LIFE_SUPPORT), ShipCargo(CargoType.FUEL), ShipCargo(CargoType.AMMUNITION), ShipCargo(CargoType.NUCLEAR))
 
-			for (containerRef in containerPartRefs) {
+			containerPartRefs.forEachFast{ containerRef ->
 				for (cargo in shipCargos) {
 					if (cargo.type.equals(containerRef.part.cargoType)) {
 						cargo.maxVolume += containerRef.part.capacity
@@ -65,9 +67,9 @@ class ShipComponent() : Component() {
 
 			val mutableCargo = LinkedHashMap<Resource, ShipCargo>()
 
-			for (shipCargo in shipCargos) {
-				for (resource in shipCargo.type.resources) {
-					mutableCargo[resource] = shipCargo
+			shipCargos.forEachFast{ cargo ->
+				cargo.type.resources.forEachFast{ resource ->
+					mutableCargo[resource] = cargo
 				}
 			}
 
@@ -389,7 +391,7 @@ data class ShipCargo(val type: CargoType) {
 	var contents: MutableMap<Resource, Long> = LinkedHashMap()
 
 	init {
-		for (resource in type.resources) {
+		type.resources.forEachFast{ resource ->
 			contents[resource] = 0
 		}
 	}

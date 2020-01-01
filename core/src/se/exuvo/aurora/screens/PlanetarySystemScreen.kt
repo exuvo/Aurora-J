@@ -277,7 +277,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 						val zoom = camera.zoom
 
 						// Exact check first
-						entityIDs.forEach { entityID ->
+						entityIDs.forEachFast { entityID ->
 							val position = movementMapper.get(entityID).get(galaxy.time).value.position
 							val radius: Float
 
@@ -299,7 +299,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 						// Lenient check if empty
 						if (entitiesUnderMouse.isEmpty()) {
-							entityIDs.forEach { entityID ->
+							entityIDs.forEachFast { entityID ->
 								val position = movementMapper.get(entityID).get(galaxy.time).value.position
 								val radius: Float
 
@@ -370,11 +370,11 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 								}
 
 								system.lock.write {
-									for (entity in selectedEntities) {
+									selectedEntities.forEachFast{ entity ->
 										val ship = shipMapper.get(entity)
 										var weaponsComponent = weaponsComponentMapper.get(entity)
 
-										for (tc in weaponsComponent.targetingComputers) {
+										weaponsComponent.targetingComputers.forEachFast{ tc ->
 											val tcState = ship.getPartState(tc)[TargetingComputerState::class]
 
 											if (target != null) {
@@ -454,7 +454,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	//			println("testRectangle $testRectangle")
 	
 				// Exact check first
-				entityIDs.forEach { entityID ->
+				entityIDs.forEachFast { entityID ->
 					val position = movementMapper.get(entityID).get(galaxy.time).value.position
 	
 					if (testRectangle.contains(position)) {
@@ -502,7 +502,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 						val zoom = camera.zoom
 
 						// Exact check first
-						entityIDs.forEach { entityID ->
+						entityIDs.forEachFast { entityID ->
 							val position = movementMapper.get(entityID).get(galaxy.time).value.position
 							val radius: Float
 
@@ -524,7 +524,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 
 						// Lenient check if empty
 						if (entitiesUnderMouse.isEmpty()) {
-							entityIDs.forEach { entityID ->
+							entityIDs.forEachFast { entityID ->
 								val position = movementMapper.get(entityID).get(galaxy.time).value.position
 								val radius: Float
 
@@ -556,7 +556,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 								approachType = ApproachType.BALLISTIC
 							}
 
-							for (entity in selectedEntities) {
+							selectedEntities.forEachFast{ entity ->
 								movementSystem.moveToEntity(entity.id, targetEntity.id, approachType)
 							}
 
@@ -571,7 +571,7 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 								approachType = ApproachType.BALLISTIC
 							}
 
-							for (entity in selectedEntities) {
+							selectedEntities.forEachFast{ entity ->
 
 								movementSystem.moveToPosition(entity.id, targetPosition, approachType)
 							}

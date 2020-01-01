@@ -12,7 +12,7 @@ import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.ShipOrdersComponent
 import se.exuvo.aurora.planetarysystems.components.ShipWorldState
 import se.exuvo.aurora.utils.GameServices
-import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.goap.interfaces.IReGoapGoal
 import se.exuvo.aurora.goap.interfaces.IReGoapAction
 import se.exuvo.aurora.goap.interfaces.ReGoapActionState
@@ -37,7 +37,7 @@ class ShipOrdersSystem : IteratingSystem(FAMILY) {
 
 		world.getAspectSubscriptionManager().get(SHIP_FAMILY).addSubscriptionListener(object : SubscriptionListener {
 			override fun inserted(entityIDs: IntBag) {
-				entityIDs.forEach { entityID ->
+				entityIDs.forEachFast { entityID ->
 
 					if (!ordersMapper.has(entityID)) {
 						ordersMapper.create(entityID)
@@ -62,7 +62,7 @@ class ShipOrdersSystem : IteratingSystem(FAMILY) {
 		if (blacklistedGoalsMap.isNotEmpty()) {
 			allowedGoals.clear();
 
-			for (goal in automaticGoals) {
+			automaticGoals.forEachFast{ goal ->
 				val blackListedGoalTime = blacklistedGoalsMap.get(goal)
 				
 				if (blackListedGoalTime == null) {

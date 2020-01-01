@@ -70,7 +70,7 @@ import se.exuvo.aurora.planetarysystems.systems.WeaponSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.Vector2L
-import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.plusAssign
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -89,6 +89,9 @@ import se.exuvo.aurora.planetarysystems.components.OwnerComponent
 import net.mostlyoriginal.api.utils.pooling.PoolsCollection
 import kotlin.reflect.KClass
 import net.mostlyoriginal.api.event.common.Event
+import se.exuvo.aurora.galactic.SimpleMunitionHull
+import se.exuvo.aurora.galactic.AdvancedMunitionHull
+import se.exuvo.aurora.galactic.DamagePattern
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener, Disposable {
 	companion object {
@@ -166,13 +169,13 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 
 		world.getAspectSubscriptionManager().get(Aspect.all()).addSubscriptionListener(object : SubscriptionListener {
 			override fun inserted(entityIDs: IntBag) {
-				entityIDs.forEach { entityID ->
+				entityIDs.forEachFast { entityID ->
 					galaxy.entityAdded(world, entityID)
 				}
 			}
 
 			override fun removed(entityIDs: IntBag) {
-				entityIDs.forEach { entityID ->
+				entityIDs.forEachFast { entityID ->
 					galaxy.entityRemoved(world, entityID)
 				}
 			}
@@ -232,12 +235,12 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		targetingComputer.name = "TC 2-10"
 		shipHull.addPart(targetingComputer)
 
-		val dummyMass1 = Battery(10 * Units.KILO, 50 * Units.KILO, 0.8f, 1 * Units.GIGA)
-		dummyMass1.cost[Resource.GENERIC] = 10
-		
-		val sabot = MunitionHull(Resource.SABOTS)
+		val sabot = SimpleMunitionHull(Resource.SABOTS)
 		sabot.name = "A sabot"
-		sabot.addPart(dummyMass1)
+		sabot.mass = 10
+		sabot.radius = 5
+		sabot.health = 2
+		sabot.damagePattern = DamagePattern.KINETIC
 
 		val missileBattery = Battery(10 * Units.KILO, 50 * Units.KILO, 0.8f, 1 * Units.GIGA)
 		missileBattery.cost[Resource.GENERIC] = 500
@@ -246,7 +249,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		val missileChemicalThruster = FueledThruster(2900 * 1000, 1)
 		val missileFuelPart = FuelContainerPart(5000)
 		
-		val missile = MunitionHull(Resource.MISSILES)
+		val missile = AdvancedMunitionHull(Resource.MISSILES)
 		missile.name = "Sprint missile"
 		missile.addPart(missileBattery)
 		missile.addPart(missileChemicalThruster)
@@ -448,7 +451,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 
 	fun getEntityByUUID(entityUUID: EntityUUID): Int? {
 		
-		world.getAspectSubscriptionManager().get(UUID_ASPECT).getEntities().forEach{ entityID ->
+		world.getAspectSubscriptionManager().get(UUID_ASPECT).getEntities().forEachFast{ entityID ->
 			val uuid = uuidMapper.get(entityID).uuid
 			
 			if (uuid.hashCode() == entityUUID.hashCode()) {
@@ -460,13 +463,13 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 	}
 
 	override fun inserted(entityIDs: IntBag) {
-		entityIDs.forEach { entityID ->
+		entityIDs.forEachFast { entityID ->
 			solarSystemMapper.create(entityID).set(this)
 		}
 	}
 
 	override fun removed(entityIDs: IntBag) {
-		entityIDs.forEach { entityID ->
+		entityIDs.forEachFast { entityID ->
 			solarSystemMapper.remove(entityID)
 		}
 	}

@@ -34,7 +34,7 @@ import se.exuvo.aurora.planetarysystems.components.UUIDComponent
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.exponentialAverage
-import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.lerpColors
 import java.nio.FloatBuffer
 import se.exuvo.aurora.AuroraGame
@@ -238,7 +238,7 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 		sensorsSubscription = world.getAspectSubscriptionManager().get(SHIP_ASPECT)
 		sensorsSubscription.addSubscriptionListener(object : SubscriptionListener {
 			override fun inserted(entities: IntBag) {
-				entities.forEach({ entityID ->
+				entities.forEachFast{ entityID ->
 					var sensorComponent = sensorsMapper.get(entityID)
 
 					if (sensorComponent == null) {
@@ -251,16 +251,15 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 							sensorComponent = sensorsMapper.create(entityID)
 							sensorComponent.sensors = sensors
 
-							sensors.forEach({
-								val sensor = it
+							sensors.forEachFast{ sensor ->
 								if (ship.isPartEnabled(sensor)) {
 									val poweredState = ship.getPartState(sensor)[PoweredPartState::class]
 									poweredState.requestedPower = sensor.part.powerConsumption
 								}
-							})
+							}
 						}
 					}
-				})
+				}
 			}
 
 			override fun removed(entities: IntBag) {}

@@ -16,28 +16,68 @@ import se.exuvo.aurora.galactic.PoweredPart
 import se.exuvo.aurora.galactic.ChargedPart
 import se.exuvo.aurora.galactic.PassiveSensor
 import se.exuvo.aurora.galactic.FueledPart
+import com.artemis.PooledComponent
+import se.exuvo.aurora.galactic.DamagePattern
+import se.exuvo.aurora.galactic.AdvancedMunitionHull
 
-class MunitionComponent() : Component() {
-	lateinit var munitionClass: MunitionHull
-	var constructionTime: Long = -1
-	var commissionDay: Int? = null
-	lateinit var armor: Array<Int>
+class LaserShotComponent() : PooledComponent() {
+	var targetEntityID: Int = -1
+	var damage: Long = 0 // joules
+	var beamArea: Long = 0 // cm²
+	lateinit var damagePattern: DamagePattern
+	
+	fun set(targetEntityID: Int,
+					damage: Long,
+					beamArea: Double // m²
+	) {
+		this.targetEntityID = targetEntityID
+		this.damage = damage
+		this.beamArea = (1000000 * beamArea).toLong()
+	}
+	
+	override fun reset(): Unit {}
+}
+
+class RailgunShotComponent() : PooledComponent() {
+	var targetEntityID: Int = -1
+	var health: Short = -1
+	var damage: Long = 0 // joules
+	lateinit var damagePattern: DamagePattern
+	
+	fun set(targetEntityID: Int,
+					damage: Long,
+					damagePattern: DamagePattern,
+					health: Short = -1
+	) {
+		this.targetEntityID = targetEntityID
+		this.damage = damage
+		this.damagePattern = damagePattern
+		this.health = health
+	}
+	
+	override fun reset(): Unit {}
+}
+
+class MunitionComponent() : PooledComponent() {
+	lateinit var hull: AdvancedMunitionHull
+	var health: Short = -1
+	var damage: Int = 0
+	lateinit var damagePattern: DamagePattern
+	lateinit var armor: Array<ShortArray> // [layer][armor column] = hp
 	lateinit var partEnabled: Array<Boolean>
 	lateinit var partState: Array<PartState>
 	var mass: Long = 0
 
-	fun set(munitionClass: MunitionHull,
-					constructionTime: Long
+	fun set(munitionHull: AdvancedMunitionHull
 	) {
-		this.munitionClass = munitionClass
-		this.constructionTime = constructionTime
+		this.hull = munitionHull
 		
-		armor = Array<Int>(munitionClass.getSurfaceArea(), { munitionClass.armorLayers })
-		partEnabled = Array<Boolean>(munitionClass.getParts().size, { true })
-		partState = Array<PartState>(munitionClass.getParts().size, { PartState() })
+		armor = Array<ShortArray>(hull.armorLayers, { ShortArray(hull.getSurfaceArea() / 1000000, { hull.armorBlockHP }) }) // 1 armor block per m2
+		partEnabled = Array<Boolean>(hull.getParts().size, { true })
+		partState = Array<PartState>(hull.getParts().size, { PartState() })
 		
 		partState.forEachIndexed { partIndex, state ->
-			val partRef = munitionClass[partIndex]
+			val partRef = hull[partIndex]
 			
 			if (partRef.part is PoweringPart) {
 				state.put(PoweringPartState())
@@ -60,6 +100,8 @@ class MunitionComponent() : Component() {
 			}
 		}
 	}
+	
+	override fun reset(): Unit {}
 	
 	fun getPartState(partRef: PartRef<out Part>): PartState {
 		return partState[partRef.index]

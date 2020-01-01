@@ -19,7 +19,7 @@ import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
-import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.forEachFast
 import org.apache.commons.math3.util.FastMath
 import se.exuvo.aurora.utils.Vector2D
 
@@ -28,8 +28,6 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 		val FAMILY = Aspect.all(TimedMovementComponent::class.java).exclude(OrbitComponent::class.java)
 		val CAN_ACCELERATE_FAMILY = Aspect.all(ThrustComponent::class.java, MassComponent::class.java)
 		val DESTINATION_FAMILY = Aspect.one(MoveToPositionComponent::class.java, MoveToEntityComponent::class.java)
-		lateinit var CAN_ACCELERATE_ASPECT: Aspect
-		lateinit var DESTINATION_ASPECT: Aspect
 		
 		@JvmStatic
 		val log = LogManager.getLogger(MovementSystem::class.java)
@@ -44,6 +42,9 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 
 	lateinit private var weaponSystem: WeaponSystem
 	private val galaxy = GameServices[Galaxy::class]
+	
+	lateinit var CAN_ACCELERATE_ASPECT: Aspect
+	lateinit var DESTINATION_ASPECT: Aspect
 
 	override fun setWorld(world: World) {
 		super.setWorld(world)
@@ -117,7 +118,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 	override fun getPreProcessPriority() = Priority.HIGH
 
 	override fun preProcessSystem() {
-		subscription.getEntities().forEach { entityID ->
+		subscription.getEntities().forEachFast { entityID ->
 
 			if (CAN_ACCELERATE_ASPECT.isInterested(world.getEntity(entityID))) {
 				val movement = movementMapper.get(entityID)
@@ -300,6 +301,8 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 //					timedMovement.setPredictionBallistic()
 //				}
 
+				//TODO fix cant go south?
+				
 				if (timeToTargetWithCurrentSpeed < timeToStop && velocityMagnitute > 0) {
 
 					if (timeToStop <= 1) {

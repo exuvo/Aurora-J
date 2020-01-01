@@ -16,7 +16,7 @@ import se.exuvo.aurora.planetarysystems.components.ShipComponent
 import se.exuvo.aurora.planetarysystems.components.ThrustComponent
 import se.exuvo.aurora.planetarysystems.events.PowerEvent
 import se.exuvo.aurora.utils.consumeFuel
-import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.planetarysystems.PlanetarySystem
 import com.artemis.annotations.Wire
 
@@ -37,12 +37,12 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 	lateinit private var planetarySystem: PlanetarySystem
 
 	override fun preProcessSystem() {
-		subscription.getEntities().forEach { entityID ->
+		subscription.getEntities().forEachFast { entityID ->
 			val ship = shipMapper.get(entityID)
 			val thrusters = ship.hull.getPartRefs().filter({ it.part is ThrustingPart })
 			val thrustComponent = thrustMapper.get(entityID)
 
-			for (thruster in thrusters) {
+			thrusters.forEachFast{ thruster ->
 				val part = thruster.part
 
 				if (part is ElectricalThruster && ship.isPartEnabled(thruster)) {
@@ -81,7 +81,7 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 		if (thrusters.isNotEmpty()) {
 			val thrustComponent = thrustMapper.get(entityID)
 
-			for (thruster in thrusters) {
+			thrusters.forEachFast{ thruster ->
 				if (ship.isPartEnabled(thruster)) {
 					val part = thruster.part
 

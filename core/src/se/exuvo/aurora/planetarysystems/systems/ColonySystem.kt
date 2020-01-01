@@ -23,7 +23,7 @@ import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.planetarysystems.components.UUIDComponent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
-import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.empires.components.ColonyComponent
 import se.exuvo.aurora.galactic.Resource
 import se.exuvo.aurora.planetarysystems.PlanetarySystem

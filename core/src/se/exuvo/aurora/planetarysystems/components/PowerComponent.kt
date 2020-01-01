@@ -35,13 +35,11 @@ enum class PowerScheme(val chargeBatteryFromReactor: Boolean, private val powerT
 	SOLAR_REACTOR_BATTERY(true, mapOf(SolarPanel::class to 1, Reactor::class to 2, Battery::class to 3));
 
 	fun getPowerTypeValue(part: Part): Int {
-		powerTypeCompareMap.entries.forEach({
-			val entry = it
-
+		powerTypeCompareMap.entries.forEach { entry ->
 			if (entry.key.isInstance(part)) {
 				return entry.value
 			}
-		})
+		}
 		
 		throw InvalidParameterException()
 	}

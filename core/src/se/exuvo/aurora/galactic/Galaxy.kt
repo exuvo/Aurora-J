@@ -21,7 +21,7 @@ import se.exuvo.aurora.planetarysystems.systems.CustomSystemInvocationStrategy
 import se.exuvo.aurora.planetarysystems.systems.GroupSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
-import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.settings.Settings
 import se.unlogic.standardutils.threads.SimpleTaskGroup
 import se.unlogic.standardutils.threads.ThreadPoolTaskGroupHandler
@@ -73,13 +73,13 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		
 		world.getAspectSubscriptionManager().get(Aspect.all()).addSubscriptionListener(object: SubscriptionListener {
 			override fun inserted(entityIDs: IntBag) {
-				entityIDs.forEach { entityID ->
+				entityIDs.forEachFast { entityID ->
 					entityAdded(world, entityID)
 				}
 			}
 
 			override fun removed(entityIDs: IntBag) {
-				entityIDs.forEach { entityID ->
+				entityIDs.forEachFast { entityID ->
 					entityRemoved(world, entityID)
 				}
 			}
@@ -116,7 +116,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		
 		var lowestRequestedSpeed = Long.MAX_VALUE;
 
-		for (player in players) {
+		players.forEachFast{ player ->
 			lowestRequestedSpeed = Math.min(lowestRequestedSpeed, player.requestedSpeed)
 		}
 		
@@ -128,7 +128,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 	}
 
 	fun getEmpire(id: Int): Empire {
-		for (empire in empires) {
+		empires.forEachFast{ empire ->
 			if (empire.id == id) {
 				return empire;
 			}
@@ -137,7 +137,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 	}
 	
 	fun getPlanetarySystemBySID(sid: Int): PlanetarySystem {
-		for (system in systems) {
+		systems.forEachFast{ system ->
 			if (system.sid == sid) {
 				return system;
 			}
@@ -146,7 +146,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 	}
 	
 	fun getPlanetarySystemByGalacticEntityID(id: Int): PlanetarySystem {
-		for (system in systems) {
+		systems.forEachFast{ system ->
 			if (system.galacticEntityID == id) {
 				return system;
 			}
@@ -173,7 +173,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		
 		//TODO release current write lock during operation and re-aquire after
 		
-		systems.forEach{ system ->
+		systems.forEachFast{ system ->
 			system.lock.read {
 				val entityID = system.getEntityByUUID(entityUUID)
 				
@@ -278,8 +278,8 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 //							log.warn("Galaxy update took ${Units.nanoToString(systemUpdateDuration)} which is more than the requested speed delay ${Units.nanoToString(speed)}")
 						}
 
-//						systems.forEach {
-//							print("${it.sid} ${Units.nanoToString(it.updateTime)}, ")
+//						for (system in systems) {
+//							print("${system.sid} ${Units.nanoToString(system.updateTime)}, ")
 //						}
 //						println()
 						

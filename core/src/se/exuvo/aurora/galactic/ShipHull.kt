@@ -6,6 +6,7 @@ import kotlin.reflect.KClass
 import se.exuvo.aurora.utils.sumByLong
 import se.exuvo.aurora.empires.components.ShipyardType
 import se.exuvo.aurora.utils.Units
+import se.exuvo.aurora.utils.forEachFast
 
 class ShipHull() {
 	companion object {
@@ -43,7 +44,7 @@ class ShipHull() {
 		armorBlockHP = parentHull.armorBlockHP
 		powerScheme = parentHull.powerScheme
 		
-		parentHull.getParts().forEach{ part ->
+		parentHull.getParts().forEachFast{ part ->
 			addPart(part)
 		}
 		
@@ -144,7 +145,7 @@ class ShipHull() {
 		return parts.sumByLong { it.getVolume() }
 	}
 
-	// cm^2
+	// cm²
 	fun getSurfaceArea(): Int {
 		val volume = getVolume()
 
@@ -164,8 +165,8 @@ class ShipHull() {
 	fun getCost(): Map<Resource, Long> {
 		val cost = HashMap<Resource, Long>()
 		
-		parts.forEach { part ->
-			part.cost.forEach{resource, amount ->
+		parts.forEachFast { part ->
+			part.cost.forEach{ resource, amount ->
 				var prevCost = cost[resource]
 				
 				if (prevCost == null) {

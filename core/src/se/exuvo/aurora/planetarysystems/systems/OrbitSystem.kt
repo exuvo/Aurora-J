@@ -14,7 +14,7 @@ import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.Vector2D
 import se.exuvo.aurora.utils.Vector2L
-import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.getUUID
 import se.exuvo.settings.Settings
 import java.util.Collections
@@ -179,7 +179,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 		
 		shapeRenderer.color = Color.GRAY
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Point);
-		subscription.getEntities().forEach { entityID ->
+		subscription.getEntities().forEachFast { entityID ->
 			val orbit = orbitMapper.get(entityID)
 			val orbitCache: OrbitCache = orbitsCache.get(entityID)!!
 			val parentEntity = orbit.parent

@@ -5,9 +5,10 @@ import se.exuvo.aurora.utils.Vector2L
 import com.artemis.Component
 import com.artemis.Entity
 import com.artemis.annotations.PooledWeaver
+import com.artemis.PooledComponent
 
 // In N and degrees
-class ThrustComponent() : Component() {
+class ThrustComponent() : PooledComponent() {
 	var thrust: Long = 0
 	var maxThrust: Long = 0
 	var thrustAngle: Float = 0f
@@ -24,6 +25,8 @@ class ThrustComponent() : Component() {
 		this.thrusting = thrusting
 		return this
 	}
+	
+	override fun reset(): Unit {}
 }
 
 enum class ApproachType {
@@ -31,7 +34,7 @@ enum class ApproachType {
 	BALLISTIC // Arrive at target as quickly as possible
 }
 
-class MoveToEntityComponent() : Component() {
+class MoveToEntityComponent() : PooledComponent() {
 	var targetID: Int = -1
 	lateinit var approach: ApproachType
 
@@ -42,9 +45,11 @@ class MoveToEntityComponent() : Component() {
 		this.approach = approach
 		return this
 	}
+	
+	override fun reset(): Unit {}
 }
 
-class MoveToPositionComponent() : Component() {
+class MoveToPositionComponent() : PooledComponent() {
 	lateinit var target: Vector2L
 	lateinit var approach: ApproachType
 
@@ -55,4 +60,6 @@ class MoveToPositionComponent() : Component() {
 		this.approach = approach
 		return this
 	}
+	
+	override fun reset(): Unit {}
 }

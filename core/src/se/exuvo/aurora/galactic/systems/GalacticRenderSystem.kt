@@ -131,19 +131,21 @@ class GalacticRenderSystem : BaseEntitySystem(FAMILY) {
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 		val screenPosition = Vector3()
 
-		entityIDs.filter { nameMapper.has(it) }.forEach {
-			val position = positionMapper.get(it)
-			val name = nameMapper.get(it).name
-
-			var radius = zoom * STRATEGIC_ICON_SIZE / 2
-
-			val x = position.getXinRender() - cameraOffset.x
-			val y = position.getYinRender() - cameraOffset.y
-
-			screenPosition.set(x, y - radius * 1.1f, 0f)
-			viewport.camera.project(screenPosition)
-
-			font.draw(spriteBatch, name, screenPosition.x - name.length * font.spaceXadvance * .5f, screenPosition.y - font.lineHeight / zoom)
+		for (entityID in entityIDs) {
+			if (nameMapper.has(entityID)) {
+				val position = positionMapper.get(entityID)
+				val name = nameMapper.get(entityID).name
+	
+				var radius = zoom * STRATEGIC_ICON_SIZE / 2
+	
+				val x = position.getXinRender() - cameraOffset.x
+				val y = position.getYinRender() - cameraOffset.y
+	
+				screenPosition.set(x, y - radius * 1.1f, 0f)
+				viewport.camera.project(screenPosition)
+	
+				font.draw(spriteBatch, name, screenPosition.x - name.length * font.spaceXadvance * .5f, screenPosition.y - font.lineHeight / zoom)
+			}
 		}
 
 		spriteBatch.end()

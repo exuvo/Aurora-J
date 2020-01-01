@@ -20,9 +20,39 @@ import com.artemis.utils.Bag
 
 private val log = LogManager.getLogger("se.exuvo.aurora.utils")
 
-inline fun IntBag.forEach(action: (entityID: Int) -> Unit) {
+inline fun IntBag.forEachFast(action: (entityID: Int) -> Unit) {
 	for (i in 0 .. size() - 1) {
 		action(data[i])
+	}
+}
+
+inline fun IntBag.forEachFast(action: (index: Int, entityID: Int) -> Unit) {
+	for (i in 0 .. size() - 1) {
+		action(i, data[i])
+	}
+}
+
+inline fun <T> Bag<T>.forEachFast(action: (T) -> Unit) {
+	for (i in 0 .. size() - 1) {
+		action(data[i])
+	}
+}
+
+inline fun <T> Bag<T>.forEachFast(action: (index: Int, T) -> Unit) {
+	for (i in 0 .. size() - 1) {
+		action(i, data[i])
+	}
+}
+
+inline fun <T> List<T>.forEachFast(block: (T) -> Unit) {
+	for (i in 0 .. size - 1) {
+		block(this[i])
+	}
+}
+
+inline fun <T> List<T>.forEachFast(block: (index: Int, T) -> Unit) {
+	for (i in 0 .. size - 1) {
+		block(i, this[i])
 	}
 }
 
@@ -52,6 +82,22 @@ fun Entity.printName(): String {
 fun Entity.printID(): String {
 
 	return "${this.printName()} (${this.getUUID()})"
+}
+
+inline fun <T> Bag<T>.sumByLong(selector: (T) -> Long): Long {
+    var sum = 0L
+		for (i in 0 .. size() - 1) {
+			sum += selector(data[i])
+		}
+    return sum
+}
+
+inline fun <T> List<T>.sumByLong(selector: (T) -> Long): Long {
+    var sum = 0L
+		for (i in 0 .. size - 1) {
+			sum += selector(this[i])
+		}
+    return sum
 }
 
 inline fun <T> Iterable<T>.sumByLong(selector: (T) -> Long): Long {

@@ -8,7 +8,7 @@ abstract class Part {
 	var name: String = ""
 	var designDay: Int = -1
 	val cost: MutableMap<Resource, Long> = LinkedHashMap() 
-	var maxHealth:Byte = 1
+	var maxHealth: Byte = 1
 	var crewRequirement = 1
 	
 	// In kg
@@ -18,9 +18,9 @@ abstract class Part {
 	fun getVolume() : Long {
 		var volume = 0L
 		
-		cost.forEach({resource, amount ->
+		cost.forEach{ resource, amount ->
 			volume += amount * resource.specificVolume
-		})
+		}
 		
 		return volume
 	}
@@ -196,7 +196,8 @@ enum class BeamWavelength(val short: String, val length: Int) { // Length in nm
 class BeamWeapon(powerConsumption: Long = 0,
 								 val aperature: Double = 1.0, // in mm diameter
 								 val waveLength: BeamWavelength,
-								 capacitor: Long
+								 capacitor: Long,
+								 val efficiency: Int = 50 // Percent Energy to damage
 ) : Part(),
 		WeaponPart,
 		PoweredPart by PoweredPartImpl(powerConsumption),
@@ -213,7 +214,8 @@ class BeamWeapon(powerConsumption: Long = 0,
 	// in m of beam radius
 	fun getBeamRadiusAtDistance(distance: Long): Double = distance.toDouble() * Math.tan(getRadialDivergence())
 	
-	fun getBeamArea(distance: Long) = Math.PI * Math.pow(getBeamRadiusAtDistance(distance), 2.0)
+	 // in m²
+	fun getBeamArea(distance: Long): Double = Math.PI * Math.pow(getBeamRadiusAtDistance(distance), 2.0)
 	
 	fun getDeliveredEnergyTo1MSquareAtDistance(distance: Long): Long { // in watts of delivered energy
 		val beamArea = getBeamArea(distance)

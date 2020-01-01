@@ -18,7 +18,7 @@ class ColonyComponent() : Component() {
 	
 	init {
 		val exludedResources = listOf(Resource.MISSILES, Resource.SABOTS)
-		Resource.values().forEach { r ->
+		for (r in Resource.values()) {
 			if (!exludedResources.contains(r)) {
 				resources[r] = 10000000L
 			}

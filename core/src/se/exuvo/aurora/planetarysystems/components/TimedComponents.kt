@@ -5,11 +5,12 @@ import com.badlogic.gdx.math.Vector2
 import se.exuvo.aurora.utils.Vector2L
 import java.lang.RuntimeException
 import org.apache.commons.math3.util.FastMath
+import com.artemis.PooledComponent
 
 data class TimedValue<T>(val value: T, var time: Long) {
 }
 
-abstract class TimedComponent<T>() : Component() {
+abstract class TimedComponent<T>() : PooledComponent() {
 	abstract fun get(time: Long): TimedValue<T>
 }
 
@@ -158,6 +159,24 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 		previous.time = time
 		
 		return this
+	}
+	
+	override fun reset(): Unit {
+		previous.value.position.set(0, 0)
+		previous.value.velocity.set(0, 0)
+		previous.value.acceleration.set(0, 0)
+		previous.time = 0
+		
+		val interpolated = interpolated
+		
+		if (interpolated != null) {
+			interpolated.value.position.set(0, 0)
+			interpolated.value.velocity.set(0, 0)
+			interpolated.value.acceleration.set(0, 0)
+			interpolated.time = 0
+		}
+		
+		next = null
 	}
 
 	override fun setPrediction(value: MovementValues, time: Long): Boolean {

@@ -20,7 +20,7 @@ import se.exuvo.aurora.utils.CircleL
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.Vector2L
-import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.keys.KeyActions_GalaxyScreen
 import se.exuvo.aurora.utils.keys.KeyMappings
 import se.exuvo.settings.Settings
@@ -186,7 +186,7 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 						val testCircle = CircleL()
 						val radius = GalacticRenderSystem.RENDER_SCALE * camera.zoom * GalacticRenderSystem.STRATEGIC_ICON_SIZE / 2
 
-						entityIDs.forEach { entityID ->
+						entityIDs.forEachFast { entityID ->
 							val position = positionMapper.get(entityID).position
 
 							testCircle.set(position, radius)
@@ -205,7 +205,6 @@ class GalaxyScreen(var lastSystemScreen: PlanetarySystemScreen) : GameScreenImpl
 									lastSystemScreen = PlanetarySystemScreen(system)
 									AuroraGame.currentWindow.screenService.add(lastSystemScreen)
 								}
-								
 
 								return true;
 							}

@@ -49,6 +49,7 @@ subprojects {
 	tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 		kotlinOptions {
 			jvmTarget = "12"
+			freeCompilerArgs = ["-Xno-param-assertions", "-Xno-call-assertions", "-Xno-receiver-assertions"]
 		}
 	}
 		

@@ -6,6 +6,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
 import se.exuvo.aurora.utils.DummyReentrantReadWriteLock
+import se.exuvo.aurora.utils.forEachFast
 import com.artemis.Entity
 import com.artemis.EntitySystem
 import com.artemis.Aspect
@@ -97,7 +98,7 @@ class GroupSystem(val lock: ReentrantReadWriteLock = DummyReentrantReadWriteLock
 			entitiesSet.addAll(entities)
 			incrementModificationCount(group)
 
-			for (entity in entities) {
+			entities.forEachFast{ entity ->
 				var groupSet = entityToGroupMap[entity]
 
 				if (groupSet == null) {

@@ -41,11 +41,18 @@ import se.exuvo.aurora.AuroraGame
 import se.exuvo.aurora.galactic.Player
 import se.exuvo.aurora.planetarysystems.PlanetarySystem
 import com.artemis.annotations.Wire
+import se.exuvo.aurora.planetarysystems.components.LaserShotComponent
+import se.exuvo.aurora.planetarysystems.components.RailgunShotComponent
+import com.artemis.EntitySubscription
+import org.apache.commons.math3.util.FastMath
 
 class RenderSystem : IteratingSystem(FAMILY) {
 	companion object {
 		val FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, CircleComponent::class.java)
-		val STRATEGIC_ICON_SIZE = 24f
+		val LASER_SHOT_FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, LaserShotComponent::class.java)
+		val RAILGUN_SHOT_FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, RailgunShotComponent::class.java)
+		
+		const val STRATEGIC_ICON_SIZE = 24f
 
 		var debugPassiveSensors = Settings.getBol("Systems/Render/debugPassiveSensors", false)
 		var debugDisableStrategicView = Settings.getBol("Systems/Render/debugDisableStrategicView", false)
@@ -65,6 +72,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	lateinit private var sensorsMapper: ComponentMapper<PassiveSensorsComponent>
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
 	lateinit private var weaponsComponentMapper: ComponentMapper<WeaponsComponent>
+	lateinit private var laserShotMapper: ComponentMapper<LaserShotComponent>
+	lateinit private var railgunShotMapper: ComponentMapper<RailgunShotComponent>
 
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	private val galaxy = GameServices[Galaxy::class]
@@ -75,18 +84,24 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	lateinit private var groupSystem: GroupSystem
 	lateinit private var orbitSystem: OrbitSystem
 //	lateinit private var gravSystem: GravimetricSensorSystem
+	
 	lateinit private var familyAspect: Aspect
+	lateinit private var laserShotSubscription: EntitySubscription
+	lateinit private var railgunShotSubscription: EntitySubscription
 
 	override fun initialize() {
 		super.initialize()
 
 		familyAspect = FAMILY.build(world)
+		
+		laserShotSubscription = world.getAspectSubscriptionManager().get(LASER_SHOT_FAMILY)
+		railgunShotSubscription = world.getAspectSubscriptionManager().get(RAILGUN_SHOT_FAMILY)
 	}
 
 	override fun checkProcessing() = false
 
 	override fun process(entityID: Int) {}
-
+	
 	private final fun drawEntities(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
 
 		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
@@ -94,7 +109,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
 
-		entityIDs.forEach { entityID ->
+		entityIDs.forEachFast { entityID ->
 
 			if (!strategicIconMapper.has(entityID) || !inStrategicView(entityID, zoom)) {
 
@@ -122,7 +137,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color.PINK
 
-		entityIDs.forEach { entityID ->
+		entityIDs.forEachFast { entityID ->
 
 			if (!strategicIconMapper.has(entityID) || !inStrategicView(entityID, zoom)) {
 
@@ -133,6 +148,55 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				val circle = circleMapper.get(entityID)
 				shapeRenderer.circle(x, y, circle.radius * 0.01f, getCircleSegments(circle.radius * 0.01f, zoom))
 			}
+		}
+
+		shapeRenderer.end()
+	}
+	
+	private final fun drawProjectiles(viewport: Viewport, cameraOffset: Vector2L) {
+
+		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
+		val zoom = (viewport.camera as OrthographicCamera).zoom
+
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+
+		shapeRenderer.color = Color.RED
+		laserShotSubscription.getEntities().forEachFast { entityID ->
+
+			println("draw laser $entityID")
+			
+			val movement = movementMapper.get(entityID).get(galaxy.time).value
+			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
+			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
+
+			var x2 = x
+			var y2 = y
+			
+			val velocityAngle = movement.velocity.angle()
+			
+			if (velocityAngle >= 45 && velocityAngle < 135) {
+				y2 -= 1
+			} else if (velocityAngle >= 135 && velocityAngle < 225) {
+				x2 -= 1
+			} else if (velocityAngle >= 225 && velocityAngle < 315) {
+				y2 += 1
+			} else if (velocityAngle >= 315 || velocityAngle < 45) {
+				x2 += 1
+			}
+			
+			shapeRenderer.line(x, y, x2, y2)
+		}
+		
+		shapeRenderer.color = Color.GRAY
+		railgunShotSubscription.getEntities().forEachFast { entityID ->
+			
+			println("draw railgun $entityID")
+
+			val movement = movementMapper.get(entityID).get(galaxy.time).value
+			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
+			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
+
+			shapeRenderer.line(x, y, x, y)
 		}
 
 		shapeRenderer.end()
@@ -155,7 +219,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 		spriteBatch.begin()
 
-		entityIDs.forEach { entityID ->
+		entityIDs.forEachFast { entityID ->
 
 			if (strategicIconMapper.has(entityID) && inStrategicView(entityID, zoom)) {
 
@@ -203,7 +267,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color.RED
 
-		for (entityID in selectedEntityIDs) {
+		selectedEntityIDs.forEachFast { entityID ->
 
 			val movement = movementMapper.get(entityID).get(galaxy.time).value
 			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
@@ -234,7 +298,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 
-		entityIDs.forEach { entityID ->
+		entityIDs.forEachFast { entityID ->
 
 			if (movementMapper.has(entityID)) {
 
@@ -352,7 +416,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 		val usedTargets = HashSet<Int>()
 
-		for (entityID in selectedEntityIDs) {
+		selectedEntityIDs.forEachFast { entityID ->
 			if (weaponsComponentMapper.has(entityID)) {
 
 				val movement = movementMapper.get(entityID).get(galaxy.time).value
@@ -364,7 +428,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 				usedTargets.clear()
 
-				for (tc in tcs) {
+				tcs.forEachFast { tc ->
 					val tcState = ship.getPartState(tc)[TargetingComputerState::class]
 					val target = tcState.target
 
@@ -411,7 +475,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		//TODO if multiple detections with the same strength overlap (ie they see the same things), only draw overlap
 
 		fun drawDetectionsInner() {
-			entityIDs.forEach { entityID ->
+			entityIDs.forEachFast { entityID ->
 				if (detectionMapper.has(entityID)) {
 					val movementValues = movementMapper.get(entityID).get(galaxy.time).value
 					val x = (movementValues.getXinKM() - cameraOffset.x).toDouble()
@@ -503,7 +567,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 			shapeRenderer.color = Color.PINK
 
-			entityIDs.forEach { entityID ->
+			entityIDs.forEachFast { entityID ->
 				if (detectionMapper.has(entityID)) {
 					val detection = detectionMapper.get(entityID)
 
@@ -545,9 +609,9 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			val x = (movement.getXinKM() - cameraOffset.x).toDouble()
 			val y = (movement.getYinKM() - cameraOffset.y).toDouble()
 
-			val sensors = sensorsMapper.get(it)
+			val sensorsComponent = sensorsMapper.get(it)
 
-			for (sensor in sensors.sensors) {
+			sensorsComponent.sensors.forEachFast { sensor ->
 
 				when (sensor.part.spectrum) {
 
@@ -653,7 +717,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		val font = Assets.fontMap
 		font.color = Color.WHITE
 
-		entityIDs.forEach { entityID ->
+		entityIDs.forEachFast { entityID ->
 			if (nameMapper.has(entityID)) {
 				val movement = movementMapper.get(entityID).get(galaxy.time).value
 				val name = nameMapper.get(entityID).name
@@ -690,7 +754,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		val font = Assets.fontMap
 		font.color = Color.WHITE
 
-		entityIDs.forEach { entityID ->
+		entityIDs.forEachFast { entityID ->
 			if (movementMapper.has(entityID)) {
 
 				val movement = movementMapper.get(entityID)
@@ -767,6 +831,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 		drawEntities(entityIDs, viewport, cameraOffset)
 		drawEntityCenters(entityIDs, viewport, cameraOffset)
+		drawProjectiles(viewport, cameraOffset)
 		drawTimedMovement(entityIDs, selectedEntityIDs, viewport, cameraOffset)
 
 		drawSelections(selectedEntityIDs, viewport, cameraOffset)

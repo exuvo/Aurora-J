@@ -11,7 +11,9 @@ import se.exuvo.aurora.planetarysystems.components.SunComponent
 import se.exuvo.aurora.planetarysystems.components.TimedMovementComponent
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.Vector2L
-import se.exuvo.aurora.utils.forEach
+import se.exuvo.aurora.utils.forEachFast
+import se.exuvo.aurora.utils.isNotEmpty
+import com.artemis.utils.Bag
 
 class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 	companion object {
@@ -44,8 +46,7 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) 
 		})
 	}
 
-
-	var suns: List<Sun> = emptyList()
+	var suns = Bag<Sun>()
 
 	fun cacheSuns() {
 		val sunEntites = sunsSubscription.getEntities()
@@ -53,14 +54,14 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) 
 		if (sunEntites.size() == 0) {
 
 			if (suns.isNotEmpty()) {
-				suns = emptyList()
+				suns.clear()
 			}
 
-		} else if (sunEntites.size() != suns.size) {
+		} else if (sunEntites.size() != suns.size()) {
 
-			val mutableSuns = ArrayList<Sun>(sunEntites.size())
+			val mutableSuns = Bag<Sun>(sunEntites.size())
 
-			sunEntites.forEach { entityID ->
+			sunEntites.forEachFast { entityID ->
 
 				var solarConstant = sunIrradianceMapper.get(entityID).solarConstant
 				var position = movementMapper.get(entityID).get(galaxy.time).value.position
@@ -69,7 +70,7 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) 
 			}
 
 			suns = mutableSuns
-			log.info("Cached solar irradiance for ${suns.size} suns")
+			log.info("Cached solar irradiance for ${suns.size()} suns")
 		}
 	}
 
@@ -79,7 +80,7 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) 
 
 		var totalIrradiance = 0.0
 
-		for (sun in suns) {
+		suns.forEachFast{ sun ->
 			val distance = position.dst(sun.position) / 1000
 
 			// https://en.wikipedia.org/wiki/Inverse-square_law

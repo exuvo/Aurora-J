@@ -4,6 +4,7 @@ import com.artemis.SystemInvocationStrategy
 import com.artemis.utils.Bag
 import com.artemis.WorldConfigurationBuilder.Priority
 import com.artemis.utils.Sort
+import se.exuvo.aurora.utils.forEachFast
 
 class CustomSystemInvocationStrategy : SystemInvocationStrategy() {
 	lateinit var preSystems: Bag<PreSystem>
@@ -13,8 +14,7 @@ class CustomSystemInvocationStrategy : SystemInvocationStrategy() {
 		preSystems = Bag(PreSystem::class.java, systems.size())
 		postSystems = Bag(PostSystem::class.java, systems.size())
 
-		systems.forEach { i, data ->
-			val system = data[i]
+		systems.forEachFast { i, system ->
 
 			if (system is PreSystem) {
 				preSystems.add(system)
@@ -43,33 +43,27 @@ class CustomSystemInvocationStrategy : SystemInvocationStrategy() {
 		
 		updateEntityStates()
 
-		preSystems.forEach { i, data ->
+		preSystems.forEachFast { i, system ->
 			if (!disabled.get(i)) {
 //				println("pre ${data[i]::class.simpleName}")
-				data[i].preProcessSystem()
+				system.preProcessSystem()
 			}
 		}
 
-		systems.forEach { i, data ->
+		systems.forEachFast { i, system ->
 			if (!disabled.get(i)) {
 //				println("pro ${data[i]::class.simpleName}")
-				data[i].process()
+				system.process()
 				updateEntityStates()
 			}
 		}
 
-		postSystems.forEach { i, data ->
+		postSystems.forEachFast { i, system ->
 			if (!disabled.get(i)) {
 //				println("post ${data[i]::class.simpleName}")
-				data[i].postProcessSystem()
+				system.postProcessSystem()
 			}
 		}
-	}
-}
-
-inline fun <E> Bag<E>.forEach(action: (index: Int, data2: Array<E>) -> Unit) {
-	for (i in 0..size() - 1) {
-		action(i, data)
 	}
 }
 
