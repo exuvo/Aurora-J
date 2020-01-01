@@ -2,6 +2,7 @@ package se.exuvo.aurora.galactic
 
 import se.exuvo.aurora.planetarysystems.components.Spectrum
 import java.util.Objects
+import java.security.InvalidParameterException
 
 abstract class Part {
 	var name: String = ""
@@ -49,13 +50,13 @@ abstract class Part {
 	} 
 }
 
-abstract class ContainerPart(val capacity: Int, val cargoType: CargoType) : Part();
+abstract class ContainerPart(val capacity: Long, val cargoType: CargoType) : Part();
 
-class CargoContainerPart(capacity: Int) : ContainerPart(capacity, CargoType.NORMAL);
-class FuelContainerPart(capacity: Int) : ContainerPart(capacity, CargoType.FUEL);
-class LifeSupportContainerPart(capacity: Int) : ContainerPart(capacity, CargoType.LIFE_SUPPORT);
-class AmmoContainerPart(capacity: Int) : ContainerPart(capacity, CargoType.AMMUNITION);
-class NuclearContainerPart(capacity: Int) : ContainerPart(capacity, CargoType.NUCLEAR);
+class CargoContainerPart(capacity: Long) : ContainerPart(capacity, CargoType.NORMAL);
+class FuelContainerPart(capacity: Long) : ContainerPart(capacity, CargoType.FUEL);
+class LifeSupportContainerPart(capacity: Long) : ContainerPart(capacity, CargoType.LIFE_SUPPORT);
+class AmmoContainerPart(capacity: Long) : ContainerPart(capacity, CargoType.AMMUNITION);
+class NuclearContainerPart(capacity: Long) : ContainerPart(capacity, CargoType.NUCLEAR);
 
 interface FueledPart {
 	val fuel: Resource
@@ -242,11 +243,15 @@ class MissileLauncher(powerConsumption: Long = 0,
 								 			ammunitionSize: Int,
 								 			ammunitionAmount: Int,
 											reloadTime: Int,
-											val launchForce: Long = 0 // Newtons
+											val launchForce: Long = 1 // Newtons
 ) : Part(),
 		WeaponPart,
 		PoweredPart by PoweredPartImpl(powerConsumption),
-		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.MISSILES, ammunitionSize, reloadTime)
+		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.MISSILES, ammunitionSize, reloadTime) {
+	init {
+		if (launchForce <= 0L) throw InvalidParameterException("launchForce must be greater than 0")
+	}
+}
 
 class TargetingComputer(val maxWeapons: Int,
 												val lockingTime: Int,

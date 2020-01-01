@@ -59,9 +59,10 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			
 			return (-b + FastMath.sqrt(tmp)) / (2 * a)
 		}
+		
+		@JvmStatic
+		val log = LogManager.getLogger(WeaponSystem::class.java)
 	}
-
-	val log = LogManager.getLogger(this.javaClass)
 
 	lateinit private var weaponsComponentMapper: ComponentMapper<WeaponsComponent>
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
@@ -306,19 +307,21 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										
 //											if (beamDivergance is sensible at timeToIntercept) {
 											
-												val (normalisedDirection, timeToIntercept, interceptPosition) = result
+												val (timeToIntercept, aimPosition, interceptPosition, interceptVelocity) = result
 												val galacticTime = timeToIntercept + galaxy.time
 												val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
-												println("laser projectileSpeed ${projectileSpeed} m/s, interceptPosition $interceptPosition, timeToIntercept ${timeToIntercept}s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}, normalisedDirection $normalisedDirection")
+												println("laser projectileSpeed $projectileSpeed m/s, interceptSpeed ${interceptVelocity.len() / 100} m/s, aimPosition $aimPosition, interceptPosition $interceptPosition, timeToIntercept $timeToIntercept s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
 												
+												//TODO fire
+												//TODO heat ship
+											
 //											} else {
 												
 //												log.error("Unable to find effective intercept for laser $part and target ${target.entityID}")
 //											}
 										}
 										
-										//TODO fire
-										//TODO heat ship
+
 									}
 								}
 								is Railgun -> {
@@ -329,27 +332,27 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	
 										val munitionClass = ammoState.type!!
 										
-										val projectileSpeed = (chargedState.charge * part.efficiency) / (100L * munitionClass.getMass())
-										val result = getInterceptionPosition(shipMovement.value, projectileSpeed.toDouble(), targetMovement.value)
+										val projectileSpeed = (chargedState.charge * part.efficiency) / munitionClass.getLoadedMass()
+										val result = getInterceptionPosition(shipMovement.value, projectileSpeed.toDouble() / 100, targetMovement.value)
 										
 										if (result == null) {
 											
-											log.warn("Unable to find intercept for railgun $part and target ${target.entityID}, projectileSpeed $projectileSpeed")
+											log.warn("Unable to find intercept for railgun $part and target ${target.entityID}, projectileSpeed ${projectileSpeed / 100}")
 											
 										} else {
 										
-											val (normalisedDirection, timeToIntercept, interceptPosition) = result
+											val (timeToIntercept, aimPosition, interceptPosition, interceptVelocity) = result
 											val galacticTime = timeToIntercept + galaxy.time
 											val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
 											
-											println("railgun projectileSpeed ${projectileSpeed} m/s, interceptPosition $interceptPosition, timeToIntercept ${timeToIntercept} s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}, normalisedDirection $normalisedDirection")
-										}
-										
-										//TODO fire
+											println("railgun projectileSpeed ${projectileSpeed / 100} m/s, interceptSpeed ${interceptVelocity.len() / 100} m/s, aimPosition $aimPosition, interceptPosition $interceptPosition, timeToIntercept $timeToIntercept s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
+											
+											//TODO fire with PooledComponents
 										//TODO heat ship
 										
 										chargedState.charge = 0
 										ammoState.amount -= 1
+										}
 									}
 								}
 								is MissileLauncher -> {
@@ -363,11 +366,10 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										
 										val munitionClass = ammoState.type!!
 										
-										val targetAcceleration = Vector2D()
 										val missileAcceleration = munitionClass.getAverageAcceleration().toDouble()
-										val missileLaunchSpeed = part.launchForce / munitionClass.getLoadedMass()
+										val missileLaunchSpeed = (100 * part.launchForce) / munitionClass.getLoadedMass()
 										
-										val result = getInterceptionPosition(shipMovement.value, targetMovement.value, targetAcceleration, missileLaunchSpeed.toDouble(), missileAcceleration)
+										val result = getInterceptionPosition(shipMovement.value, targetMovement.value, missileLaunchSpeed.toDouble() / 100, missileAcceleration / 100)
 										
 										if (result == null) {
 											
@@ -375,19 +377,27 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 											
 										} else {
 											
-											val (normalisedDirection, timeToIntercept, interceptPosition) = result
+											val (timeToIntercept, aimPosition, interceptPosition, interceptVelocity) = result
 											
 											val galacticTime = timeToIntercept + galaxy.time
 											val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
-											val impactVelocity = missileLaunchSpeed + missileAcceleration * FastMath.min(timeToIntercept, munitionClass.getThrustTime().toLong())
+											val relativeSpeed = targetMovement.value.velocity.cpy().sub(shipMovement.value.velocity).len() * FastMath.cos(targetMovement.value.velocity.angleToRad(shipMovement.value.velocity))
+											val impactSpeed = relativeSpeed + missileLaunchSpeed + missileAcceleration * FastMath.min(timeToIntercept, munitionClass.getThrustTime().toLong())
 											
-											println("missile missileAcceleration ${missileAcceleration} m/s², impactVelocity ${impactVelocity} m/s, interceptPosition $interceptPosition, thrustTime ${munitionClass.getThrustTime()} s, timeToIntercept ${timeToIntercept} s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}, normalisedDirection $normalisedDirection")
+											println("missile missileAcceleration $missileAcceleration m/s², impactSpeed ${impactSpeed / 100} m/s, interceptSpeed ${interceptVelocity.len() / 100} m/s, aimPosition $aimPosition, interceptPosition $interceptPosition, thrustTime ${munitionClass.getThrustTime()} s, timeToIntercept $timeToIntercept s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
 											
 											if (timeToIntercept <= munitionClass.getThrustTime()) {
 												
-												normalisedDirection.scl(missileLaunchSpeed.toFloat())
+												val angleRadToIntercept = shipMovement.value.position.angleToRad(interceptPosition)
+												val initialVelocity = Vector2L(missileLaunchSpeed, 0).rotateRad(angleRadToIntercept).add(shipMovement.value.velocity)
 												
 												//TODO fire
+												
+//												val angleToPredictedTarget = position.angleTo(interceptPosition)
+//						
+//												movement.previous.time = galaxy.time
+//												movement.setPredictionBallistic(MovementValues(interceptPosition, interceptVelocity, Vector2L.Zero), maxAcceleration, galaxy.time + timeToIntercept)
+//												thrustComponent.thrustAngle = angleToPredictedTarget.toFloat()
 												
 												ammoState.amount -= 1
 												
@@ -407,12 +417,14 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		}
 	}
 	
+	data class InterceptResult(val timeToIntercept: Long, val aimPosition: Vector2L, val interceptPosition: Vector2L, val interceptVelocity: Vector2L)
+	
+	//TODO support increasing acceleration as fuel depletes
 	fun getInterceptionPosition(shooterMovement: MovementValues,
 	                            targetMovement: MovementValues,
-	                            targetAcceleration: Vector2D,
 	                            missileLaunchSpeed: Double,
 	                            missileAcceleration: Double
-	): Triple<Vector2, Long, Vector2L>? {
+	): InterceptResult? { // timeToIntercept, interceptPosition, interceptVelocity
 		
 		/**
 		https://www.gamedev.net/forums/topic/579481-advanced-intercept-equation
@@ -420,13 +432,34 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		https://www.gamedev.net/forums/topic/621460-need-help-with-interception-of-accelerated-target/
 		**/
 		
+		val targetAcceleration = Vector2D(targetMovement.acceleration.x.toDouble(), targetMovement.acceleration.y.toDouble())
 		val relativeVelocity = Vector2D((targetMovement.velocity.x - shooterMovement.velocity.x).toDouble(), (targetMovement.velocity.y - shooterMovement.velocity.y).toDouble())
 		val relativePosition = Vector2D((targetMovement.position.x - shooterMovement.position.x).toDouble(), (targetMovement.position.y - shooterMovement.position.y).toDouble())
 		
+		// The math behind it is this:
+		// (A+B+C)^2 = (A+B+C).(A+B+C) = A.A + B.B + C.C + 2*(A.B + A.C + B.C)
+		
+		// interception possible, when
+		// | (P + V*t + A/2 * t^2) | - (v*t + 1/2 * a * t^2) = 0
+		
+		// (target/left side:)
+		// -> P'(t) = P.P + V.V * t^2 + 1/4 * A.A * t^4 + 2 * P.V * t + 2/2 * P.A * t^2 + 2/2 * V.A * t^3
+		// = P.P + 2 * P.V * t + (V.V + P.A) * t^2 + V.A * t^3 + 1/4 * A.A * t^4
+		
+		// (interceptor/right)
+		// -> v^2 * t^2 + 1/4 * a^2 * t^4 + v*a * t^3
+		
+		// final polynomial:
+		// (1/4 * A.A - 1/4 * a^2) * t^4
+		// (V.A - v*a) * t^3
+		// (V.V + P.A - v^2) * t^2
+		// (2 * P.V) * t^1
+		// (P.P) * t^0
+		
 		val coefs = DoubleArray(5)
-		coefs[4] = targetAcceleration.dot(targetAcceleration) / 4.0 - FastMath.pow(missileAcceleration, 2.0) / 4.0
+		coefs[4] = targetAcceleration.dot(targetAcceleration) / 4.0 - (missileAcceleration * missileAcceleration) / 4.0
 		coefs[3] = relativeVelocity.dot(targetAcceleration) /* / 2.0 */ - missileLaunchSpeed * missileAcceleration
-		coefs[2] = relativePosition.dot(targetAcceleration) + relativeVelocity.dot(relativeVelocity) - FastMath.pow(missileLaunchSpeed, 2.0)
+		coefs[2] = relativePosition.dot(targetAcceleration) + relativeVelocity.dot(relativeVelocity) - (missileLaunchSpeed * missileLaunchSpeed)
 		coefs[1] = 2 * relativePosition.dot(relativeVelocity)
 		coefs[0] = relativePosition.dot(relativePosition)
 		
@@ -448,16 +481,20 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			
 			if (solvedTime != null) {
 				
-				relativeVelocity.scl(solvedTime)
-				targetAcceleration.scl(0.5 * FastMath.pow(solvedTime, 2.0))
+				// RPos + t * RVel + (t^2 * TAccel) / 2
+				relativePosition.set(relativeVelocity).scl(solvedTime).add(targetAcceleration.scl(0.5 * solvedTime * solvedTime))
 				
-				val interceptPosition = shooterMovement.position.cpy()
-				interceptPosition.add(relativeVelocity.x.toLong(), relativeVelocity.y.toLong())
-				interceptPosition.add(targetAcceleration.x.toLong(), targetAcceleration.y.toLong())
+				val aimPosition = targetMovement.position.cpy().sub(shooterMovement.position)
+				aimPosition.add(relativePosition.x.toLong(), relativePosition.y.toLong())
 				
-				val normalisedDirection = Vector2(interceptPosition.x.toFloat(), interceptPosition.y.toFloat()).nor()
+				relativePosition.set(missileLaunchSpeed + missileAcceleration * solvedTime, 0.0).rotateRad(shooterMovement.position.angleToRad(aimPosition))
+				relativeVelocity.add(relativePosition).scl(100.0)
 				
-				return Triple(normalisedDirection, FastMath.ceil(solvedTime).toLong(), interceptPosition)
+				val interceptPosition = targetMovement.acceleration.cpy().scl(0.5 * solvedTime * solvedTime)
+				interceptPosition.mulAdd(targetMovement.velocity, FastMath.round(solvedTime))
+				interceptPosition.div(100).add(targetMovement.position)
+				
+				return InterceptResult(FastMath.ceil(solvedTime).toLong(), aimPosition, interceptPosition, Vector2L(relativeVelocity.x.toLong(), relativeVelocity.y.toLong()))
 			}
 			
 		} catch (e: TooManyEvaluationsException) {
@@ -468,9 +505,12 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	}
 	
 	// https://www.gamedev.net/forums/?topic_id=401165
-	fun getInterceptionPosition(shooterMovement: MovementValues, projectileSpeed: Double, targetMovement: MovementValues): Triple<Vector2, Long, Vector2L>? {
+	fun getInterceptionPosition(shooterMovement: MovementValues,
+	                            projectileSpeed: Double,
+	                            targetMovement: MovementValues
+	): InterceptResult? {
 		
-		val relativeVelocity = Vector2D((targetMovement.velocity.x - shooterMovement.velocity.x).toDouble(), (targetMovement.velocity.y - shooterMovement.velocity.y).toDouble())
+		val relativeVelocity = Vector2D((targetMovement.velocity.x - shooterMovement.velocity.x).toDouble(), (targetMovement.velocity.y - shooterMovement.velocity.y).toDouble()).div(100.0)
 		val relativePosition = targetMovement.position.cpy().sub(shooterMovement.position)
 		
 		val a: Double = projectileSpeed * projectileSpeed - relativeVelocity.dot(relativeVelocity)
@@ -487,12 +527,15 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		
 		relativeVelocity.scl(root)
 		
-		val interceptPosition = relativePosition.set(shooterMovement.position)
-		interceptPosition.add(relativeVelocity.x.toLong(), relativeVelocity.y.toLong())
+		val aimPosition = relativePosition.set(shooterMovement.position)
+		aimPosition.add(relativeVelocity.x.toLong(), relativeVelocity.y.toLong())
 		
-		val normalisedDirection = Vector2(interceptPosition.x.toFloat(), interceptPosition.y.toFloat()).nor()
+		val interceptPosition = targetMovement.velocity.cpy().scl(FastMath.round(root))
+		interceptPosition.div(100).add(targetMovement.position)
 		
-		return Triple(normalisedDirection, FastMath.ceil(root).toLong(), interceptPosition)
+		relativeVelocity.scl(100.0)
+		
+		return InterceptResult(FastMath.ceil(root).toLong(), aimPosition, interceptPosition, Vector2L(relativeVelocity.x.toLong(), relativeVelocity.y.toLong()))
 	}
 	
 	

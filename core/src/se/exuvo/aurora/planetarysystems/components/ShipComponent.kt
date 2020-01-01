@@ -122,9 +122,19 @@ class ShipComponent() : Component() {
 	}
 
 	fun getMass(): Long {
-		var mass = hull.getMass()
+		var mass = hull.getEmptyMass()
 		
-		//TODO add cargo
+		mass += getCargoMass()
+		
+		return mass
+	}
+	
+	fun getCargoMass(): Long {
+		var mass = 0L
+		
+		for((resource, shipCargo) in cargo) {
+			mass += shipCargo.contents[resource]!!
+		}
 		
 		return mass
 	}
@@ -300,7 +310,7 @@ class ShipComponent() : Component() {
 			
 			shipCargo.usedVolume += volumeToBeStored
 			val storedMass = shipCargo.contents[munitionHull.storageType]!!
-			shipCargo.contents[munitionHull.storageType] = storedMass + munitionHull.getMass() * amount
+			shipCargo.contents[munitionHull.storageType] = storedMass + munitionHull.getLoadedMass() * amount
 			
 			var stored = munitionCargo[munitionHull]
 
@@ -366,7 +376,7 @@ class ShipComponent() : Component() {
 		val shipCargo = cargo[munitionHull.storageType]!!
 		val storedMass = shipCargo.contents[munitionHull.storageType]!!
 		
-		shipCargo.contents[munitionHull.storageType] = storedMass - retrievedAmount * munitionHull.getMass()
+		shipCargo.contents[munitionHull.storageType] = storedMass - retrievedAmount * munitionHull.getLoadedMass()
 		shipCargo.usedVolume -= retrievedAmount * munitionHull.getVolume()
 
 		return retrievedAmount

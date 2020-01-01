@@ -88,8 +88,10 @@ import se.exuvo.aurora.planetarysystems.systems.WeaponSystem
 import org.apache.commons.math3.util.FastMath
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
-
-	val log = LogManager.getLogger(this.javaClass)
+	companion object {
+		@JvmStatic
+		val log = LogManager.getLogger(ImGuiScreen::class.java)
+	}
 
 	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
@@ -488,7 +490,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 														}
 														
 														if (hull != null) {
-															sameLineRightAlignedColumnText(Units.massToString(hull.getMass()))
+															sameLineRightAlignedColumnText(Units.massToString(hull.getEmptyMass()))
 															nextColumn()
 															rightAlignedColumnText(Units.volumeToString(hull.getVolume()))
 															nextColumn()
@@ -863,8 +865,6 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 						ImGui.text("Entity ${entity.printID()}")
 						
-						ImGui.sliderScalar("Weapon test range", imgui.DataType.Double, ::weaponTestDistance, 100.0, Units.AU * 1000, Units.distanceToString(weaponTestDistance.toLong()), 8.0f)
-
 						if (ImGui.collapsingHeader("Components", 0)) {
 
 							val components = entity.getComponents(Bag())
@@ -887,6 +887,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 						if (shipComponent != null) {
 
 							if (ImGui.collapsingHeader("Parts", TreeNodeFlag.DefaultOpen.i)) {
+								
+								ImGui.sliderScalar("Weapon test range", imgui.DataType.Double, ::weaponTestDistance, 100.0, Units.AU * 1000, Units.distanceToString(weaponTestDistance.toLong()), 8.0f)
 
 								for (partRef in shipComponent.hull.getPartRefs()) {
 									if (ImGui.treeNode("${partRef.part::class.simpleName} ${partRef.part.name}")) {
@@ -927,6 +929,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 										}
 
 										if (partRef.part is TargetingComputer) {
+											
 											val state = shipComponent.getPartState(partRef)[TargetingComputerState::class]
 											ImGui.text("target ${state.target?.entityID}")
 											ImGui.text("lockCompletionAt ${state.lockCompletionAt}")
@@ -963,7 +966,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 											
 											if (munitionClass != null) {
 											
-												val projectileSpeed = (partRef.part.capacitor * partRef.part.efficiency) / (100L * munitionClass.getMass())
+												val projectileSpeed = (partRef.part.capacitor * partRef.part.efficiency) / (100L * munitionClass.getLoadedMass())
 												val weaponTestDistance = weaponTestDistance.toLong()
 												val timeToIntercept = FastMath.max(1, weaponTestDistance / projectileSpeed)
 												val galacticTime = timeToIntercept + galaxy.time
@@ -986,7 +989,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 												
 												ImGui.text("launchSpeed $missileLaunchSpeed m/s + acceleration ${missileAcceleration} m/s²")
 												
-												val a: Double = missileAcceleration.toDouble()
+												val a: Double = missileAcceleration.toDouble() / 2
 												val b: Double = missileLaunchSpeed.toDouble()
 												val c: Double = -weaponTestDistance
 												

@@ -94,10 +94,49 @@ class ShipHull() {
 	}
 
 	// Kg
-	fun getMass(): Long {
+	fun getEmptyMass(): Long {
 		//TODO add armor
 		return parts.sumByLong { it.getMass() }
 	}
+	
+	fun getLoadedMass(): Long {
+		var mass = getEmptyMass() + getPreferredCargoMass() + getPreferredMunitionMass()
+		
+		mass += parts.sumByLong {
+			if (it is FuelContainerPart) {
+				it.capacity / Resource.ROCKET_FUEL.specificVolume
+				
+			} else if (it is LifeSupportContainerPart) {
+				it.capacity / Resource.LIFE_SUPPORT.specificVolume
+				
+			} else {
+				0L
+			}
+		}
+		
+		return mass
+	}
+	
+	fun getPreferredCargoMass(): Long {
+		var mass = 0L
+		
+		for(amount in preferredCargo.values) {
+			mass += amount
+		}
+		
+		return mass
+	}
+	
+	fun getPreferredMunitionMass(): Long {
+		var mass = 0L
+		
+		for((munitonHull, amount) in preferredMunitions) {
+			mass += amount * munitonHull.getLoadedMass()
+		}
+		
+		return mass
+	}
+	
 	
 	// cm³
 	fun getVolume(): Long {

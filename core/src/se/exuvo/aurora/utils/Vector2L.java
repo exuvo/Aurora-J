@@ -80,6 +80,12 @@ public class Vector2L implements Serializable {
 		y -= v.y;
 		return this;
 	}
+	
+	public Vector2L subDiv(Vector2L v, long divisor) {
+		x -= v.x / divisor;
+		y -= v.y / divisor;
+		return this;
+	}
 
 	/**
 	 * Substracts the other vector from this vector.
@@ -93,10 +99,22 @@ public class Vector2L implements Serializable {
 		this.y -= y;
 		return this;
 	}
+	
+	public Vector2L subDiv(long x, long y, long divisor) {
+		this.x -= x / divisor;
+		this.y -= y / divisor;
+		return this;
+	}
 
 	public Vector2L add(Vector2L v) {
 		x += v.x;
 		y += v.y;
+		return this;
+	}
+	
+	public Vector2L addDiv(Vector2L v, long divisor) {
+		x += v.x / divisor;
+		y += v.y / divisor;
 		return this;
 	}
 
@@ -110,6 +128,12 @@ public class Vector2L implements Serializable {
 	public Vector2L add(long x, long y) {
 		this.x += x;
 		this.y += y;
+		return this;
+	}
+	
+	public Vector2L addDiv(long x, long y, long divisor) {
+		this.x += x / divisor;
+		this.y += y / divisor;
 		return this;
 	}
 
@@ -144,8 +168,8 @@ public class Vector2L implements Serializable {
 	}
 	
 	public Vector2L div(long divider) {
-		x = (divider / 2 + x) / divider;
-		y = (divider / 2 + y) / divider;
+		x = x / divider;
+		y = y / divider;
 		return this;
 	}
 	
@@ -285,12 +309,13 @@ public class Vector2L implements Serializable {
 	}
 	
 	public double angleTo(Vector2L other){
+		return FastMath.toDegrees(angleToRad(other));
+	}
+	
+	public double angleToRad(Vector2L other){
 		long x = other.x - this.x;
 		long y = other.y - this.y;
-		Vector2D tmp = new Vector2D(x, y);
-		tmp.nor();
-		tmp.scl(this.dst(other));
-		return tmp.angle();
+		return FastMath.atan2(y, x);
 	}
 
 	/**

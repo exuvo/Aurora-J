@@ -250,7 +250,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					val nextMovementValues = movement.next!!.value
 					val x2 = (nextMovementValues.getXinKM() - cameraOffset.x).toFloat()
 					val y2 = (nextMovementValues.getYinKM() - cameraOffset.y).toFloat()
-
+					
 					if (strategic) {
 
 						val radius = zoom * STRATEGIC_ICON_SIZE / 2 + 4 * zoom
@@ -277,6 +277,32 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 						shapeRenderer.color = Color.PINK
 						shapeRenderer.circle(x2, y2, radius, segments)
+					}
+					
+					val aimTarget = movement.aimTarget
+					
+					if (aimTarget != null && selectedEntityIDs.contains(entityID)) {
+						
+						val x3 = (((500 + aimTarget.x) / 1000L) - cameraOffset.x).toFloat()
+						val y3 = (((500 + aimTarget.y) / 1000L) - cameraOffset.y).toFloat()
+						
+						shapeRenderer.color = Color.ORANGE
+						
+						if (strategic) {
+	
+							val radius = zoom * STRATEGIC_ICON_SIZE / 3 + 4 * zoom
+							val segments = getCircleSegments(radius, zoom)
+
+							shapeRenderer.circle(x3, y3, radius, segments)
+	
+						} else {
+	
+							val circle = circleMapper.get(entityID)
+							val radius = circle.radius + 2 * zoom
+							val segments = getCircleSegments(radius, zoom)
+	
+							shapeRenderer.circle(x3, y3, radius, segments)
+						}
 					}
 				}
 			}

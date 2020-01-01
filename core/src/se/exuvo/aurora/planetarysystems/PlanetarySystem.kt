@@ -92,11 +92,16 @@ import net.mostlyoriginal.api.event.common.Event
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener, Disposable {
 	companion object {
+		@JvmStatic
 		val planetarySystemIDGenerator = AtomicInteger()
+		
+		@JvmStatic
 		val UUID_ASPECT = Aspect.all(UUIDComponent::class.java)
+		
+		@JvmStatic
+		val log = LogManager.getLogger(PlanetarySystem::class.java)
 	}
 	
-	val log = LogManager.getLogger(this.javaClass)
 	var updateTime = 0L
 
 	private var entityUIDGenerator = 1L
@@ -209,12 +214,12 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		nuclearStorage.cost[Resource.GENERIC] = 100
 		shipHull.addPart(nuclearStorage)
 
-		val ammoStorage = AmmoContainerPart(100000000)
+		val ammoStorage = AmmoContainerPart(200000000)
 		ammoStorage.name = "Munitions Cargo"
 		ammoStorage.cost[Resource.GENERIC] = 100
 		shipHull.addPart(ammoStorage)
 
-		val fuelStorage = FuelContainerPart(10000000)
+		val fuelStorage = FuelContainerPart(400000000)
 		fuelStorage.name = "Fuel Cargo"
 		fuelStorage.cost[Resource.GENERIC] = 100
 		shipHull.addPart(fuelStorage)
@@ -263,10 +268,10 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		val tcRef: PartRef<TargetingComputer> = shipHull[TargetingComputer::class][0]
 		shipHull.defaultWeaponAssignments[tcRef] = shipHull.getPartRefs().filter({ it.part is WeaponPart })
 
-		val ionThruster = ElectricalThruster(10 * 982, 1 * Units.MEGA)
+		val ionThruster = ElectricalThruster(2000 * 982, 1 * Units.MEGA)
 		shipHull.addPart(ionThruster)
 
-		val chemicalThruster = FueledThruster(100 * 982, 1)
+		val chemicalThruster = FueledThruster(10000 * 982, 1)
 		shipHull.addPart(chemicalThruster)
 		
 		shipHull.preferredCargo[Resource.NUCLEAR_FISSION] = 100
@@ -284,7 +289,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		}
 
 		val entity1 = createEntity(Empire.GAIA)
-		timedMovementMapper.create(entity1).set(0, 0, 0, 0, 0)
+		timedMovementMapper.create(entity1).set(0, 0, 0, 0, 0, 0, 0)
 		renderMapper.create(entity1)
 		circleMapper.create(entity1).set(radius = 695700f)
 		massMapper.create(entity1).set(mass = 1.988e30)
@@ -350,8 +355,8 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		emissionsMapper.create(entity4).set(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10))
 		
 		val shipComponent = shipMapper.create(entity4).set(shipHull, galaxy.time)
-		shipComponent.addCargo(Resource.NUCLEAR_FISSION, 100)
-		shipComponent.addCargo(Resource.ROCKET_FUEL, 10000)
+		shipComponent.addCargo(Resource.NUCLEAR_FISSION, nuclearStorage.capacity / Resource.NUCLEAR_FISSION.specificVolume)
+		shipComponent.addCargo(Resource.ROCKET_FUEL, fuelStorage.capacity / Resource.ROCKET_FUEL.specificVolume)
 
 		if (!shipComponent.addCargo(sabot, 10)) {
 			println("Failed to add sabots")
@@ -387,7 +392,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 			val colonyMovement = timedMovementMapper.get(colonyEntity)
 			val colonyPos = colonyMovement.get(galaxy.time)
 			
-			shipMovement.set(colonyPos.value.position, shipMovement.previous.value.velocity, galaxy.time)
+			shipMovement.set(colonyPos.value.position, shipMovement.previous.value.velocity, Vector2L.Zero, galaxy.time)
 			
 			hull.preferredCargo.forEach{ resource, amount ->
 				shipComponent.addCargo(resource, colony.retrieveCargo(resource, amount))

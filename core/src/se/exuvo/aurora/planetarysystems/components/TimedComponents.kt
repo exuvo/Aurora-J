@@ -4,6 +4,7 @@ import com.artemis.Component
 import com.badlogic.gdx.math.Vector2
 import se.exuvo.aurora.utils.Vector2L
 import java.lang.RuntimeException
+import org.apache.commons.math3.util.FastMath
 
 data class TimedValue<T>(val value: T, var time: Long) {
 }
@@ -53,7 +54,7 @@ abstract class InterpolatedComponent<T>(initial: TimedValue<T>) : TimedComponent
 	open fun setPrediction(value: T, time: Long): Boolean {
 
 		if (previous.time >= time) {
-			next = null
+			next = null // why?
 			return false
 		}
 
@@ -67,7 +68,6 @@ abstract class InterpolatedComponent<T>(initial: TimedValue<T>) : TimedComponent
 
 			setValue(next2, value)
 			next2.time = time
-			next = next2
 		}
 
 		return true
@@ -98,8 +98,8 @@ abstract class InterpolatedComponent<T>(initial: TimedValue<T>) : TimedComponent
 	}
 }
 
-// In m
-data class MovementValues(val position: Vector2L, val velocity: Vector2L) {
+// In m, cm/s, cm/s²
+data class MovementValues(val position: Vector2L, val velocity: Vector2L, val acceleration: Vector2L) {
 	fun getXinKM(): Long {
 		return (500 + position.x) / 1000L
 	}
@@ -109,17 +109,19 @@ data class MovementValues(val position: Vector2L, val velocity: Vector2L) {
 	}
 }
 
-class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValue(MovementValues(Vector2L(), Vector2L()), 0L)) {
+class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValue(MovementValues(Vector2L(), Vector2L(), Vector2L()), 0L)) {
 	var approach: ApproachType? = null
 	var startAcceleration: Long? = null
 	var finalAcceleration: Long? = null
+	var aimTarget: Vector2L? = null
 
 	override protected fun setValue(timedValue: TimedValue<MovementValues>, newValue: MovementValues) {
 		timedValue.value.position.set(newValue.position)
 		timedValue.value.velocity.set(newValue.velocity)
+		timedValue.value.acceleration.set(newValue.acceleration)
 	}
 	
-	fun set(x: Long, y: Long, vx: Long, vy: Long, time: Long): TimedMovementComponent {
+	fun set(x: Long, y: Long, vx: Long, vy: Long, ax: Long, ay: Long, time: Long): TimedMovementComponent {
 
 		if (previous.time > time) {
 			return this
@@ -133,11 +135,12 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 
 		previous.value.position.set(x, y)
 		previous.value.velocity.set(vx, vy)
+		previous.value.acceleration.set(ax, ay)
 		previous.time = time
 		return this
 	}
 	
-	fun set(position: Vector2L, velocity: Vector2L, time: Long): TimedMovementComponent {
+	fun set(position: Vector2L, velocity: Vector2L, acceleration: Vector2L, time: Long): TimedMovementComponent {
 
 		if (previous.time > time) {
 			return this
@@ -151,6 +154,7 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 
 		previous.value.position.set(position)
 		previous.value.velocity.set(velocity)
+		previous.value.acceleration.set(acceleration)
 		previous.time = time
 		
 		return this
@@ -168,12 +172,12 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 		return updated
 	}
 
-	fun setPredictionBrachistocrone(value: MovementValues, startAcceleration: Long, finalAcceleration: Long, time: Long): Boolean {
+	fun setPredictionBrachistocrone(value: MovementValues, startAcceleration: Long, time: Long): Boolean {
 
 		if (setPrediction(value, time)) {
 			approach = ApproachType.BRACHISTOCHRONE;
 			this.startAcceleration = startAcceleration
-			this.finalAcceleration = finalAcceleration
+			this.finalAcceleration = value.acceleration.len().toLong()
 			return true
 		}
 
@@ -181,12 +185,13 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 	}
 
 	// Only works with static targets and initial velocity in the target direction
-	fun setPredictionBallistic(value: MovementValues, startAcceleration: Long, finalAcceleration: Long, time: Long): Boolean {
+	fun setPredictionBallistic(value: MovementValues, aimTarget: Vector2L, startAcceleration: Long, time: Long): Boolean {
 
 		if (setPrediction(value, time)) {
 			approach = ApproachType.BALLISTIC;
 			this.startAcceleration = startAcceleration
-			this.finalAcceleration = finalAcceleration
+			this.finalAcceleration = value.acceleration.len().toLong()
+			this.aimTarget = aimTarget
 			return true
 		}
 
@@ -198,24 +203,26 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 		var interpolated = this.interpolated
 
 		if (interpolated == null) {
-			interpolated = TimedValue(MovementValues(Vector2L(), Vector2L()), time)
+			interpolated = TimedValue(MovementValues(Vector2L(), Vector2L(), Vector2L()), time)
 			this.interpolated = interpolated
 		}
 
 		val startPosition = previous.value.position
-		val endPosition = next!!.value.position
+//		val endPosition = next!!.value.position
+		val aimPosition = aimTarget!!
 		val startTime = previous.time
 		val endTime = next!!.time
 		val startVelocity = previous.value.velocity
-		val finalVelocity = next!!.value.velocity
+//		val finalVelocity = next!!.value.velocity
 		val startAcceleration = startAcceleration!!
 		val finalAcceleration = finalAcceleration!!
 
 		val position = interpolated.value.position
 		val velocity = interpolated.value.velocity
+		val acceleration = interpolated.value.acceleration
 
-		position.set(startPosition).sub(endPosition)
-		val totalDistance = position.len()
+//		position.set(startPosition).sub(endPosition)
+//		val totalDistance = position.len()
 		val travelTime = endTime - startTime
 		val traveledTime = time - startTime
 
@@ -225,19 +232,30 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 
 		when (approach) {
 			ApproachType.BALLISTIC -> {
-				val acceleration = startAcceleration + (finalAcceleration - startAcceleration) * (traveledTime / travelTime)
-				var distanceTraveled = startVelocity.len() * traveledTime + 0.5 * acceleration * traveledTime * traveledTime
+				
+				val averageAcceleration = (startAcceleration + finalAcceleration) / 2
+				
+				//TODO does not work well
+				position.set(startVelocity).scl(traveledTime)
+				
+				var distanceTraveled = (averageAcceleration * traveledTime * traveledTime) / 2
+				
+				val angle = startPosition.angleToRad(aimPosition)
 
-				position.set(startPosition).sub(endPosition)
-				val angle = position.angleRad() + Math.PI
+				val x = distanceTraveled * FastMath.cos(angle)
+				val y = distanceTraveled * FastMath.sin(angle)
+				
+				position.add(x.toLong(), y.toLong())
+				
+				position.div(100).add(startPosition)
 
-				position.set(distanceTraveled.toLong(), 0).rotateRad(angle)
-				position.add(startPosition)
-
-				velocity.set(acceleration * traveledTime, 0).rotateRad(angle).add(startVelocity)
+				velocity.set(averageAcceleration * traveledTime, 0).rotateRad(angle).add(startVelocity)
+				
+				acceleration.set(averageAcceleration, 0).rotateRad(angle)
 			}
 			ApproachType.BRACHISTOCHRONE -> {
 				//TODO implement
+				println("BRACHISTOCHRONE approach not implemented")
 			}
 			else -> {
 				throw RuntimeException("Unknown approach type: " + approach)

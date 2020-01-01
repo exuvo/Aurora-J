@@ -55,7 +55,7 @@ class MunitionHull(val storageType: Resource) {
 			return 0f
 		}
 		
-		return thrust / getMass()
+		return thrust / getEmptyMass()
 	}
 	
 	fun getAverageAcceleration(): Float {
@@ -72,7 +72,7 @@ class MunitionHull(val storageType: Resource) {
 			return 0f
 		}
 		
-		return thrust / (getMass() + getFuelMass() / 2)
+		return thrust / (getEmptyMass() + getFuelMass() / 2)
 	}
 	
 	fun getThrustTime(): Int {
@@ -87,15 +87,22 @@ class MunitionHull(val storageType: Resource) {
 	}
 	
 	// Kg
-	fun getMass(): Long {
+	fun getEmptyMass(): Long {
 		//TODO add armor
 		return parts.sumByLong { it.getMass() }
 	}
 	
 	fun getFuelMass(): Long {
 		return parts.sumByLong {
-			if (it is ContainerPart) {
-				it.capacity.toLong()
+			if (it is FuelContainerPart) {
+				it.capacity / Resource.ROCKET_FUEL.specificVolume
+				
+			} else if (it is LifeSupportContainerPart) {
+				it.capacity / Resource.LIFE_SUPPORT.specificVolume
+				
+			} else if (it is NuclearContainerPart) {
+				it.capacity / Resource.NUCLEAR_FISSION.specificVolume
+				
 			} else {
 				0
 			}
@@ -103,7 +110,7 @@ class MunitionHull(val storageType: Resource) {
 	}
 	
 	fun getLoadedMass(): Long {
-		return getMass() + getFuelMass()
+		return getEmptyMass() + getFuelMass()
 	}
 
 	// cm³

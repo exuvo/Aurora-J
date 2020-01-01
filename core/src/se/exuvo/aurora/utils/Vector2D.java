@@ -175,6 +175,11 @@ public class Vector2D implements Serializable {
 		this.y *= v.y;
 		return this;
 	}
+	
+	public Vector2D div(double divider) {
+		scl(1.0 / divider);
+		return this;
+	}
 
 	public Vector2D mulAdd(Vector2D vec, double scalar) {
 		this.x += vec.x * scalar;
