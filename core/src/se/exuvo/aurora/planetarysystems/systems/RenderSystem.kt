@@ -45,12 +45,14 @@ import se.exuvo.aurora.planetarysystems.components.LaserShotComponent
 import se.exuvo.aurora.planetarysystems.components.RailgunShotComponent
 import com.artemis.EntitySubscription
 import org.apache.commons.math3.util.FastMath
+import se.exuvo.aurora.planetarysystems.components.MissileComponent
 
 class RenderSystem : IteratingSystem(FAMILY) {
 	companion object {
 		val FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, CircleComponent::class.java)
 		val LASER_SHOT_FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, LaserShotComponent::class.java)
 		val RAILGUN_SHOT_FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, RailgunShotComponent::class.java)
+		val MISSILE_FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, MissileComponent::class.java)
 		
 		const val STRATEGIC_ICON_SIZE = 24f
 
@@ -74,6 +76,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	lateinit private var weaponsComponentMapper: ComponentMapper<WeaponsComponent>
 	lateinit private var laserShotMapper: ComponentMapper<LaserShotComponent>
 	lateinit private var railgunShotMapper: ComponentMapper<RailgunShotComponent>
+	lateinit private var missileMapper: ComponentMapper<MissileComponent>
 
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	private val galaxy = GameServices[Galaxy::class]
@@ -88,6 +91,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	lateinit private var familyAspect: Aspect
 	lateinit private var laserShotSubscription: EntitySubscription
 	lateinit private var railgunShotSubscription: EntitySubscription
+	lateinit private var missileSubscription: EntitySubscription
 
 	override fun initialize() {
 		super.initialize()
@@ -96,6 +100,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		
 		laserShotSubscription = world.getAspectSubscriptionManager().get(LASER_SHOT_FAMILY)
 		railgunShotSubscription = world.getAspectSubscriptionManager().get(RAILGUN_SHOT_FAMILY)
+		missileSubscription  = world.getAspectSubscriptionManager().get(MISSILE_FAMILY)
 	}
 
 	override fun checkProcessing() = false
@@ -158,13 +163,11 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val zoom = (viewport.camera as OrthographicCamera).zoom
 
-		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-
-		shapeRenderer.color = Color.RED
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+		shapeRenderer.color = Color.BLUE
+		
 		laserShotSubscription.getEntities().forEachFast { entityID ->
 
-			println("draw laser $entityID")
-			
 			val movement = movementMapper.get(entityID).get(galaxy.time).value
 			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
 			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
@@ -175,30 +178,97 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			val velocityAngle = movement.velocity.angle()
 			
 			if (velocityAngle >= 45 && velocityAngle < 135) {
-				y2 -= 1
+				y2 -= 10 * zoom
 			} else if (velocityAngle >= 135 && velocityAngle < 225) {
-				x2 -= 1
+				x2 -= 10 * zoom
 			} else if (velocityAngle >= 225 && velocityAngle < 315) {
-				y2 += 1
+				y2 += 10 * zoom
 			} else if (velocityAngle >= 315 || velocityAngle < 45) {
-				x2 += 1
+				x2 += 10 * zoom
 			}
 			
 			shapeRenderer.line(x, y, x2, y2)
 		}
 		
+		shapeRenderer.end()
+		
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Point)
 		shapeRenderer.color = Color.GRAY
+		
 		railgunShotSubscription.getEntities().forEachFast { entityID ->
 			
-			println("draw railgun $entityID")
-
 			val movement = movementMapper.get(entityID).get(galaxy.time).value
 			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
 			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
-
-			shapeRenderer.line(x, y, x, y)
+			
+			shapeRenderer.point(x, y, 0f)
+		}
+		
+		shapeRenderer.color = Color.WHITE
+		
+		missileSubscription.getEntities().forEachFast { entityID ->
+			
+			val movement = movementMapper.get(entityID).get(galaxy.time).value
+			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
+			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
+			
+			shapeRenderer.point(x, y, 0f)
 		}
 
+		shapeRenderer.end()
+		
+		// Draw intercept position
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+
+		shapeRenderer.color = Color.RED
+		laserShotSubscription.getEntities().forEachFast { entityID ->
+
+			val movement = movementMapper.get(entityID).next
+			
+			if (movement != null) {
+			
+				val x = (((500 + movement.value.position.x) / 1000L) - cameraOffset.x).toFloat()
+				val y = (((500 + movement.value.position.y) / 1000L) - cameraOffset.y).toFloat()
+				
+				val radius = zoom * STRATEGIC_ICON_SIZE / 3 + 4 * zoom
+				val segments = getCircleSegments(radius, zoom)
+
+				shapeRenderer.circle(x, y, radius, segments)
+			}
+		}
+		
+		railgunShotSubscription.getEntities().forEachFast { entityID ->
+			
+			val movement = movementMapper.get(entityID).next
+			
+			if (movement != null) {
+			
+				val x = (((500 + movement.value.position.x) / 1000L) - cameraOffset.x).toFloat()
+				val y = (((500 + movement.value.position.y) / 1000L) - cameraOffset.y).toFloat()
+				
+				val radius = zoom * STRATEGIC_ICON_SIZE / 3 + 4 * zoom
+				val segments = getCircleSegments(radius, zoom)
+
+				shapeRenderer.circle(x, y, radius, segments)
+			}
+		}
+		
+		missileSubscription.getEntities().forEachFast { entityID ->
+			
+			val movement = movementMapper.get(entityID).next
+			
+			if (movement != null) {
+			
+				val x = (((500 + movement.value.position.x) / 1000L) - cameraOffset.x).toFloat()
+				val y = (((500 + movement.value.position.y) / 1000L) - cameraOffset.y).toFloat()
+				
+				val radius = zoom * STRATEGIC_ICON_SIZE / 3 + 4 * zoom
+				val segments = getCircleSegments(radius, zoom)
+
+				shapeRenderer.circle(x, y, radius, segments)
+			}
+		}
+		
 		shapeRenderer.end()
 	}
 
@@ -810,7 +880,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		val uiCamera = AuroraGame.currentWindow.screenService.uiCamera
 		
 		val entityIDs = subscription.getEntities()
-		val selectedEntityIDs = galaxyGroupSystem.get(GroupSystem.SELECTED).filter { familyAspect.isInterested(it) }.map { it.id }
+		val selectedEntityIDs = galaxyGroupSystem.get(GroupSystem.SELECTED).filter { it.system == planetarySystem && familyAspect.isInterested(world.getEntity(it.entityID)) }.map { it.entityID }
 
 		viewport.apply()
 		shapeRenderer.projectionMatrix = viewport.camera.combined

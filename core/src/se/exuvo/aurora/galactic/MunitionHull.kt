@@ -25,6 +25,17 @@ abstract class MunitionHull(val storageType: Resource) {
 	abstract fun getRadius(): Int // cm
 	abstract fun getLoadedMass(): Long // kg
 	abstract fun getVolume(): Long // cm³
+	
+	override fun toString() = name
+	
+	private val hashcode: Int by lazy (LazyThreadSafetyMode.NONE) {
+		var hash = 1;
+		hash = 37 * hash + name.hashCode()
+		hash = 37 * hash + designDay
+		hash
+	}
+
+	override fun hashCode(): Int = hashcode
 }
 
 class SimpleMunitionHull(storageType: Resource): MunitionHull(storageType) {
@@ -77,9 +88,9 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 		partRefs.removeAt(index)
 	}
 	
-	fun getMaxAcceleration(): Float {
+	fun getThrust(): Long {
 		
-		var thrust = 0f
+		var thrust = 0L
 		
 		parts.forEachFast{ part ->
 			if (part is ThrustingPart) {
@@ -87,29 +98,14 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 			}
 		}
 		
-		if (thrust == 0f) {
-			return 0f
-		}
-		
-		return thrust / getEmptyMass()
+		return thrust
 	}
 	
-	fun getAverageAcceleration(): Float {
-		
-		var thrust = 0f
-		
-		parts.forEachFast{ part ->
-			if (part is ThrustingPart) {
-				thrust += part.thrust
-			}
-		}
-		
-		if (thrust == 0f) {
-			return 0f
-		}
-		
-		return thrust / (getEmptyMass() + getFuelMass() / 2)
-	}
+	fun getMaxAcceleration(): Long = getThrust() / getEmptyMass()
+	
+	fun getAverageAcceleration(): Long = getThrust() / (getEmptyMass() + getFuelMass() / 2)
+	
+	fun getMinAcceleration(): Long = getThrust() / (getEmptyMass() + getFuelMass())
 	
 	fun getThrustTime(): Int {
 		val fuel = getFuelMass()
@@ -181,16 +177,4 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 		//TODO add armor
 		return surface.toInt()
 	}
-	
-	override fun toString() = name
-	
-	private val hashcode: Int by lazy (LazyThreadSafetyMode.NONE) {
-		var hash = 1;
-		hash = 37 * hash + name.hashCode()
-		hash = 37 * hash + designDay
-		hash = 37 * hash + armorLayers
-		hash
-	}
-
-	override fun hashCode(): Int = hashcode
 }

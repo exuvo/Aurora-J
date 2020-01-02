@@ -58,8 +58,9 @@ class RailgunShotComponent() : PooledComponent() {
 	override fun reset(): Unit {}
 }
 
-class MunitionComponent() : PooledComponent() {
+class MissileComponent() : PooledComponent() {
 	lateinit var hull: AdvancedMunitionHull
+	var targetEntityID: Int = -1
 	var health: Short = -1
 	var damage: Int = 0
 	lateinit var damagePattern: DamagePattern
@@ -68,9 +69,15 @@ class MunitionComponent() : PooledComponent() {
 	lateinit var partState: Array<PartState>
 	var mass: Long = 0
 
-	fun set(munitionHull: AdvancedMunitionHull
+	fun set(munitionHull: AdvancedMunitionHull,
+					targetEntityID: Int
 	) {
 		this.hull = munitionHull
+		this.targetEntityID = targetEntityID
+		
+		//TODO get from parts
+		damagePattern = DamagePattern.EXPLOSIVE
+		damage = 1
 		
 		armor = Array<ShortArray>(hull.armorLayers, { ShortArray(hull.getSurfaceArea() / 1000000, { hull.armorBlockHP }) }) // 1 armor block per m2
 		partEnabled = Array<Boolean>(hull.getParts().size, { true })

@@ -31,7 +31,8 @@ class ThrustComponent() : PooledComponent() {
 
 enum class ApproachType {
 	BRACHISTOCHRONE, // Arrive at target using a Brachistochrone trajectory
-	BALLISTIC // Arrive at target as quickly as possible
+	BALLISTIC, // Arrive at target as quickly as possible
+	COAST
 }
 
 class MoveToEntityComponent() : PooledComponent() {

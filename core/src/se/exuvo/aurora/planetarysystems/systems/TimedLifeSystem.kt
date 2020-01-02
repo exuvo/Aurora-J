@@ -26,7 +26,7 @@ class TimedLifeSystem : IteratingSystem(ASPECT) {
 	override fun process(entityID: Int) {
 		val timedLife = timedLifeMapper.get(entityID)
 
-		if (timedLife.endTime >= galaxy.time) {
+		if (galaxy.time >= timedLife.endTime) {
 			planetarySystem.destroyEntity(entityID)
 		}
 	}

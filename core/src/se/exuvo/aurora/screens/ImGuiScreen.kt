@@ -89,6 +89,8 @@ import se.exuvo.aurora.planetarysystems.systems.WeaponSystem
 import org.apache.commons.math3.util.FastMath
 import se.exuvo.aurora.galactic.AdvancedMunitionHull
 import se.exuvo.aurora.galactic.SimpleMunitionHull
+import com.artemis.annotations.Wire
+import se.exuvo.aurora.planetarysystems.PlanetarySystem
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	companion object {
@@ -98,6 +100,9 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
+	
+	@Wire
+	lateinit private var planetarySystem: PlanetarySystem
 
 	override val overlay = true
 	private val ctx: Context
@@ -841,6 +846,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	var addResource = Resource.NUCLEAR_FISSION
 	var addResourceAmount = 0
 	var weaponTestDistance = 1000000.0
+	var selectionIndex = 0
 	
 	private fun shipDebug() {
 
@@ -854,335 +860,347 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 					ImGui.text("Nothing selected")
 
 				} else {
+					
+					if (selectionIndex > selectedEntities.size() - 1) {
+						selectionIndex = 0
+					}
+					
+					ImGui.sliderScalar("Selection", imgui.DataType.Int, ::selectionIndex, 0, selectedEntities.size() - 1, "${1 + selectionIndex} / ${selectedEntities.size()}", 2.0f)
 
-					val entity = selectedEntities.first()
-					val system = galaxy.getPlanetarySystemByEntity(entity)
-
-					val shipMapper = ComponentMapper.getFor(ShipComponent::class.java, entity.world)
-					val powerMapper = ComponentMapper.getFor(PowerComponent::class.java, entity.world)
-					val irradianceMapper = ComponentMapper.getFor(SolarIrradianceComponent::class.java, entity.world)
-
-					system.lock.read {
-
-						val shipComponent = shipMapper.get(entity)
-
-						ImGui.text("Entity ${entity.printID()}")
+					val entityRef = galaxy.resolveEntityReference(selectedEntities[selectionIndex])
+					
+					if (entityRef != null) {
 						
-						if (ImGui.collapsingHeader("Components", 0)) {
-
-							val components = entity.getComponents(Bag())
+						val system = entityRef.system
+	
+						val shipMapper = ComponentMapper.getFor(ShipComponent::class.java, system.world)
+						val powerMapper = ComponentMapper.getFor(PowerComponent::class.java, system.world)
+						val irradianceMapper = ComponentMapper.getFor(SolarIrradianceComponent::class.java, system.world)
+	
+						system.lock.read {
+	
+							val shipComponent = shipMapper.get(entityRef.entityID)
 							
-							components.forEachFast{ component ->
-
-								if (ImGui.treeNode("${component::class.java.simpleName}")) {
-
-									val fields = ReflectionUtils.getFields(component::class.java)
-									
-									fields.forEachFast{ field ->
-										ReflectionUtils.fixFieldAccess(field)
-										ImGui.text("${field.name}: ${field.get(component)}")
+							val entity = system.world.getEntity(entityRef.entityID)
+	
+							ImGui.text("Entity ${entity.printID()}")
+							
+							if (ImGui.collapsingHeader("Components", 0)) {
+	
+								val components = entity.getComponents(Bag())
+								
+								components.forEachFast{ component ->
+	
+									if (ImGui.treeNode("${component::class.java.simpleName}")) {
+	
+										val fields = ReflectionUtils.getFields(component::class.java)
+										
+										fields.forEachFast{ field ->
+											ReflectionUtils.fixFieldAccess(field)
+											ImGui.text("${field.name}: ${field.get(component)}")
+										}
+	
+										ImGui.treePop()
 									}
-
-									ImGui.treePop()
 								}
 							}
-						}
-
-						if (shipComponent != null) {
-
-							if (ImGui.collapsingHeader("Parts", TreeNodeFlag.DefaultOpen.i)) {
-								
-								ImGui.sliderScalar("Weapon test range", imgui.DataType.Double, ::weaponTestDistance, 100.0, Units.AU * 1000, Units.distanceToString(weaponTestDistance.toLong()), 8.0f)
-
-								shipComponent.hull.getPartRefs().forEachFast{ partRef ->
-									if (ImGui.treeNode("${partRef.part::class.simpleName} ${partRef.part.name}")) {
-
-										if (partRef.part is PoweringPart) {
-											val state = shipComponent.getPartState(partRef)[PoweringPartState::class]
-											ImGui.text("availiablePower ${Units.powerToString(state.availiablePower)}")
-											ImGui.text("producedPower ${Units.powerToString(state.producedPower)}")
-										}
-
-										if (partRef.part is PoweredPart) {
-											val state = shipComponent.getPartState(partRef)[PoweredPartState::class]
-											ImGui.text("requestedPower ${Units.powerToString(state.requestedPower)}")
-											ImGui.text("givenPower ${Units.powerToString(state.givenPower)}")
-										}
-
-										if (partRef.part is ChargedPart) {
-											val state = shipComponent.getPartState(partRef)[ChargedPartState::class]
-											ImGui.text("charge ${Units.powerToString(state.charge)}")
-										}
-
-										if (partRef.part is PassiveSensor) {
-											val state = shipComponent.getPartState(partRef)[PassiveSensorState::class]
-											ImGui.text("lastScan ${state.lastScan}")
-										}
-
-										if (partRef.part is AmmunitionPart) {
-											val state = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
-											ImGui.text("type ${state.type?.name}")
-											ImGui.text("amount ${state.amount}/${partRef.part.ammunitionAmount}")
-											ImGui.text("reloadPowerRemaining ${Units.powerToString(state.reloadPowerRemaining)}")
-										}
-
-										if (partRef.part is FueledPart) {
-											val state = shipComponent.getPartState(partRef)[FueledPartState::class]
-											ImGui.text("fuelEnergyRemaining ${state.fuelEnergyRemaining}")
-											ImGui.text("totalFuelEnergyRemaining ${state.totalFuelEnergyRemaining}")
-										}
-
-										if (partRef.part is TargetingComputer) {
-											
-											val state = shipComponent.getPartState(partRef)[TargetingComputerState::class]
-											ImGui.text("target ${state.target?.entityID}")
-											ImGui.text("lockCompletionAt ${state.lockCompletionAt}")
-											
-											if (ImGui.treeNode("linkedWeapons ${state.linkedWeapons.size}")) {
-												for(linked in state.linkedWeapons) {
-													ImGui.text("$linked")
-												}
-												ImGui.treePop()
+	
+							if (shipComponent != null) {
+	
+								if (ImGui.collapsingHeader("Parts", TreeNodeFlag.DefaultOpen.i)) {
+									
+									ImGui.sliderScalar("Weapon test range", imgui.DataType.Double, ::weaponTestDistance, 100.0, Units.AU * 1000, Units.distanceToString(weaponTestDistance.toLong()), 8.0f)
+	
+									shipComponent.hull.getPartRefs().forEachFast{ partRef ->
+										if (ImGui.treeNode("${partRef.part::class.simpleName} ${partRef.part.name}")) {
+	
+											if (partRef.part is PoweringPart) {
+												val state = shipComponent.getPartState(partRef)[PoweringPartState::class]
+												ImGui.text("availiablePower ${Units.powerToString(state.availiablePower)}")
+												ImGui.text("producedPower ${Units.powerToString(state.producedPower)}")
 											}
-											
-										} else if (partRef.part is BeamWeapon) {
-											
-											val weaponTestDistanceL = weaponTestDistance.toLong()
-											
-											ImGui.text("radialDivergence ${partRef.part.getRadialDivergence() * 1000} mrad")
-											ImGui.text("beamRadiusAtDistance ${partRef.part.getBeamRadiusAtDistance(weaponTestDistanceL)} m")
-											ImGui.text("beamArea ${partRef.part.getBeamArea(weaponTestDistanceL)} m²")
-											ImGui.text("deliveredEnergyTo1MSquareAtDistance ${Units.powerToString(partRef.part.getDeliveredEnergyTo1MSquareAtDistance(weaponTestDistanceL))}")
-											
-											val projectileSpeed = Units.C * 1000
-											val timeToIntercept = FastMath.ceil(weaponTestDistance / projectileSpeed).toLong()
-											val galacticTime = timeToIntercept + galaxy.time
-											val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
-											
-											ImGui.text("projectileSpeed $projectileSpeed m/s")
-											ImGui.text("timeToIntercept ${timeToIntercept} s, at ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
-											
-										} else if (partRef.part is Railgun) {
-											
-											val ammoState = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
-											
-											val munitionClass = ammoState.type as? SimpleMunitionHull
-											
-											if (munitionClass != null) {
-											
-												val projectileSpeed = (partRef.part.capacitor * partRef.part.efficiency) / (100L * munitionClass.getLoadedMass())
-												val weaponTestDistance = weaponTestDistance.toLong()
-												val timeToIntercept = FastMath.max(1, weaponTestDistance / projectileSpeed)
+	
+											if (partRef.part is PoweredPart) {
+												val state = shipComponent.getPartState(partRef)[PoweredPartState::class]
+												ImGui.text("requestedPower ${Units.powerToString(state.requestedPower)}")
+												ImGui.text("givenPower ${Units.powerToString(state.givenPower)}")
+											}
+	
+											if (partRef.part is ChargedPart) {
+												val state = shipComponent.getPartState(partRef)[ChargedPartState::class]
+												ImGui.text("charge ${Units.powerToString(state.charge)}")
+											}
+	
+											if (partRef.part is PassiveSensor) {
+												val state = shipComponent.getPartState(partRef)[PassiveSensorState::class]
+												ImGui.text("lastScan ${state.lastScan}")
+											}
+	
+											if (partRef.part is AmmunitionPart) {
+												val state = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
+												ImGui.text("type ${state.type?.name}")
+												ImGui.text("amount ${state.amount}/${partRef.part.ammunitionAmount}")
+												ImGui.text("reloadPowerRemaining ${Units.powerToString(state.reloadPowerRemaining)}")
+											}
+	
+											if (partRef.part is FueledPart) {
+												val state = shipComponent.getPartState(partRef)[FueledPartState::class]
+												ImGui.text("fuelEnergyRemaining ${state.fuelEnergyRemaining}")
+												ImGui.text("totalFuelEnergyRemaining ${state.totalFuelEnergyRemaining}")
+											}
+	
+											if (partRef.part is TargetingComputer) {
+												
+												val state = shipComponent.getPartState(partRef)[TargetingComputerState::class]
+												ImGui.text("target ${state.target?.entityID}")
+												ImGui.text("lockCompletionAt ${state.lockCompletionAt}")
+												
+												if (ImGui.treeNode("linkedWeapons ${state.linkedWeapons.size}")) {
+													for(linked in state.linkedWeapons) {
+														ImGui.text("$linked")
+													}
+													ImGui.treePop()
+												}
+												
+											} else if (partRef.part is BeamWeapon) {
+												
+												val weaponTestDistanceL = weaponTestDistance.toLong()
+												
+												ImGui.text("radialDivergence ${partRef.part.getRadialDivergence() * 1000} mrad")
+												ImGui.text("beamRadiusAtDistance ${partRef.part.getBeamRadiusAtDistance(weaponTestDistanceL)} m")
+												ImGui.text("beamArea ${partRef.part.getBeamArea(weaponTestDistanceL)} m²")
+												ImGui.text("deliveredEnergyTo1MSquareAtDistance ${Units.powerToString(partRef.part.getDeliveredEnergyTo1MSquareAtDistance(weaponTestDistanceL))}")
+												
+												val projectileSpeed = Units.C * 1000
+												val timeToIntercept = FastMath.ceil(weaponTestDistance / projectileSpeed).toLong()
 												val galacticTime = timeToIntercept + galaxy.time
 												val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
 												
 												ImGui.text("projectileSpeed $projectileSpeed m/s")
 												ImGui.text("timeToIntercept ${timeToIntercept} s, at ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
-											}
-											
-										} else if (partRef.part is MissileLauncher) {
-											
-											val ammoState = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
-											
-											val munitionClass = ammoState.type as? AdvancedMunitionHull
-											
-											if (munitionClass != null) {
 												
-												val missileAcceleration = munitionClass.getAverageAcceleration()
-												val missileLaunchSpeed = partRef.part.launchForce / munitionClass.getLoadedMass()
+											} else if (partRef.part is Railgun) {
 												
-												ImGui.text("launchSpeed $missileLaunchSpeed m/s + acceleration ${missileAcceleration} m/s²")
+												val ammoState = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
 												
-												val a: Double = missileAcceleration.toDouble() / 2
-												val b: Double = missileLaunchSpeed.toDouble()
-												val c: Double = -weaponTestDistance
+												val munitionClass = ammoState.type as? SimpleMunitionHull
 												
-												val timeToIntercept = FastMath.ceil(WeaponSystem.getPositiveRootOfQuadraticEquation(a, b, c)).toLong()
+												if (munitionClass != null) {
 												
-												val galacticTime = timeToIntercept + galaxy.time
-												val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
-												val impactVelocity = missileLaunchSpeed + missileAcceleration * FastMath.min(timeToIntercept, munitionClass.getThrustTime().toLong())
+													val projectileSpeed = (partRef.part.capacitor * partRef.part.efficiency) / (100L * munitionClass.getLoadedMass())
+													val weaponTestDistance = weaponTestDistance.toLong()
+													val timeToIntercept = FastMath.max(1, weaponTestDistance / projectileSpeed)
+													val galacticTime = timeToIntercept + galaxy.time
+													val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
+													
+													ImGui.text("projectileSpeed $projectileSpeed m/s")
+													ImGui.text("timeToIntercept ${timeToIntercept} s, at ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
+												}
 												
-												ImGui.text("impactVelocity ${impactVelocity} m/s")
-												ImGui.text("timeToIntercept ${timeToIntercept} s / thrustTime ${munitionClass.getThrustTime()} s")
-												ImGui.text("interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
-											}
-										}
-
-										ImGui.treePop()
-									}
-								}
-							}
-
-							if (ImGui.collapsingHeader("Power", 0)) {
-
-								val solarIrradiance = irradianceMapper.get(entity)
-
-								if (solarIrradiance != null) {
-
-									ImGui.text("Solar irradiance ${solarIrradiance.irradiance} W/m2")
-								}
-
-								val powerComponent = powerMapper.get(entity)
-
-								if (powerComponent != null) {
-
-									ImGui.separator()
-
-									val now = System.currentTimeMillis()
-
-									if (now - lastDebugTime > 500) {
-										lastDebugTime = now
-
-										powerAvailiableValues[arrayIndex] = powerComponent.totalAvailiablePower.toFloat()
-										powerRequestedValues[arrayIndex] = powerComponent.totalRequestedPower.toFloat()
-										powerUsedValues[arrayIndex] = powerComponent.totalUsedPower.toFloat() / powerComponent.totalAvailiablePower.toFloat()
-										arrayIndex++
-
-										if (arrayIndex >= 60) {
-											arrayIndex = 0
-										}
-									}
-
-									ImGui.plotLines("AvailiablePower", { powerAvailiableValues[(arrayIndex + it) % 60] }, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
-									ImGui.plotLines("RequestedPower", { powerRequestedValues[(arrayIndex + it) % 60] }, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
-									ImGui.plotLines("UsedPower", { powerUsedValues[(arrayIndex + it) % 60] }, 60, 0, "", 0f, 1f, Vec2(0, 50))
-
-									if (ImGui.treeNode("Producers")) {
-										powerComponent.poweringParts.forEach({
-											val partRef = it
-											val poweringState = shipComponent.getPartState(partRef)[PoweringPartState::class]
-
-											val power = if (poweringState.availiablePower == 0L) 0f else poweringState.producedPower / poweringState.availiablePower.toFloat()
-
-											ImGui.progressBar(power, Vec2(), "${Units.powerToString(poweringState.producedPower)}/${Units.powerToString(poweringState.availiablePower)}")
-
-											ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
-											ImGui.text("${partRef.part}")
-
-											if (partRef is FueledPart && partRef is PoweringPart) {
-
-												val fueledState = shipComponent.getPartState(partRef)[FueledPartState::class]
-												val fuelRemaining = Units.secondsToString(fueledState.fuelEnergyRemaining / partRef.power)
-												val totalFuelRemaining = Units.secondsToString(fueledState.totalFuelEnergyRemaining / partRef.power)
-
-												ImGui.text("Fuel $fuelRemaining/$totalFuelRemaining W")
-											}
-
-											if (partRef.part is Battery) {
-
-												val chargedState = shipComponent.getPartState(partRef)[ChargedPartState::class]
-												val charge = chargedState.charge
-												val maxCharge = partRef.part.capacitor
-												val charged = if (maxCharge == 0L) 0f else charge / maxCharge.toFloat()
-
-												ImGui.progressBar(charged, Vec2(), "${Units.powerToString(charge)}/${Units.powerToString(maxCharge)}s")
-
-												if (poweringState.producedPower > 0L) {
-
-													ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
-													ImGui.text("${Units.secondsToString(charge / poweringState.producedPower)}")
+											} else if (partRef.part is MissileLauncher) {
+												
+												val ammoState = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
+												
+												val munitionClass = ammoState.type as? AdvancedMunitionHull
+												
+												if (munitionClass != null) {
+													
+													val missileAcceleration = munitionClass.getAverageAcceleration()
+													val missileLaunchSpeed = partRef.part.launchForce / munitionClass.getLoadedMass()
+													
+													ImGui.text("launchSpeed $missileLaunchSpeed m/s + acceleration ${missileAcceleration} m/s²")
+													
+													val a: Double = missileAcceleration.toDouble() / 2
+													val b: Double = missileLaunchSpeed.toDouble()
+													val c: Double = -weaponTestDistance
+													
+													val timeToIntercept = FastMath.ceil(WeaponSystem.getPositiveRootOfQuadraticEquation(a, b, c)).toLong()
+													
+													val galacticTime = timeToIntercept + galaxy.time
+													val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
+													val impactVelocity = missileLaunchSpeed + missileAcceleration * FastMath.min(timeToIntercept, munitionClass.getThrustTime().toLong())
+													
+													ImGui.text("impactVelocity ${impactVelocity} m/s")
+													ImGui.text("timeToIntercept ${timeToIntercept} s / thrustTime ${munitionClass.getThrustTime()} s")
+													ImGui.text("interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
 												}
 											}
-										})
-
-										ImGui.treePop()
-									}
-
-									if (ImGui.treeNode("Consumers")) {
-										powerComponent.poweredParts.forEach({
-											val part = it
-											val poweredState = shipComponent.getPartState(part)[PoweredPartState::class]
-
-											val power = if (poweredState.requestedPower == 0L) 0f else poweredState.givenPower / poweredState.requestedPower.toFloat()
-											ImGui.progressBar(power, Vec2(), "${Units.powerToString(poweredState.givenPower)}/${Units.powerToString(poweredState.requestedPower)}")
-
-											ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
-											ImGui.text("${part.part}")
-										})
-
-										ImGui.treePop()
-									}
-								}
-							}
-
-							if (ImGui.collapsingHeader("Cargo", 0)) { //TreeNodeFlags.DefaultOpen.i
-
-								CargoType.values().forEach {
-									val cargo = it
-
-									val usedVolume = shipComponent.getUsedCargoVolume(cargo)
-									val maxVolume = shipComponent.getMaxCargoVolume(cargo)
-									val usedMass = shipComponent.getUsedCargoMass(cargo)
-									val usage = if (maxVolume == 0L) 0f else usedVolume / maxVolume.toFloat()
-									ImGui.progressBar(usage, Vec2(), "$usedMass kg, ${usedVolume / 1000}/${maxVolume / 1000} m³")
-
-									ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
-									ImGui.text("${cargo.name}")
-
-									if (cargo == CargoType.AMMUNITION) {
-										for (entry in shipComponent.munitionCargo.entries) {
-											ImGui.text("${entry.value} ${entry.key}")
+	
+											ImGui.treePop()
 										}
 									}
 								}
-
-								ImGui.separator();
-
-								if (ImGui.beginCombo("", addResource.name)) { // The second parameter is the label previewed before opening the combo.
-									for (resource in Resource.values()) {
-										val isSelected = addResource == resource
-
-										if (ImGui.selectable(resource.name, isSelected)) {
-											addResource = resource
+	
+								if (ImGui.collapsingHeader("Power", 0)) {
+	
+									val solarIrradiance = irradianceMapper.get(entityRef.entityID)
+	
+									if (solarIrradiance != null) {
+	
+										ImGui.text("Solar irradiance ${solarIrradiance.irradiance} W/m2")
+									}
+	
+									val powerComponent = powerMapper.get(entityRef.entityID)
+	
+									if (powerComponent != null) {
+	
+										ImGui.separator()
+	
+										val now = System.currentTimeMillis()
+	
+										if (now - lastDebugTime > 500) {
+											lastDebugTime = now
+	
+											powerAvailiableValues[arrayIndex] = powerComponent.totalAvailiablePower.toFloat()
+											powerRequestedValues[arrayIndex] = powerComponent.totalRequestedPower.toFloat()
+											powerUsedValues[arrayIndex] = powerComponent.totalUsedPower.toFloat() / powerComponent.totalAvailiablePower.toFloat()
+											arrayIndex++
+	
+											if (arrayIndex >= 60) {
+												arrayIndex = 0
+											}
 										}
-
-										if (isSelected) { // Set the initial focus when opening the combo (scrolling + for keyboard navigation support in the upcoming navigation branch)
-											ImGui.setItemDefaultFocus()
+	
+										ImGui.plotLines("AvailiablePower", { powerAvailiableValues[(arrayIndex + it) % 60] }, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
+										ImGui.plotLines("RequestedPower", { powerRequestedValues[(arrayIndex + it) % 60] }, 60, 0, "", 0f, Float.MAX_VALUE, Vec2(0, 50))
+										ImGui.plotLines("UsedPower", { powerUsedValues[(arrayIndex + it) % 60] }, 60, 0, "", 0f, 1f, Vec2(0, 50))
+	
+										if (ImGui.treeNode("Producers")) {
+											powerComponent.poweringParts.forEach({
+												val partRef = it
+												val poweringState = shipComponent.getPartState(partRef)[PoweringPartState::class]
+	
+												val power = if (poweringState.availiablePower == 0L) 0f else poweringState.producedPower / poweringState.availiablePower.toFloat()
+	
+												ImGui.progressBar(power, Vec2(), "${Units.powerToString(poweringState.producedPower)}/${Units.powerToString(poweringState.availiablePower)}")
+	
+												ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
+												ImGui.text("${partRef.part}")
+	
+												if (partRef is FueledPart && partRef is PoweringPart) {
+	
+													val fueledState = shipComponent.getPartState(partRef)[FueledPartState::class]
+													val fuelRemaining = Units.secondsToString(fueledState.fuelEnergyRemaining / partRef.power)
+													val totalFuelRemaining = Units.secondsToString(fueledState.totalFuelEnergyRemaining / partRef.power)
+	
+													ImGui.text("Fuel $fuelRemaining/$totalFuelRemaining W")
+												}
+	
+												if (partRef.part is Battery) {
+	
+													val chargedState = shipComponent.getPartState(partRef)[ChargedPartState::class]
+													val charge = chargedState.charge
+													val maxCharge = partRef.part.capacitor
+													val charged = if (maxCharge == 0L) 0f else charge / maxCharge.toFloat()
+	
+													ImGui.progressBar(charged, Vec2(), "${Units.powerToString(charge)}/${Units.powerToString(maxCharge)}s")
+	
+													if (poweringState.producedPower > 0L) {
+	
+														ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
+														ImGui.text("${Units.secondsToString(charge / poweringState.producedPower)}")
+													}
+												}
+											})
+	
+											ImGui.treePop()
+										}
+	
+										if (ImGui.treeNode("Consumers")) {
+											powerComponent.poweredParts.forEach({
+												val part = it
+												val poweredState = shipComponent.getPartState(part)[PoweredPartState::class]
+	
+												val power = if (poweredState.requestedPower == 0L) 0f else poweredState.givenPower / poweredState.requestedPower.toFloat()
+												ImGui.progressBar(power, Vec2(), "${Units.powerToString(poweredState.givenPower)}/${Units.powerToString(poweredState.requestedPower)}")
+	
+												ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
+												ImGui.text("${part.part}")
+											})
+	
+											ImGui.treePop()
 										}
 									}
-									ImGui.endCombo()
 								}
-
-								ImGui.inputScalar("kg", imgui.DataType.Int, ::addResourceAmount, 10, 100, "%d", 0)
-
-								if (ImGui.button("Add")) {
-									system.lock.write {
-										if (!shipComponent.addCargo(addResource, addResourceAmount.toLong())) {
-											println("Cargo does not fit")
-										}
-									}
-								}
-
-								ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
-
-								if (ImGui.button("Remove")) {
-									system.lock.write {
-										if (shipComponent.retrieveCargo(addResource, addResourceAmount.toLong()) != addResourceAmount.toLong()) {
-											println("Does not have enough of specified cargo")
-										}
-									}
-								}
-
-								if (ImGui.treeNode("Each resource")) {
-									Resource.values().forEach {
-										val resource = it
-
-										val usedVolume = shipComponent.getUsedCargoVolume(resource)
-										val maxVolume = shipComponent.getMaxCargoVolume(resource)
-										val usedMass = shipComponent.getUsedCargoMass(resource)
+	
+								if (ImGui.collapsingHeader("Cargo", 0)) { //TreeNodeFlags.DefaultOpen.i
+	
+									CargoType.values().forEach {
+										val cargo = it
+	
+										val usedVolume = shipComponent.getUsedCargoVolume(cargo)
+										val maxVolume = shipComponent.getMaxCargoVolume(cargo)
+										val usedMass = shipComponent.getUsedCargoMass(cargo)
 										val usage = if (maxVolume == 0L) 0f else usedVolume / maxVolume.toFloat()
 										ImGui.progressBar(usage, Vec2(), "$usedMass kg, ${usedVolume / 1000}/${maxVolume / 1000} m³")
-
+	
 										ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
-										ImGui.text("${resource.name}")
+										ImGui.text("${cargo.name}")
+	
+										if (cargo == CargoType.AMMUNITION) {
+											for (entry in shipComponent.munitionCargo.entries) {
+												ImGui.text("${entry.value} ${entry.key}")
+											}
+										}
 									}
-
-									ImGui.treePop()
+	
+									ImGui.separator();
+	
+									if (ImGui.beginCombo("", addResource.name)) { // The second parameter is the label previewed before opening the combo.
+										for (resource in Resource.values()) {
+											val isSelected = addResource == resource
+	
+											if (ImGui.selectable(resource.name, isSelected)) {
+												addResource = resource
+											}
+	
+											if (isSelected) { // Set the initial focus when opening the combo (scrolling + for keyboard navigation support in the upcoming navigation branch)
+												ImGui.setItemDefaultFocus()
+											}
+										}
+										ImGui.endCombo()
+									}
+	
+									ImGui.inputScalar("kg", imgui.DataType.Int, ::addResourceAmount, 10, 100, "%d", 0)
+	
+									if (ImGui.button("Add")) {
+										system.lock.write {
+											if (!shipComponent.addCargo(addResource, addResourceAmount.toLong())) {
+												println("Cargo does not fit")
+											}
+										}
+									}
+	
+									ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
+	
+									if (ImGui.button("Remove")) {
+										system.lock.write {
+											if (shipComponent.retrieveCargo(addResource, addResourceAmount.toLong()) != addResourceAmount.toLong()) {
+												println("Does not have enough of specified cargo")
+											}
+										}
+									}
+	
+									if (ImGui.treeNode("Each resource")) {
+										Resource.values().forEach {
+											val resource = it
+	
+											val usedVolume = shipComponent.getUsedCargoVolume(resource)
+											val maxVolume = shipComponent.getMaxCargoVolume(resource)
+											val usedMass = shipComponent.getUsedCargoMass(resource)
+											val usage = if (maxVolume == 0L) 0f else usedVolume / maxVolume.toFloat()
+											ImGui.progressBar(usage, Vec2(), "$usedMass kg, ${usedVolume / 1000}/${maxVolume / 1000} m³")
+	
+											ImGui.sameLine(0f, ImGui.style.itemInnerSpacing.x)
+											ImGui.text("${resource.name}")
+										}
+	
+										ImGui.treePop()
+									}
 								}
 							}
+	
 						}
-
 					}
 				}
 

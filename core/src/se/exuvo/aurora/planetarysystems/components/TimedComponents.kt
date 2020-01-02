@@ -183,9 +183,10 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 		val updated = super.setPrediction(value, time);
 
 		if (updated) {
-			approach = null
+			approach = ApproachType.COAST
 			startAcceleration = null
 			finalAcceleration = null
+			aimTarget = null
 		}
 
 		return updated
@@ -197,13 +198,13 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 			approach = ApproachType.BRACHISTOCHRONE;
 			this.startAcceleration = startAcceleration
 			this.finalAcceleration = value.acceleration.len().toLong()
+			aimTarget = null
 			return true
 		}
 
 		return false
 	}
 
-	// Only works with static targets and initial velocity in the target direction
 	fun setPredictionBallistic(value: MovementValues, aimTarget: Vector2L, startAcceleration: Long, time: Long): Boolean {
 
 		if (setPrediction(value, time)) {
@@ -227,21 +228,18 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 		}
 
 		val startPosition = previous.value.position
-//		val endPosition = next!!.value.position
-		val aimPosition = aimTarget!!
+		val endPosition = next!!.value.position
 		val startTime = previous.time
 		val endTime = next!!.time
 		val startVelocity = previous.value.velocity
 //		val finalVelocity = next!!.value.velocity
-		val startAcceleration = startAcceleration!!
-		val finalAcceleration = finalAcceleration!!
 
 		val position = interpolated.value.position
 		val velocity = interpolated.value.velocity
 		val acceleration = interpolated.value.acceleration
 
-//		position.set(startPosition).sub(endPosition)
-//		val totalDistance = position.len()
+		position.set(startPosition).sub(endPosition)
+		val totalDistance = position.len()
 		val travelTime = endTime - startTime
 		val traveledTime = time - startTime
 
@@ -250,23 +248,24 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 		}
 
 		when (approach) {
+			ApproachType.COAST -> {
+				position.set(startPosition).lerp(endPosition, traveledTime, travelTime)
+			}
 			ApproachType.BALLISTIC -> {
+				val startAcceleration = startAcceleration!!
+				val finalAcceleration = finalAcceleration!!
+				val aimPosition = aimTarget!!
 				
 				val averageAcceleration = (startAcceleration + finalAcceleration) / 2
 				
-				//TODO does not work well
-				position.set(startVelocity).scl(traveledTime)
+				var distanceTraveled: Long = (averageAcceleration * traveledTime * traveledTime) / 2
 				
-				var distanceTraveled = (averageAcceleration * traveledTime * traveledTime) / 2
+				position.set(startPosition).lerp(aimPosition, distanceTraveled, totalDistance.toLong())
+				
+				//TODO does not work well
+				position.mulAdd(startVelocity, traveledTime)
 				
 				val angle = startPosition.angleToRad(aimPosition)
-
-				val x = distanceTraveled * FastMath.cos(angle)
-				val y = distanceTraveled * FastMath.sin(angle)
-				
-				position.add(x.toLong(), y.toLong())
-				
-				position.div(100).add(startPosition)
 
 				velocity.set(averageAcceleration * traveledTime, 0).rotateRad(angle).add(startVelocity)
 				

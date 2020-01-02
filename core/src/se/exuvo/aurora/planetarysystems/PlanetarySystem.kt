@@ -145,7 +145,6 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		val worldBuilder = WorldConfigurationBuilder()
 //		worldBuilder.dependsOn(ProfilerPlugin::class.java)
 		worldBuilder.with(EventSystem(PooledFastEventDispatcher(pools), SubscribeAnnotationFinder()))
-		worldBuilder.with(GroupSystem())
 		worldBuilder.with(OrbitSystem())
 		worldBuilder.with(ColonySystem())
 		worldBuilder.with(ShipSystem())
@@ -255,18 +254,18 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		missile.addPart(missileChemicalThruster)
 		missile.addPart(missileFuelPart)
 
-		val railgun = Railgun(2 * Units.MEGA, 5, 5 * Units.MEGA, 5, 3, 20)
-		shipHull.addPart(railgun)
-		val railgunRef = shipHull[Railgun::class][0]
-		shipHull.preferredPartMunitions[railgunRef] = sabot
+//		val railgun = Railgun(2 * Units.MEGA, 5, 5 * Units.MEGA, 5, 3, 20)
+//		shipHull.addPart(railgun)
+//		val railgunRef = shipHull[Railgun::class][0]
+//		shipHull.preferredPartMunitions[railgunRef] = sabot
 
 		val missileLauncher = MissileLauncher(200 * Units.KILO, 14, 3, 10, 1000 * 5500)
 		shipHull.addPart(missileLauncher)
 		val missileLauncherRef = shipHull[MissileLauncher::class][0]
 		shipHull.preferredPartMunitions[missileLauncherRef] = missile
 
-		val beam = BeamWeapon(1 * Units.MEGA, 1.0, BeamWavelength.Infrared, 10 * Units.MEGA)
-		shipHull.addPart(beam)
+//		val beam = BeamWeapon(1 * Units.MEGA, 1.0, BeamWavelength.Infrared, 10 * Units.MEGA)
+//		shipHull.addPart(beam)
 
 		val tcRef: PartRef<TargetingComputer> = shipHull[TargetingComputer::class][0]
 		shipHull.defaultWeaponAssignments[tcRef] = shipHull.getPartRefs().filter({ it.part is WeaponPart })
@@ -361,11 +360,11 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		shipComponent.addCargo(Resource.NUCLEAR_FISSION, nuclearStorage.capacity / Resource.NUCLEAR_FISSION.specificVolume)
 		shipComponent.addCargo(Resource.ROCKET_FUEL, fuelStorage.capacity / Resource.ROCKET_FUEL.specificVolume)
 
-		if (!shipComponent.addCargo(sabot, 10)) {
+		if (!shipComponent.addCargo(sabot, 50)) {
 			println("Failed to add sabots")
 		}
 
-		if (!shipComponent.addCargo(missile, 10)) {
+		if (!shipComponent.addCargo(missile, 20)) {
 			println("Failed to add missiles")
 		}
 	}
@@ -435,7 +434,12 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 	
 	fun getEntityReference(entityID: Int): EntityReference {
 		
-		return EntityReference(this, entityID, uuidMapper.get(entityID).uuid)
+		return pools.getPool(EntityReference::class.java).obtain().set(this, entityID, uuidMapper.get(entityID).uuid)
+	}
+	
+	fun updateEntityReference(entityID: Int, entityReference: EntityReference): EntityReference {
+		
+		return entityReference.set(this, entityID, uuidMapper.get(entityID).uuid)
 	}
 	
 	fun isEntityReferenceValid(entityReference: EntityReference): Boolean {

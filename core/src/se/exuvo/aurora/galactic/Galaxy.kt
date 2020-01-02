@@ -64,7 +64,6 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		val worldBuilder = WorldConfigurationBuilder()
 //		worldBuilder.dependsOn(ProfilerPlugin::class.java)
 		worldBuilder.with(EventSystem())
-		worldBuilder.with(GroupSystem())
 		worldBuilder.with(GalacticRenderSystem())
 		worldBuilder.register(CustomSystemInvocationStrategy())
 		
@@ -166,10 +165,10 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 			}
 		}
 		
-		return getEntityReferenceByUUID(entityReference.entityUUID)
+		return getEntityReferenceByUUID(entityReference.entityUUID, entityReference)
 	}
 	
-	fun getEntityReferenceByUUID(entityUUID: EntityUUID): EntityReference? {
+	fun getEntityReferenceByUUID(entityUUID: EntityUUID, oldEntityReference: EntityReference? = null): EntityReference? {
 		
 		//TODO release current write lock during operation and re-aquire after
 		
@@ -178,7 +177,11 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 				val entityID = system.getEntityByUUID(entityUUID)
 				
 				if (entityID != null) {
-					return system.getEntityReference(entityID)
+					if (oldEntityReference != null) {
+						return system.updateEntityReference(entityID, oldEntityReference)
+					} else {
+						return system.getEntityReference(entityID)
+					}
 				}
 			}
 		}
@@ -187,13 +190,11 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 	}
 	
 	fun entityAdded(world: World, entityID: Int) {
-		groupSystem.inserted(world.getEntity(entityID))
+		
 	}
 
 	fun entityRemoved(world: World, entityID: Int) {
-		if (!ComponentMapper.getFor(ChangingWorldComponent::class.java, world).has(entityID)) {
-			groupSystem.removed(world.getEntity(entityID))
-		}
+		
 	}
 	
 	fun moveEntity(targetSystem: PlanetarySystem, entity: Entity, targetPosition: MovementValues) {
@@ -201,6 +202,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		
 		ComponentMapper.getFor(ChangingWorldComponent::class.java, sourceWorld).create(entity)
 		
+		//TODO could we just move it? or does that cause problems
 		//TODO serialize entity, add to target system, remove from old system
 	}
 

@@ -139,9 +139,54 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 	private val tempVelocity = Vector2L()
 
 	override fun process(entityID: Int) {
-		val deltaGameTime = world.getDelta().toLong()
+		val deltaGameTime = galaxy.tickSize.toLong()
 
 		val movement = movementMapper.get(entityID)
+		
+		if (movement.next != null) { // On timed movement
+
+			val next = movement.next!!
+
+			if (galaxy.time >= next.time) {
+
+				if (CAN_ACCELERATE_ASPECT.isInterested(world.getEntity(entityID))) {
+					println("Movement: target reached predicted time")
+				}
+				
+				movement.previous = next
+				movement.next = null
+				movement.aimTarget = null
+				movement.startAcceleration = null
+				movement.finalAcceleration = null
+
+				moveToEntityMapper.remove(entityID)
+				moveToPositionMapper.remove(entityID)
+
+			} else {
+
+				val current = movement.get(galaxy.time)
+
+				when (movement.approach) {
+					ApproachType.COAST -> {
+						
+					}
+					ApproachType.BRACHISTOCHRONE -> {
+
+					}
+					ApproachType.BALLISTIC -> {
+						if (CAN_ACCELERATE_ASPECT.isInterested(world.getEntity(entityID))) {
+							nameMapper.get(entityID).name = "p " + current.value.velocity.len().toLong()
+						}
+					}
+					else -> {
+						throw RuntimeException("Unknown approach type: " + movement.approach)
+					}
+				}
+			}
+
+			return
+		}
+		
 		val shipMovementValue = movement.previous.value
 		
 		val velocity = shipMovementValue.velocity
@@ -150,7 +195,8 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 
 		if (!CAN_ACCELERATE_ASPECT.isInterested(world.getEntity(entityID))) {
 
-			position.addDiv(velocity, 100)
+			tempVelocity.set(velocity).scl(deltaGameTime)
+			position.addDiv(tempVelocity, 100)
 			movement.previous.time = galaxy.time
 			return
 		}
@@ -196,43 +242,6 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 				}
 
 				nameMapper.get(entityID).name = "s " + velocity.len().toLong()
-			}
-
-			return
-		}
-
-		if (movement.next != null) { // On timed movement
-
-			val next = movement.next!!
-
-			if (galaxy.time >= next.time) {
-
-				println("Movement: target reached predicted time")
-				movement.previous = next
-				movement.next = null
-				movement.aimTarget = null
-				movement.startAcceleration = null
-				movement.finalAcceleration = null
-
-				moveToEntityMapper.remove(entityID)
-				moveToPositionMapper.remove(entityID)
-
-			} else {
-
-				val current = movement.get(galaxy.time)
-
-				when (movement.approach) {
-					ApproachType.BRACHISTOCHRONE -> {
-
-					}
-					ApproachType.BALLISTIC -> {
-						nameMapper.get(entityID).name = "p " + current.value.velocity.len().toLong()
-						thrustComponent.thrustAngle = current.value.acceleration.angle().toFloat()
-					}
-					else -> {
-						throw RuntimeException("Unknown approach type: " + movement.approach)
-					}
-				}
 			}
 
 			return

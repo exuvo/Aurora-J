@@ -7,189 +7,260 @@ import kotlin.concurrent.read
 import kotlin.concurrent.write
 import se.exuvo.aurora.utils.DummyReentrantReadWriteLock
 import se.exuvo.aurora.utils.forEachFast
-import com.artemis.Entity
 import com.artemis.EntitySystem
 import com.artemis.Aspect
+import se.exuvo.aurora.planetarysystems.components.EntityReference
+import com.artemis.utils.Bag
 
-class GroupSystem(val lock: ReentrantReadWriteLock = DummyReentrantReadWriteLock.INSTANCE) : EntitySystem(Aspect.all()) {
+class GroupSystem(val lock: ReentrantReadWriteLock = DummyReentrantReadWriteLock.INSTANCE) {
 	companion object {
-		// Galaxy only
-		val SELECTED = "selected"
+		const val SELECTED = "selected"
+		
+		@JvmStatic
+		val EmptyBag = Bag<Any>(0)
+		
+		@Suppress("UNCHECKED_CAST")
+		@JvmStatic
+		val EmptyEntityBag = EmptyBag as Bag<EntityReference>
+		
+		@Suppress("UNCHECKED_CAST")
+		@JvmStatic
+		val EmptyGroupBag = EmptyBag as Bag<String>
 	}
 
-	private val groupToEntityMap = HashMap<String, MutableSet<Entity>?>()
-	private val entityToGroupMap = HashMap<Entity, MutableSet<String>?>()
+	private val groupMembershipMap = HashMap<String, HashMap<EntityReference, Int>?>()
+	private val groupEntitiesMap = HashMap<String, Bag<EntityReference>?>()
+	private val entityGroupsMap = HashMap<EntityReference, HashSet<String>?>()
 
-	private val groupToEntityModificationCountMap = HashMap<String, Int?>()
-	private val entityToGroupModificationCountpMap = HashMap<Entity, Int?>()
-
-	override fun checkProcessing() = false
-	override fun processSystem() {}
-
-	operator fun get(group: String): Set<Entity> {
+	operator fun get(group: String): Bag<EntityReference> {
 		lock.read {
-			return groupToEntityMap[group] ?: Collections.emptySet()
+			return groupEntitiesMap[group] ?: EmptyEntityBag
 		}
 	}
 
-	operator fun get(entity: Entity): Set<String> {
+	operator fun get(entity: EntityReference): Set<String> {
 		lock.read {
-			return entityToGroupMap[entity] ?: Collections.emptySet()
+			return entityGroupsMap[entity] ?: Collections.emptySet()
 		}
 	}
 
-	fun getModificationCount(group: String): Int {
+	fun isMemberOf(entity: EntityReference, group: String): Boolean {
+		val membership = groupMembershipMap[group]
+		
+		if (membership == null) {
+			return false
+		}
+		
+		return membership.contains(entity)
+	}
+
+	fun add(entity: EntityReference, group: String) {
 		lock.read {
-			return groupToEntityModificationCountMap[group] ?: 0
-		}
-	}
-
-	fun getModificationCount(entity: Entity): Int {
-		lock.read {
-			return entityToGroupModificationCountpMap[entity] ?: 0
-		}
-	}
-
-	private fun incrementModificationCount(group: String) {
-		groupToEntityModificationCountMap[group] = 1 + (groupToEntityModificationCountMap[group] ?: 0)
-	}
-
-	private fun incrementModificationCount(entity: Entity) {
-		entityToGroupModificationCountpMap[entity] = 1 + (entityToGroupModificationCountpMap[entity] ?: 0)
-	}
-
-	fun isMemberOf(entity: Entity, group: String): Boolean {
-		return get(group).contains(entity)
-	}
-
-	fun add(entity: Entity, group: String) {
-		lock.write {
-			var entitiesSet = groupToEntityMap[group]
-
-			if (entitiesSet == null) {
-				entitiesSet = HashSet<Entity>()
-				groupToEntityMap[group] = entitiesSet
-			}
-
-			entitiesSet.add(entity)
-			incrementModificationCount(group)
-
-			var groupSet = entityToGroupMap[entity]
-
-			if (groupSet == null) {
-				groupSet = HashSet<String>()
-				entityToGroupMap[entity] = groupSet
-			}
-
-			groupSet.add(group)
-			incrementModificationCount(entity)
-		}
-	}
-
-	fun add(entities: List<Entity>, group: String) {
-		lock.write {
-			var entitiesSet = groupToEntityMap[group]
-
-			if (entitiesSet == null) {
-				entitiesSet = HashSet<Entity>()
-				groupToEntityMap[group] = entitiesSet
-			}
-
-			entitiesSet.addAll(entities)
-			incrementModificationCount(group)
-
-			entities.forEachFast{ entity ->
-				var groupSet = entityToGroupMap[entity]
-
-				if (groupSet == null) {
-					groupSet = HashSet<String>()
-					entityToGroupMap[entity] = groupSet
+			val membership = groupMembershipMap[group]
+			
+			if (membership == null || !membership.contains(entity)) {
+				
+				lock.write {
+					var membership2 = membership
+					var entitiesBag: Bag<EntityReference>
+							
+					if (membership2 == null) {
+						
+						membership2 = HashMap<EntityReference, Int>()
+						groupMembershipMap[group] = membership2
+						
+						entitiesBag = Bag<EntityReference>()
+						groupEntitiesMap[group] = entitiesBag
+						
+					} else {
+						
+						entitiesBag = groupEntitiesMap[group]!!
+					}
+					
+					val index = entitiesBag.size()
+					
+					membership2.put(entity, index)
+					entitiesBag.add(entity)
+		
+					var groupsBag = entityGroupsMap[entity]
+					
+					if (groupsBag == null) {
+						groupsBag = HashSet<String>()
+						entityGroupsMap[entity] = groupsBag
+					}
+		
+					groupsBag.add(group)
 				}
+			}
+		}
+	}
+	
+	fun add(entities: Bag<EntityReference>, group: String) {
+		lock.write {
+			var membership = groupMembershipMap[group]
+			var entitiesBag: Bag<EntityReference>
+						
+			if (membership == null) {
+				
+				membership = HashMap<EntityReference, Int>()
+				groupMembershipMap[group] = membership
+				
+				entitiesBag = Bag<EntityReference>()
+				groupEntitiesMap[group] = entitiesBag
+				
+			} else {
+				
+				entitiesBag = groupEntitiesMap[group]!!
+			}
+			
+			entities.forEachFast{ entity ->
 
-				groupSet.add(group)
-				incrementModificationCount(entity)
+				if (!membership.contains(entity)) {
+
+					val index = entitiesBag.size()
+					
+					membership.put(entity, index)
+					entitiesBag.add(entity)
+
+					var groupsBag = entityGroupsMap[entity]
+
+					if (groupsBag == null) {
+						groupsBag = HashSet<String>()
+						entityGroupsMap[entity] = groupsBag
+					}
+
+					groupsBag.add(group)
+				}
 			}
 		}
 	}
 
-	fun remove(entity: Entity, group: String) {
+	fun add(entities: List<EntityReference>, group: String) {
 		lock.write {
-			val entitiesSet = groupToEntityMap[group]
-
-			if (entitiesSet == null) {
-				return
+			var membership = groupMembershipMap[group]
+			var entitiesBag: Bag<EntityReference>
+						
+			if (membership == null) {
+				
+				membership = HashMap<EntityReference, Int>()
+				groupMembershipMap[group] = membership
+				
+				entitiesBag = Bag<EntityReference>()
+				groupEntitiesMap[group] = entitiesBag
+				
+			} else {
+				
+				entitiesBag = groupEntitiesMap[group]!!
 			}
+			
+			entities.forEachFast{ entity ->
 
-			entitiesSet.remove(entity)
-			incrementModificationCount(group)
+				if (!membership.contains(entity)) {
 
-			var groupSet = entityToGroupMap[entity]
+					val index = entitiesBag.size()
+					
+					membership.put(entity, index)
+					entitiesBag.add(entity)
 
-			if (groupSet != null) {
-				groupSet.remove(group)
-				incrementModificationCount(entity)
+					var groupsBag = entityGroupsMap[entity]
+
+					if (groupsBag == null) {
+						groupsBag = HashSet<String>()
+						entityGroupsMap[entity] = groupsBag
+					}
+
+					groupsBag.add(group)
+				}
 			}
 		}
 	}
 
-	fun remove(entities: List<Entity>, group: String) {
-		lock.write {
-			val entitiesSet = groupToEntityMap[group]
+	fun remove(entity: EntityReference, group: String) {
+		lock.read {
+			val membership = groupMembershipMap[group]
+			
+			val index = membership?.get(entity)
+			
+			if (index != null) {
+				
+				lock.write {
+					
+					membership.remove(entity)
+					
+					val entitiesBag = groupEntitiesMap[group]!!
+					
+					if (entitiesBag.size() > 1) {
+						
+						val movedEntity = entitiesBag[entitiesBag.size() - 1]
+						entitiesBag.remove(index)
+						membership[movedEntity] = index
+						
+					} else {
+						entitiesBag.removeLast()
+					}
+					
+					entityGroupsMap[entity]!!.remove(group)
+				}
+			}
+		}
+	}
 
-			if (entitiesSet == null) {
+	fun remove(entities: List<EntityReference>, group: String) {
+		lock.read {
+			var membership = groupMembershipMap[group]
+					
+			if (membership == null || membership.isEmpty()) {
 				return
 			}
+			
+			lock.write {
+				var entitiesBag = groupEntitiesMap[group]!!
+				
+				entities.forEachFast{ entity ->
+					
+					val index = membership.get(entity)
+			
+					if (index != null) {
 
-			entitiesSet.removeAll(entities)
-			incrementModificationCount(group)
-
-			for (entity in entities) {
-				var groupSet = entityToGroupMap[entity]
-
-				if (groupSet != null) {
-					groupSet.remove(group)
-					incrementModificationCount(entity)
+						membership.remove(entity)
+						
+						if (entitiesBag.size() > 1) {
+							
+							val movedEntity = entitiesBag[entitiesBag.size() - 1]
+							entitiesBag.remove(index)
+							membership[movedEntity] = index
+							
+						} else {
+							entitiesBag.removeLast()
+						}
+						
+						entityGroupsMap[entity]!!.remove(group)
+					}
 				}
 			}
 		}
 	}
 
 	fun clear(group: String) {
-		lock.write {
-			val entitiesSet = groupToEntityMap[group]
-
-			if (entitiesSet != null) {
-
-				for (entity in entitiesSet) {
-					var groupSet = entityToGroupMap[entity]
-
-					groupSet!!.remove(group)
-					incrementModificationCount(entity)
-				}
-
-				entitiesSet.clear()
-				incrementModificationCount(group)
+		lock.read {
+			var membership = groupMembershipMap[group]
+					
+			if (membership == null || membership.isEmpty()) {
+				return
 			}
-		}
-	}
+			
+			lock.write {
+				membership.clear()
+				
+				var entitiesBag = groupEntitiesMap[group]!!
+				
+				entitiesBag.forEachFast{ entity ->
+					var groupSet = entityGroupsMap[entity]!!
 
-	override fun inserted(entity: Entity) {}
-
-	override fun removed(entity: Entity) {
-		lock.write {
-			var groupSet = entityToGroupMap[entity]
-
-			if (groupSet != null) {
-
-				for (group in groupSet) {
-					val entitiesSet = groupToEntityMap[group]
-
-					entitiesSet!!.remove(entity)
-					incrementModificationCount(group)
+					groupSet.remove(group)
 				}
 
-				entityToGroupMap[entity] = null
-				entityToGroupModificationCountpMap[entity] = null
+				entitiesBag.clear()
 			}
 		}
 	}

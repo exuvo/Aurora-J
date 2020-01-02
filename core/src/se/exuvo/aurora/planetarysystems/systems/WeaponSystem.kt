@@ -46,6 +46,8 @@ import se.exuvo.aurora.galactic.DamagePattern
 import se.exuvo.aurora.galactic.SimpleMunitionHull
 import se.exuvo.aurora.planetarysystems.components.LaserShotComponent
 import se.exuvo.aurora.planetarysystems.components.RailgunShotComponent
+import se.exuvo.aurora.planetarysystems.components.TimedLifeComponent
+import se.exuvo.aurora.planetarysystems.components.MissileComponent
 
 class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -80,12 +82,15 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	lateinit private var renderMapper: ComponentMapper<RenderComponent>
 	lateinit private var laserShotMapper: ComponentMapper<LaserShotComponent>
 	lateinit private var railgunShotMapper: ComponentMapper<RailgunShotComponent>
+	lateinit private var missileMapper: ComponentMapper<MissileComponent>
+	lateinit private var timedLifeMapper: ComponentMapper<TimedLifeComponent>
 	lateinit private var events: EventSystem
 
 	@Wire
 	lateinit private var planetarySystem: PlanetarySystem
 	
 	private val galaxy = GameServices[Galaxy::class]
+	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	
 	val polynomialSolver: LaguerreSolver
 
@@ -321,7 +326,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 											val beamArea = part.getBeamArea(distance)
 											var damage: Long = (part.efficiency * chargedState.charge) / 100
 											
-											if (beamArea <= 1 || (damage / beamArea) > 1000) {
+//											if (beamArea <= 1 || (damage / beamArea) > 1000) {
 												
 												val (timeToIntercept, aimPosition, interceptPosition, interceptVelocity) = result
 												val galacticTime = timeToIntercept + galaxy.time
@@ -333,16 +338,21 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 												nameMapper.create(munitionEntityID).set(name = part.name + " laser")
 												
 												laserShotMapper.create(munitionEntityID).set(target.entityID, damage, beamArea)
+											
 												val munitionMovement = movementMapper.create(munitionEntityID)
 												munitionMovement.set(shipMovement.value, galaxy.time)
+												munitionMovement.previous.value.velocity.set(interceptVelocity)
+												munitionMovement.previous.value.acceleration.set(0, 0)
 												munitionMovement.setPrediction(MovementValues(aimPosition, interceptVelocity, Vector2L()), galacticTime)
+											
+												timedLifeMapper.create(munitionEntityID).endTime = galacticTime
 												
 												ship.heat += ((100 - part.efficiency) * chargedState.charge) / 100
 											
-											} else {
-												
-												log.error("Unable to find effective intercept for laser $part and target ${target.entityID}")
-											}
+//											} else {
+//												
+//												log.error("Unable to find effective intercept for laser $part and target ${target.entityID}")
+//											}
 										}
 									}
 								}
@@ -385,9 +395,16 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 											}
 											
 											railgunShotMapper.create(munitionEntityID).set(target.entityID, damage, munitionHull.damagePattern, munitionHull.health)
+											
 											val munitionMovement = movementMapper.create(munitionEntityID)
 											munitionMovement.set(shipMovement.value, galaxy.time)
+											munitionMovement.previous.value.velocity.set(interceptVelocity)
+											munitionMovement.previous.value.acceleration.set(0, 0)
 											munitionMovement.setPrediction(MovementValues(aimPosition, interceptVelocity, Vector2L()), galacticTime)
+											
+											timedLifeMapper.create(munitionEntityID).endTime = galacticTime
+											
+//											galaxyGroupSystem.add(planetarySystem.getEntityReference(munitionEntityID), GroupSystem.SELECTED)
 											
 											ship.heat += ((100 - part.efficiency) * chargedState.charge) / 100
 										
@@ -407,10 +424,10 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										
 										val advMunitionHull = ammoState.type!! as AdvancedMunitionHull
 										
-										val missileAcceleration = advMunitionHull.getAverageAcceleration().toDouble()
+										val missileAcceleration = advMunitionHull.getAverageAcceleration().toDouble() / 100
 										val missileLaunchSpeed = (100 * part.launchForce) / advMunitionHull.getLoadedMass()
 										
-										val result = getInterceptionPosition(shipMovement.value, targetMovement.value, missileLaunchSpeed.toDouble() / 100, missileAcceleration / 100)
+										val result = getInterceptionPosition(shipMovement.value, targetMovement.value, missileLaunchSpeed.toDouble() / 100, missileAcceleration)
 										
 										if (result == null) {
 											
@@ -425,27 +442,40 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 											val relativeSpeed = targetMovement.value.velocity.cpy().sub(shipMovement.value.velocity).len() * FastMath.cos(targetMovement.value.velocity.angleToRad(shipMovement.value.velocity))
 											val impactSpeed = relativeSpeed + missileLaunchSpeed + missileAcceleration * FastMath.min(timeToIntercept, advMunitionHull.getThrustTime().toLong())
 											
-											println("missile missileAcceleration $missileAcceleration m/s², impactSpeed ${impactSpeed / 100} m/s, interceptSpeed ${interceptVelocity.len() / 100} m/s, aimPosition $aimPosition, interceptPosition $interceptPosition, thrustTime ${advMunitionHull.getThrustTime()} s, timeToIntercept $timeToIntercept s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
-											
-											if (timeToIntercept <= advMunitionHull.getThrustTime()) {
+//											if (timeToIntercept <= advMunitionHull.getThrustTime()) {
+												
+												println("missile missileAcceleration $missileAcceleration m/s², impactSpeed ${impactSpeed / 100} m/s, interceptSpeed ${interceptVelocity.len() / 100} m/s, aimPosition $aimPosition, interceptPosition $interceptPosition, thrustTime ${advMunitionHull.getThrustTime()} s, timeToIntercept $timeToIntercept s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
 												
 												val angleRadToIntercept = shipMovement.value.position.angleToRad(interceptPosition)
+												val angleRadToAimTarget = shipMovement.value.position.angleToRad(aimPosition)
 												val initialVelocity = Vector2L(missileLaunchSpeed, 0).rotateRad(angleRadToIntercept).add(shipMovement.value.velocity)
+												val initialAcceleration = Vector2L(advMunitionHull.getMinAcceleration(), 0).rotateRad(angleRadToAimTarget)
+												val interceptAcceleration = Vector2L(advMunitionHull.getMaxAcceleration(), 0).rotateRad(angleRadToAimTarget)
 												
-												//TODO fire
+												val munitionEntityID = planetarySystem.createEntity(ownerEmpire)
+												renderMapper.create(munitionEntityID)
+												nameMapper.create(munitionEntityID).set(name = advMunitionHull.name)
+											
+												missileMapper.create(munitionEntityID).set(advMunitionHull, target.entityID)
 												
-//												val angleToPredictedTarget = position.angleTo(interceptPosition)
-//						
-//												movement.previous.time = galaxy.time
-//												movement.setPredictionBallistic(MovementValues(interceptPosition, interceptVelocity, Vector2L.Zero), maxAcceleration, galaxy.time + timeToIntercept)
+												val munitionMovement = movementMapper.create(munitionEntityID)
+												munitionMovement.set(shipMovement.value, galaxy.time)
+												munitionMovement.previous.value.velocity.set(initialVelocity)
+												munitionMovement.previous.value.acceleration.set(initialAcceleration)
+												munitionMovement.setPredictionBallistic(MovementValues(interceptPosition, interceptVelocity, interceptAcceleration), aimPosition, advMunitionHull.getMinAcceleration(), galacticTime)
+												
+												timedLifeMapper.create(munitionEntityID).endTime = galacticTime
+												
+												galaxyGroupSystem.add(planetarySystem.getEntityReference(munitionEntityID), GroupSystem.SELECTED)
+											
 //												thrustComponent.thrustAngle = angleToPredictedTarget.toFloat()
 												
 												ammoState.amount -= 1
 												
-											} else {
-												
-												log.warn("Unable to find intercept inside thrust time for missile $advMunitionHull and target ${target.entityID}")
-											}
+//											} else {
+//												
+//												log.warn("Unable to find intercept inside thrust time for missile $advMunitionHull and target ${target.entityID}")
+//											}
 										}
 									}
 								}
@@ -525,8 +555,8 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				// RPos + t * RVel + (t^2 * TAccel) / 2
 				relativePosition.set(relativeVelocity).scl(solvedTime).add(targetAcceleration.scl(0.5 * solvedTime * solvedTime))
 				
-				val aimPosition = targetMovement.position.cpy().sub(shooterMovement.position)
-				aimPosition.add(relativePosition.x.toLong(), relativePosition.y.toLong())
+				val aimPosition = targetMovement.position.cpy()
+				aimPosition.addDiv(relativePosition.x.toLong(), relativePosition.y.toLong(), 100)
 				
 				relativePosition.set(missileLaunchSpeed + missileAcceleration * solvedTime, 0.0).rotateRad(shooterMovement.position.angleToRad(aimPosition))
 				relativeVelocity.add(relativePosition).scl(100.0)
@@ -568,16 +598,16 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		
 		relativeVelocity.scl(root)
 		
-		val aimPosition = relativePosition.set(shooterMovement.position)
+		val aimPosition = relativePosition.set(targetMovement.position)
 		aimPosition.add(relativeVelocity.x.toLong(), relativeVelocity.y.toLong())
 		
 		val interceptPosition = targetMovement.velocity.cpy().scl(FastMath.round(root))
 		interceptPosition.div(100).add(targetMovement.position)
 		
-		relativeVelocity.scl(100.0)
+		val projectileVelocity = Vector2D(projectileSpeed, 0.0).rotateRad(shooterMovement.position.angleToRad(aimPosition))
+		relativeVelocity.add(projectileVelocity).scl(100.0)
 		
 		return InterceptResult(FastMath.ceil(root).toLong(), aimPosition, interceptPosition, Vector2L(relativeVelocity.x.toLong(), relativeVelocity.y.toLong()))
 	}
-	
 	
 }

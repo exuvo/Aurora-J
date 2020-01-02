@@ -445,7 +445,32 @@ public class Vector2L implements Serializable {
 		this.y = (long) ((y * invAlpha) + (target.y * alpha));
 		return this;
 	}
-
+	
+	public Vector2L lerp(Vector2L target, long current, long max) {
+		final long invAlpha = max - current;
+		
+		BigInt X1 = new BigInt(x);
+		BigInt Y1 = new BigInt(y);
+		X1.mul(invAlpha);
+		Y1.mul(invAlpha);
+		
+		BigInt X2 = new BigInt(target.x);
+		BigInt Y2 = new BigInt(target.y);
+		X2.mul(current);
+		Y2.mul(current);
+		
+		X1.add(X2);
+		Y1.add(Y2);
+		
+		X1.div(max);
+		Y1.div(max);
+		
+		x = X1.longValue();
+		y = Y1.longValue();
+		
+		return this;
+	}
+	
 	public Vector2L interpolate(Vector2L target, float alpha, Interpolation interpolation) {
 		return lerp(target, interpolation.apply(alpha));
 	}
