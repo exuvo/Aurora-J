@@ -48,6 +48,7 @@ import java.util.concurrent.Future;
 *
 * @author Simon Klein
 * @version 0.7
+* https://github.com/bwakell/Huldra
 */
 public class BigInt extends Number implements Comparable<BigInt>
 {
@@ -377,8 +378,8 @@ public class BigInt extends Number implements Comparable<BigInt>
 	public void uassign(final int s, final long val)
 	{
 		sign = s;
-		len = 2;
 		if(dig.length<2) realloc(2);
+		len = 2;
 		dig[0] = (int)(val&mask);
 		dig[1] = (int)(val>>>32);
 		if(dig[1]==0) --len;
@@ -1661,6 +1662,24 @@ public class BigInt extends Number implements Comparable<BigInt>
 		sign *= div.sign;
 		return new BigInt(sign/div.sign, r, tmp);
 	}
+	
+	/**
+	 * Sets this number to {@code (this mod m}).  This method
+	 * differs from {@code rem} in that it always computes * <i>non-negative</i> result
+	 *
+	 * @param  div The number to use in the division causing the remainder.
+	 * @see    #rem
+	 */
+	public void mod(BigInt div) {
+		if (div.sign <= 0)
+			throw new ArithmeticException("BigInt: modulus not positive");
+
+		this.rem(div);
+		if (this.sign < 0) {
+			this.add(div);
+		}
+	}
+	
 	/**
 	* Divides the first magnitude u[0..m) by v[0..n) and stores the resulting quotient in q.
 	* The remainder will be stored in u, so u will be destroyed.

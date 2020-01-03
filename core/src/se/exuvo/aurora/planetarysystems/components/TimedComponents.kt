@@ -180,25 +180,37 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 	}
 
 	override fun setPrediction(value: MovementValues, time: Long): Boolean {
-		val updated = super.setPrediction(value, time);
 
-		if (updated) {
+		if (super.setPrediction(value, time)) {
 			approach = ApproachType.COAST
 			startAcceleration = null
 			finalAcceleration = null
 			aimTarget = null
+			
+			if (interpolated == null) {
+				interpolated = TimedValue(MovementValues(Vector2L(), Vector2L(value.velocity), Vector2L()), -1)
+				this.interpolated = interpolated
+			}
+			
+			return true
 		}
 
-		return updated
+		return false
 	}
 
 	fun setPredictionBrachistocrone(value: MovementValues, startAcceleration: Long, time: Long): Boolean {
 
-		if (setPrediction(value, time)) {
+		if (super.setPrediction(value, time)) {
 			approach = ApproachType.BRACHISTOCHRONE;
 			this.startAcceleration = startAcceleration
 			this.finalAcceleration = value.acceleration.len().toLong()
 			aimTarget = null
+			
+			if (interpolated == null) {
+				interpolated = TimedValue(MovementValues(Vector2L(), Vector2L(), Vector2L()), -1)
+				this.interpolated = interpolated
+			}
+			
 			return true
 		}
 
@@ -207,11 +219,17 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 
 	fun setPredictionBallistic(value: MovementValues, aimTarget: Vector2L, startAcceleration: Long, time: Long): Boolean {
 
-		if (setPrediction(value, time)) {
+		if (super.setPrediction(value, time)) {
 			approach = ApproachType.BALLISTIC;
 			this.startAcceleration = startAcceleration
 			this.finalAcceleration = value.acceleration.len().toLong()
 			this.aimTarget = aimTarget
+			
+			if (interpolated == null) {
+				interpolated = TimedValue(MovementValues(Vector2L(), Vector2L(), Vector2L()), -1)
+				this.interpolated = interpolated
+			}
+			
 			return true
 		}
 
@@ -220,12 +238,7 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 
 	override fun interpolate(time: Long) {
 
-		var interpolated = this.interpolated
-
-		if (interpolated == null) {
-			interpolated = TimedValue(MovementValues(Vector2L(), Vector2L(), Vector2L()), time)
-			this.interpolated = interpolated
-		}
+		var interpolated = this.interpolated!!
 
 		val startPosition = previous.value.position
 		val endPosition = next!!.value.position

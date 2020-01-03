@@ -24,6 +24,7 @@ import se.exuvo.settings.Settings
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import se.exuvo.aurora.utils.Storage
 import se.exuvo.aurora.screens.ImGuiScreen
+import se.exuvo.aurora.galactic.Galaxy
 
 interface AuroraGame : ApplicationListener {
 	fun update()
@@ -91,6 +92,8 @@ class AuroraGameMainWindow() : AuroraGame {
 
 	override fun dispose() {
 		//TODO close all other windows first
+		
+		GameServices(Galaxy::class)?.dispose()
 		storage.dispose()
 		Assets.dispose()
 		GameServices.dispose()

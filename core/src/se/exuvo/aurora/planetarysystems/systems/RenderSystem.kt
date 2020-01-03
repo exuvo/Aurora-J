@@ -46,6 +46,7 @@ import se.exuvo.aurora.planetarysystems.components.RailgunShotComponent
 import com.artemis.EntitySubscription
 import org.apache.commons.math3.util.FastMath
 import se.exuvo.aurora.planetarysystems.components.MissileComponent
+import com.badlogic.gdx.math.Vector2
 
 class RenderSystem : IteratingSystem(FAMILY) {
 	companion object {
@@ -92,6 +93,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	lateinit private var laserShotSubscription: EntitySubscription
 	lateinit private var railgunShotSubscription: EntitySubscription
 	lateinit private var missileSubscription: EntitySubscription
+	
+	private val tempL = Vector2L()
+	private val tempD = Vector2D()
+	private val tempF = Vector2()
 
 	override fun initialize() {
 		super.initialize()
@@ -172,20 +177,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
 			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
 
-			var x2 = x
-			var y2 = y
+			tempF.set(10 * zoom, 0f).rotateRad(movement.velocity.angleRad().toFloat()).add(x, y)
 			
-			val velocityAngle = movement.velocity.angle()
-			
-			if (velocityAngle >= 45 && velocityAngle < 135) {
-				y2 -= 10 * zoom
-			} else if (velocityAngle >= 135 && velocityAngle < 225) {
-				x2 -= 10 * zoom
-			} else if (velocityAngle >= 225 && velocityAngle < 315) {
-				y2 += 10 * zoom
-			} else if (velocityAngle >= 315 || velocityAngle < 45) {
-				x2 += 10 * zoom
-			}
+			val x2 = tempF.x
+			val y2 = tempF.y
 			
 			shapeRenderer.line(x, y, x2, y2)
 		}

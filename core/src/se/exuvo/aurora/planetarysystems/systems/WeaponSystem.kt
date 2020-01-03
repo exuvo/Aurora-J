@@ -409,7 +409,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 											ship.heat += ((100 - part.efficiency) * chargedState.charge) / 100
 										
 											chargedState.charge = 0
-											ammoState.amount -= 1
+//											ammoState.amount -= 1
 										}
 									}
 								}
@@ -466,11 +466,11 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 												
 												timedLifeMapper.create(munitionEntityID).endTime = galacticTime
 												
-												galaxyGroupSystem.add(planetarySystem.getEntityReference(munitionEntityID), GroupSystem.SELECTED)
+//												galaxyGroupSystem.add(planetarySystem.getEntityReference(munitionEntityID), GroupSystem.SELECTED)
 											
 //												thrustComponent.thrustAngle = angleToPredictedTarget.toFloat()
 												
-												ammoState.amount -= 1
+//												ammoState.amount -= 1
 												
 //											} else {
 //												

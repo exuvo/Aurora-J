@@ -39,9 +39,11 @@ public class ArrayListQuery<ReturnType> extends PopulatedQuery<ReturnType> {
 			rs = pstmt.executeQuery();
 
 			if (rs.next()) {
-				rs.last();
-				returnTypeList = new ArrayList<ReturnType>(rs.getRow());
-				rs.beforeFirst();
+//				rs.last();
+//				returnTypeList = new ArrayList<ReturnType>(rs.getRow());
+//				rs.beforeFirst();
+				
+				returnTypeList = new ArrayList<ReturnType>();
 
 				while (rs.next()) {
 					returnTypeList.add(beanPopulator.populate(rs));
@@ -72,6 +74,6 @@ public class ArrayListQuery<ReturnType> extends PopulatedQuery<ReturnType> {
 	@Override
 	protected PreparedStatement getPreparedStatement(String query) throws SQLException {
 
-		return connection.prepareStatement(query, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+		return connection.prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
 	}
 }

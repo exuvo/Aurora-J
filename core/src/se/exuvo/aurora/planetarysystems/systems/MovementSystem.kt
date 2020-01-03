@@ -139,8 +139,6 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 	private val tempVelocity = Vector2L()
 
 	override fun process(entityID: Int) {
-		val deltaGameTime = galaxy.tickSize.toLong()
-
 		val movement = movementMapper.get(entityID)
 		
 		if (movement.next != null) { // On timed movement
@@ -186,6 +184,8 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 
 			return
 		}
+		
+		val deltaGameTime = galaxy.tickSize.toLong()
 		
 		val shipMovementValue = movement.previous.value
 		
@@ -289,17 +289,19 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 		val targetVelocity = if (targetMovement != null) targetMovement.velocity else Vector2L.Zero
 		val targetVelocityMagnitude = targetVelocity.len()
 		val angleToTarget = position.angleTo(targetPosition)
-		val velocityAngle = velocity.angle();
-		val targetVelocityAngle = targetVelocity.angle()
-		val velocityAngleScale = (targetVelocityAngle - velocityAngle) / 180
-		val velocityMagnitute = velocity.len()
+//		val velocityAngle = velocity.angle();
+		val velocityAngleDiffAngleToTarget = velocity.angle(tempPosition)
+//		val targetVelocityAngle = targetVelocity.angle()
+		val velocityAngleScale = FastMath.cos(targetVelocity.angleToRad(velocity))
+		val velocityMagnitute = velocity.len().toLong()
 		val timeToTargetWithCurrentSpeed = (100 * distance) / (velocityMagnitute + maxAcceleration)
-		val positionDiffMagnitude = tempPosition.len()
+		val positionDiffMagnitude = tempPosition.len().toLong()
 //		println("angleToTarget, $angleToTarget , velocityAngle $velocityAngle")
 
 		when (approach) {
 			ApproachType.BRACHISTOCHRONE -> {
 
+//		val relativeSpeed = targetMovement.value.velocity.cpy().sub(shipMovement.value.velocity).len() * FastMath.cos(targetMovement.value.velocity.angleToRad(shipMovement.value.velocity))
 				val timeToStop = (velocityMagnitute - velocityAngleScale * targetVelocityMagnitude) / maxAcceleration
 
 //			println("timeToTargetWithCurrentSpeed ${timeToTargetWithCurrentSpeed}, timeToStop ${timeToStop}")
@@ -329,16 +331,16 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 					}
 
 					// Apply breaking in same direction as travel
-					tempVelocity.set(velocity).scl(tickAcceleration).div(velocityMagnitute)
+					tempVelocity.set(velocity).scl(-tickAcceleration).div(velocityMagnitute)
 					
 					if (tickAcceleration == currentAcceleration) {
 						acceleration.set(tempVelocity)
 						
 					} else {
-						acceleration.set(velocity).scl(currentAcceleration).div(velocityMagnitute)
+						acceleration.set(velocity).scl(-currentAcceleration).div(velocityMagnitute)
 					}
 					
-					velocity.sub(tempVelocity)
+					velocity.add(tempVelocity)
 					
 					val thrustReverseAngle = (tempVelocity.angle() + 180) % 360
 					thrustComponent.thrustAngle = thrustReverseAngle.toFloat()
@@ -357,11 +359,13 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 					}
 
 					if (velocityMagnitute > 10 * currentAcceleration) {
-						if (FastMath.abs(angleToTarget - velocityAngle) <= 90) { // Thrust slightly sideways if velocity is only somewhat in the wrong direction
-							tempVelocity.rotate(angleToTarget - velocityAngle)
+						if (FastMath.abs(velocityAngleDiffAngleToTarget) <= 90) { // Thrust slightly sideways if velocity is only somewhat in the wrong direction
+							tempVelocity.rotate(velocityAngleDiffAngleToTarget)
+//							nameMapper.get(entityID).name = "< " + velocityAngleDiffAngleToTarget
 
-						} else if (FastMath.abs(angleToTarget - velocityAngle) > 90) { // Stop sideways velocity completly if is is too far off target
-							tempVelocity.rotate(180 - (angleToTarget - velocityAngle))
+						} else { // Stop sideways velocity completly if is is too far off target
+							tempVelocity.rotate(180 - velocityAngleDiffAngleToTarget)
+//							nameMapper.get(entityID).name = "> " + velocityAngleDiffAngleToTarget + "," + (180 - velocityAngleDiffAngleToTarget)
 						}
 					}
 
@@ -370,18 +374,20 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 					thrustComponent.thrustAngle = tempVelocity.angle().toFloat()
 					
 					nameMapper.get(entityID).name = "a " + velocity.len().toLong()
+					
+//					println("angleToTarget $angleToTarget, velocityAngle $velocityAngle, angleToTargetDiffVelocityAngle $angleToTargetDiffVelocityAngle, tickAcceleration $tickAcceleration cm/s, acceleration $acceleration cm/s, tempVelocity $tempVelocity, velocity $velocity, distance $distance")
 				}
 
 				tempVelocity.set(velocity).scl(deltaGameTime)
 				position.addDiv(tempVelocity, 100)
 
-//				println("tickAcceleration $tickAcceleration m/s, tempVelocity $tempVelocity, velocity $velocity, distance $distance")
+//				println("tickAcceleration $tickAcceleration cm/s, acceleration $acceleration cm/s, velocity $velocity, distance $distance")
 			}
 			ApproachType.BALLISTIC -> {
 
 				nameMapper.get(entityID).name = "a " + velocityMagnitute
 
-				if (movement.next == null && targetEntityID == null && velocityMagnitute == 0.0) {
+				if (movement.next == null && targetEntityID == null && velocityMagnitute == 0L) {
 
 					println("Movement: ballistic prediction to target")
 
@@ -448,11 +454,11 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 				tempVelocity.set(tempPosition).scl(tickAcceleration).div(positionDiffMagnitude)
 
 				if (velocityMagnitute > 10 * currentAcceleration) {
-					if (FastMath.abs(angleToTarget - velocityAngle) <= 90) {
-						tempVelocity.rotate(angleToTarget - velocityAngle)
+					if (FastMath.abs(velocityAngleDiffAngleToTarget) <= 90) { // Thrust slightly sideways if velocity is only somewhat in the wrong direction
+						tempVelocity.rotate(velocityAngleDiffAngleToTarget)
 
-					} else if (FastMath.abs(angleToTarget - velocityAngle) > 90) {
-						tempVelocity.rotate(180 - (angleToTarget - velocityAngle))
+					} else { // Stop sideways velocity completly if is is too far off target
+						tempVelocity.rotate(180 - velocityAngleDiffAngleToTarget)
 					}
 				}
 
@@ -463,9 +469,9 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 				position.addDiv(tempVelocity, 100)
 
 			}
-//			else -> {
-//				throw RuntimeException("Unknown approach type: " + approach)
-//			}
+			else -> {
+				throw RuntimeException("Unknown approach type: " + approach)
+			}
 		}
 
 	}

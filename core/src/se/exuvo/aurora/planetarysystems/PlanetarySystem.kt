@@ -244,7 +244,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		val missileBattery = Battery(10 * Units.KILO, 50 * Units.KILO, 0.8f, 1 * Units.GIGA)
 		missileBattery.cost[Resource.GENERIC] = 500
 		
-//		val missileIonThruster = ElectricalThruster(10 * 100f, 1 * Units.KILO)
+//		val missileIonThruster = ElectricalThruster(290 * 1000, 1 * Units.KILO)
 		val missileChemicalThruster = FueledThruster(2900 * 1000, 1)
 		val missileFuelPart = FuelContainerPart(5000)
 		
@@ -254,18 +254,18 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		missile.addPart(missileChemicalThruster)
 		missile.addPart(missileFuelPart)
 
-//		val railgun = Railgun(2 * Units.MEGA, 5, 5 * Units.MEGA, 5, 3, 20)
-//		shipHull.addPart(railgun)
-//		val railgunRef = shipHull[Railgun::class][0]
-//		shipHull.preferredPartMunitions[railgunRef] = sabot
+		val railgun = Railgun(2 * Units.MEGA, 5, 5 * Units.MEGA, 5, 3, 20)
+		shipHull.addPart(railgun)
+		val railgunRef = shipHull[Railgun::class][0]
+		shipHull.preferredPartMunitions[railgunRef] = sabot
 
 		val missileLauncher = MissileLauncher(200 * Units.KILO, 14, 3, 10, 1000 * 5500)
 		shipHull.addPart(missileLauncher)
 		val missileLauncherRef = shipHull[MissileLauncher::class][0]
 		shipHull.preferredPartMunitions[missileLauncherRef] = missile
 
-//		val beam = BeamWeapon(1 * Units.MEGA, 1.0, BeamWavelength.Infrared, 10 * Units.MEGA)
-//		shipHull.addPart(beam)
+		val beam = BeamWeapon(1 * Units.MEGA, 1.0, BeamWavelength.Infrared, 10 * Units.MEGA)
+		shipHull.addPart(beam)
 
 		val tcRef: PartRef<TargetingComputer> = shipHull[TargetingComputer::class][0]
 		shipHull.defaultWeaponAssignments[tcRef] = shipHull.getPartRefs().filter({ it.part is WeaponPart })
@@ -346,7 +346,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 
 		val entity4 = createEntity(empire1)
 		ownerMapper.create(entity4).set(empire1)
-		timedMovementMapper.create(entity4).apply { previous.value.position.set((Units.AU * 1000L * 1L).toLong(), 0).rotate(45f) } //; previous.value.velocity.set(-1000000f, 0f)
+		timedMovementMapper.create(entity4).apply { previous.value.position.set((Units.AU * 1000 * 1).toLong(), 0).rotate(45f) } //; previous.value.velocity.set(-1000000f, 0f)
 		renderMapper.create(entity4)
 		solarIrradianceMapper.create(entity4)
 		circleMapper.create(entity4).set(radius = 10f)
@@ -367,11 +367,21 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		if (!shipComponent.addCargo(missile, 20)) {
 			println("Failed to add missiles")
 		}
+		
+		val entity5 = createEntity(Empire.GAIA)
+		timedMovementMapper.create(entity5).apply {previous.value.velocity.set(0L, 1000 * 100L); previous.value.position.set(- (Units.AU * 1000 * 0.5).toLong(), 0) }
+		renderMapper.create(entity5)
+		circleMapper.create(entity5).set(radius = 100f)
+		nameMapper.create(entity5).set(name = "Asteroid")
+		tintMapper.create(entity5).set(Color.GRAY)
+		strategicIconMapper.create(entity5).set(Assets.textures.findRegion("strategic/moon"))
 	}
 	
 	fun createShip(hull: ShipHull, colonyEntity: Int?, empire: Empire): Int {
 		
 		val shipEntity = createEntity(empire)
+		
+		//TODO use https://github.com/junkdog/artemis-odb/wiki/Entity-Transmuter ?
 		
 		val shipMovement = timedMovementMapper.create(shipEntity)
 		renderMapper.create(shipEntity)
@@ -424,6 +434,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		uuidMapper.create(entityID).set(EntityUUID(sid, empire.id, getNewEntitityID()))
 
 		history.entityCreated(entityID, world)
+		
 		return entityID
 	}
 	

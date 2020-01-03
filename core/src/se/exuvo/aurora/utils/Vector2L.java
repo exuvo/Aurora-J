@@ -12,9 +12,33 @@ public class Vector2L implements Serializable {
 
 	private static final long serialVersionUID = 913902788239530931L;
 
-	public final static Vector2L X = new Vector2L(1, 0);
-	public final static Vector2L Y = new Vector2L(0, 1);
-	public final static Vector2L Zero = new Vector2L(0, 0);
+	public static final Vector2L X = new Vector2L(1, 0);
+	public static final Vector2L Y = new Vector2L(0, 1);
+	public static final Vector2L Zero = new Vector2L(0, 0);
+	
+	private static final ThreadLocal<BigInt> tmpBigIntX = new ThreadLocal<BigInt>() {
+		@Override protected BigInt initialValue() {
+			return new BigInt(0L);
+		}
+	};
+	
+	private static final ThreadLocal<BigInt> tmpBigIntY = new ThreadLocal<BigInt>() {
+		@Override protected BigInt initialValue() {
+			return new BigInt(0L);
+		}
+	};
+	
+	private static final ThreadLocal<BigInt> tmpBigIntX2 = new ThreadLocal<BigInt>() {
+		@Override protected BigInt initialValue() {
+			return new BigInt(0L);
+		}
+	};
+	
+	private static final ThreadLocal<BigInt> tmpBigIntY2 = new ThreadLocal<BigInt>() {
+		@Override protected BigInt initialValue() {
+			return new BigInt(0L);
+		}
+	};
 
 	/** the x-component of this vector **/
 	public long x;
@@ -139,12 +163,14 @@ public class Vector2L implements Serializable {
 
 	public static BigInt dot(long x1, long y1, long x2, long y2) {
 	// return x1 * x2 + y1 * y2;
-			BigInt X = new BigInt(x1);
-			BigInt Y = new BigInt(y1);
-			X.mul(x2);
-			Y.mul(y2);
-			X.add(Y);
-			return X;
+		BigInt X = tmpBigIntX2.get();
+		BigInt Y = tmpBigIntY2.get();
+		X.assign(x1);
+		Y.assign(y1);
+		X.mul(x2);
+		Y.mul(y2);
+		X.add(Y);
+		return X;
 	}
 
 	public BigInt dot(Vector2L v) {
@@ -300,8 +326,10 @@ public class Vector2L implements Serializable {
 	 */
 	public BigInt crs(long x, long y) {
 		// return this.x * y - this.y * x;
-		BigInt X = new BigInt(this.x);
-		BigInt Y = new BigInt(this.y);
+		BigInt X = tmpBigIntX.get();
+		BigInt Y = tmpBigIntY.get();
+		X.assign(this.x);
+		Y.assign(this.y);
 		X.mul(y);
 		Y.mul(x);
 		X.sub(Y);
@@ -449,13 +477,17 @@ public class Vector2L implements Serializable {
 	public Vector2L lerp(Vector2L target, long current, long max) {
 		final long invAlpha = max - current;
 		
-		BigInt X1 = new BigInt(x);
-		BigInt Y1 = new BigInt(y);
+		BigInt X1 = tmpBigIntX.get();
+		BigInt Y1 = tmpBigIntY.get();
+		X1.assign(x);
+		Y1.assign(y);
 		X1.mul(invAlpha);
 		Y1.mul(invAlpha);
 		
-		BigInt X2 = new BigInt(target.x);
-		BigInt Y2 = new BigInt(target.y);
+		BigInt X2 = tmpBigIntX2.get();
+		BigInt Y2 = tmpBigIntY2.get();
+		X2.assign(target.x);
+		Y2.assign(target.y);
 		X2.mul(current);
 		Y2.mul(current);
 		
