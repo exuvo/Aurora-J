@@ -907,7 +907,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	
 							if (shipComponent != null) {
 	
-								if (ImGui.collapsingHeader("Parts", TreeNodeFlag.DefaultOpen.i)) {
+								if (ImGui.collapsingHeader("Parts", 0)) { // TreeNodeFlag.DefaultOpen.i
 									
 									ImGui.sliderScalar("Weapon test range", imgui.DataType.Double, ::weaponTestDistance, 100.0, Units.AU * 1000, Units.distanceToString(weaponTestDistance.toLong()), 8.0f)
 	

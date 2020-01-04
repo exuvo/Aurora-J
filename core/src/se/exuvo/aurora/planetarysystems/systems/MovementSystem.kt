@@ -22,10 +22,11 @@ import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEachFast
 import org.apache.commons.math3.util.FastMath
 import se.exuvo.aurora.utils.Vector2D
+import se.exuvo.aurora.planetarysystems.components.OnPredictedMovementComponent
 
 class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
-		val FAMILY = Aspect.all(TimedMovementComponent::class.java).exclude(OrbitComponent::class.java)
+		val FAMILY = Aspect.all(TimedMovementComponent::class.java).exclude(OrbitComponent::class.java, OnPredictedMovementComponent::class.java)
 		val CAN_ACCELERATE_FAMILY = Aspect.all(ThrustComponent::class.java, MassComponent::class.java)
 		val DESTINATION_FAMILY = Aspect.one(MoveToPositionComponent::class.java, MoveToEntityComponent::class.java)
 		
@@ -39,6 +40,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 	lateinit private var moveToPositionMapper: ComponentMapper<MoveToPositionComponent>
 	lateinit private var nameMapper: ComponentMapper<NameComponent>
 	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>
+	lateinit private var predictedMovementMapper: ComponentMapper<OnPredictedMovementComponent>
 
 	lateinit private var weaponSystem: WeaponSystem
 	private val galaxy = GameServices[Galaxy::class]
@@ -69,6 +71,8 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 				val current = movement.get(galaxy.time)
 				movement.set(current.value, galaxy.time)
 				movement.next = null
+				
+				predictedMovementMapper.remove(entityID)
 			}
 
 		} else {
@@ -112,6 +116,8 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 			val current = movement.get(galaxy.time)
 			movement.set(current.value, galaxy.time)
 			movement.next = null
+			
+			predictedMovementMapper.remove(entityID)
 		}
 	}
 
@@ -141,48 +147,50 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 	override fun process(entityID: Int) {
 		val movement = movementMapper.get(entityID)
 		
-		if (movement.next != null) { // On timed movement
+		if (movement.next != null) {
 
-			val next = movement.next!!
-
-			if (galaxy.time >= next.time) {
-
-				if (CAN_ACCELERATE_ASPECT.isInterested(world.getEntity(entityID))) {
-					println("Movement: target reached predicted time")
-				}
-				
-				movement.previous = next
-				movement.next = null
-				movement.aimTarget = null
-				movement.startAcceleration = null
-				movement.finalAcceleration = null
-
-				moveToEntityMapper.remove(entityID)
-				moveToPositionMapper.remove(entityID)
-
-			} else {
-
-				val current = movement.get(galaxy.time)
-
-				when (movement.approach) {
-					ApproachType.COAST -> {
-						
-					}
-					ApproachType.BRACHISTOCHRONE -> {
-
-					}
-					ApproachType.BALLISTIC -> {
-						if (CAN_ACCELERATE_ASPECT.isInterested(world.getEntity(entityID))) {
-							nameMapper.get(entityID).name = "p " + current.value.velocity.len().toLong()
-						}
-					}
-					else -> {
-						throw RuntimeException("Unknown approach type: " + movement.approach)
-					}
-				}
-			}
-
+			log.error("Entity $entityID on predicted movement but does not have a OnPredictedMovementComponent")
 			return
+//			val next = movement.next!!
+//
+//			if (galaxy.time >= next.time) {
+//
+//				if (CAN_ACCELERATE_ASPECT.isInterested(world.getEntity(entityID))) {
+//					println("Movement: target reached predicted time")
+//				}
+//				
+//				movement.previous = next
+//				movement.next = null
+//				movement.aimTarget = null
+//				movement.startAcceleration = null
+//				movement.finalAcceleration = null
+//
+//				moveToEntityMapper.remove(entityID)
+//				moveToPositionMapper.remove(entityID)
+//
+//			} else {
+//
+//				val current = movement.get(galaxy.time)
+//
+//				when (movement.approach) {
+//					ApproachType.COAST -> {
+//						
+//					}
+//					ApproachType.BRACHISTOCHRONE -> {
+//
+//					}
+//					ApproachType.BALLISTIC -> {
+//						if (CAN_ACCELERATE_ASPECT.isInterested(world.getEntity(entityID))) {
+//							nameMapper.get(entityID).name = "p " + current.value.velocity.len().toLong()
+//						}
+//					}
+//					else -> {
+//						throw RuntimeException("Unknown approach type: " + movement.approach)
+//					}
+//				}
+//			}
+//
+//			return
 		}
 		
 		val deltaGameTime = galaxy.tickSize.toLong()
@@ -312,8 +320,6 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 //					timedMovement.setPredictionBallistic()
 //				}
 
-				//TODO fix cant go south?
-				
 				if (timeToTargetWithCurrentSpeed < timeToStop && velocityMagnitute > 0) {
 
 					if (timeToStop <= 1) {
@@ -391,18 +397,20 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 
 					println("Movement: ballistic prediction to target")
 
-					val timeToTarget = FastMath.sqrt((2 * 100 * distance) / maxAcceleration)
+					val timeToTarget = FastMath.sqrt((2 * 100 * distance) / maxAcceleration.toDouble())
 
 					val finalVelocity = maxAcceleration * timeToTarget
 					
-					println("timeToTarget $timeToTarget, final velocity ${finalVelocity / 100}, distance $distance, acceleration ${maxAcceleration / 100}")
+					println("timeToTarget $timeToTarget, final velocity ${finalVelocity / 100} m/s, distance $distance, acceleration ${maxAcceleration} cm/s²")
 					
 					tempVelocity.set(finalVelocity.toLong(), 0).rotate(angleToTarget)
 					
-//					movement.previous.time = galaxy.time
+					movement.previous.time = galaxy.time
 					val targetPositionCpy = targetPosition.cpy()
-					movement.setPredictionBallistic(MovementValues(targetPositionCpy, tempVelocity.cpy(), Vector2L(maxAcceleration, 0).rotate(angleToTarget)), targetPositionCpy, maxAcceleration, galaxy.time + FastMath.ceil(timeToTarget).toLong())
+					movement.setPredictionBallistic(MovementValues(targetPositionCpy, tempVelocity.cpy(), Vector2L(maxAcceleration, 0).rotate(angleToTarget)), targetPositionCpy, maxAcceleration, galaxy.time + FastMath.round(timeToTarget))
 					thrustComponent.thrustAngle = angleToTarget.toFloat()
+					
+					predictedMovementMapper.create(entityID)
 
 					return
 				}
@@ -418,7 +426,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 						targetMovementValue = MovementValues(targetPosition, targetVelocity, Vector2L.Zero)
 					}
 					
-					val result = weaponSystem.getInterceptionPosition(shipMovementValue, targetMovementValue, 0.0, maxAcceleration.toDouble())
+					val result = weaponSystem.getInterceptionPosition(shipMovementValue, targetMovementValue, 0.0, maxAcceleration.toDouble() / 100)
 										
 					if (result == null) {
 						
@@ -428,16 +436,20 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 						
 						println("Movement: ballistic prediction to target")
 						
-						val (timeToIntercept, aimPosition, interceptPosition, interceptVelocity) = result
+						val (timeToIntercept, aimPosition, interceptPosition, interceptVelocity, relativeInterceptVelocity) = result
 						
-						println("timeToIntercept $timeToIntercept, final velocity ${interceptVelocity.len()}, distance1 $distance, distance2 ${position.cpy().sub(interceptPosition).len()}, acceleration $maxAcceleration")
+						println("timeToIntercept $timeToIntercept, final velocity ${relativeInterceptVelocity.len()}, distance1 $distance, distance2 ${position.cpy().sub(interceptPosition).len()}, acceleration $maxAcceleration")
 						
 						val angleToAimTarget = position.angleTo(aimPosition)
 						val angleRadToAimTarget = position.angleRad(aimPosition)
 						
-//						movement.previous.time = galaxy.time
+						movement.previous.time = galaxy.time
 						movement.setPredictionBallistic(MovementValues(interceptPosition, interceptVelocity, Vector2L(maxAcceleration, 0).rotate(angleRadToAimTarget)), aimPosition, maxAcceleration, galaxy.time + timeToIntercept)
 						thrustComponent.thrustAngle = angleToAimTarget.toFloat()
+						
+						predictedMovementMapper.create(entityID)
+						
+						return
 					}
 				}
 				

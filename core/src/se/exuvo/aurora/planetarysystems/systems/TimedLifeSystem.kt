@@ -18,9 +18,11 @@ import com.artemis.utils.BitVector
 class TimedLifeSystem : BaseEntitySystem(ASPECT) {
 	companion object {
 		val ASPECT = Aspect.all(TimedLifeComponent::class.java)
+		
+		@JvmStatic
+		val log = LogManager.getLogger(TimedLifeSystem::class.java)
 	}
 
-	val log = LogManager.getLogger(this.javaClass)
 	private val galaxy = GameServices[Galaxy::class]
 
 	@Wire
@@ -56,7 +58,6 @@ class TimedLifeSystem : BaseEntitySystem(ASPECT) {
 		}
 	}
 
-	//TODO listen on add/remove aspect entity and put into sorted list
 	override fun processSystem() {
 		
 		while(true) {

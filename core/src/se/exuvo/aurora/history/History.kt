@@ -43,7 +43,7 @@ class History : Disposable {
 	val historyEntityEventDAO: AnnotatedDAO<HistoryEntityEvent>
 
 	// Only seems to affects reads and not linearly
-	private val executorService = ThreadPoolExecutor(5, 5, 10000L, TimeUnit.MILLISECONDS, LinkedBlockingQueue<Runnable>())
+	private val executorService = ThreadPoolExecutor(5, 5, 10L, TimeUnit.SECONDS, LinkedBlockingQueue<Runnable>())
 
 	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 
@@ -57,8 +57,9 @@ class History : Disposable {
 
 		val config = SQLiteConfig()
 		config.setPragma(SQLiteConfig.Pragma.FOREIGN_KEYS, "true")
-		config.setPragma(SQLiteConfig.Pragma.SYNCHRONOUS, SynchronousMode.OFF.getValue())
-		config.setOpenMode(SQLiteOpenMode.NOMUTEX) // Should enable SQLITE_CONFIG_MULTITHREAD, see https://github.com/xerial/sqlite-jdbc/issues/369 and https://www.sqlite.org/threadsafe.html
+		config.setPragma(SQLiteConfig.Pragma.SYNCHRONOUS, SynchronousMode.NORMAL.getValue())
+//		config.setPragma(SQLiteConfig.Pragma.SYNCHRONOUS, SynchronousMode.OFF.getValue()) // Better performance but creates exceptions on new database as it is not seen yet by other connections
+		config.setOpenMode(SQLiteOpenMode.NOMUTEX) // NOT WORKING needs library recompile, Should enable SQLITE_CONFIG_MULTITHREAD, see https://github.com/xerial/sqlite-jdbc/issues/369 and https://www.sqlite.org/threadsafe.html
 		
 		config.setJournalMode(SQLiteConfig.JournalMode.WAL)
 //		config.setJournalMode(SQLiteConfig.JournalMode.MEMORY) // No benefit for small data as WAL already caches in memory
@@ -110,20 +111,7 @@ class History : Disposable {
 //		log.info("Read in $time ms")
 	}
 
-	override fun dispose() {
-		executorService.shutdown()
-		
-		var tasks = 0L
-		
-		while (executorService.isTerminating()) {
-			val newTasks = executorService.getTaskCount() - executorService.getCompletedTaskCount()
-			log.info("Waiting on History DB ${newTasks} queued tasks, ${tasks - newTasks} /s")
-			tasks = newTasks
-			executorService.awaitTermination(1, TimeUnit.SECONDS)
-		}
-		
-		log.info("Closing history DB..")
-		
+	private fun checkpointWAL() {
 		// Run full checkpoint operation
 		var connection: Connection? = null
 		var statement: Statement? = null;
@@ -145,7 +133,7 @@ class History : Disposable {
 			}
 
 		} catch (e: SQLException) {
-			log.error("", e);
+			log.error("Error checkpointing WAL", e);
 
 		} finally {
 
@@ -158,6 +146,23 @@ class History : Disposable {
 
 			DBUtils.closeConnection(connection);
 		}
+	}
+	
+	override fun dispose() {
+		executorService.shutdown()
+		
+		var tasks = 0L
+		
+		while (executorService.isTerminating()) {
+			val newTasks = executorService.getTaskCount() - executorService.getCompletedTaskCount()
+			log.info("Waiting on History DB ${newTasks} queued tasks, ${tasks - newTasks} /s")
+			tasks = newTasks
+			executorService.awaitTermination(1, TimeUnit.SECONDS)
+		}
+		
+		log.info("Closing history DB..")
+		
+		checkpointWAL()
 
 		connectionPool.dispose()
 		
@@ -176,18 +181,18 @@ class History : Disposable {
 		val time = galaxy.time
 		val uuid = ComponentMapper.getFor(UUIDComponent::class.java, world).get(entityID).uuid
 		
-		execute({
-			historyEntityEventDAO.add(HistoryEntityEvent(time, uuid, EntityEvent.CREATE))
-		})
+//		execute({
+//			historyEntityEventDAO.add(HistoryEntityEvent(time, uuid, EntityEvent.CREATE))
+//		})
 	}
 
 	fun entityDestroyed(entityID: Int, world: World) {
 		val time = galaxy.time
 		val uuid = ComponentMapper.getFor(UUIDComponent::class.java, world).get(entityID).uuid
 		
-		execute({
-			historyEntityEventDAO.add(HistoryEntityEvent(time, uuid, EntityEvent.DESTROY))
-		})
+//		execute({
+//			historyEntityEventDAO.add(HistoryEntityEvent(time, uuid, EntityEvent.DESTROY))
+//		})
 	}
 }
 

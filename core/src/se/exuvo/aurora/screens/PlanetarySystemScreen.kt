@@ -54,8 +54,8 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	
 	private val imGuiScreen by lazy (LazyThreadSafetyMode.NONE) { AuroraGame.currentWindow.screenService[ImGuiScreen::class] }
 
-	private var viewport by Delegates.notNull<Viewport>()
-	private var camera by Delegates.notNull<OrthographicCamera>()
+	private var viewport: Viewport
+	private var camera: OrthographicCamera
 	private val cameraOffset = Vector2L()
 
 	private val circleMapper = ComponentMapper.getFor(CircleComponent::class.java, system.world)

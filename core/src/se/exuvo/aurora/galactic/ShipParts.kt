@@ -3,6 +3,7 @@ package se.exuvo.aurora.galactic
 import se.exuvo.aurora.planetarysystems.components.Spectrum
 import java.util.Objects
 import java.security.InvalidParameterException
+import org.apache.commons.math3.util.FastMath
 
 abstract class Part {
 	var name: String = ""
@@ -180,6 +181,14 @@ class PassiveSensor(powerConsumption: Long = 0,
 	}
 }
 
+// Blocks all laser and explosive, lets 50% kinetic through
+class Shield(capacitor: Long,
+             powerConsumption: Long,
+             val efficiency: Int = 50 // Percent Energy to damage
+) : Part(),
+		ChargedPart by ChargedPartImpl(capacitor),
+		PoweredPart by PoweredPartImpl(powerConsumption)
+
 enum class BeamWavelength(val short: String, val length: Int) { // Length in nm
 	Microwaves("MW", 500000), // 100000 nm - 25000 nm
 	Infrared("IR", 13750),    //  25000 nm -  2500 nm
@@ -208,23 +217,19 @@ class BeamWeapon(powerConsumption: Long = 0,
 	// Diffraction limited radial beam divergence in radians
 	// https://www.quora.com/Is-the-light-from-lasers-reduced-by-the-inverse-square-law-as-distance-grows-similar-to-other-light-sources
 	// https://en.wikipedia.org/wiki/Beam_divergence
-	fun getRadialDivergence(): Double = (waveLength.length.toDouble() / 1000000000.0) / (Math.PI * 1000 * aperature / 2)
+	fun getRadialDivergence(): Double = (waveLength.length.toDouble() / 1000000000.0) / (FastMath.PI * 1000 * aperature / 2)
 	
 	// We are always outside rayleight range so beam width is linear to distance
 	// in m of beam radius
-	fun getBeamRadiusAtDistance(distance: Long): Double = distance.toDouble() * Math.tan(getRadialDivergence())
+	fun getBeamRadiusAtDistance(distance: Long): Double = distance.toDouble() * FastMath.tan(getRadialDivergence())
 	
 	 // in m²
-	fun getBeamArea(distance: Long): Double = Math.PI * Math.pow(getBeamRadiusAtDistance(distance), 2.0)
+	fun getBeamArea(distance: Long): Double = FastMath.PI * FastMath.pow(getBeamRadiusAtDistance(distance), 2.0)
 	
 	fun getDeliveredEnergyTo1MSquareAtDistance(distance: Long): Long { // in watts of delivered energy
 		val beamArea = getBeamArea(distance)
 		
-		if (beamArea <= 1) {
-			return capacitor
-		}
-		
-		return capacitor / beamArea.toLong()
+		return (efficiency * capacitor) / (100 * FastMath.max(1, beamArea.toLong()))
 	}
 }
 

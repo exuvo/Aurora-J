@@ -64,3 +64,7 @@ class MoveToPositionComponent() : PooledComponent() {
 	
 	override fun reset(): Unit {}
 }
+
+class OnPredictedMovementComponent() : PooledComponent() {
+	override fun reset(): Unit {}
+}

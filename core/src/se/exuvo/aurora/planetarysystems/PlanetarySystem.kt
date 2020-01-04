@@ -92,6 +92,8 @@ import net.mostlyoriginal.api.event.common.Event
 import se.exuvo.aurora.galactic.SimpleMunitionHull
 import se.exuvo.aurora.galactic.AdvancedMunitionHull
 import se.exuvo.aurora.galactic.DamagePattern
+import se.exuvo.aurora.galactic.Shield
+import se.exuvo.aurora.planetarysystems.systems.MovementPredictedSystem
 
 class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener, Disposable {
 	companion object {
@@ -148,6 +150,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		worldBuilder.with(OrbitSystem())
 		worldBuilder.with(ColonySystem())
 		worldBuilder.with(ShipSystem())
+		worldBuilder.with(MovementPredictedSystem())
 		worldBuilder.with(MovementSystem())
 		worldBuilder.with(SolarIrradianceSystem())
 		worldBuilder.with(PassiveSensorSystem())
@@ -246,7 +249,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		
 //		val missileIonThruster = ElectricalThruster(290 * 1000, 1 * Units.KILO)
 		val missileChemicalThruster = FueledThruster(2900 * 1000, 1)
-		val missileFuelPart = FuelContainerPart(5000)
+		val missileFuelPart = FuelContainerPart(5000L * Resource.ROCKET_FUEL.specificVolume)
 		
 		val missile = AdvancedMunitionHull(Resource.MISSILES)
 		missile.name = "Sprint missile"
@@ -275,6 +278,9 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 
 		val chemicalThruster = FueledThruster(10000 * 982, 1)
 		shipHull.addPart(chemicalThruster)
+		
+		val shield = Shield(1 * Units.MEGA, 200 * Units.KILO, 50)
+		shipHull.addPart(shield)
 		
 		shipHull.preferredCargo[Resource.NUCLEAR_FISSION] = 100
 		shipHull.preferredCargo[Resource.ROCKET_FUEL] = 10000

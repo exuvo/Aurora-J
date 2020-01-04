@@ -11,6 +11,7 @@ import com.badlogic.gdx.graphics.GL30
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.viewport.Viewport
 import se.exuvo.aurora.Assets
@@ -46,7 +47,13 @@ import se.exuvo.aurora.planetarysystems.components.RailgunShotComponent
 import com.artemis.EntitySubscription
 import org.apache.commons.math3.util.FastMath
 import se.exuvo.aurora.planetarysystems.components.MissileComponent
-import com.badlogic.gdx.math.Vector2
+import se.exuvo.aurora.galactic.BeamWeapon
+import se.exuvo.aurora.galactic.Railgun
+import se.exuvo.aurora.galactic.MissileLauncher
+import se.exuvo.aurora.planetarysystems.components.AmmunitionPartState
+import se.exuvo.aurora.galactic.SimpleMunitionHull
+import se.exuvo.aurora.galactic.AdvancedMunitionHull
+import kotlin.math.sign
 
 class RenderSystem : IteratingSystem(FAMILY) {
 	companion object {
@@ -97,6 +104,15 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	private val tempL = Vector2L()
 	private val tempD = Vector2D()
 	private val tempF = Vector2()
+	private val temp3F = Vector3()
+	
+	private var scale: Float = 1f
+	lateinit private var viewport: Viewport
+	private var cameraOffset: Vector2L = Vector2L.Zero
+	private var shapeRenderer: ShapeRenderer  = AuroraGame.currentWindow.shapeRenderer
+	private var spriteBatch: SpriteBatch = AuroraGame.currentWindow.spriteBatch
+	private var uiCamera: OrthographicCamera = AuroraGame.currentWindow.screenService.uiCamera
+	private var displaySize: Int = 0
 
 	override fun initialize() {
 		super.initialize()
@@ -112,16 +128,13 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	override fun process(entityID: Int) {}
 	
-	private final fun drawEntities(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
-
-		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
-		val zoom = (viewport.camera as OrthographicCamera).zoom
+	private final fun drawEntities(entityIDs: IntBag) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
 
 		entityIDs.forEachFast { entityID ->
 
-			if (!strategicIconMapper.has(entityID) || !inStrategicView(entityID, zoom)) {
+			if (!strategicIconMapper.has(entityID) || !inStrategicView(entityID)) {
 
 				val movement = movementMapper.get(entityID).get(galaxy.time).value
 				val tintComponent = if (tintMapper.has(entityID)) tintMapper.get(entityID) else null
@@ -132,41 +145,132 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				shapeRenderer.color = color
 
 				val circle = circleMapper.get(entityID)
-				shapeRenderer.circle(x, y, circle.radius, getCircleSegments(circle.radius, zoom))
+				shapeRenderer.circle(x, y, circle.radius / 1000, getCircleSegments(circle.radius, scale))
 			}
 		}
 
 		shapeRenderer.end()
 	}
 
-	private final fun drawEntityCenters(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
-
-		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
-		val zoom = (viewport.camera as OrthographicCamera).zoom
+	private final fun drawEntityCenters(entityIDs: IntBag) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color.PINK
 
 		entityIDs.forEachFast { entityID ->
 
-			if (!strategicIconMapper.has(entityID) || !inStrategicView(entityID, zoom)) {
+			if (!strategicIconMapper.has(entityID) || !inStrategicView(entityID)) {
 
 				val movement = movementMapper.get(entityID).get(galaxy.time).value
 				val x = (movement.getXinKM() - cameraOffset.x).toFloat()
 				val y = (movement.getYinKM() - cameraOffset.y).toFloat()
 
 				val circle = circleMapper.get(entityID)
-				shapeRenderer.circle(x, y, circle.radius * 0.01f, getCircleSegments(circle.radius * 0.01f, zoom))
+				shapeRenderer.circle(x, y, circle.radius / 1000 * 0.01f, getCircleSegments(circle.radius * 0.01f, scale))
 			}
 		}
 
 		shapeRenderer.end()
 	}
 	
-	private final fun drawProjectiles(viewport: Viewport, cameraOffset: Vector2L) {
+	private final fun drawWeaponRanges(entityIDs: IntBag, selectedEntityIDs: List<Int>) {
 
-		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
-		val zoom = (viewport.camera as OrthographicCamera).zoom
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+
+		entityIDs.forEachFast { entityID ->
+
+			if (selectedEntityIDs.contains(entityID) && movementMapper.has(entityID) && weaponsComponentMapper.has(entityID)) {
+
+				val movement = movementMapper.get(entityID).get(galaxy.time).value
+				val ship = shipMapper.get(entityID)
+				val weaponsComponent = weaponsComponentMapper.get(entityID)
+				
+				val x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
+				val y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
+				val tcs = weaponsComponent.targetingComputers
+				val timeToImpact = 10 // s
+				
+				tcs.forEachFast{ tc ->
+					val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+					
+					tcState.linkedWeapons.forEachFast weaponLoop@{ weapon ->
+						if (ship.isPartEnabled(weapon)) {
+							val part = weapon.part
+							
+							val range: Long
+							
+							when (part) {
+								is BeamWeapon -> {
+									val projectileSpeed = (Units.C * 1000).toLong()
+									var damage: Long = (part.efficiency * part.capacitor) / 100
+									val dmg1Range = FastMath.sqrt(damage / FastMath.PI) / FastMath.tan(part.getRadialDivergence())
+									val timeRange = projectileSpeed * timeToImpact
+									
+//									println("damage $damage, dmg1Range $dmg1Range, timeRange $timeRange")
+									range = FastMath.min(timeRange, dmg1Range.toLong())
+									
+									shapeRenderer.color = Color.PURPLE
+								}
+								is Railgun -> {
+									val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
+									val munitionHull = ammoState.type as? SimpleMunitionHull
+									
+									if (munitionHull == null) {
+										return@weaponLoop
+									}
+									
+									val projectileSpeed = (part.capacitor * part.efficiency) / (100 * munitionHull.getLoadedMass())
+									range = projectileSpeed * timeToImpact
+									
+									shapeRenderer.color = Color.ORANGE
+								}
+								is MissileLauncher -> {
+									val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
+									val advMunitionHull = ammoState.type!! as? AdvancedMunitionHull
+									
+									if (advMunitionHull == null) {
+										return@weaponLoop
+									}
+									
+									val missileAcceleration = advMunitionHull.getAverageAcceleration()
+									val missileLaunchSpeed = (100 * part.launchForce) / advMunitionHull.getLoadedMass()
+									val flightTime = advMunitionHull.getFuelMass()
+									
+									range = (missileLaunchSpeed * flightTime + (missileAcceleration * flightTime * flightTime) / 2) / 100
+									
+									shapeRenderer.color = Color.RED
+								}
+								else -> {
+									return@weaponLoop
+								}
+							}
+							
+							// everything in km
+							val radius = (range / 1000).toFloat()
+							val cameraDistance = (tempL.set(movement.position).div(1000).dst(cameraOffset)).toFloat()
+							val viewLength = scale * displaySize
+							
+							//TODO use on all line circles
+							val cameraEdgeInsideCircle =  cameraDistance < radius - viewLength/2
+							val circleOutsideCamera = cameraDistance > radius + viewLength/2
+							
+							if (radius / scale > 20 && !cameraEdgeInsideCircle && !circleOutsideCamera) {
+								
+								val segments = getCircleSegments(radius, scale)
+								
+								shapeRenderer.circle(x, y, radius, segments)
+								println("render")
+							}
+						}
+					}
+				}
+			}
+		}
+
+		shapeRenderer.end()
+	}
+	
+	private final fun drawProjectiles() {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color.BLUE
@@ -177,7 +281,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
 			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
 
-			tempF.set(10 * zoom, 0f).rotateRad(movement.velocity.angleRad().toFloat()).add(x, y)
+			tempF.set(10 * scale, 0f).rotateRad(movement.velocity.angleRad().toFloat()).add(x, y)
 			
 			val x2 = tempF.x
 			val y2 = tempF.y
@@ -222,11 +326,11 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			
 			if (movement != null) {
 			
-				val x = (((500 + movement.value.position.x) / 1000L) - cameraOffset.x).toFloat()
-				val y = (((500 + movement.value.position.y) / 1000L) - cameraOffset.y).toFloat()
+				val x = (((movement.value.position.x.sign * 500 + movement.value.position.x) / 1000L) - cameraOffset.x).toFloat()
+				val y = (((movement.value.position.y.sign * 500 + movement.value.position.y) / 1000L) - cameraOffset.y).toFloat()
 				
-				val radius = zoom * STRATEGIC_ICON_SIZE / 3 + 4 * zoom
-				val segments = getCircleSegments(radius, zoom)
+				val radius = scale * STRATEGIC_ICON_SIZE / 3 + 4 * scale
+				val segments = getCircleSegments(radius, scale)
 
 				shapeRenderer.circle(x, y, radius, segments)
 			}
@@ -238,11 +342,11 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			
 			if (movement != null) {
 			
-				val x = (((500 + movement.value.position.x) / 1000L) - cameraOffset.x).toFloat()
-				val y = (((500 + movement.value.position.y) / 1000L) - cameraOffset.y).toFloat()
+				val x = (((movement.value.position.x.sign * 500 + movement.value.position.x) / 1000L) - cameraOffset.x).toFloat()
+				val y = (((movement.value.position.y.sign * 500 + movement.value.position.y) / 1000L) - cameraOffset.y).toFloat()
 				
-				val radius = zoom * STRATEGIC_ICON_SIZE / 3 + 4 * zoom
-				val segments = getCircleSegments(radius, zoom)
+				val radius = scale * STRATEGIC_ICON_SIZE / 3 + 4 * scale
+				val segments = getCircleSegments(radius, scale)
 
 				shapeRenderer.circle(x, y, radius, segments)
 			}
@@ -254,11 +358,11 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			
 			if (movement != null) {
 			
-				val x = (((500 + movement.value.position.x) / 1000L) - cameraOffset.x).toFloat()
-				val y = (((500 + movement.value.position.y) / 1000L) - cameraOffset.y).toFloat()
+				val x = (((movement.value.position.x.sign * 500 + movement.value.position.x) / 1000L) - cameraOffset.x).toFloat()
+				val y = (((movement.value.position.y.sign * 500 + movement.value.position.y) / 1000L) - cameraOffset.y).toFloat()
 				
-				val radius = zoom * STRATEGIC_ICON_SIZE / 3 + 4 * zoom
-				val segments = getCircleSegments(radius, zoom)
+				val radius = scale * STRATEGIC_ICON_SIZE / 3 + 4 * scale
+				val segments = getCircleSegments(radius, scale)
 
 				shapeRenderer.circle(x, y, radius, segments)
 			}
@@ -267,26 +371,23 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 
-	fun inStrategicView(entityID: Int, zoom: Float): Boolean {
+	fun inStrategicView(entityID: Int, scale: Float = this.scale): Boolean {
 
 		if (debugDisableStrategicView) {
 			return false
 		}
 
-		val radius = circleMapper.get(entityID).radius
-		return radius / zoom < 5f
+		val radius = circleMapper.get(entityID).radius / 1000
+		return radius / scale < 5f
 	}
 
-	private final fun drawStrategicEntities(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
-
-		val spriteBatch = AuroraGame.currentWindow.spriteBatch
-		val zoom = (viewport.camera as OrthographicCamera).zoom
+	private final fun drawStrategicEntities(entityIDs: IntBag) {
 
 		spriteBatch.begin()
 
 		entityIDs.forEachFast { entityID ->
 
-			if (strategicIconMapper.has(entityID) && inStrategicView(entityID, zoom)) {
+			if (strategicIconMapper.has(entityID) && inStrategicView(entityID)) {
 
 				val movement = movementMapper.get(entityID).get(galaxy.time).value
 				val tintComponent = if (tintMapper.has(entityID)) tintMapper.get(entityID) else null
@@ -299,8 +400,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				// https://github.com/libgdx/libgdx/wiki/Spritebatch%2C-Textureregions%2C-and-Sprites
 				spriteBatch.setColor(color.r, color.g, color.b, color.a);
 
-				val width = zoom * STRATEGIC_ICON_SIZE
-				val height = zoom * STRATEGIC_ICON_SIZE
+				val width = scale * STRATEGIC_ICON_SIZE
+				val height = scale * STRATEGIC_ICON_SIZE
 				x = x - width / 2
 				y = y - height / 2
 
@@ -324,10 +425,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		spriteBatch.end()
 	}
 
-	private final fun drawSelections(selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
-
-		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
-		val zoom = (viewport.camera as OrthographicCamera).zoom
+	private final fun drawSelections(selectedEntityIDs: List<Int>) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color.RED
@@ -338,17 +436,17 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
 			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
 
-			if (strategicIconMapper.has(entityID) && inStrategicView(entityID, zoom)) {
+			if (strategicIconMapper.has(entityID) && inStrategicView(entityID)) {
 
-				val radius = zoom * STRATEGIC_ICON_SIZE / 2 + 3 * zoom
-				val segments = getCircleSegments(radius, zoom)
+				val radius = scale * STRATEGIC_ICON_SIZE / 2 + 3 * scale
+				val segments = getCircleSegments(radius, scale)
 				shapeRenderer.circle(x, y, radius, segments)
 
 			} else {
 
 				val circle = circleMapper.get(entityID)
-				val radius = circle.radius + 3 * zoom
-				val segments = getCircleSegments(radius, zoom)
+				val radius = circle.radius / 1000 + 3 * scale
+				val segments = getCircleSegments(radius, scale)
 				shapeRenderer.circle(x, y, radius, segments)
 			}
 		}
@@ -356,19 +454,17 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 
-	private final fun drawTimedMovement(entityIDs: IntBag, selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
-
-		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
-		val zoom = (viewport.camera as OrthographicCamera).zoom
+	private final fun drawTimedMovement(entityIDs: IntBag, selectedEntityIDs: List<Int>) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 
 		entityIDs.forEachFast { entityID ->
 
-			if (movementMapper.has(entityID)) {
+			val movement = movementMapper.get(entityID)
+			
+			if (movement != null) {
 
-				val strategic = strategicIconMapper.has(entityID) && inStrategicView(entityID, zoom)
-				val movement = movementMapper.get(entityID)
+				val strategic = strategicIconMapper.has(entityID) && inStrategicView(entityID)
 
 				if (movement.previous.time != galaxy.time && movement.next != null) {
 
@@ -382,8 +478,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					
 					if (strategic) {
 
-						val radius = zoom * STRATEGIC_ICON_SIZE / 2 + 4 * zoom
-						val segments = getCircleSegments(radius, zoom)
+						val radius = scale * STRATEGIC_ICON_SIZE / 2 + 4 * scale
+						val segments = getCircleSegments(radius, scale)
 
 						if (selectedEntityIDs.contains(entityID)) {
 							shapeRenderer.color = Color.GREEN
@@ -396,8 +492,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					} else {
 
 						val circle = circleMapper.get(entityID)
-						val radius = circle.radius + 3 * zoom
-						val segments = getCircleSegments(radius, zoom)
+						val radius = circle.radius / 1000 + 3 * scale
+						val segments = getCircleSegments(radius, scale)
 
 						if (selectedEntityIDs.contains(entityID)) {
 							shapeRenderer.color = Color.GREEN
@@ -412,23 +508,23 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					
 					if (aimTarget != null && selectedEntityIDs.contains(entityID)) {
 						
-						val x3 = (((500 + aimTarget.x) / 1000L) - cameraOffset.x).toFloat()
-						val y3 = (((500 + aimTarget.y) / 1000L) - cameraOffset.y).toFloat()
+						val x3 = (((aimTarget.x.sign * 500 + aimTarget.x) / 1000L) - cameraOffset.x).toFloat()
+						val y3 = (((aimTarget.y.sign * 500 + aimTarget.y) / 1000L) - cameraOffset.y).toFloat()
 						
 						shapeRenderer.color = Color.ORANGE
 						
 						if (strategic) {
 	
-							val radius = zoom * STRATEGIC_ICON_SIZE / 3 + 4 * zoom
-							val segments = getCircleSegments(radius, zoom)
+							val radius = scale * STRATEGIC_ICON_SIZE / 3 + 4 * scale
+							val segments = getCircleSegments(radius, scale)
 
 							shapeRenderer.circle(x3, y3, radius, segments)
 	
 						} else {
 	
 							val circle = circleMapper.get(entityID)
-							val radius = circle.radius + 2 * zoom
-							val segments = getCircleSegments(radius, zoom)
+							val radius = circle.radius / 1000 + 2 * scale
+							val segments = getCircleSegments(radius, scale)
 	
 							shapeRenderer.circle(x3, y3, radius, segments)
 						}
@@ -440,10 +536,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 
-	private final fun drawSelectionMoveTargets(selectedEntityIDs: List<Int>, cameraOffset: Vector2L) {
+	private final fun drawSelectionMoveTargets(selectedEntityIDs: List<Int>) {
 
-		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
-		
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color(0.8f, 0.8f, 0.8f, 0.5f)
 
@@ -472,10 +566,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 
-	private final fun drawAttackTargets(selectedEntityIDs: List<Int>, cameraOffset: Vector2L) {
+	private final fun drawAttackTargets(selectedEntityIDs: List<Int>) {
 
-		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
-		
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		shapeRenderer.color = Color(0.8f, 0f, 0f, 0.5f)
 
@@ -511,7 +603,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 	
-	private final fun drawOrders(viewport: Viewport, cameraOffset: Vector2L) {
+	private final fun drawOrders() {
 
 		val empire = Player.current.empire;
 		if (empire != null) {
@@ -520,8 +612,6 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 			shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 			shapeRenderer.color = Color(0.8f, 0f, 0f, 0.5f)
-
-			val zoom = (viewport.camera as OrthographicCamera).zoom
 
 			empire.orders.forEach {
 
@@ -532,21 +622,19 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	}
 
 	//TODO draw with shader
-	private final fun drawDetections(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
-
-		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
-		val zoom = (viewport.camera as OrthographicCamera).zoom
+	private final fun drawDetections(entityIDs: IntBag) {
 
 		//TODO if multiple detections with the same strength overlap (ie they see the same things), only draw overlap
 
 		fun drawDetectionsInner() {
 			entityIDs.forEachFast { entityID ->
-				if (detectionMapper.has(entityID)) {
+				val detection = detectionMapper.get(entityID)
+				
+				if (detection != null) {
+					
 					val movementValues = movementMapper.get(entityID).get(galaxy.time).value
 					val x = (movementValues.getXinKM() - cameraOffset.x).toDouble()
 					val y = (movementValues.getYinKM() - cameraOffset.y).toDouble()
-
-					val detection = detectionMapper.get(entityID)
 
 					for (sensorEntry in detection.detections.entries) {
 
@@ -604,7 +692,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 								val minRadius = distanceStep * sensor.part.distanceResolution
 								val maxRadius = minRadius + sensor.part.distanceResolution
-								val segments = Math.min(100, Math.max(3, getCircleSegments(maxRadius.toFloat(), zoom) / 4))
+								val segments = FastMath.min(100, FastMath.max(3, getCircleSegments(maxRadius.toFloat(), scale) / 4))
 
 								shapeRenderer.scanCircleSector(x, y, maxRadius, minRadius, arcAngle, arcWidth, segments)
 							}
@@ -633,19 +721,20 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			shapeRenderer.color = Color.PINK
 
 			entityIDs.forEachFast { entityID ->
-				if (detectionMapper.has(entityID)) {
-					val detection = detectionMapper.get(entityID)
+				val detection = detectionMapper.get(entityID)
+				
+				if (detection != null) {
 
 					for (sensorEntry in detection.detections.entries) {
 						for (angleEntry in sensorEntry.value.entries) {
 							for (distanceEntry in angleEntry.value) {
 								for (hitPosition in distanceEntry.value.hitPositions) {
 
-									val x = ((500 + hitPosition.x) / 1000L - cameraOffset.x).toFloat()
-									val y = ((500 + hitPosition.y) / 1000L - cameraOffset.y).toFloat()
+									val x = ((hitPosition.x.sign * 500 + hitPosition.x) / 1000L - cameraOffset.x).toFloat()
+									val y = ((hitPosition.y.sign * 500 + hitPosition.y) / 1000L - cameraOffset.y).toFloat()
 
-									val radius = 10 + 3 * zoom
-									val segments = getCircleSegments(radius, zoom)
+									val radius = 10 + 3 * scale
+									val segments = getCircleSegments(radius, scale)
 									shapeRenderer.circle(x, y, radius, segments)
 								}
 							}
@@ -658,56 +747,52 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 	}
 
-	private final fun drawSelectionDetectionZones(selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
-
-		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
-		val zoom = (viewport.camera as OrthographicCamera).zoom
-		val sensorEntitites = selectedEntityIDs.filter { sensorsMapper.has(it) }
+	private final fun drawSelectionDetectionZones(selectedEntityIDs: List<Int>) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 
-		sensorEntitites.forEach {
-
-			val entityID = it
-
-			val movement = movementMapper.get(entityID).get(galaxy.time).value
-			val x = (movement.getXinKM() - cameraOffset.x).toDouble()
-			val y = (movement.getYinKM() - cameraOffset.y).toDouble()
-
-			val sensorsComponent = sensorsMapper.get(it)
-
-			sensorsComponent.sensors.forEachFast { sensor ->
-
-				when (sensor.part.spectrum) {
-
-					Spectrum.Thermal -> {
-						shapeRenderer.color = Color.CORAL.cpy()
-						shapeRenderer.color.a = 0.2f
+		selectedEntityIDs.forEachFast { entityID ->
+			val sensorsComponent = sensorsMapper.get(entityID)
+			
+			if (sensorsComponent != null) {
+				
+				val movement = movementMapper.get(entityID).get(galaxy.time).value
+				val x = (movement.getXinKM() - cameraOffset.x).toDouble()
+				val y = (movement.getYinKM() - cameraOffset.y).toDouble()
+	
+				sensorsComponent.sensors.forEachFast { sensor ->
+	
+					when (sensor.part.spectrum) {
+	
+						Spectrum.Thermal -> {
+							shapeRenderer.color = Color.CORAL.cpy()
+							shapeRenderer.color.a = 0.2f
+						}
+	
+						Spectrum.Electromagnetic -> {
+							shapeRenderer.color = Color.VIOLET.cpy()
+							shapeRenderer.color.a = 0.3f
+						}
+	
+						else -> {
+							shapeRenderer.color = Color.WHITE.cpy()
+							shapeRenderer.color.a = 0.2f
+						}
 					}
-
-					Spectrum.Electromagnetic -> {
-						shapeRenderer.color = Color.VIOLET.cpy()
-						shapeRenderer.color.a = 0.3f
+	
+					val arcWidth = 360.0 / sensor.part.arcSegments
+					val minRadius = sensor.part.distanceResolution
+					val maxRadius = minRadius + sensor.part.distanceResolution
+					val segments = FastMath.min(100, FastMath.max(3, getCircleSegments(maxRadius.toFloat(), scale) / 4))
+	
+					var i = 0;
+					while (i < sensor.part.arcSegments) {
+	
+						val arcAngle = i * arcWidth + sensor.part.angleOffset
+	
+						shapeRenderer.scanCircleSector(x, y, maxRadius, minRadius, arcAngle, arcWidth, segments)
+						i++
 					}
-
-					else -> {
-						shapeRenderer.color = Color.WHITE.cpy()
-						shapeRenderer.color.a = 0.2f
-					}
-				}
-
-				val arcWidth = 360.0 / sensor.part.arcSegments
-				val minRadius = sensor.part.distanceResolution
-				val maxRadius = minRadius + sensor.part.distanceResolution
-				val segments = Math.min(100, Math.max(3, getCircleSegments(maxRadius.toFloat(), zoom) / 4))
-
-				var i = 0;
-				while (i < sensor.part.arcSegments) {
-
-					val arcAngle = i * arcWidth + sensor.part.angleOffset
-
-					shapeRenderer.scanCircleSector(x, y, maxRadius, minRadius, arcAngle, arcWidth, segments)
-					i++
 				}
 			}
 		}
@@ -715,10 +800,9 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 
-	private final fun drawSelectionDetectionStrength(selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
+	private final fun drawSelectionDetectionStrength(selectedEntityIDs: List<Int>) {
 
-		val spriteBatch = AuroraGame.currentWindow.spriteBatch
-		val screenPosition = Vector3()
+		val screenPosition = temp3F
 
 		val font = Assets.fontMap
 		font.color = Color.WHITE
@@ -756,9 +840,9 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 						val text = "${sensor.part.spectrum} ${String.format("%.2e", hit.signalStrength)} - ${sensor.part.name}"
 
-						val angleRad = Math.toRadians(angle)
-						val x = (sensorX + radius * Math.cos(angleRad)).toFloat()
-						val y = (sensorY + radius * Math.sin(angleRad)).toFloat()
+						val angleRad = FastMath.toRadians(angle)
+						val x = (sensorX + radius * FastMath.cos(angleRad)).toFloat()
+						val y = (sensorY + radius * FastMath.sin(angleRad)).toFloat()
 
 						screenPosition.set(x, y, 0f)
 						viewport.camera.project(screenPosition)
@@ -773,11 +857,9 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 	}
 
-	private final fun drawNames(entityIDs: IntBag, viewport: Viewport, cameraOffset: Vector2L) {
+	private final fun drawNames(entityIDs: IntBag) {
 
-		val spriteBatch = AuroraGame.currentWindow.spriteBatch
-		val zoom = (viewport.camera as OrthographicCamera).zoom
-		val screenPosition = Vector3()
+		val screenPosition = temp3F
 
 		val font = Assets.fontMap
 		font.color = Color.WHITE
@@ -789,14 +871,14 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 				var radius = 0f
 
-				if (inStrategicView(entityID, zoom)) {
+				if (inStrategicView(entityID)) {
 
-					radius = zoom * STRATEGIC_ICON_SIZE / 2
+					radius = scale * STRATEGIC_ICON_SIZE / 2
 
 				} else if (circleMapper.has(entityID)) {
 
 					val circleComponent = circleMapper.get(entityID)
-					radius = circleComponent.radius
+					radius = circleComponent.radius / 1000
 				}
 
 				val x = (movement.getXinKM() - cameraOffset.x).toFloat()
@@ -810,11 +892,9 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 	}
 
-	private final fun drawMovementTimes(entityIDs: IntBag, selectedEntityIDs: List<Int>, viewport: Viewport, cameraOffset: Vector2L) {
+	private final fun drawMovementTimes(entityIDs: IntBag, selectedEntityIDs: List<Int>) {
 
-		val spriteBatch = AuroraGame.currentWindow.spriteBatch
-		val zoom = (viewport.camera as OrthographicCamera).zoom
-		val screenPosition = Vector3()
+		val screenPosition = temp3F
 
 		val font = Assets.fontMap
 		font.color = Color.WHITE
@@ -826,14 +906,14 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 				var radius = 0f
 
-				if (inStrategicView(entityID, zoom)) {
+				if (inStrategicView(entityID)) {
 
-					radius = zoom * STRATEGIC_ICON_SIZE / 2
+					radius = scale * STRATEGIC_ICON_SIZE / 2
 
 				} else if (circleMapper.has(entityID)) {
 
 					val circleComponent = circleMapper.get(entityID)
-					radius = circleComponent.radius
+					radius = circleComponent.radius / 1000
 				}
 
 				if (movement.next != null && movement.previous.time != galaxy.time) {
@@ -870,50 +950,55 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	final fun render(viewport: Viewport, cameraOffset: Vector2L) {
 
-		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
-		val spriteBatch = AuroraGame.currentWindow.spriteBatch
-		val uiCamera = AuroraGame.currentWindow.screenService.uiCamera
+		this.viewport = viewport
+		this.cameraOffset = cameraOffset
+		shapeRenderer = AuroraGame.currentWindow.shapeRenderer
+		spriteBatch = AuroraGame.currentWindow.spriteBatch
+		uiCamera = AuroraGame.currentWindow.screenService.uiCamera
 		
 		val entityIDs = subscription.getEntities()
 		val selectedEntityIDs = galaxyGroupSystem.get(GroupSystem.SELECTED).filter { it.system == planetarySystem && familyAspect.isInterested(world.getEntity(it.entityID)) }.map { it.entityID }
 
 		viewport.apply()
+		scale = (viewport.camera as OrthographicCamera).zoom
+		displaySize = FastMath.hypot(viewport.getScreenWidth().toDouble(), viewport.getScreenHeight().toDouble()).toInt()
 		shapeRenderer.projectionMatrix = viewport.camera.combined
 		
 //		gravSystem.render(viewport, cameraOffset)
 		
-		drawDetections(entityIDs, viewport, cameraOffset)
+		drawDetections(entityIDs)
 
 		if (Gdx.input.isKeyPressed(Input.Keys.C)) {
-			drawSelectionDetectionZones(selectedEntityIDs, viewport, cameraOffset)
+			drawSelectionDetectionZones(selectedEntityIDs)
 		}
 		
 		if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-			drawOrders(viewport, cameraOffset)
+			drawOrders()
 		}
 
 		orbitSystem.render(cameraOffset)
 
-		drawEntities(entityIDs, viewport, cameraOffset)
-		drawEntityCenters(entityIDs, viewport, cameraOffset)
-		drawProjectiles(viewport, cameraOffset)
-		drawTimedMovement(entityIDs, selectedEntityIDs, viewport, cameraOffset)
+		drawWeaponRanges(entityIDs, selectedEntityIDs)
+		drawEntities(entityIDs)
+		drawEntityCenters(entityIDs)
+		drawProjectiles()
+		drawTimedMovement(entityIDs, selectedEntityIDs)
 
-		drawSelections(selectedEntityIDs, viewport, cameraOffset)
-		drawSelectionMoveTargets(selectedEntityIDs, cameraOffset)
+		drawSelections(selectedEntityIDs)
+		drawSelectionMoveTargets(selectedEntityIDs)
 		//TODO draw selection weapon ranges
-		drawAttackTargets(selectedEntityIDs, cameraOffset)
+		drawAttackTargets(selectedEntityIDs)
 
 		spriteBatch.projectionMatrix = viewport.camera.combined
 
-		drawStrategicEntities(entityIDs, viewport, cameraOffset)
+		drawStrategicEntities(entityIDs)
 
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
 
-		drawSelectionDetectionStrength(selectedEntityIDs, viewport, cameraOffset)
-		drawNames(entityIDs, viewport, cameraOffset)
-		drawMovementTimes(entityIDs, selectedEntityIDs, viewport, cameraOffset)
+		drawSelectionDetectionStrength(selectedEntityIDs)
+		drawNames(entityIDs)
+		drawMovementTimes(entityIDs, selectedEntityIDs)
 
 		spriteBatch.end()
 	}
@@ -950,8 +1035,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 //	}
 }
 
-fun getCircleSegments(radius: Float, zoom: Float): Int {
-	return Math.max(3, (10 * Math.cbrt((radius / zoom).toDouble())).toInt())
+fun getCircleSegments(radius: Float, scale: Float): Int {
+	return FastMath.min(1000, FastMath.max(3, (10 * FastMath.cbrt((radius / scale).toDouble())).toInt()))
 }
 
 fun getXinKM(position: Vector2L): Long {

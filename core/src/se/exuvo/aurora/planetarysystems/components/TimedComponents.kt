@@ -6,6 +6,7 @@ import se.exuvo.aurora.utils.Vector2L
 import java.lang.RuntimeException
 import org.apache.commons.math3.util.FastMath
 import com.artemis.PooledComponent
+import kotlin.math.sign
 
 data class TimedValue<T>(val value: T, var time: Long) {
 }
@@ -102,11 +103,11 @@ abstract class InterpolatedComponent<T>(initial: TimedValue<T>) : TimedComponent
 // In m, cm/s, cm/s²
 data class MovementValues(val position: Vector2L, val velocity: Vector2L, val acceleration: Vector2L) {
 	fun getXinKM(): Long {
-		return (500 + position.x) / 1000L
+		return (position.x.sign * 500 + position.x) / 1000L
 	}
 
 	fun getYinKM(): Long {
-		return (500 + position.y) / 1000L
+		return (position.y.sign * 500 + position.y) / 1000L
 	}
 }
 
@@ -230,6 +231,12 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 				this.interpolated = interpolated
 			}
 			
+			val averageAcceleration = (startAcceleration + finalAcceleration!!) / 2
+			val startPosition = previous.value.position
+			val angle = startPosition.angleToRad(aimTarget)
+			
+			interpolated!!.value.acceleration.set(averageAcceleration, 0).rotateRad(angle)
+			
 			return true
 		}
 
@@ -249,10 +256,10 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 
 		val position = interpolated.value.position
 		val velocity = interpolated.value.velocity
-		val acceleration = interpolated.value.acceleration
+//		val acceleration = interpolated.value.acceleration
 
-		position.set(startPosition).sub(endPosition)
-		val totalDistance = position.len()
+//		position.set(startPosition).sub(endPosition)
+//		val totalDistance = position.len()
 		val travelTime = endTime - startTime
 		val traveledTime = time - startTime
 
@@ -271,18 +278,19 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 				
 				val averageAcceleration = (startAcceleration + finalAcceleration) / 2
 				
-				var distanceTraveled: Long = (averageAcceleration * traveledTime * traveledTime) / 2
+				var distanceTraveled: Long = (averageAcceleration * traveledTime * traveledTime) / (2 * 100)
 				
-				position.set(startPosition).lerp(aimPosition, distanceTraveled, totalDistance.toLong())
+				val aimDistance = FastMath.round(position.set(startPosition).sub(aimPosition).len())
+				position.set(startPosition).lerp(aimPosition, distanceTraveled, aimDistance)
 				
-				//TODO does not work well
-				position.mulAdd(startVelocity, traveledTime)
+				velocity.set(startVelocity).scl(traveledTime).div(100)
+				position.add(velocity)
 				
 				val angle = startPosition.angleToRad(aimPosition)
 
 				velocity.set(averageAcceleration * traveledTime, 0).rotateRad(angle).add(startVelocity)
 				
-				acceleration.set(averageAcceleration, 0).rotateRad(angle)
+//				acceleration.set(lerp(startAcceleration, finalAcceleration, distanceTraveled, totalDistance.toLong()), 0).rotateRad(angle)
 			}
 			ApproachType.BRACHISTOCHRONE -> {
 				//TODO implement
