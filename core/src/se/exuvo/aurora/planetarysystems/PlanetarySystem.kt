@@ -248,7 +248,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		missileBattery.cost[Resource.GENERIC] = 500
 		
 //		val missileIonThruster = ElectricalThruster(290 * 1000, 1 * Units.KILO)
-		val missileChemicalThruster = FueledThruster(2900 * 1000, 1)
+		val missileChemicalThruster = FueledThruster(29000 * 1000, 0)
 		val missileFuelPart = FuelContainerPart(5000L * Resource.ROCKET_FUEL.specificVolume)
 		
 		val missile = AdvancedMunitionHull(Resource.MISSILES)

@@ -54,6 +54,7 @@ import se.exuvo.aurora.planetarysystems.components.AmmunitionPartState
 import se.exuvo.aurora.galactic.SimpleMunitionHull
 import se.exuvo.aurora.galactic.AdvancedMunitionHull
 import kotlin.math.sign
+import com.badlogic.gdx.math.MathUtils
 
 class RenderSystem : IteratingSystem(FAMILY) {
 	companion object {
@@ -185,10 +186,12 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				val ship = shipMapper.get(entityID)
 				val weaponsComponent = weaponsComponentMapper.get(entityID)
 				
-				val x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
-				val y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
+				var x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
+				var y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
 				val tcs = weaponsComponent.targetingComputers
 				val timeToImpact = 10 // s
+				
+				//TODO draw at mouse pos if x is held
 				
 				tcs.forEachFast{ tc ->
 					val tcState = ship.getPartState(tc)[TargetingComputerState::class]
@@ -259,7 +262,6 @@ class RenderSystem : IteratingSystem(FAMILY) {
 								val segments = getCircleSegments(radius, scale)
 								
 								shapeRenderer.circle(x, y, radius, segments)
-								println("render")
 							}
 						}
 					}
@@ -277,11 +279,13 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		
 		laserShotSubscription.getEntities().forEachFast { entityID ->
 
-			val movement = movementMapper.get(entityID).get(galaxy.time).value
-			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
-			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
+			val movement = movementMapper.get(entityID)
+			val movementNow = movement.get(galaxy.time).value
+			val movementPrev = movement.previous.value
+			val x = (movementNow.getXinKM() - cameraOffset.x).toFloat()
+			val y = (movementNow.getYinKM() - cameraOffset.y).toFloat()
 
-			tempF.set(10 * scale, 0f).rotateRad(movement.velocity.angleRad().toFloat()).add(x, y)
+			tempF.set(10 * scale, 0f).rotateRad(MathUtils.PI + movementPrev.position.angleToRad(movement.aimTarget).toFloat()).add(x, y)
 			
 			val x2 = tempF.x
 			val y2 = tempF.y

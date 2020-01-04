@@ -103,7 +103,7 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 	
 	fun getMaxAcceleration(): Long = getThrust() / getEmptyMass()
 	
-	fun getAverageAcceleration(): Long = getThrust() / (getEmptyMass() + getFuelMass() / 2)
+	fun getAverageAcceleration(): Long = (getMinAcceleration() + getMaxAcceleration()) / 2
 	
 	fun getMinAcceleration(): Long = getThrust() / (getEmptyMass() + getFuelMass())
 	

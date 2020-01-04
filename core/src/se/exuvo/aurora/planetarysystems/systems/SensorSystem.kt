@@ -24,8 +24,11 @@ import se.exuvo.aurora.planetarysystems.components.UUIDComponent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEachFast
+import org.apache.commons.math3.util.FastMath
+import se.exuvo.aurora.planetarysystems.PlanetarySystem
+import com.artemis.annotations.Wire
 
-class PassiveSensorSystem : IteratingSystem(FAMILY) {
+class PassiveSensorSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10) {
 	companion object {
 		val FAMILY = Aspect.all(PassiveSensorsComponent::class.java)
 		val SHIP_ASPECT = Aspect.all(ShipComponent::class.java)
@@ -33,7 +36,6 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 	}
 
 	val log = LogManager.getLogger(this.javaClass)
-	private val galaxy = GameServices[Galaxy::class]
 
 	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>
 	lateinit private var sensorsMapper: ComponentMapper<PassiveSensorsComponent>
@@ -45,6 +47,9 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 	lateinit private var emissionsSubscription: EntitySubscription
 	lateinit private var events: EventSystem
 
+	@Wire
+	lateinit private var planetarySystem: PlanetarySystem
+	
 	var emitters: List<Emitter> = emptyList()
 	var emissionFamilyChanged = true
 	
@@ -168,13 +173,13 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 						val trueDistanceInKM: Double = sensorPosition.dst(emitterPosition) / 1000
 
 						// https://en.wikipedia.org/wiki/Inverse-square_law
-						val signalStrength = emission / (4 * Math.PI * Math.pow(trueDistanceInKM / 2, 2.0))
+						val signalStrength = emission / (4 * FastMath.PI * FastMath.pow(trueDistanceInKM / 2, 2.0))
 
 						if (signalStrength * powerRatio >= sensor.part.sensitivity) {
 
 							if (sensor.part.accuracy != 1.0) {
 								val temp = emitterPosition.cpy().sub(sensorPosition)
-								temp.set(temp.len().toLong(), 0).scl(Math.random() * (1 - sensor.part.accuracy))
+								temp.set(temp.len().toLong(), 0).scl(planetarySystem.random.nextDouble() * (1 - sensor.part.accuracy))
 
 								if (shipMapper.has(emitter.entityID)) {
 									val hash = 37 * shipMapper.get(emitter.entityID).hull.hashCode() + sensor.hashCode()
@@ -188,7 +193,7 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 
 
 								} else {
-									temp.rotateRad(2 * Math.PI * Math.random())
+									temp.rotateRad(2 * FastMath.PI * planetarySystem.random.nextDouble())
 								}
 
 								emitterPosition = emitterPosition.cpy().add(temp)
@@ -197,8 +202,8 @@ class PassiveSensorSystem : IteratingSystem(FAMILY) {
 							val distanceInKM: Double = sensorPosition.dst(emitterPosition) / 1000
 							val targetAngle = sensorPosition.angleTo(emitterPosition)
 
-							val arcAngleStep = Math.floor((targetAngle - sensor.part.angleOffset) / arcWidth).toInt()
-							val distanceStep = Math.floor(distanceInKM / sensor.part.distanceResolution).toInt()
+							val arcAngleStep = FastMath.floor((targetAngle - sensor.part.angleOffset) / arcWidth).toInt()
+							val distanceStep = FastMath.floor(distanceInKM / sensor.part.distanceResolution).toInt()
 
 							var angleSteps: HashMap<Int, HashMap<Int, DetectionHit>>? = detections[sensor]
 

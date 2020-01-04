@@ -63,6 +63,8 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	private val planetarySystemMapper = ComponentMapper.getFor(PlanetarySystemComponent::class.java, system.world)
 	private val weaponsComponentMapper = ComponentMapper.getFor(WeaponsComponent::class.java, system.world)
 	private val shipMapper = ComponentMapper.getFor(ShipComponent::class.java, system.world)
+	
+	val allSubscription = system.world.getAspectSubscriptionManager().get(Aspect.all())
 
 	var zoomLevel = 0
 	var zoomSensitivity = Settings.getFloat("UI/zoomSensitivity", 1.25f).toDouble()
@@ -151,26 +153,29 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
 		
-		val layout = Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, ${Units.daysToDate(galaxy.day)} ${Units.secondsToString(galaxy.time)}, ", 8f, 32f)
+		var x = 8f
+		x += Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, ${Units.daysToDate(galaxy.day)} ${Units.secondsToString(galaxy.time)}, ", x, 32f).width
 		
 		if (galaxy.speed == 0L) {
 			Assets.fontUI.color = Color.RED
-			Assets.fontUI.draw(spriteBatch, "System Error", 8f + layout.width, 32f)
+			x += Assets.fontUI.draw(spriteBatch, "System Error", x, 32f).width
 			Assets.fontUI.color = Color.WHITE
 			
 		} else if (galaxy.speed < 0L) {
 			Assets.fontUI.color = Color.GRAY
-			Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / -galaxy.speed}", 8f + layout.width, 32f)
+			x += Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / -galaxy.speed}", x, 32f).width
 			Assets.fontUI.color = Color.WHITE
 			
 		} else if (galaxy.speedLimited) {
 			Assets.fontUI.color = Color.RED
-			Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / galaxy.speed}", 8f + layout.width, 32f)
+			x += Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / galaxy.speed}", x, 32f).width
 			Assets.fontUI.color = Color.WHITE
 			
 		}  else {
-			Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / galaxy.speed}", 8f + layout.width, 32f)
+			x += Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / galaxy.speed}", x, 32f).width
 		}
+		
+		x += Assets.fontUI.draw(spriteBatch, ", entities ${allSubscription.getActiveEntityIds().cardinality()}", x, 32f).width
 		
 		spriteBatch.end()
 	}
@@ -451,15 +456,18 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 	//			println("p1GameCoordinates $p1GameCoordinates, p2GameCoordinates $p2GameCoordinates")
 	
 				val entitiesInSelection = Bag<EntityReference>()
-				val entityIDs = indirectSelectionFamily.entities
-				val testRectangle = RectangleL(p1GameCoordinates.x, p1GameCoordinates.y, p2GameCoordinates.x - p1GameCoordinates.x, p2GameCoordinates.y - p1GameCoordinates.y)
-	//			println("testRectangle $testRectangle")
-	
-				entityIDs.forEachFast { entityID ->
-					val position = movementMapper.get(entityID).get(galaxy.time).value.position
-	
-					if (testRectangle.contains(position)) {
-						entitiesInSelection.add(system.getEntityReference(entityID))
+				
+				system.lock.read {
+					val entityIDs = indirectSelectionFamily.entities
+					val testRectangle = RectangleL(p1GameCoordinates.x, p1GameCoordinates.y, p2GameCoordinates.x - p1GameCoordinates.x, p2GameCoordinates.y - p1GameCoordinates.y)
+		//			println("testRectangle $testRectangle")
+		
+					entityIDs.forEachFast { entityID ->
+						val position = movementMapper.get(entityID).get(galaxy.time).value.position
+		
+						if (testRectangle.contains(position)) {
+							entitiesInSelection.add(system.getEntityReference(entityID))
+						}
 					}
 				}
 	

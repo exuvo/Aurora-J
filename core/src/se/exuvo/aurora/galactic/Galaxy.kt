@@ -47,7 +47,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 	var day: Int = updateDay()
 	var speed: Long = 1 * Units.NANO_SECOND
 	var speedLimited = false
-	var tickSize: Int = 0
+	var tickSize: Int = 1
 
 	val players = ArrayList<Player>()
 	val storage = Storage()
@@ -236,7 +236,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 					if (accumulator >= speed) {
 
 						//TODO automatically adjust based on computer speed
-						tickSize = if (speed >= Units.NANO_MILLI) 1 else (Units.NANO_MILLI / speed).toInt()
+//						tickSize = if (speed >= Units.NANO_MILLI) 1 else (Units.NANO_MILLI / speed).toInt()
 
 						// max sensible tick size is 1 minute, unless there is combat..
 						if (tickSize > 60) {

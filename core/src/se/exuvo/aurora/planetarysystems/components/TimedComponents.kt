@@ -198,6 +198,25 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 
 		return false
 	}
+	
+	fun setPredictionCoast(value: MovementValues, aimTarget: Vector2L, time: Long): Boolean {
+
+		if (super.setPrediction(value, time)) {
+			approach = ApproachType.COAST
+			startAcceleration = null
+			finalAcceleration = null
+			this.aimTarget = aimTarget
+			
+			if (interpolated == null) {
+				interpolated = TimedValue(MovementValues(Vector2L(), Vector2L(value.velocity), Vector2L()), -1)
+				this.interpolated = interpolated
+			}
+			
+			return true
+		}
+
+		return false
+	}
 
 	fun setPredictionBrachistocrone(value: MovementValues, startAcceleration: Long, time: Long): Boolean {
 
