@@ -185,7 +185,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 						
 						if (speedLimited) {
 //							log.warn("Galaxy update took ${Units.nanoToString(systemUpdateDuration)} which is more than the requested speed delay ${Units.nanoToString(speed)}")
-							println("Galaxy update took ${Units.nanoToString(systemUpdateDuration)} which is more than the requested speed delay ${Units.nanoToString(speed)}")
+//							println("Galaxy update took ${Units.nanoToString(systemUpdateDuration)} which is more than the requested speed delay ${Units.nanoToString(speed)}")
 						}
 
 //						for (system in systems) {
@@ -210,7 +210,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 
 					lastSleep = now;
 					
-					// If we are more than 10 ticks behind stop counting
+					// If we are more than 10 ticks behind limit counting
 					if (accumulator >= speed * 10) {
 						accumulator = speed * 10L
 						
@@ -223,7 +223,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 							ThreadUtils.sleep(sleepTime - 1)
 							sleeping = false
 							
-						} else {
+						} else if ((speed - accumulator) / Units.NANO_MICRO > 10) {
 							sleeping = true
 							Thread.yield()
 							sleeping = false
