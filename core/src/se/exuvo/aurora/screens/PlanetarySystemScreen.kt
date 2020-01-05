@@ -175,7 +175,8 @@ class PlanetarySystemScreen(val system: PlanetarySystem) : GameScreenImpl(), Inp
 			x += Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / galaxy.speed}", x, 32f).width
 		}
 		
-		x += Assets.fontUI.draw(spriteBatch, ", entities ${allSubscription.getActiveEntityIds().cardinality()}", x, 32f).width
+		x += Assets.fontUI.draw(spriteBatch, " ${system.updateTimeAverage.toInt() / 1000}us", x, 32f).width
+		x += Assets.fontUI.draw(spriteBatch, ", ${allSubscription.getActiveEntityIds().cardinality()}st", x, 32f).width
 		
 		spriteBatch.end()
 	}

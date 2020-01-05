@@ -33,6 +33,8 @@ import kotlin.concurrent.read
 import se.exuvo.aurora.utils.Storage
 import se.exuvo.aurora.planetarysystems.components.EntityReference
 import se.exuvo.aurora.planetarysystems.components.EntityUUID
+import se.exuvo.aurora.utils.exponentialAverage
+import org.apache.commons.math3.util.FastMath
 
 class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, Disposable {
 	val log = LogManager.getLogger(this.javaClass)
@@ -88,8 +90,8 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 	fun init(systems: Bag<PlanetarySystem>) {
 		this.systems = systems
 		
-		systems.forEach {
-			it.init()
+		systems.forEachFast { system ->
+			system.init()
 		}
 		
 		updateSpeed()
@@ -106,8 +108,8 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		
 		thread?.join()
 		
-		systems.forEach {
-			it.dispose()
+		systems.forEachFast { system ->
+			system.dispose()
 		}
 	}
 	
@@ -236,7 +238,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 					if (accumulator >= speed) {
 
 						//TODO automatically adjust based on computer speed
-//						tickSize = if (speed >= Units.NANO_MILLI) 1 else (Units.NANO_MILLI / speed).toInt()
+						tickSize = if (speed >= Units.NANO_MILLI) 1 else (Units.NANO_MILLI / speed).toInt()
 
 						// max sensible tick size is 1 minute, unless there is combat..
 						if (tickSize > 60) {
@@ -285,7 +287,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 //						}
 //						println()
 						
-						//if one system took a noticable larger time to process than others, schedule it earlier
+						// If one system took a noticable larger time to process than others, schedule it earlier
 						Sort.instance().sort(systems, object : Comparator<PlanetarySystem> {
 							val s = tickSpeed / 10
 							override fun compare(o1: PlanetarySystem, o2: PlanetarySystem): Int {
@@ -343,6 +345,8 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 				val systemUpdateStart = System.nanoTime()
 				system.update(galaxy.tickSize)
 				system.updateTime = (System.nanoTime() - systemUpdateStart)
+ 
+				system.updateTimeAverage = exponentialAverage(system.updateTime.toDouble(), system.updateTimeAverage, FastMath.min(100.0, (Units.NANO_SECOND / FastMath.abs(galaxy.speed)).toDouble()))
 				
 			} catch (t: Throwable) {
 				log.error("Exception in system update", t)

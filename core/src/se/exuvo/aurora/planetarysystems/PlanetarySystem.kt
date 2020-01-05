@@ -108,6 +108,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 	}
 	
 	var updateTime = 0L
+	var updateTimeAverage = 0.0
 
 	private var entityUIDGenerator = 1L
 	private val galaxy = GameServices[Galaxy::class]

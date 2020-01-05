@@ -59,7 +59,7 @@ class History : Disposable {
 		config.setPragma(SQLiteConfig.Pragma.FOREIGN_KEYS, "true")
 		config.setPragma(SQLiteConfig.Pragma.SYNCHRONOUS, SynchronousMode.NORMAL.getValue())
 //		config.setPragma(SQLiteConfig.Pragma.SYNCHRONOUS, SynchronousMode.OFF.getValue()) // Better performance but creates exceptions on new database as it is not seen yet by other connections
-		config.setOpenMode(SQLiteOpenMode.NOMUTEX) // NOT WORKING needs library recompile, Should enable SQLITE_CONFIG_MULTITHREAD, see https://github.com/xerial/sqlite-jdbc/issues/369 and https://www.sqlite.org/threadsafe.html
+		config.setOpenMode(SQLiteOpenMode.NOMUTEX) // Should enable SQLITE_CONFIG_MULTITHREAD, see https://github.com/xerial/sqlite-jdbc/issues/369 and https://www.sqlite.org/threadsafe.html
 		
 		config.setJournalMode(SQLiteConfig.JournalMode.WAL)
 //		config.setJournalMode(SQLiteConfig.JournalMode.MEMORY) // No benefit for small data as WAL already caches in memory
