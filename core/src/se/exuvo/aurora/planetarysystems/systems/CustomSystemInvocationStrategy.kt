@@ -14,7 +14,7 @@ class CustomSystemInvocationStrategy : SystemInvocationStrategy() {
 		preSystems = Bag(PreSystem::class.java, systems.size())
 		postSystems = Bag(PostSystem::class.java, systems.size())
 
-		systems.forEachFast { i, system ->
+		systems.forEachFast { system ->
 
 			if (system is PreSystem) {
 				preSystems.add(system)
