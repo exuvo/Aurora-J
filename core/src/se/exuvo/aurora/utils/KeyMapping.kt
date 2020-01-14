@@ -189,6 +189,9 @@ enum class KeyActions_ImGuiScreen(override val defaultKey: Int? = null,
                                   override val defaultType: KeyPressType
 ) : KeyAction {
 	DEBUG(Input.Keys.GRAVE),
+	SHIP_DEBUG(Input.Keys.F1),
+	COLONY_MANAGER(Input.Keys.F2),
+	SHIP_DESIGNER(Input.Keys.F3),
 	;
 	
 	constructor (char: Char): this(char.toInt(), KeyPressType.TRANSLATED)

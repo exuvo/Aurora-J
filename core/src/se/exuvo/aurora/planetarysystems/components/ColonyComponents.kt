@@ -130,7 +130,7 @@ class ShipyardSlipway() {
 		}
 		
 		hull = newHull
-		hullCost = newHull.getCost()
+		hullCost = newHull.cost
 		usedResources.clear()
 		hullCost.forEach { entry ->
 			usedResources[entry.key] = 0L

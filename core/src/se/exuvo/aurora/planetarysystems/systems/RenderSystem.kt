@@ -222,7 +222,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 										return@weaponLoop
 									}
 									
-									val projectileSpeed = (part.capacitor * part.efficiency) / (100 * munitionHull.getLoadedMass())
+									val projectileSpeed = (part.capacitor * part.efficiency) / (100 * munitionHull.loadedMass)
 									range = projectileSpeed * timeToImpact
 									
 									shapeRenderer.color = Color.ORANGE
@@ -236,8 +236,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 									}
 									
 									val missileAcceleration = advMunitionHull.getAverageAcceleration()
-									val missileLaunchSpeed = (100 * part.launchForce) / advMunitionHull.getLoadedMass()
-									val flightTime = advMunitionHull.getFuelMass()
+									val missileLaunchSpeed = (100 * part.launchForce) / advMunitionHull.loadedMass
+									val flightTime = advMunitionHull.fuelMass
 									
 									range = (missileLaunchSpeed * flightTime + (missileAcceleration * flightTime * flightTime) / 2) / 100
 									

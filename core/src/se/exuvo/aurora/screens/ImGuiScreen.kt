@@ -498,9 +498,9 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 														}
 														
 														if (hull != null) {
-															sameLineRightAlignedColumnText(Units.massToString(hull.getEmptyMass()))
+															sameLineRightAlignedColumnText(Units.massToString(hull.emptyMass))
 															nextColumn()
-															rightAlignedColumnText(Units.volumeToString(hull.getVolume()))
+															rightAlignedColumnText(Units.volumeToString(hull.volume))
 															nextColumn()
 															text("${hull}")
 															nextColumn()
@@ -987,7 +987,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 												
 												if (munitionClass != null) {
 												
-													val projectileSpeed = (partRef.part.capacitor * partRef.part.efficiency) / (100L * munitionClass.getLoadedMass())
+													val projectileSpeed = (partRef.part.capacitor * partRef.part.efficiency) / (100L * munitionClass.loadedMass)
 													val weaponTestDistance = weaponTestDistance.toLong()
 													val timeToIntercept = FastMath.max(1, weaponTestDistance / projectileSpeed)
 													val galacticTime = timeToIntercept + galaxy.time
@@ -1006,7 +1006,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 												if (munitionClass != null) {
 													
 													val missileAcceleration = munitionClass.getAverageAcceleration()
-													val missileLaunchSpeed = partRef.part.launchForce / munitionClass.getLoadedMass()
+													val missileLaunchSpeed = partRef.part.launchForce / munitionClass.loadedMass
 													
 													ImGui.text("launchSpeed $missileLaunchSpeed m/s + acceleration ${missileAcceleration} m/s²")
 													
@@ -1018,10 +1018,10 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 													
 													val galacticTime = timeToIntercept + galaxy.time
 													val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
-													val impactVelocity = missileLaunchSpeed + missileAcceleration * FastMath.min(timeToIntercept, munitionClass.getThrustTime().toLong())
+													val impactVelocity = missileLaunchSpeed + missileAcceleration * FastMath.min(timeToIntercept, munitionClass.thrustTime.toLong())
 													
 													ImGui.text("impactVelocity ${impactVelocity} m/s")
-													ImGui.text("timeToIntercept ${timeToIntercept} s / thrustTime ${munitionClass.getThrustTime()} s")
+													ImGui.text("timeToIntercept ${timeToIntercept} s / thrustTime ${munitionClass.thrustTime} s")
 													ImGui.text("interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
 												}
 											}
@@ -1030,6 +1030,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 										}
 									}
 								}
+								
+								//TODO draw armor and parts hp
 	
 								if (ImGui.collapsingHeader("Power", 0)) {
 	
@@ -1289,6 +1291,18 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 
 		if (action == KeyActions_ImGuiScreen.DEBUG) {
 			mainDebugVisible = !mainDebugVisible;
+			return true;
+			
+		} else if (action == KeyActions_ImGuiScreen.SHIP_DEBUG) {
+			shipDebugVisible = !shipDebugVisible;
+			return true;
+		
+		} else if (action == KeyActions_ImGuiScreen.COLONY_MANAGER) {
+			colonyManagerVisible = !colonyManagerVisible;
+			return true;
+		
+		} else if (action == KeyActions_ImGuiScreen.SHIP_DESIGNER) {
+			shipDesignerVisible = !shipDesignerVisible;
 			return true;
 		}
 

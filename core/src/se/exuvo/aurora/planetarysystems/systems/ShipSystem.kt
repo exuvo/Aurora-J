@@ -63,7 +63,7 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 			}
 
 			if (!massMapper.has(entityID) || ship.cargoChanged) {
-				massMapper.create(entityID).set(ship.getMass().toDouble())
+				massMapper.create(entityID).set(ship.mass.toDouble())
 				ship.cargoChanged = false
 			}
 		}

@@ -108,7 +108,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 				if (part is SolarPanel) { // Update solar power
 
 					val irradiance = irradianceMapper.get(entityID).irradiance
-					val solarPanelArea = part.getVolume() / SOLAR_PANEL_THICKNESS
+					val solarPanelArea = part.volume / SOLAR_PANEL_THICKNESS
 					val producedPower = (((solarPanelArea * irradiance.toLong()) / 100L) * part.efficiency.toDouble()).toLong()
 
 //				println("solarPanelArea ${solarPanelArea / 100} m2, irradiance $irradiance W/m2, producedPower $producedPower W")

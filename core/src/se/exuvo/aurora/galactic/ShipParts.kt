@@ -4,6 +4,8 @@ import se.exuvo.aurora.planetarysystems.components.Spectrum
 import java.util.Objects
 import java.security.InvalidParameterException
 import org.apache.commons.math3.util.FastMath
+import se.exuvo.aurora.utils.ResetableLazy
+import se.exuvo.aurora.utils.resetDelegate
 
 abstract class Part {
 	var name: String = ""
@@ -11,12 +13,16 @@ abstract class Part {
 	val cost: MutableMap<Resource, Long> = LinkedHashMap() 
 	var maxHealth: Byte = 1
 	var crewRequirement = 1
-	
+
+	val mass by ResetableLazy (::calculateMass)
+	val volume by ResetableLazy (::calculateVolume)
+	private val hashcode by ResetableLazy (::calculateHashCode)
+		
 	// In kg
-	fun getMass() = cost.values.sum()
+	fun calculateMass(): Long = cost.values.sum()
 	
 	// In cm3
-	fun getVolume() : Long {
+	fun calculateVolume(): Long {
 		var volume = 0L
 		
 		cost.forEach{ resource, amount ->
@@ -26,14 +32,11 @@ abstract class Part {
 		return volume
 	}
 	
-	private val hashcode: Int by lazy (LazyThreadSafetyMode.NONE) {calculateHashCode()}
-	
 	// https://stackoverflow.com/questions/113511/best-implementation-for-hashcode-method
-	open fun calculateHashCode() : Int {
+	open fun calculateHashCode(): Int {
 		var hash = 1;
 		hash = 37 * hash + name.hashCode()
 		hash = 37 * hash + designDay
-		val volume = getVolume()
 		hash = 37 * hash + (volume xor (volume shr 32)).toInt()
 		hash = 37 * hash + maxHealth
 		hash = 37 * hash + crewRequirement
@@ -48,7 +51,16 @@ abstract class Part {
 		}
 		
 		return "${this::class.simpleName}"
-	} 
+	}
+	
+	fun resetLazyCache() {
+//		::mass.resetDelegate()
+//		::volume.resetDelegate()
+//		::hashcode.resetDelegate()
+		(this::mass.getDelegate() as ResetableLazy).reset()
+		(this::volume.getDelegate() as ResetableLazy).reset()
+		(this::hashcode.getDelegate() as ResetableLazy).reset()
+	}
 }
 
 abstract class ContainerPart(val capacity: Long, val cargoType: CargoType) : Part();

@@ -22,9 +22,8 @@ import se.exuvo.aurora.galactic.AdvancedMunitionHull
 
 class LaserShotComponent() : PooledComponent() {
 	var targetEntityID: Int = -1
-	var damage: Long = 0 // joules
+	var damage: Long = 0 // J
 	var beamArea: Long = 0 // cm²
-	lateinit var damagePattern: DamagePattern
 	
 	fun set(targetEntityID: Int,
 					damage: Long,
@@ -41,7 +40,7 @@ class LaserShotComponent() : PooledComponent() {
 class RailgunShotComponent() : PooledComponent() {
 	var targetEntityID: Int = -1
 	var health: Short = -1
-	var damage: Long = 0 // joules
+	var damage: Long = 0 // J
 	lateinit var damagePattern: DamagePattern
 	
 	fun set(targetEntityID: Int,

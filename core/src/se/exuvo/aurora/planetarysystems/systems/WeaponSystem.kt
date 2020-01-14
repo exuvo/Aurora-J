@@ -168,8 +168,8 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 
 							if (ammoState.type != null) {
 
-								if (ammoState.type!!.getRadius() != part.ammunitionSize) {
-									log.error("Wrong ammo size for $part: ${ammoState.type!!.getRadius()} != ${part.ammunitionSize}")
+								if (ammoState.type!!.radius != part.ammunitionSize) {
+									log.error("Wrong ammo size for $part: ${ammoState.type!!.radius} != ${part.ammunitionSize}")
 									
 								} else {
 									
@@ -372,7 +372,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	
 										val munitionHull = ammoState.type!! as SimpleMunitionHull
 										
-										val projectileSpeed = (chargedState.charge * part.efficiency) / (100 * munitionHull.getLoadedMass())
+										val projectileSpeed = (chargedState.charge * part.efficiency) / (100 * munitionHull.loadedMass)
 										
 										val result = getInterceptionPosition(shipMovement.value, targetMovement.value, projectileSpeed.toDouble())
 //										val result = getInterceptionPosition(shipMovement.value, targetMovement.value, projectileSpeed.toDouble(), 0.0)
@@ -404,7 +404,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 													
 												} else {
 													
-													damage = ((munitionHull.mass * projectileSpeed * projectileSpeed) / 2).toLong()
+													damage = ((munitionHull.loadedMass * projectileSpeed * projectileSpeed) / 2).toLong()
 												}
 												
 												railgunShotMapper.create(munitionEntityID).set(target.entityID, damage, munitionHull.damagePattern, munitionHull.health)
@@ -440,7 +440,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										val advMunitionHull = ammoState.type!! as AdvancedMunitionHull
 										
 										val missileAcceleration = advMunitionHull.getAverageAcceleration().toDouble()
-										val missileLaunchSpeed = (100 * part.launchForce) / advMunitionHull.getLoadedMass()
+										val missileLaunchSpeed = (100 * part.launchForce) / advMunitionHull.loadedMass
 										
 										val result = getInterceptionPosition(shipMovement.value, targetMovement.value, missileLaunchSpeed.toDouble() / 100, missileAcceleration / 100)
 										
@@ -455,9 +455,9 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 											val galacticTime = timeToIntercept + galaxy.time
 											val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
 											val relativeSpeed = targetMovement.value.velocity.cpy().sub(shipMovement.value.velocity).len() * FastMath.cos(targetMovement.value.velocity.angleRad(shipMovement.value.velocity))
-											val impactSpeed = relativeSpeed + missileLaunchSpeed + missileAcceleration * FastMath.min(timeToIntercept, advMunitionHull.getThrustTime().toLong())
+											val impactSpeed = relativeSpeed + missileLaunchSpeed + missileAcceleration * FastMath.min(timeToIntercept, advMunitionHull.thrustTime.toLong())
 											
-											if (timeToIntercept <= advMunitionHull.getThrustTime()) {
+											if (timeToIntercept <= advMunitionHull.thrustTime) {
 												
 //												println("missile missileAcceleration $missileAcceleration m/s², impactSpeed ${impactSpeed / 100} ${interceptVelocity.len() / 100} m/s, interceptSpeed ${relativeInterceptVelocity.len() / 100} m/s, aimPosition $aimPosition, interceptPosition $interceptPosition, thrustTime ${advMunitionHull.getThrustTime()} s, timeToIntercept $timeToIntercept s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
 												
@@ -479,7 +479,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 												munitionMovement.previous.value.acceleration.set(initialAcceleration)
 												munitionMovement.setPredictionBallistic(MovementValues(interceptPosition, interceptVelocity, interceptAcceleration), aimPosition, advMunitionHull.getMinAcceleration(), galacticTime)
 												
-												timedLifeMapper.create(munitionEntityID).endTime = FastMath.min(galaxy.time + advMunitionHull.getThrustTime(), galacticTime)
+												timedLifeMapper.create(munitionEntityID).endTime = FastMath.min(galaxy.time + advMunitionHull.thrustTime, galacticTime)
 												predictedMovementMapper.create(munitionEntityID)
 												
 //												galaxyGroupSystem.add(planetarySystem.getEntityReference(munitionEntityID), GroupSystem.SELECTED)
@@ -504,7 +504,161 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		}
 	}
 	
-	data class InterceptResult(val timeToIntercept: Long, val aimPosition: Vector2L, val interceptPosition: Vector2L, val interceptVelocity: Vector2L, val relativeInterceptVelocity: Vector2L)
+	fun munitionExpired(entityID: Int) {
+
+		val movement = movementMapper.get(entityID).get(galaxy.time).value
+		val laser: LaserShotComponent? = laserShotMapper.get(entityID)
+		val railgun: RailgunShotComponent? = railgunShotMapper.get(entityID)
+		val missile: MissileComponent? = missileMapper.get(entityID)
+
+		if (laser != null) {
+
+			val targetID = laser.targetEntityID
+
+			if (!world.getEntityManager().isActive(targetID)) {
+				return
+			}
+
+			val targetMovement = movementMapper.get(targetID).get(galaxy.time).value
+			val distanceFromTarget = tmpPosition.set(movement.position).sub(targetMovement.position).len()
+			
+			if (distanceFromTarget < 1000L) {
+				return
+			}
+			
+//			if (laser.beamArea < 1 column) {
+				
+				applyArmorDamage(entityID, laser.damage, DamagePattern.LASER)
+				
+//			} else {
+				
+				// spread damage
+//				applyArmorDamage(entityID, laser.damage, railgun.damagePattern)
+				
+//			}
+
+		} else if (railgun != null) {
+
+			val targetID = railgun.targetEntityID
+
+			if (!world.getEntityManager().isActive(targetID)) {
+				return
+			}
+
+			val targetMovement = movementMapper.get(targetID).get(galaxy.time).value
+			val distanceFromTarget = tmpPosition.set(movement.position).sub(targetMovement.position).len()
+			
+			if (distanceFromTarget < 1000L) {
+				return
+			}
+			
+			applyArmorDamage(entityID, railgun.damage, railgun.damagePattern)
+
+		} else if (missile != null) {
+
+			val targetID = missile.targetEntityID
+		}
+	}
+	
+	@Suppress("NAME_SHADOWING")
+	fun applyArmorDamage(entityID: Int, damage: Long = 0, damagePattern: DamagePattern, damageColumn: Int? = null ) {
+		val ship = shipMapper.get(entityID)
+		
+		var damage = damage
+		var damageColumn = damageColumn
+		
+		if (damageColumn == null) {
+			damageColumn = planetarySystem.random.nextInt(ship.hull.getArmorWidth())
+		}
+		
+		var layer = ship.hull.armorLayers
+		
+		when (damagePattern) {
+			DamagePattern.LASER -> {
+				while(layer > 0) {
+					val armorHP: Int = ship.armor[--layer][damageColumn].toInt()
+					
+					if (armorHP > 0) {
+						val blockDamage: Int = FastMath.min(armorHP, FastMath.max(255, damage / ship.hull.armorEnergyPerDamage[layer]).toInt())
+						damage -= blockDamage
+						
+						println("Damaging armor layer $layer for $blockDamage dmg")
+						
+						ship.armor[layer][damageColumn] = (armorHP - blockDamage).toByte()
+						
+						if (damage == 0L) {
+							return
+						}
+					}
+				}
+			}
+			DamagePattern.KINETIC -> {
+				while(layer > 0) {
+					val armorHP: Int = ship.armor[--layer][damageColumn].toInt()
+					
+					if (armorHP > 0) {
+						break
+					}
+				}
+			}
+			DamagePattern.EXPLOSIVE -> { // full damage hit block, quarter damage sides
+				while(layer > 0) {
+					val armorHP: Int = ship.armor[--layer][damageColumn].toInt()
+					
+					if (armorHP > 0) {
+						val blockDamage: Int = FastMath.min(armorHP, FastMath.max(255, damage / ship.hull.armorEnergyPerDamage[layer]).toInt())
+						damage -= blockDamage
+						
+						println("Damaging armor layer $layer for $blockDamage dmg")
+						
+						ship.armor[layer][damageColumn] = (armorHP - blockDamage).toByte()
+						
+						if (damage == 0L) {
+							return
+						}
+						
+						break
+					}
+				}
+				
+				//TODO spread damage
+			}
+		}
+		
+		applyHullDamage(ship, damage)
+	}
+	
+	@Suppress("NAME_SHADOWING")
+	fun applyHullDamage(ship: ShipComponent, damage: Long) {
+		var damage = damage / 100
+		
+		if (damage > 0 && ship.totalPartHP > 0) {
+			println("Damaging parts for $damage dmg")
+			while (ship.damageablePartsVolume > 0) {
+				val partRef = ship.damageableParts.higherEntry(planetarySystem.random.nextLong(ship.damageablePartsVolume)).value
+				val partHP = ship.getPartHP(partRef).toInt()
+				
+				val partDamage: Int = FastMath.min(partHP, FastMath.max(255, damage).toInt())
+				damage -= partDamage
+				
+				ship.setPartHP(partRef, (partHP - partDamage).toByte())
+				
+				if (damage == 0L) {
+					return
+				}
+			}
+			
+			if (damage > 0) {
+				println("Ship destroyed")
+			}
+		}
+	}
+	
+	data class InterceptResult(val timeToIntercept: Long,
+	                           val aimPosition: Vector2L,
+	                           val interceptPosition: Vector2L,
+	                           val interceptVelocity: Vector2L,
+	                           val relativeInterceptVelocity: Vector2L)
 	
 	//TODO support increasing acceleration as fuel depletes
 	// Calculates intercept with position, speed and acceleration

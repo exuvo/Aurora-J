@@ -7,6 +7,7 @@ import se.exuvo.aurora.utils.sumByLong
 import se.exuvo.aurora.empires.components.ShipyardType
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.forEachFast
+import se.exuvo.aurora.utils.ResetableLazy
 
 class ShipHull() {
 	companion object {
@@ -22,7 +23,8 @@ class ShipHull() {
 	private val parts: MutableList<Part> = ArrayList()
 	private val partRefs: MutableList<PartRef<Part>> = ArrayList()
 	var armorLayers = 1 // Centimeters of armor
-	var armorBlockHP:Short = 100
+	var armorBlockHP = ByteArray(1, { 100 })
+	var armorEnergyPerDamage = ShortArray(1, { 1000 }) // In J
 	val preferredCargo: MutableMap<Resource, Long> = LinkedHashMap()
 	val preferredMunitions: MutableMap<MunitionHull, Int> = LinkedHashMap()
 	val preferredPartMunitions: MutableMap<PartRef<out Part>, MunitionHull> = LinkedHashMap()
@@ -33,6 +35,15 @@ class ShipHull() {
 	val derivatives: MutableList<ShipHull> = ArrayList()
 	
 	var comment: String = ""
+	
+	val emptyMass by ResetableLazy (::calculateEmptyMass)
+	val loadedMass by ResetableLazy (::calculateLoadedMass)
+	val preferredCargoMass by ResetableLazy (::calculatePreferredCargoMass)
+	val preferredMunitionMass by ResetableLazy (::calculatePreferredMunitionMass)
+	val volume by ResetableLazy (::calculateVolume)
+	val surfaceArea by ResetableLazy (::calculateSurfaceArea)
+	val cost by ResetableLazy (::calculateCost)
+	private val hashcode by ResetableLazy (::calculateHashCode)
 	
 	constructor(parentHull: ShipHull): this() {
 		this.parentHull = parentHull
@@ -95,13 +106,13 @@ class ShipHull() {
 	}
 
 	// Kg
-	fun getEmptyMass(): Long {
+	fun calculateEmptyMass(): Long {
 		//TODO add armor
-		return parts.sumByLong { it.getMass() }
+		return parts.sumByLong { it.mass }
 	}
 	
-	fun getLoadedMass(): Long {
-		var mass = getEmptyMass() + getPreferredCargoMass() + getPreferredMunitionMass()
+	fun calculateLoadedMass(): Long {
+		var mass = emptyMass + preferredCargoMass + preferredMunitionMass
 		
 		mass += parts.sumByLong {
 			if (it is FuelContainerPart) {
@@ -118,7 +129,7 @@ class ShipHull() {
 		return mass
 	}
 	
-	fun getPreferredCargoMass(): Long {
+	fun calculatePreferredCargoMass(): Long {
 		var mass = 0L
 		
 		for(amount in preferredCargo.values) {
@@ -128,11 +139,11 @@ class ShipHull() {
 		return mass
 	}
 	
-	fun getPreferredMunitionMass(): Long {
+	fun calculatePreferredMunitionMass(): Long {
 		var mass = 0L
 		
 		for((munitonHull, amount) in preferredMunitions) {
-			mass += amount * munitonHull.getLoadedMass()
+			mass += amount * munitonHull.loadedMass
 		}
 		
 		return mass
@@ -140,15 +151,13 @@ class ShipHull() {
 	
 	
 	// cm³
-	fun getVolume(): Long {
+	fun calculateVolume(): Long {
 		//TODO add armor
-		return parts.sumByLong { it.getVolume() }
+		return parts.sumByLong { it.volume }
 	}
 
 	// cm²
-	fun getSurfaceArea(): Int {
-		val volume = getVolume()
-
+	fun calculateSurfaceArea(): Int {
 		// V = πr^2h, http://mathhelpforum.com/geometry/170076-how-find-cylinder-dimensions-volume-aspect-ratio.html
 		val length = Math.pow(Math.pow(2.0, 2 * lengthToDiameterRatio) * volume / Math.PI, 1.0 / 3)
 		val radius = Math.sqrt(volume / Math.PI / length)
@@ -162,7 +171,9 @@ class ShipHull() {
 		return surface.toInt()
 	}
 	
-	fun getCost(): Map<Resource, Long> {
+	fun getArmorWidth(): Int = surfaceArea / 1000000
+	
+	fun calculateCost(): Map<Resource, Long> {
 		val cost = HashMap<Resource, Long>()
 		
 		parts.forEachFast { part ->
@@ -189,16 +200,27 @@ class ShipHull() {
 		return "$name ${Units.daysToYear(parentHull.designDay)}-${Units.daysToSubYear(designDay)}"
 	} 
 	
-	private val hashcode: Int by lazy (LazyThreadSafetyMode.NONE) {
+	fun calculateHashCode() : Int {
 		var hash = 1;
 		hash = 37 * hash + name.hashCode()
 		hash = 37 * hash + designDay
 		hash = 37 * hash + armorLayers
 		hash = 37 * hash + powerScheme.ordinal
-		hash
+		return hash
 	}
 
 	override fun hashCode(): Int = hashcode
+
+ fun resetLazyCache() {
+		(this::emptyMass.getDelegate() as ResetableLazy).reset()
+		(this::loadedMass.getDelegate() as ResetableLazy).reset()
+		(this::preferredCargoMass.getDelegate() as ResetableLazy).reset()
+		(this::preferredMunitionMass.getDelegate() as ResetableLazy).reset()
+		(this::volume.getDelegate() as ResetableLazy).reset()
+		(this::surfaceArea.getDelegate() as ResetableLazy).reset()
+		(this::cost.getDelegate() as ResetableLazy).reset()
+		(this::hashcode.getDelegate() as ResetableLazy).reset()
+	}
 }
 
 data class PartRef<T: Part>(val part: T, val index: Int)

@@ -23,32 +23,49 @@ import kotlin.Suppress
 import se.exuvo.aurora.galactic.MunitionHull
 import se.exuvo.aurora.utils.forEachFast
 import com.artemis.Entity
+import com.artemis.utils.Bag
+import java.util.TreeMap
+import uk.co.omegaprime.btreemap.LongObjectBTreeMap
+import se.exuvo.aurora.utils.ResetableLazy
+import se.exuvo.aurora.utils.resetDelegate
 
 class ShipComponent() : Component() {
 	lateinit var hull: ShipHull
-	var constructionTime: Long = -1
-	var commissionDay: Int? = null
-	lateinit var armor: Array<ShortArray> // [layer][armor column] = hp
-	lateinit var partHealth: ByteArray
+	var comissionTime: Long = -1
+	lateinit var armor: Array<ByteArray> // [layer][armor column] = hp
+	var totalPartHP = 0
+	var damageablePartsVolume = 0L
+	val damageableParts = LongObjectBTreeMap.create<PartRef<Part>>()
+	lateinit var partHP: ByteArray
 	lateinit var partEnabled: BooleanArray
 	lateinit var partState: Array<PartState>
 	lateinit var cargo: Map<Resource, ShipCargo>
 	lateinit var munitionCargo: MutableMap<MunitionHull, Int>
-	var cargoChanged = true
+	var cargoChanged = false
 	var heat: Long = 0
+	
+	val mass by ResetableLazy (::calculateMass)
+	val cargoMass by ResetableLazy (::calculateCargoMass)
 
 	fun set(hull: ShipHull,
-					constructionTime: Long
+					comissionTime: Long
 	): ShipComponent {
 		this.hull = hull
-		this.constructionTime = constructionTime
+		this.comissionTime = comissionTime
 
-		armor = Array<ShortArray>(hull.armorLayers, { ShortArray(hull.getSurfaceArea() / 1000000, { hull.armorBlockHP }) }) // 1 armor block per m2
-		partHealth = ByteArray(hull.getParts().size, { hull[it].part.maxHealth })
+		armor = Array<ByteArray>(hull.armorLayers, { layer -> ByteArray(hull.getArmorWidth(), { hull.armorBlockHP[layer] }) }) // 1 armor block per m2
+		partHP = ByteArray(hull.getParts().size, { hull[it].part.maxHealth })
+		totalPartHP = partHP.sum()
 		partEnabled = BooleanArray(hull.getParts().size, { true })
 		partState = Array<PartState>(hull.getParts().size, { PartState() })
 		cargo = emptyMap()
 		munitionCargo = LinkedHashMap()
+		
+		hull.getPartRefs().forEachFast { partRef ->
+			val volume = partRef.part.volume
+			damageableParts.put(volume, partRef)
+			damageablePartsVolume += volume
+		}
 		
 		var containerPartRefs: List<PartRef<ContainerPart>> = hull[ContainerPart::class]
 
@@ -123,15 +140,15 @@ class ShipComponent() : Component() {
 		return this
 	}
 
-	fun getMass(): Long {
-		var mass = hull.getEmptyMass()
+	fun calculateMass(): Long {
+		var mass = hull.emptyMass
 		
-		mass += getCargoMass()
+		mass += cargoMass
 		
 		return mass
 	}
 	
-	fun getCargoMass(): Long {
+	fun calculateCargoMass(): Long {
 		var mass = 0L
 		
 		for((resource, shipCargo) in cargo) {
@@ -145,18 +162,36 @@ class ShipComponent() : Component() {
 		return partState[partRef.index]
 	}
 
-	fun getPartHealth(partRef: PartRef<out Part>): Byte {
-		return partHealth[partRef.index]
+	fun getPartHP(partRef: PartRef<out Part>): Byte {
+		return partHP[partRef.index]
 	}
 
-	fun setPartHealth(partRef: PartRef<out Part>, health: Byte) {
+	fun setPartHP(partRef: PartRef<Part>, health: Byte) {
 		if (health < 0 || health > partRef.part.maxHealth) {
 			throw IllegalArgumentException()
 		}
+		
+		val oldHP = partHP[partRef.index]
+		
+		if (oldHP == 0.toByte() && health > 0) {
+			
+			val volume = partRef.part.volume
+			damageableParts.put(volume, partRef)
+			damageablePartsVolume += volume
+			
+		} else if (oldHP > 0 && health == 0.toByte()) {
+			
+			val volume = partRef.part.volume
+			damageableParts.remove(volume, partRef)
+			damageablePartsVolume -= volume
+		}
+		
 
-		partHealth[partRef.index] = health
+		totalPartHP += health - oldHP
+		
+		partHP[partRef.index] = health
 	}
-
+	
 	fun isPartEnabled(partRef: PartRef<out Part>): Boolean {
 		return partEnabled[partRef.index]
 	}
@@ -292,6 +327,7 @@ class ShipComponent() : Component() {
 			shipCargo.usedVolume += volumeToBeStored
 			shipCargo.contents[resource] = shipCargo.contents[resource]!! + amount
 
+			massChange()
 			return true
 		}
 
@@ -304,7 +340,7 @@ class ShipComponent() : Component() {
 
 		if (shipCargo != null) {
 
-			val volumeToBeStored = amount * munitionHull.getVolume()
+			val volumeToBeStored = amount * munitionHull.volume
 
 			if (shipCargo.usedVolume + volumeToBeStored > shipCargo.maxVolume) {
 				return false;
@@ -312,7 +348,7 @@ class ShipComponent() : Component() {
 			
 			shipCargo.usedVolume += volumeToBeStored
 			val storedMass = shipCargo.contents[munitionHull.storageType]!!
-			shipCargo.contents[munitionHull.storageType] = storedMass + munitionHull.getLoadedMass() * amount
+			shipCargo.contents[munitionHull.storageType] = storedMass + munitionHull.loadedMass * amount
 			
 			var stored = munitionCargo[munitionHull]
 
@@ -322,6 +358,7 @@ class ShipComponent() : Component() {
 			
 			munitionCargo[munitionHull] = stored + amount
 
+			massChange()
 			return true
 		}
 
@@ -353,6 +390,7 @@ class ShipComponent() : Component() {
 			shipCargo.contents[resource] = available - retrievedAmount
 			shipCargo.usedVolume -= retrievedAmount * resource.specificVolume
 
+			massChange()
 			return retrievedAmount
 		}
 
@@ -378,10 +416,22 @@ class ShipComponent() : Component() {
 		val shipCargo = cargo[munitionHull.storageType]!!
 		val storedMass = shipCargo.contents[munitionHull.storageType]!!
 		
-		shipCargo.contents[munitionHull.storageType] = storedMass - retrievedAmount * munitionHull.getLoadedMass()
-		shipCargo.usedVolume -= retrievedAmount * munitionHull.getVolume()
+		shipCargo.contents[munitionHull.storageType] = storedMass - retrievedAmount * munitionHull.loadedMass
+		shipCargo.usedVolume -= retrievedAmount * munitionHull.volume
 
+		massChange()
 		return retrievedAmount
+	}
+	
+	private fun massChange() {
+		cargoChanged = true
+		::mass.resetDelegate()
+		::cargoMass.resetDelegate()
+	}
+	
+	fun resetLazyCache() {
+		::mass.resetDelegate()
+		::cargoMass.resetDelegate()
 	}
 }
 

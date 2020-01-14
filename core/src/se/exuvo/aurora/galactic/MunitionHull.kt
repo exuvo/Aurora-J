@@ -7,6 +7,7 @@ import se.exuvo.aurora.galactic.FueledThruster
 import java.lang.IllegalArgumentException
 import kotlin.reflect.KClass
 import org.apache.commons.math3.util.FastMath
+import se.exuvo.aurora.utils.ResetableLazy
 
 enum class DamagePattern {
 	KINETIC,
@@ -22,33 +23,49 @@ abstract class MunitionHull(val storageType: Resource) {
 	var name: String = ""
 	var designDay: Int = 0
 	
-	abstract fun getRadius(): Int // cm
-	abstract fun getLoadedMass(): Long // kg
-	abstract fun getVolume(): Long // cm³
+	open val radius by ResetableLazy (::calculateRadius)
+	open val loadedMass by ResetableLazy (::calculateLoadedMass)
+	val volume by ResetableLazy (::calculateVolume)
+	private val hashcode by ResetableLazy (::calculateHashCode)
+	
+	abstract fun calculateRadius(): Int // cm
+	abstract fun calculateLoadedMass(): Long // kg
+	abstract fun calculateVolume(): Long // cm³
 	
 	override fun toString() = name
 	
-	private val hashcode: Int by lazy (LazyThreadSafetyMode.NONE) {
+	open fun calculateHashCode(): Int {
 		var hash = 1;
 		hash = 37 * hash + name.hashCode()
 		hash = 37 * hash + designDay
-		hash
+		return hash
 	}
 
 	override fun hashCode(): Int = hashcode
+	
+	open fun resetLazyCache() {
+		(this::radius.getDelegate() as ResetableLazy).reset()
+		(this::loadedMass.getDelegate() as ResetableLazy).reset()
+		(this::volume.getDelegate() as ResetableLazy).reset()
+		(this::hashcode.getDelegate() as ResetableLazy).reset()
+	}
 }
 
 class SimpleMunitionHull(storageType: Resource): MunitionHull(storageType) {
 	var health: Short = -1
 	var damagePattern: DamagePattern = DamagePattern.KINETIC
 	var damage: Long = 0 // joules
-	@JvmField
-	var radius: Int = 1
+	override var radius: Int = 1
 	var mass: Long = 1
+	override var loadedMass
+		get() = mass
+		set(value) {
+			mass = value
+		}
 	
-	override fun getRadius(): Int = radius
-	override fun getLoadedMass(): Long = mass
-	override fun getVolume(): Long {
+	override fun calculateRadius(): Int = radius
+	override fun calculateLoadedMass(): Long = mass
+	override fun calculateVolume(): Long {
 		// V = πr²h, http://mathhelpforum.com/geometry/170076-how-find-cylinder-dimensions-volume-aspect-ratio.html
 		val length = lengthToDiameterRatio * 2 * radius
 		val volume = FastMath.PI * radius * radius * length
@@ -64,6 +81,11 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 	
 	var armorLayers = 1 // Centimeters of armor
 	var armorBlockHP: Short = 100
+	
+	val thrust by ResetableLazy (::calculateThrust)
+	val thrustTime by ResetableLazy (::calculateThrustTime)
+	val emptyMass by ResetableLazy (::calculateEmptyMass)
+	val fuelMass by ResetableLazy (::calculateFuelMass)
 
 	@Suppress("UNCHECKED_CAST")
 	operator fun <T: Part> get(partClass: KClass<T>) : List<PartRef<T>> = partRefs.filter { partClass.isInstance(it.part) } as List<PartRef<T>>
@@ -88,7 +110,7 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 		partRefs.removeAt(index)
 	}
 	
-	fun getThrust(): Long {
+	fun calculateThrust(): Long {
 		
 		var thrust = 0L
 		
@@ -101,14 +123,14 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 		return thrust
 	}
 	
-	fun getMaxAcceleration(): Long = getThrust() / getEmptyMass()
+	fun getMaxAcceleration(): Long = thrust / emptyMass
 	
 	fun getAverageAcceleration(): Long = (getMinAcceleration() + getMaxAcceleration()) / 2
 	
-	fun getMinAcceleration(): Long = getThrust() / (getEmptyMass() + getFuelMass())
+	fun getMinAcceleration(): Long = thrust / (emptyMass + fuelMass)
 	
-	fun getThrustTime(): Int {
-		val fuel = getFuelMass()
+	fun calculateThrustTime(): Int {
+		val fuel = fuelMass
 		val fuelConsumption = this[FueledThruster::class].sumBy { it.part.fuelConsumption }
 		
 		if (fuelConsumption == 0) {
@@ -119,12 +141,12 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 	}
 	
 	// Kg
-	fun getEmptyMass(): Long {
+	fun calculateEmptyMass(): Long {
 		//TODO add armor
-		return parts.sumByLong { it.getMass() }
+		return parts.sumByLong { it.mass }
 	}
 	
-	fun getFuelMass(): Long {
+	fun calculateFuelMass(): Long {
 		return parts.sumByLong {
 			if (it is FuelContainerPart) {
 				it.capacity / Resource.ROCKET_FUEL.specificVolume
@@ -141,20 +163,18 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 		}
 	}
 	
-	override fun getLoadedMass(): Long {
-		return getEmptyMass() + getFuelMass()
+	override fun calculateLoadedMass(): Long {
+		return emptyMass + fuelMass
 	}
 
 	// cm³
-	override fun getVolume(): Long {
+	override fun calculateVolume(): Long {
 		//TODO add armor
-		return parts.sumByLong { it.getVolume() }
+		return parts.sumByLong { it.volume }
 	}
 	
 	// cm
-	override fun getRadius(): Int {
-		val volume = getVolume()
-
+	override fun calculateRadius(): Int {
 		// V = πr²h, http://mathhelpforum.com/geometry/170076-how-find-cylinder-dimensions-volume-aspect-ratio.html
 		val length = FastMath.pow(FastMath.pow(2.0, 2 * lengthToDiameterRatio) * volume / FastMath.PI, 1.0 / 3)
 		var radius = FastMath.ceil(FastMath.sqrt(volume / FastMath.PI / length)).toInt()
@@ -164,8 +184,6 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 
 	// cm^2
 	fun getSurfaceArea(): Int {
-		val volume = getVolume()
-
 		// V = πr^2h, http://mathhelpforum.com/geometry/170076-how-find-cylinder-dimensions-volume-aspect-ratio.html
 		val length = FastMath.pow(FastMath.pow(2.0, 2 * lengthToDiameterRatio) * volume / FastMath.PI, 1.0 / 3)
 		val radius = FastMath.sqrt(volume / FastMath.PI / length)
@@ -176,5 +194,14 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 
 		//TODO add armor
 		return surface.toInt()
+	}
+	
+	override fun resetLazyCache() {
+		super.resetLazyCache()
+		
+		(this::thrust.getDelegate() as ResetableLazy).reset()
+		(this::thrustTime.getDelegate() as ResetableLazy).reset()
+		(this::emptyMass.getDelegate() as ResetableLazy).reset()
+		(this::fuelMass.getDelegate() as ResetableLazy).reset()
 	}
 }

@@ -25,10 +25,12 @@ class TimedLifeSystem : BaseEntitySystem(ASPECT) {
 
 	private val galaxy = GameServices[Galaxy::class]
 
+	lateinit private var timedLifeMapper: ComponentMapper<TimedLifeComponent>
+	
 	@Wire
 	lateinit private var planetarySystem: PlanetarySystem
+	lateinit private var weaponSystem: WeaponSystem
 
-	lateinit private var timedLifeMapper: ComponentMapper<TimedLifeComponent>
 	
 	private var selfRemovedEntityIDs = BitVector()
 	
@@ -71,6 +73,8 @@ class TimedLifeSystem : BaseEntitySystem(ASPECT) {
 					
 					queue.poll()
 //					println("destroying $entityID")
+					
+					weaponSystem.munitionExpired(entityID)
 					
 					planetarySystem.destroyEntity(entityID)
 					
