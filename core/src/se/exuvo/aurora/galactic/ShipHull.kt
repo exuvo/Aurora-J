@@ -8,6 +8,7 @@ import se.exuvo.aurora.empires.components.ShipyardType
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.ResetableLazy
+import org.apache.commons.math3.util.FastMath
 
 class ShipHull() {
 	companion object {
@@ -157,21 +158,21 @@ class ShipHull() {
 	}
 
 	// cm²
-	fun calculateSurfaceArea(): Int {
+	fun calculateSurfaceArea(): Long {
 		// V = πr^2h, http://mathhelpforum.com/geometry/170076-how-find-cylinder-dimensions-volume-aspect-ratio.html
 		val length = Math.pow(Math.pow(2.0, 2 * lengthToDiameterRatio) * volume / Math.PI, 1.0 / 3)
 		val radius = Math.sqrt(volume / Math.PI / length)
 
 		val surface = 2 * Math.PI * radius * length + 2 * Math.PI * radius * radius
 
-//		println("length $length, diameter ${2 * radius}, surface $surface, volume ${Math.PI * length * radius * radius}")
+//		println("length $length cm, diameter ${2 * radius} cm, surface $surface cm², volume ${Math.PI * length * radius * radius} cm³")
 
 		//TODO add armor
 		
-		return surface.toInt()
+		return surface.toLong()
 	}
 	
-	fun getArmorWidth(): Int = surfaceArea / 1000000
+	fun getArmorWidth(): Int = 10 //FastMath.max(1, (surfaceArea / 1000000).toInt())
 	
 	fun calculateCost(): Map<Resource, Long> {
 		val cost = HashMap<Resource, Long>()

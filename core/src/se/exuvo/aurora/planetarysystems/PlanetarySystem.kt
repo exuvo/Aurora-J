@@ -199,6 +199,11 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		val shipHull = ShipHull()
 		shipHull.name = "Elodin"
 		shipHull.designDay = galaxy.day
+		shipHull.armorLayers = 5
+		shipHull.armorBlockHP = ByteArray(5, { 50 })
+		shipHull.armorBlockHP[2] = 127.toByte()
+		shipHull.armorEnergyPerDamage = ShortArray(5, { 1000 })
+		shipHull.armorEnergyPerDamage[2] = 800.toShort()
 //		shipClass.powerScheme = PowerScheme.SOLAR_REACTOR_BATTERY
 
 		shipHull.addPart(sensor1)

@@ -561,10 +561,10 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	}
 	
 	@Suppress("NAME_SHADOWING")
-	fun applyArmorDamage(entityID: Int, damage: Long = 0, damagePattern: DamagePattern, damageColumn: Int? = null ) {
+	fun applyArmorDamage(entityID: Int, damageEnergy: Long = 0, damagePattern: DamagePattern, damageColumn: Int? = null ) {
 		val ship = shipMapper.get(entityID)
 		
-		var damage = damage
+		var damage = damageEnergy
 		var damageColumn = damageColumn
 		
 		if (damageColumn == null) {
@@ -576,17 +576,19 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		when (damagePattern) {
 			DamagePattern.LASER -> {
 				while(layer > 0) {
-					val armorHP: Int = ship.armor[--layer][damageColumn].toInt()
+					var armorHP: Int = ship.armor[--layer][damageColumn].toInt()
 					
 					if (armorHP > 0) {
-						val blockDamage: Int = FastMath.min(armorHP, FastMath.max(255, damage / ship.hull.armorEnergyPerDamage[layer]).toInt())
-						damage -= blockDamage
+						val armorResistance = ship.hull.armorEnergyPerDamage[layer].toInt()
+						val blockDamage: Int = FastMath.min(armorHP, (damage / armorResistance).toInt())
+						damage -= blockDamage * armorResistance
 						
-						println("Damaging armor layer $layer for $blockDamage dmg")
+						println("Damaging armor $layer-$damageColumn for $blockDamage dmg, remaining $damage")
 						
-						ship.armor[layer][damageColumn] = (armorHP - blockDamage).toByte()
+						armorHP -= blockDamage
+						ship.armor[layer][damageColumn] = armorHP.toByte()
 						
-						if (damage == 0L) {
+						if (armorHP > 0 && damage < armorResistance) {
 							return
 						}
 					}
@@ -603,17 +605,19 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			}
 			DamagePattern.EXPLOSIVE -> { // full damage hit block, quarter damage sides
 				while(layer > 0) {
-					val armorHP: Int = ship.armor[--layer][damageColumn].toInt()
+					var armorHP: Int = ship.armor[--layer][damageColumn].toInt()
 					
 					if (armorHP > 0) {
-						val blockDamage: Int = FastMath.min(armorHP, FastMath.max(255, damage / ship.hull.armorEnergyPerDamage[layer]).toInt())
-						damage -= blockDamage
+						val armorResistance = ship.hull.armorEnergyPerDamage[layer].toInt()
+						val blockDamage: Int = FastMath.min(armorHP, (damage / armorResistance).toInt())
+						damage -= blockDamage * armorResistance
 						
-						println("Damaging armor layer $layer for $blockDamage dmg")
+						println("Damaging armor $layer-$damageColumn for $blockDamage dmg, remaining $damage")
 						
-						ship.armor[layer][damageColumn] = (armorHP - blockDamage).toByte()
+						armorHP -= blockDamage
+						ship.armor[layer][damageColumn] = armorHP.toByte()
 						
-						if (damage == 0L) {
+						if (armorHP > 0 && damage < armorResistance) {
 							return
 						}
 						
@@ -629,8 +633,8 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	}
 	
 	@Suppress("NAME_SHADOWING")
-	fun applyHullDamage(ship: ShipComponent, damage: Long) {
-		var damage = damage / 100
+	fun applyHullDamage(ship: ShipComponent, damageEnergy: Long) {
+		var damage = damageEnergy / 100
 		
 		if (damage > 0 && ship.totalPartHP > 0) {
 			println("Damaging parts for $damage dmg")
@@ -638,7 +642,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				val partRef = ship.damageableParts.higherEntry(planetarySystem.random.nextLong(ship.damageablePartsVolume)).value
 				val partHP = ship.getPartHP(partRef).toInt()
 				
-				val partDamage: Int = FastMath.min(partHP, FastMath.max(255, damage).toInt())
+				val partDamage: Int = FastMath.min(partHP, FastMath.max(127, damage).toInt())
 				damage -= partDamage
 				
 				ship.setPartHP(partRef, (partHP - partDamage).toByte())

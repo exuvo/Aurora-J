@@ -1005,6 +1005,9 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		drawMovementTimes(entityIDs, selectedEntityIDs)
 
 		spriteBatch.end()
+		
+		//TODO gamma correction https://github.com/ocornut/imgui/issues/578#issuecomment-379467586
+		// check if we use sRGB https://github.com/ocornut/imgui/issues/1927#issuecomment-553844370
 	}
 
 	var lastBump = 0L
