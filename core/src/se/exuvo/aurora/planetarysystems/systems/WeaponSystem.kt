@@ -652,7 +652,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				
 				var partHP = ship.getPartHP(partRef).toInt()
 				
-				val partDamage: Int = FastMath.min(partHP, FastMath.max(127, damage).toInt())
+				val partDamage: Int = FastMath.min(partHP, damage.toInt())
 				damage -= partDamage
 				
 				partHP = partHP - partDamage

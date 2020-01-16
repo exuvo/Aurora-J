@@ -236,6 +236,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		val fuelStorage = FuelContainerPart(400000000)
 		fuelStorage.name = "Fuel Cargo"
 		fuelStorage.cost[Resource.GENERIC] = 100
+		fuelStorage.maxHealth = 3 - 128
 		shipHull.addPart(fuelStorage)
 
 		val battery = Battery(200 * Units.KILO, 500 * Units.KILO, 0.8f, 100 * Units.GIGA)
@@ -272,6 +273,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		shipHull.preferredPartMunitions[railgunRef] = sabot
 
 		val missileLauncher = MissileLauncher(200 * Units.KILO, 14, 3, 10, 1000 * 5500)
+		missileLauncher.maxHealth = 3 - 128
 		shipHull.addPart(missileLauncher)
 		val missileLauncherRef = shipHull[MissileLauncher::class][0]
 		shipHull.preferredPartMunitions[missileLauncherRef] = missile
