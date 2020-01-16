@@ -11,7 +11,7 @@ abstract class Part {
 	var name: String = ""
 	var designDay: Int = -1
 	val cost: MutableMap<Resource, Long> = LinkedHashMap() 
-	var maxHealth: Byte = 1
+	var maxHealth: Byte = 1 - 128
 	var crewRequirement = 1
 
 	val mass by ResetableLazy (::calculateMass)
@@ -19,7 +19,7 @@ abstract class Part {
 	private val hashcode by ResetableLazy (::calculateHashCode)
 		
 	// In kg
-	fun calculateMass(): Long = cost.values.sum()
+	fun calculateMass(): Long = FastMath.max(1, cost.values.sum())
 	
 	// In cm3
 	fun calculateVolume(): Long {
@@ -29,7 +29,7 @@ abstract class Part {
 			volume += amount * resource.specificVolume
 		}
 		
-		return volume
+		return FastMath.max(1, volume)
 	}
 	
 	// https://stackoverflow.com/questions/113511/best-implementation-for-hashcode-method

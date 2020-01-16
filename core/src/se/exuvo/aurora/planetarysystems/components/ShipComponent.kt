@@ -33,9 +33,9 @@ class ShipComponent() : Component() {
 	lateinit var hull: ShipHull
 	var comissionTime: Long = -1
 	lateinit var armor: Array<ByteArray> // [layer][armor column] = hp
-	var totalPartHP = 0
-	var damageablePartsVolume = 0L
-	val damageableParts = LongObjectBTreeMap.create<PartRef<Part>>()
+	var totalPartHP: Int = 0
+	var damageablePartsMaxVolume = 0L
+	val damageableParts = LongObjectBTreeMap.create<Bag<PartRef<Part>>>()
 	lateinit var partHP: ByteArray
 	lateinit var partEnabled: BooleanArray
 	lateinit var partState: Array<PartState>
@@ -46,7 +46,7 @@ class ShipComponent() : Component() {
 	
 	val mass by ResetableLazy (::calculateMass)
 	val cargoMass by ResetableLazy (::calculateCargoMass)
-
+	
 	fun set(hull: ShipHull,
 					comissionTime: Long
 	): ShipComponent {
@@ -55,16 +55,14 @@ class ShipComponent() : Component() {
 
 		armor = Array<ByteArray>(hull.armorLayers, { layer -> ByteArray(hull.getArmorWidth(), { hull.armorBlockHP[layer] }) }) // 1 armor block per m2
 		partHP = ByteArray(hull.getParts().size, { hull[it].part.maxHealth })
-		totalPartHP = partHP.sum()
+		totalPartHP = partHP.size * 128 + partHP.sum()
 		partEnabled = BooleanArray(hull.getParts().size, { true })
 		partState = Array<PartState>(hull.getParts().size, { PartState() })
 		cargo = emptyMap()
 		munitionCargo = LinkedHashMap()
 		
 		hull.getPartRefs().forEachFast { partRef ->
-			val volume = partRef.part.volume
-			damageableParts.put(volume, partRef)
-			damageablePartsVolume += volume
+			addDamageablePart(partRef)
 		}
 		
 		var containerPartRefs: List<PartRef<ContainerPart>> = hull[ContainerPart::class]
@@ -162,34 +160,119 @@ class ShipComponent() : Component() {
 		return partState[partRef.index]
 	}
 
-	fun getPartHP(partRef: PartRef<out Part>): Byte {
-		return partHP[partRef.index]
+	fun getPartHP(partRef: PartRef<out Part>): Int {
+		return 128 + partHP[partRef.index]
 	}
 
-	fun setPartHP(partRef: PartRef<Part>, health: Byte) {
-		if (health < 0 || health > partRef.part.maxHealth) {
+	@Suppress("NAME_SHADOWING")
+	fun setPartHP(partRef: PartRef<Part>, health: Int, damageablePartsEntry: Map.Entry<Long, Bag<PartRef<Part>>>? = null) {
+		if (health < 0 || health > (128 + partRef.part.maxHealth)) {
 			throw IllegalArgumentException()
 		}
 		
-		val oldHP = partHP[partRef.index]
+		val oldHP = 128 + partHP[partRef.index]
 		
-		if (oldHP == 0.toByte() && health > 0) {
+		if (oldHP == 0 && health > 0) {
 			
+			addDamageablePart(partRef)
+			
+		} else if (oldHP > 0 && health == 0) {
+
+			var damageablePartsEntry = damageablePartsEntry
 			val volume = partRef.part.volume
-			damageableParts.put(volume, partRef)
-			damageablePartsVolume += volume
 			
-		} else if (oldHP > 0 && health == 0.toByte()) {
+			if (damageablePartsEntry == null) {
+				damageablePartsEntry = getDamageablePartsEntry(volume)!!
+			}
 			
-			val volume = partRef.part.volume
-			damageableParts.remove(volume, partRef)
-			damageablePartsVolume -= volume
+			damageableParts.remove(damageablePartsEntry.key)
+			
+			if (damageablePartsEntry.value.size() == 1) {
+				
+//				println("removing $volume, single")
+			
+				if (damageableParts.size == 0) {
+					damageablePartsMaxVolume = 0
+					
+				} else if (volume == damageablePartsMaxVolume) {
+					damageablePartsMaxVolume = damageableParts.lastKeyLong()
+				}
+				
+			} else {
+				
+//				println("removing $volume, multi")
+				
+				damageablePartsEntry.value.remove(partRef)
+				
+				val newVolume = damageablePartsEntry.key - volume
+				damageableParts.put(newVolume, damageablePartsEntry.value)
+				
+				if (damageablePartsMaxVolume >= newVolume) {
+					damageablePartsMaxVolume = damageableParts.lastKeyLong()
+				}
+			}
 		}
-		
 
 		totalPartHP += health - oldHP
 		
-		partHP[partRef.index] = health
+		partHP[partRef.index] = (health - 128).toByte()
+	}
+	
+	private fun getDamageablePartsEntry(volume: Long): Map.Entry<Long, Bag<PartRef<Part>>>? {
+		if (damageableParts.size > 0) {
+			var entry = damageableParts.ceilingEntry(volume)
+			
+			while(entry != null) {
+				
+//				println("get $volume, entry ${entry.key} = ${entry.value[0].part.volume} * ${entry.value.size()}")
+				
+				if (entry.value[0].part.volume == volume) {
+					return entry
+				}
+				
+				entry = damageableParts.higherEntry(entry.key)
+			}
+		}
+		
+		return null
+	}
+	
+	private fun addDamageablePart(partRef: PartRef<Part>) {
+		val part = partRef.part
+		val volume = part.volume
+		
+		var list: Bag<PartRef<Part>>? = null
+		
+		if (damageableParts.size > 0) {
+			val entry = getDamageablePartsEntry(volume)
+			
+			if (entry != null) {
+				list = entry.value
+				
+				damageableParts.remove(entry.key)
+				val newVolume = entry.key + volume
+				damageableParts.put(newVolume, list)
+				
+				if (newVolume > damageablePartsMaxVolume) {
+					damageablePartsMaxVolume = newVolume
+				}
+				
+//				println("adding $volume, appending")
+			}
+		}
+		
+		if (list == null) {
+			list = Bag<PartRef<Part>>(4)
+			damageableParts.put(volume, list)
+			
+			if (volume > damageablePartsMaxVolume) {
+				damageablePartsMaxVolume = volume
+			}
+			
+//			println("adding $volume, new")
+		}
+		
+		list.add(partRef)
 	}
 	
 	fun isPartEnabled(partRef: PartRef<out Part>): Boolean {

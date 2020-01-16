@@ -49,6 +49,8 @@ import se.exuvo.aurora.planetarysystems.components.RailgunShotComponent
 import se.exuvo.aurora.planetarysystems.components.TimedLifeComponent
 import se.exuvo.aurora.planetarysystems.components.MissileComponent
 import se.exuvo.aurora.planetarysystems.components.OnPredictedMovementComponent
+import se.exuvo.aurora.galactic.PartRef
+import se.exuvo.aurora.galactic.Part
 
 class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -522,7 +524,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			val targetMovement = movementMapper.get(targetID).get(galaxy.time).value
 			val distanceFromTarget = tmpPosition.set(movement.position).sub(targetMovement.position).len()
 			
-			if (distanceFromTarget < 1000L) {
+			if (distanceFromTarget < 1000L) { //TODO < target length
 				return
 			}
 			
@@ -576,17 +578,17 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		when (damagePattern) {
 			DamagePattern.LASER -> {
 				while(layer > 0) {
-					var armorHP: Int = ship.armor[--layer][damageColumn].toInt()
+					var armorHP: Int = 128 + ship.armor[--layer][damageColumn]
 					
 					if (armorHP > 0) {
 						val armorResistance = ship.hull.armorEnergyPerDamage[layer].toInt()
 						val blockDamage: Int = FastMath.min(armorHP, (damage / armorResistance).toInt())
 						damage -= blockDamage * armorResistance
 						
-						println("Damaging armor $layer-$damageColumn for $blockDamage dmg, remaining $damage")
+						println("Damaging armor $damageColumn-$layer for $blockDamage dmg, remaining $damage")
 						
 						armorHP -= blockDamage
-						ship.armor[layer][damageColumn] = armorHP.toByte()
+						ship.armor[layer][damageColumn] = (armorHP - 128).toByte()
 						
 						if (armorHP > 0 && damage < armorResistance) {
 							return
@@ -605,17 +607,17 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			}
 			DamagePattern.EXPLOSIVE -> { // full damage hit block, quarter damage sides
 				while(layer > 0) {
-					var armorHP: Int = ship.armor[--layer][damageColumn].toInt()
+					var armorHP: Int = 128 + ship.armor[--layer][damageColumn]
 					
 					if (armorHP > 0) {
 						val armorResistance = ship.hull.armorEnergyPerDamage[layer].toInt()
 						val blockDamage: Int = FastMath.min(armorHP, (damage / armorResistance).toInt())
 						damage -= blockDamage * armorResistance
 						
-						println("Damaging armor $layer-$damageColumn for $blockDamage dmg, remaining $damage")
+						println("Damaging armor $damageColumn-$layer for $blockDamage dmg, remaining $damage")
 						
 						armorHP -= blockDamage
-						ship.armor[layer][damageColumn] = armorHP.toByte()
+						ship.armor[layer][damageColumn] = (armorHP - 128).toByte()
 						
 						if (armorHP > 0 && damage < armorResistance) {
 							return
@@ -632,20 +634,33 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		applyHullDamage(ship, damage)
 	}
 	
-	@Suppress("NAME_SHADOWING")
 	fun applyHullDamage(ship: ShipComponent, damageEnergy: Long) {
-		var damage = damageEnergy / 100
+		var damage = damageEnergy / 1000
 		
 		if (damage > 0 && ship.totalPartHP > 0) {
 			println("Damaging parts for $damage dmg")
-			while (ship.damageablePartsVolume > 0) {
-				val partRef = ship.damageableParts.higherEntry(planetarySystem.random.nextLong(ship.damageablePartsVolume)).value
-				val partHP = ship.getPartHP(partRef).toInt()
+			while (ship.damageableParts.size > 0) {
+				val entry = ship.damageableParts.higherEntry(planetarySystem.random.nextLong(ship.damageablePartsMaxVolume))
+				val partRef: PartRef<Part>
+				
+				if (entry.value.size() == 1) {
+					partRef = entry.value[0]
+					
+				} else {
+					partRef = entry.value[planetarySystem.random.nextInt(entry.value.size())]
+				}
+				
+				var partHP = ship.getPartHP(partRef).toInt()
 				
 				val partDamage: Int = FastMath.min(partHP, FastMath.max(127, damage).toInt())
 				damage -= partDamage
 				
-				ship.setPartHP(partRef, (partHP - partDamage).toByte())
+				partHP = partHP - partDamage
+				ship.setPartHP(partRef, partHP, entry)
+				
+				if (partHP == 0) {
+					println("Part destroyed ${partRef.part}")
+				}
 				
 				if (damage == 0L) {
 					return

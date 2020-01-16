@@ -97,6 +97,8 @@ import imgui.ImGui.renderNavHighlight
 import glm_.vec4.Vec4
 import imgui.u32
 import se.exuvo.aurora.galactic.DamagePattern
+import se.exuvo.aurora.galactic.PartRef
+import se.exuvo.aurora.galactic.Part
 
 class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	companion object {
@@ -853,6 +855,7 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 	var addResourceAmount = 0
 	var weaponTestDistance = 1000000.0
 	var selectionIndex = 0
+	var testDmgAmount = 10000L
 	
 	private fun shipDebug() {
 
@@ -1047,8 +1050,8 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 											val backupPaddingY = style.framePadding.y
 											style.framePadding.y = 0f
 											
-											val fullArmorColor = Vec4(0f, 255f, 0f, 1f)
-											val emptyArmorColor = Vec4(255f, 0f, 0f, 1f)
+											val fullArmorColor = Vec4(0f, 1f, 0f, 1f)
+											val emptyArmorColor = Vec4(1f, 0f, 0f, 1f)
 											val tmpColor = Vec4(0f, 0f, 0f, 1f)
 											
 											fun armorBlock(hp: Float, maxHP: Float): Boolean {
@@ -1083,8 +1086,11 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 													
 													pushId(y * 31 + x)
 													
-													if (armorBlock(shipComponent.armor[y][x].toFloat(), shipComponent.hull.armorBlockHP[y].toFloat())) {
-														// tooltip?
+													val armorHP = 128 + shipComponent.armor[y][x]
+													val maxArmorHP = 128 + shipComponent.hull.armorBlockHP[y]
+													
+													if (armorBlock(armorHP.toFloat(), maxArmorHP.toFloat())) {
+														setTooltip("$armorHP / $maxArmorHP, resistance ${shipComponent.hull.armorEnergyPerDamage[y]}")
 													}
 													
 													popId()
@@ -1093,13 +1099,50 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 											
 											style.framePadding.y = backupPaddingY
 											
-											//TODO print info about hovered armor block
+											text("totalPartHP ${shipComponent.totalPartHP}")
 											
-											if (button("damage")) {
-												weaponSystem.applyArmorDamage(entityRef.entityID, 10000, DamagePattern.LASER)
+											val sortedParts = Bag<PartRef<Part>>(shipComponent.hull.getPartRefs().size)
+											for(partRef in shipComponent.hull.getPartRefs()) {
+												sortedParts.add(partRef)
+											}
+											sortedParts.sort{ p1, p2 ->
+												val hitChance1 = (100 * p1.part.volume) / shipComponent.hull.volume
+												val hitChance2 = (100 * p2.part.volume) / shipComponent.hull.volume
+												
+												(hitChance2 - hitChance1).toInt()
 											}
 											
-											//TODO draw parts hp
+											sortedParts.forEachFast{ partRef ->
+												val hitChance = (100 * partRef.part.volume) / shipComponent.hull.volume
+												text("${shipComponent.getPartHP(partRef)} / ${128 + partRef.part.maxHealth} ${String.format("%3d", hitChance)}% ${partRef.part}")
+											}
+											
+											sliderScalar("Damage amount", DataType.Long, ::testDmgAmount, 0L, 1_000_000L, "$testDmgAmount", 2.5f)
+											
+											if (button("damage")) {
+												weaponSystem.applyArmorDamage(entityRef.entityID, testDmgAmount, DamagePattern.LASER)
+											}
+											
+											if (button("kill armor")) {
+												for (y in 0..shipComponent.hull.armorLayers - 1) {
+													for (x in 0..shipComponent.hull.getArmorWidth() - 1) {
+														shipComponent.armor[y][x] = -128
+													}
+												}
+											}
+											
+											if (button("repair")) {
+												for (y in 0..shipComponent.hull.armorLayers - 1) {
+													for (x in 0..shipComponent.hull.getArmorWidth() - 1) {
+														shipComponent.armor[y][x] = shipComponent.hull.armorBlockHP[y]
+													}
+												}
+												
+												for(partRef in shipComponent.hull.getPartRefs()) {
+													shipComponent.setPartHP(partRef, 128 + partRef.part.maxHealth)
+												}
+											}
+											
 										}
 			
 										if (collapsingHeader("Power", 0)) {
@@ -1325,21 +1368,21 @@ class ImGuiScreen : GameScreenImpl(), InputProcessor {
 					if (PieMenuItem("SubSub2")) {println("subsub2")}
 					
 					if (BeginPieMenu("Sub sub\nmenu")) {
-					if (PieMenuItem("SubSub")) {println("subsub1")}
-					if (PieMenuItem("SubSub2")) {println("subsub2")}
-					if (BeginPieMenu("Sub sub\nmenu")) {
-					if (PieMenuItem("SubSub")) {println("subsub1")}
-					if (PieMenuItem("SubSub2")) {println("subsub2")}
-					if (BeginPieMenu("Sub sub\nmenu")) {
-					if (PieMenuItem("SubSub")) {println("subsub1")}
-					if (PieMenuItem("SubSub2")) {println("subsub2")}
-					
-					EndPieMenu();
-				}
-					EndPieMenu();
-				}
-					EndPieMenu();
-				}
+						if (PieMenuItem("SubSub")) {println("subsub1")}
+						if (PieMenuItem("SubSub2")) {println("subsub2")}
+							if (BeginPieMenu("Sub sub\nmenu")) {
+								if (PieMenuItem("SubSub")) {println("subsub1")}
+								if (PieMenuItem("SubSub2")) {println("subsub2")}
+								if (BeginPieMenu("Sub sub\nmenu")) {
+									if (PieMenuItem("SubSub")) {println("subsub1")}
+									if (PieMenuItem("SubSub2")) {println("subsub2")}
+										
+										EndPieMenu();
+									}
+								EndPieMenu();
+							}
+						EndPieMenu();
+					}
 					
 					EndPieMenu();
 				}

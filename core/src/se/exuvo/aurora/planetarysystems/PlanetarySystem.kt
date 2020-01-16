@@ -200,10 +200,12 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		shipHull.name = "Elodin"
 		shipHull.designDay = galaxy.day
 		shipHull.armorLayers = 5
-		shipHull.armorBlockHP = ByteArray(5, { 50 })
-		shipHull.armorBlockHP[2] = 127.toByte()
+		shipHull.armorBlockHP = ByteArray(5, { 100 - 128 })
 		shipHull.armorEnergyPerDamage = ShortArray(5, { 1000 })
+		shipHull.armorBlockHP[2] = (255 - 128).toByte()
 		shipHull.armorEnergyPerDamage[2] = 800.toShort()
+		shipHull.armorBlockHP[3] = (50 - 128).toByte()
+		shipHull.armorEnergyPerDamage[3] = 3000.toShort()
 //		shipClass.powerScheme = PowerScheme.SOLAR_REACTOR_BATTERY
 
 		shipHull.addPart(sensor1)
@@ -217,6 +219,7 @@ class PlanetarySystem(val initialName: String, val initialPosition: Vector2L) : 
 		val reactor = FissionReactor(5 * Units.MEGA)
 		reactor.name = "Nuclear Reactor"
 		reactor.cost[Resource.GENERIC] = 1000
+		reactor.maxHealth = 5 - 128
 		shipHull.addPart(reactor)
 //		println("Reactor fuel consumption ${reactor.fuelConsumption} kg / ${reactor.fuelTime} s")
 
