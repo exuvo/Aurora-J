@@ -13,12 +13,12 @@ import com.badlogic.gdx.utils.Disposable
 import net.mostlyoriginal.api.event.common.EventSystem
 import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.galactic.systems.GalacticRenderSystem
-import se.exuvo.aurora.planetarysystems.PlanetarySystem
-import se.exuvo.aurora.planetarysystems.components.ChangingWorldComponent
-import se.exuvo.aurora.planetarysystems.components.MovementValues
-import se.exuvo.aurora.planetarysystems.components.PlanetarySystemComponent
-import se.exuvo.aurora.planetarysystems.systems.CustomSystemInvocationStrategy
-import se.exuvo.aurora.planetarysystems.systems.GroupSystem
+import se.exuvo.aurora.starsystems.StarSystem
+import se.exuvo.aurora.starsystems.components.ChangingWorldComponent
+import se.exuvo.aurora.starsystems.components.MovementValues
+import se.exuvo.aurora.starsystems.components.StarSystemComponent
+import se.exuvo.aurora.starsystems.systems.CustomSystemInvocationStrategy
+import se.exuvo.aurora.starsystems.systems.GroupSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.forEachFast
@@ -31,8 +31,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
 import kotlin.concurrent.read
 import se.exuvo.aurora.utils.Storage
-import se.exuvo.aurora.planetarysystems.components.EntityReference
-import se.exuvo.aurora.planetarysystems.components.EntityUUID
+import se.exuvo.aurora.starsystems.components.EntityReference
+import se.exuvo.aurora.starsystems.components.EntityUUID
 import se.exuvo.aurora.utils.exponentialAverage
 import org.apache.commons.math3.util.FastMath
 import java.util.concurrent.locks.Condition
@@ -45,7 +45,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		val log = LogManager.getLogger(Galaxy::class.java)
 	}
 
-	lateinit var systems: Bag<PlanetarySystem>
+	lateinit var systems: Bag<StarSystem>
 	private var thread: Thread? = null
 	private val threads = Bag<Thread>(Settings.getInt("Galaxy/threads", Runtime.getRuntime().availableProcessors()))
 	val threadsCondition = Object()
@@ -96,7 +96,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		})
 	}
 	
-	fun init(systems: Bag<PlanetarySystem>) {
+	fun init(systems: Bag<StarSystem>) {
 		this.systems = systems
 		
 		systems.forEachFast { system ->
@@ -194,9 +194,9 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 //						println()
 						
 						// If one system took a noticable larger time to process than others, schedule it earlier
-						systems.sort(object : Comparator<PlanetarySystem> {
+						systems.sort(object : Comparator<StarSystem> {
 							val s = tickSpeed / 10
-							override fun compare(o1: PlanetarySystem, o2: PlanetarySystem): Int {
+							override fun compare(o1: StarSystem, o2: StarSystem): Int {
 								val diff = o1.updateTime - o2.updateTime
 								
 								if (diff > s) return -1
@@ -323,7 +323,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		throw IllegalArgumentException("$id")
 	}
 	
-	fun getPlanetarySystemBySID(sid: Int): PlanetarySystem {
+	fun getStarSystemBySID(sid: Int): StarSystem {
 		systems.forEachFast{ system ->
 			if (system.sid == sid) {
 				return system;
@@ -332,7 +332,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		throw IllegalArgumentException("$sid")
 	}
 	
-	fun getPlanetarySystemByGalacticEntityID(id: Int): PlanetarySystem {
+	fun getStarSystemByGalacticEntityID(id: Int): StarSystem {
 		systems.forEachFast{ system ->
 			if (system.galacticEntityID == id) {
 				return system;
@@ -341,8 +341,8 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		throw IllegalArgumentException("$id")
 	}
 	
-	fun getPlanetarySystemByEntity(entity: Entity): PlanetarySystem {
-		return ComponentMapper.getFor(PlanetarySystemComponent::class.java, entity.world).get(entity).system
+	fun getStarSystemByEntity(entity: Entity): StarSystem {
+		return ComponentMapper.getFor(StarSystemComponent::class.java, entity.world).get(entity).system
 	}
 	
 	fun resolveEntityReference(entityReference: EntityReference): EntityReference? {
@@ -385,7 +385,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		
 	}
 	
-	fun moveEntity(targetSystem: PlanetarySystem, entity: Entity, targetPosition: MovementValues) {
+	fun moveEntity(targetSystem: StarSystem, entity: Entity, targetPosition: MovementValues) {
 		val sourceWorld = entity.world
 		
 		ComponentMapper.getFor(ChangingWorldComponent::class.java, sourceWorld).create(entity)

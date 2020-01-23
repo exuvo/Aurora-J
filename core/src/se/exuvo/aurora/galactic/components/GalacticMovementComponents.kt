@@ -1,8 +1,8 @@
-package se.exuvo.aurora.planetarysystems.components
+package se.exuvo.aurora.starsystems.components
 
 import com.badlogic.gdx.math.Vector2
 import se.exuvo.aurora.galactic.systems.GalacticRenderSystem
-import se.exuvo.aurora.planetarysystems.PlanetarySystem
+import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.utils.Vector2L
 import com.artemis.Component
 

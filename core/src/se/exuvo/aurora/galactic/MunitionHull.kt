@@ -1,6 +1,6 @@
 package se.exuvo.aurora.galactic
 
-import se.exuvo.aurora.planetarysystems.components.PowerScheme
+import se.exuvo.aurora.starsystems.components.PowerScheme
 import se.exuvo.aurora.utils.sumByLong
 import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.galactic.FueledThruster

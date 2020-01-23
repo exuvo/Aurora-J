@@ -7,8 +7,8 @@ import org.apache.logging.log4j.LogManager
 import org.sqlite.SQLiteConfig
 import org.sqlite.javax.SQLiteConnectionPoolDataSource
 import se.exuvo.aurora.galactic.Galaxy
-import se.exuvo.aurora.planetarysystems.components.EntityUUID
-import se.exuvo.aurora.planetarysystems.components.UUIDComponent
+import se.exuvo.aurora.starsystems.components.EntityUUID
+import se.exuvo.aurora.starsystems.components.UUIDComponent
 import se.exuvo.aurora.utils.GameServices
 import se.unlogic.standardutils.dao.AnnotatedDAO
 import se.unlogic.standardutils.dao.SimpleAnnotatedDAOFactory
@@ -210,7 +210,7 @@ abstract class HistoryEvent() {
 class HistoryEntityEvent() : HistoryEvent() {
 
 	@DAOManaged
-	var planetarySystemID: Int? = null
+	var starSystemID: Int? = null
 
 	@DAOManaged
 	var empireID: Int? = null
@@ -223,7 +223,7 @@ class HistoryEntityEvent() : HistoryEvent() {
 
 	constructor (time: Long, uuid: EntityUUID, eventType: EntityEvent) : this() {
 		this.time = time
-		planetarySystemID = uuid.planetarySystemID
+		starSystemID = uuid.starSystemID
 		empireID = uuid.empireID
 		shipID = uuid.entityUID
 		this.eventType = eventType

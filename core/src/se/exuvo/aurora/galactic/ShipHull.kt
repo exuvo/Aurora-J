@@ -1,6 +1,6 @@
 package se.exuvo.aurora.galactic
 
-import se.exuvo.aurora.planetarysystems.components.PowerScheme
+import se.exuvo.aurora.starsystems.components.PowerScheme
 import java.lang.IllegalArgumentException
 import kotlin.reflect.KClass
 import se.exuvo.aurora.utils.sumByLong

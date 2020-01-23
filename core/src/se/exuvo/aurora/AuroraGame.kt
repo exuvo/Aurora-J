@@ -13,17 +13,17 @@ import com.badlogic.gdx.graphics.profiling.GLProfiler
 import com.esotericsoftware.kryonet.MinlogTolog4j
 import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.history.History
-import se.exuvo.aurora.planetarysystems.PlanetarySystem
-import se.exuvo.aurora.planetarysystems.systems.GroupSystem
-import se.exuvo.aurora.screens.GameScreenService
-import se.exuvo.aurora.screens.LoadingScreen
-import se.exuvo.aurora.screens.PlanetarySystemScreen
+import se.exuvo.aurora.starsystems.StarSystem
+import se.exuvo.aurora.starsystems.systems.GroupSystem
+import se.exuvo.aurora.ui.GameScreenService
+import se.exuvo.aurora.ui.LoadingScreen
+import se.exuvo.aurora.ui.StarSystemScreen
 import se.exuvo.aurora.utils.GameServices
-import se.exuvo.aurora.utils.keys.KeyMappings
+import se.exuvo.aurora.ui.keys.KeyMappings
 import se.exuvo.settings.Settings
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import se.exuvo.aurora.utils.Storage
-import se.exuvo.aurora.screens.ImGuiScreen
+import se.exuvo.aurora.ui.UIScreen
 import se.exuvo.aurora.galactic.Galaxy
 
 interface AuroraGame : ApplicationListener {
@@ -102,7 +102,7 @@ class AuroraGameMainWindow() : AuroraGame {
 	}
 }
 
-class AuroraGameSecondaryWindow(val system: PlanetarySystem) : AuroraGame {
+class AuroraGameSecondaryWindow(val system: StarSystem) : AuroraGame {
 	val log = LogManager.getLogger(this.javaClass)
 	override lateinit var screenService: GameScreenService
 	override lateinit var shapeRenderer: ShapeRenderer
@@ -117,8 +117,8 @@ class AuroraGameSecondaryWindow(val system: PlanetarySystem) : AuroraGame {
 		
 		Gdx.input.setInputProcessor(screenService)
 
-		screenService.add(ImGuiScreen())
-		screenService.add(PlanetarySystemScreen(system))
+		screenService.add(UIScreen())
+		screenService.add(StarSystemScreen(system))
 	}
 
 	override fun resize(width: Int, height: Int) {

@@ -1,6 +1,6 @@
 package se.exuvo.aurora.galactic
 
-import se.exuvo.aurora.planetarysystems.components.Spectrum
+import se.exuvo.aurora.starsystems.components.Spectrum
 import java.util.Objects
 import java.security.InvalidParameterException
 import org.apache.commons.math3.util.FastMath

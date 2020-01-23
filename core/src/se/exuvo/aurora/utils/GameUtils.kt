@@ -6,10 +6,10 @@ import se.exuvo.aurora.galactic.FuelWastePart
 import se.exuvo.aurora.galactic.FueledPart
 import se.exuvo.aurora.galactic.Part
 import se.exuvo.aurora.galactic.PartRef
-import se.exuvo.aurora.planetarysystems.components.FueledPartState
-import se.exuvo.aurora.planetarysystems.components.NameComponent
-import se.exuvo.aurora.planetarysystems.components.ShipComponent
-import se.exuvo.aurora.planetarysystems.components.UUIDComponent
+import se.exuvo.aurora.starsystems.components.FueledPartState
+import se.exuvo.aurora.starsystems.components.NameComponent
+import se.exuvo.aurora.starsystems.components.ShipComponent
+import se.exuvo.aurora.starsystems.components.UUIDComponent
 import com.artemis.Entity
 import com.artemis.ComponentMapper
 import com.artemis.utils.IntBag

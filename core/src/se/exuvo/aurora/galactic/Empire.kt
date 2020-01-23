@@ -5,8 +5,8 @@ import org.apache.logging.log4j.LogManager
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import com.artemis.utils.Sort
-import se.exuvo.aurora.planetarysystems.components.EntityUUID
-import se.exuvo.aurora.planetarysystems.components.EntityReference
+import se.exuvo.aurora.starsystems.components.EntityUUID
+import se.exuvo.aurora.starsystems.components.EntityReference
 import com.artemis.utils.Bag
 
 

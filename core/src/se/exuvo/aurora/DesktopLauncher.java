@@ -20,7 +20,7 @@ import com.martiansoftware.jsap.JSAPException;
 import com.martiansoftware.jsap.JSAPResult;
 import com.martiansoftware.jsap.Switch;
 
-import se.exuvo.aurora.utils.keys.KeyMappings;
+import se.exuvo.aurora.ui.keys.KeyMappings;
 import se.exuvo.settings.Settings;
 import se.unlogic.standardutils.io.FileUtils;
 
