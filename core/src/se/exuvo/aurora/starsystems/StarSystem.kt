@@ -94,6 +94,8 @@ import se.exuvo.aurora.galactic.AdvancedMunitionHull
 import se.exuvo.aurora.galactic.DamagePattern
 import se.exuvo.aurora.galactic.Shield
 import se.exuvo.aurora.starsystems.systems.MovementPredictedSystem
+import se.exuvo.aurora.empires.components.InCombatComponent
+import se.exuvo.aurora.starsystems.systems.TargetingSystem
 
 class StarSystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener, Disposable {
 	companion object {
@@ -102,6 +104,9 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		
 		@JvmStatic
 		val UUID_ASPECT = Aspect.all(UUIDComponent::class.java)
+		
+		@JvmStatic
+		val IN_COMBAT_ASPECT = Aspect.all(InCombatComponent::class.java)
 		
 		@JvmStatic
 		val log = LogManager.getLogger(StarSystem::class.java)
@@ -120,6 +125,8 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	val world: World
 	val random = RandomXS128()
 	val pools = PoolsCollection()
+	val uuidSubscription: EntitySubscription
+	val inCombatSubscription: EntitySubscription
 
 	lateinit private var solarSystemMapper: ComponentMapper<StarSystemComponent>
 	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
@@ -156,6 +163,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		worldBuilder.with(SolarIrradianceSystem())
 		worldBuilder.with(PassiveSensorSystem())
 //		worldBuilder.with(GravimetricSensorSystem())
+		worldBuilder.with(TargetingSystem())
 		worldBuilder.with(WeaponSystem())
 		worldBuilder.with(PowerSystem())
 		worldBuilder.with(TimedLifeSystem())
@@ -183,6 +191,9 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 				}
 			}
 		})
+		
+		uuidSubscription = world.getAspectSubscriptionManager().get(UUID_ASPECT)
+		inCombatSubscription = world.getAspectSubscriptionManager().get(IN_COMBAT_ASPECT)
 	}
 
 	fun init() {
@@ -239,22 +250,18 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		fuelStorage.maxHealth = 3 - 128
 		shipHull.addPart(fuelStorage)
 
-		val battery = Battery(200 * Units.KILO, 500 * Units.KILO, 0.8f, 100 * Units.GIGA)
+		val battery = Battery(200 * Units.KILO, 500 * Units.KILO, 80, 100 * Units.GIGA)
 		battery.name = "Battery"
 		shipHull.addPart(battery)
 
-		val targetingComputer = TargetingComputer(2, 1, 0f, 10 * Units.KILO)
-		targetingComputer.name = "TC 2-10"
-		shipHull.addPart(targetingComputer)
-
 		val sabot = SimpleMunitionHull(Resource.SABOTS)
 		sabot.name = "A sabot"
-		sabot.mass = 10
+		sabot.loadedMass = 10
 		sabot.radius = 5
 		sabot.health = 2
 		sabot.damagePattern = DamagePattern.KINETIC
 
-		val missileBattery = Battery(10 * Units.KILO, 50 * Units.KILO, 0.8f, 1 * Units.GIGA)
+		val missileBattery = Battery(10 * Units.KILO, 50 * Units.KILO, 80, 1 * Units.GIGA)
 		missileBattery.cost[Resource.GENERIC] = 500
 		
 //		val missileIonThruster = ElectricalThruster(290 * 1000, 1 * Units.KILO)
@@ -272,7 +279,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		val railgunRef = shipHull[Railgun::class][0]
 		shipHull.preferredPartMunitions[railgunRef] = sabot
 
-		val missileLauncher = MissileLauncher(200 * Units.KILO, 14, 3, 10, 1000 * 5500)
+		val missileLauncher = MissileLauncher(14, 3, 10, 1000 * 5500)
 		missileLauncher.maxHealth = 3 - 128
 		shipHull.addPart(missileLauncher)
 		val missileLauncherRef = shipHull[MissileLauncher::class][0]
@@ -281,6 +288,10 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		val beam = BeamWeapon(1 * Units.MEGA, 1.0, BeamWavelength.Infrared, 10 * Units.MEGA)
 		shipHull.addPart(beam)
 
+		val targetingComputer = TargetingComputer(2, 1, 0f, 10 * Units.KILO)
+		targetingComputer.name = "TC 2-10"
+		shipHull.addPart(targetingComputer)
+		
 		val tcRef: PartRef<TargetingComputer> = shipHull[TargetingComputer::class][0]
 		shipHull.defaultWeaponAssignments[tcRef] = shipHull.getPartRefs().filter({ it.part is WeaponPart })
 
@@ -483,7 +494,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 
 	fun getEntityByUUID(entityUUID: EntityUUID): Int? {
 		
-		world.getAspectSubscriptionManager().get(UUID_ASPECT).getEntities().forEachFast{ entityID ->
+		uuidSubscription.getEntities().forEachFast{ entityID ->
 			val uuid = uuidMapper.get(entityID).uuid
 			
 			if (uuid.hashCode() == entityUUID.hashCode()) {
@@ -510,8 +521,20 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	fun update(deltaGameTime: Int) {
 
 		lock.write {
-			world.setDelta(deltaGameTime.toFloat())
-			world.process()
+			
+			if (inCombatSubscription.getEntityCount() > 0) {
+				
+				world.setDelta(1f)
+				
+				for (i in 0 .. deltaGameTime.toInt()) {
+					world.process()
+				}
+				
+			} else {
+			
+				world.setDelta(deltaGameTime.toFloat())
+				world.process()
+			}
 		}
 		
 //		if (Math.random() > 0.97) {

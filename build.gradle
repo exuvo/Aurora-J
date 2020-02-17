@@ -19,12 +19,12 @@ allprojects {
 	version = '1.0'
 	ext {
 		appName = "Aurora J"
-		gdxVersion = '1.9.9'
-		ktxVersion = '1.9.9-b2'
+		gdxVersion = '1.9.10'
+		ktxVersion = '1.9.10-b4'
 		lwjglVersion = '3.2.2'
 		log4jVersion = '2.11.1'
 		jsapVersion = '2.1'
-		artemisVersion = '2.2.0'
+		artemisVersion = '2.3.0'
 		artemisContribVersion = '2.4.0'
 	}
 

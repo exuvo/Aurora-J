@@ -26,8 +26,7 @@ import com.artemis.Entity
 import com.artemis.utils.Bag
 import java.util.TreeMap
 import uk.co.omegaprime.btreemap.LongObjectBTreeMap
-import se.exuvo.aurora.utils.ResetableLazy
-import se.exuvo.aurora.utils.resetDelegate
+import java.util.PriorityQueue
 
 class ShipComponent() : Component() {
 	lateinit var hull: ShipHull
@@ -44,8 +43,16 @@ class ShipComponent() : Component() {
 	var cargoChanged = false
 	var heat: Long = 0
 	
-	val mass by ResetableLazy (::calculateMass)
-	val cargoMass by ResetableLazy (::calculateCargoMass)
+	var mass = -1L
+		get() {
+			if (field == -1L) { field = calculateMass() }
+			return field
+		}
+	var cargoMass = -1L
+		get() {
+			if (field == -1L) { field = calculateCargoMass() }
+			return field
+		}
 	
 	fun set(hull: ShipHull,
 					comissionTime: Long
@@ -122,13 +129,35 @@ class ShipComponent() : Component() {
 
 			if (partRef.part is TargetingComputer) {
 
-				var tcs = TargetingComputerState()
-
 				@Suppress("UNCHECKED_CAST")
 				var defaultAssignments: List<PartRef<Part>>? = hull.defaultWeaponAssignments[partRef as PartRef<TargetingComputer>]
+				
+				var tcs: TargetingComputerState
 
 				if (defaultAssignments != null) {
-					tcs.linkedWeapons = defaultAssignments.toMutableList()
+					
+					tcs = TargetingComputerState(this, defaultAssignments.size)
+					
+					for (weaponRef in defaultAssignments) {
+						tcs.linkedWeapons.add(weaponRef)
+						
+						if (weaponRef.part is AmmunitionPart) {
+							tcs.reloadingWeapons.add(weaponRef)
+						}
+						
+						if (weaponRef.part is ChargedPart) {
+							tcs.chargingWeapons.add(weaponRef)
+						}
+						
+						val weaponState = WeaponPartState()
+						weaponState.targetingComputer = partRef
+						
+						val weaponPartState = getPartState(weaponRef)
+						weaponPartState.put(weaponState)
+					}
+					
+				} else {
+					tcs = TargetingComputerState(this)
 				}
 
 				state.put(tcs)
@@ -138,13 +167,7 @@ class ShipComponent() : Component() {
 		return this
 	}
 
-	fun calculateMass(): Long {
-		var mass = hull.emptyMass
-		
-		mass += cargoMass
-		
-		return mass
-	}
+	fun calculateMass(): Long = hull.emptyMass + cargoMass
 	
 	fun calculateCargoMass(): Long {
 		var mass = 0L
@@ -508,13 +531,13 @@ class ShipComponent() : Component() {
 	
 	private fun massChange() {
 		cargoChanged = true
-		::mass.resetDelegate()
-		::cargoMass.resetDelegate()
+		mass = -1
+		cargoMass = -1
 	}
 	
 	fun resetLazyCache() {
-		::mass.resetDelegate()
-		::cargoMass.resetDelegate()
+		mass = -1
+		cargoMass = -1
 	}
 }
 
@@ -532,7 +555,7 @@ data class ShipCargo(val type: CargoType) {
 
 @Suppress("UNCHECKED_CAST")
 class PartState {
-	private val states = HashMap<KClass<*>, Any>()
+	private val states = HashMap<KClass<*>, Any>() //TODO to fixed array with hard index
 
 	operator fun <T : Any> get(serviceClass: KClass<T>) = states[serviceClass] as T
 	fun <T : Any> tryGet(serviceClass: KClass<T>) = states[serviceClass] as? T
@@ -561,16 +584,52 @@ data class PoweredPartState(var requestedPower: Long = 0,
 data class PassiveSensorState(var lastScan: Long = 0
 )
 
-
-data class ChargedPartState(var charge: Long = 0)
+data class ChargedPartState(var charge: Long = 0,
+														var expectedFullAt: Long = 0
+)
 
 data class AmmunitionPartState(var type: MunitionHull? = null,
 															 var amount: Int = 0,
-															 var reloadPowerRemaining: Long = 0
+															 var reloadedAt: Long = 0 // time remaining when part is disabled
 )
 
 data class TargetingComputerState(var target: EntityReference? = null,
 																	var lockCompletionAt: Long = 0,
-																	var linkedWeapons: MutableList<PartRef<Part>> = ArrayList()
-)
+																	var linkedWeapons: Bag<PartRef<Part>> = Bag(1),
+																	var disabledWeapons: Bag<PartRef<Part>> = Bag(1),
+																	var reloadingWeapons: PriorityQueue<PartRef<Part>>,
+																	var chargingWeapons: PriorityQueue<PartRef<Part>>,
+																	var readyWeapons: Bag<PartRef<Part>> = Bag(1)
+) {
+	constructor(ship: ShipComponent) : this (
+		reloadingWeapons = PriorityQueue(AmmunitionReladedAtComparator(ship)),
+		chargingWeapons = PriorityQueue(ChargedExpectedFullAtComparator(ship))
+	)
+	constructor(ship: ShipComponent, size: Int) : this (
+		reloadingWeapons = PriorityQueue(AmmunitionReladedAtComparator(ship)),
+		chargingWeapons = PriorityQueue(ChargedExpectedFullAtComparator(ship)),
+		linkedWeapons = Bag(size),
+		disabledWeapons = Bag(size),
+		readyWeapons = Bag(size)
+	)
+}
 
+class AmmunitionReladedAtComparator(val ship: ShipComponent): Comparator<PartRef<Part>> {
+	override fun compare(a: PartRef<Part>, b: PartRef<Part>): Int {
+		val reloadedAtA = ship.getPartState(a)[AmmunitionPartState::class].reloadedAt
+		val reloadedAtB = ship.getPartState(b)[AmmunitionPartState::class].reloadedAt
+		
+		return reloadedAtA.compareTo(reloadedAtB)
+	}
+}
+
+class ChargedExpectedFullAtComparator(val ship: ShipComponent): Comparator<PartRef<Part>> {
+	override fun compare(a: PartRef<Part>, b: PartRef<Part>): Int {
+		val reloadedAtA = ship.getPartState(a)[ChargedPartState::class].expectedFullAt
+		val reloadedAtB = ship.getPartState(b)[ChargedPartState::class].expectedFullAt
+		
+		return reloadedAtA.compareTo(reloadedAtB)
+	}
+}
+
+data class WeaponPartState(var targetingComputer: PartRef<Part>? = null)

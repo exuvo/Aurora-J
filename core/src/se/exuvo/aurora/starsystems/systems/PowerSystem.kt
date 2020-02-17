@@ -25,6 +25,16 @@ import se.exuvo.aurora.starsystems.events.PowerEvent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.consumeFuel
 import se.exuvo.aurora.utils.forEachFast
+import java.lang.IllegalStateException
+import se.exuvo.aurora.galactic.PartRef
+import se.exuvo.aurora.galactic.Part
+import se.exuvo.aurora.galactic.TargetingComputer
+import se.exuvo.aurora.starsystems.components.TargetingComputerState
+import se.exuvo.aurora.galactic.WeaponPart
+import se.exuvo.aurora.starsystems.components.WeaponPartState
+import se.exuvo.aurora.galactic.AmmunitionPart
+import se.exuvo.aurora.starsystems.components.AmmunitionPartState
+import se.exuvo.aurora.galactic.Railgun
 
 class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -84,6 +94,129 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 			override fun removed(entities: IntBag) {}
 		})
 	}
+	
+	fun activatePart(entityID: Int, ship: ShipComponent, partRef: PartRef<Part>) {
+		
+		if (ship.isPartEnabled(partRef)) {
+			throw IllegalStateException();
+		}
+		
+		ship.setPartEnabled(partRef, true)
+		
+		val part = partRef.part
+		
+		if (part is TargetingComputer) {
+			
+			val tcState = ship.getPartState(partRef)[TargetingComputerState::class]
+			
+			for (weapon in tcState.linkedWeapons) {
+				
+				activatePart(entityID, ship, weapon)
+			}
+			
+		} else if (part is WeaponPart) {
+			
+			val weaponState = ship.getPartState(partRef)[WeaponPartState::class]
+			val targetingComputer = weaponState.targetingComputer
+			
+			if (targetingComputer != null) {
+				
+				val tcState = ship.getPartState(targetingComputer)[TargetingComputerState::class]
+				
+				tcState.disabledWeapons.remove(partRef)
+				
+				if (part is ChargedPart) {
+					tcState.chargingWeapons.add(partRef)
+				}
+				
+				if (part is AmmunitionPart) {
+					
+					val ammoState = ship.getPartState(partRef)[AmmunitionPartState::class]
+					
+					if (ammoState.amount > 0 && part !is Railgun) {
+						tcState.readyWeapons.add(partRef)
+					}
+					
+					var freeSpace = part.ammunitionAmount - ammoState.amount
+
+					if (freeSpace > 0) {
+						
+						if (ammoState.reloadedAt != 0L) {
+							ammoState.reloadedAt += galaxy.time
+						}
+					
+						tcState.reloadingWeapons.add(partRef)
+					}
+				}
+			}
+		}
+	}
+	
+	fun deactivatePart(entityID: Int, ship: ShipComponent, partRef: PartRef<Part>) {
+		
+		if (!ship.isPartEnabled(partRef)) {
+			throw IllegalStateException();
+		}
+		
+		ship.setPartEnabled(partRef, false)
+		
+		val part = partRef.part
+		
+		if (part is PoweredPart) {
+			
+			val poweredState = ship.getPartState(partRef)[PoweredPartState::class]
+			
+			if (poweredState.requestedPower > 0) {
+				poweredState.requestedPower = 0
+				
+				val powerComponent = powerMapper.get(entityID)
+				powerComponent.stateChanged = true
+			}
+		}
+		
+		if (part is ChargedPart) {
+			val chargedState = ship.getPartState(partRef)[ChargedPartState::class]
+			chargedState.charge = 0
+			chargedState.expectedFullAt = 0
+		}
+		
+		if (part is TargetingComputer) {
+			
+			val tcState = ship.getPartState(partRef)[TargetingComputerState::class]
+			
+			for (weapon in tcState.linkedWeapons) {
+				
+				deactivatePart(entityID, ship, weapon)
+			}
+			
+		} else if (part is WeaponPart) {
+			
+			val weaponState = ship.getPartState(partRef)[WeaponPartState::class]
+			val targetingComputer = weaponState.targetingComputer
+			
+			if (targetingComputer != null) {
+				
+				val tcState = ship.getPartState(targetingComputer)[TargetingComputerState::class]
+				
+				tcState.readyWeapons.remove(partRef)
+				tcState.disabledWeapons.add(partRef)
+				
+				if (part is ChargedPart) {
+					tcState.chargingWeapons.remove(partRef)
+				}
+				
+				if (part is AmmunitionPart) {
+					tcState.reloadingWeapons.remove(partRef)
+					
+					val ammoState = ship.getPartState(partRef)[AmmunitionPartState::class]
+					
+					if (ammoState.reloadedAt != 0L) {
+						ammoState.reloadedAt -= galaxy.time
+					}
+				}
+			}
+		}
+	}
 
 	@Subscribe
 	fun powerEvent(event: PowerEvent) {
@@ -109,7 +242,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 
 					val irradiance = irradianceMapper.get(entityID).irradiance
 					val solarPanelArea = part.volume / SOLAR_PANEL_THICKNESS
-					val producedPower = (((solarPanelArea * irradiance.toLong()) / 100L) * part.efficiency.toDouble()).toLong()
+					val producedPower = (solarPanelArea * irradiance * part.efficiency) / (100 * 100)
 
 //				println("solarPanelArea ${solarPanelArea / 100} m2, irradiance $irradiance W/m2, producedPower $producedPower W")
 
@@ -153,7 +286,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 					}
 
 					// Charge full
-					if (poweredState.givenPower > 0 && chargedState.charge + (poweredState.givenPower * part.efficiency.toDouble()).toLong() > part.capacitor) {
+					if (poweredState.givenPower > 0 && chargedState.charge + (poweredState.givenPower * part.efficiency) / 100 > part.capacitor) {
 						powerComponent.stateChanged = true
 					}
 
@@ -263,7 +396,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 							val chargedState = ship.getPartState(partRef)[ChargedPartState::class]
 							val leftToCharge = part.capacitor - chargedState.charge
 
-							poweredState.requestedPower = Math.min((leftToCharge / part.efficiency.toDouble()).toLong(), part.powerConsumption)
+							poweredState.requestedPower = Math.min((leftToCharge * 100) / part.efficiency, part.powerConsumption)
 
 							if (powerComponent.totalRequestedPower + poweredState.requestedPower <= availiableChargingPower) {
 
@@ -349,14 +482,17 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 						var chargeToAdd = deltaGameTime * poweredState.givenPower
 
 						if (part is Battery) {
-							chargeToAdd = (chargeToAdd * part.efficiency.toDouble()).toLong();
-						}
-
-						if (chargedState.charge + chargeToAdd <= part.capacitor) {
-							chargedState.charge += chargeToAdd
-
+							chargeToAdd = (chargeToAdd * part.efficiency) / 100;
+							
+							if (chargedState.charge + chargeToAdd > part.capacitor) {
+								chargedState.charge = part.capacitor
+	
+							} else {
+								chargedState.charge += chargeToAdd
+							}
+							
 						} else {
-							chargedState.charge = part.capacitor
+							chargedState.charge += chargeToAdd
 						}
 					}
 				}

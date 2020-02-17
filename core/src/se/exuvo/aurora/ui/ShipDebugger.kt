@@ -152,7 +152,7 @@ class ShipDebugger : UIWindow() {
 			
 									text("Entity ${entity.printID()}")
 									
-									if (collapsingHeader("Components", 0)) {
+									if (collapsingHeader("Components", 0)) { // TreeNodeFlag.DefaultOpen.i
 			
 										val components = entity.getComponents(Bag())
 										
@@ -164,7 +164,19 @@ class ShipDebugger : UIWindow() {
 												
 												fields.forEachFast{ field ->
 													ReflectionUtils.fixFieldAccess(field)
-													text("${field.name}: ${field.get(component)}")
+													
+													if (Collection::class.java.isAssignableFrom(field.getType())) {
+														val collection = field.get(component) as Collection<*>
+														
+														if (treeNode("${field.name}: ${collection.size}")) {
+															for(item in collection) {
+																text("$item")
+															}
+															treePop()
+														}
+													} else {
+														text("${field.name}: ${field.get(component)}")
+													}
 												}
 			
 												treePop()
@@ -174,7 +186,7 @@ class ShipDebugger : UIWindow() {
 			
 									if (shipComponent != null) {
 			
-										if (collapsingHeader("Parts", 0)) { // TreeNodeFlag.DefaultOpen.i
+										if (collapsingHeader("Parts", TreeNodeFlag.DefaultOpen.i)) { // 
 											
 											sliderScalar("Weapon test range", DataType.Double, ::weaponTestDistance, 100.0, Units.AU * 1000, Units.distanceToString(weaponTestDistance.toLong()), 8.0f)
 			
@@ -196,6 +208,7 @@ class ShipDebugger : UIWindow() {
 													if (partRef.part is ChargedPart) {
 														val state = shipComponent.getPartState(partRef)[ChargedPartState::class]
 														text("charge ${Units.powerToString(state.charge)}")
+														text("expectedFullAt ${Units.secondsToString(state.expectedFullAt)}")
 													}
 			
 													if (partRef.part is PassiveSensor) {
@@ -207,7 +220,7 @@ class ShipDebugger : UIWindow() {
 														val state = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
 														text("type ${state.type?.name}")
 														text("amount ${state.amount}/${partRef.part.ammunitionAmount}")
-														text("reloadPowerRemaining ${Units.powerToString(state.reloadPowerRemaining)}")
+														text("reloadedAt ${Units.secondsToString(state.reloadedAt)}")
 													}
 			
 													if (partRef.part is FueledPart) {
@@ -222,9 +235,37 @@ class ShipDebugger : UIWindow() {
 														text("target ${state.target?.entityID}")
 														text("lockCompletionAt ${state.lockCompletionAt}")
 														
-														if (treeNode("linkedWeapons ${state.linkedWeapons.size}")) {
-															for(linked in state.linkedWeapons) {
-																text("$linked")
+														if (treeNode("linkedWeapons ${state.linkedWeapons.size()}###linked")) {
+															for(weaponRef in state.linkedWeapons) {
+																text("$weaponRef")
+															}
+															treePop()
+														}
+														
+														if (treeNode("readyWeapons ${state.readyWeapons.size()}###ready")) {
+															for(weaponRef in state.readyWeapons) {
+																text("$weaponRef")
+															}
+															treePop()
+														}
+														
+														if (treeNode("chargingWeapons ${state.chargingWeapons.size}###charging")) {
+															for(weaponRef in state.chargingWeapons) {
+																text("$weaponRef")
+															}
+															treePop()
+														}
+														
+														if (treeNode("reloadingWeapons ${state.reloadingWeapons.size}###reloading")) {
+															for(weaponRef in state.reloadingWeapons) {
+																text("$weaponRef")
+															}
+															treePop()
+														}
+														
+														if (treeNode("disabledWeapons ${state.disabledWeapons.size()}###disabled")) {
+															for(weaponRef in state.disabledWeapons) {
+																text("$weaponRef")
 															}
 															treePop()
 														}
@@ -298,7 +339,7 @@ class ShipDebugger : UIWindow() {
 											}
 										}
 										
-										if (collapsingHeader("Armor", TreeNodeFlag.DefaultOpen.i)) {
+										if (collapsingHeader("Armor", 0)) { // TreeNodeFlag.DefaultOpen.i
 											
 											val weaponSystem: WeaponSystem = system.world.getSystem(WeaponSystem::class.java)
 											

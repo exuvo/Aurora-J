@@ -13,7 +13,6 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.badlogic.gdx.utils.viewport.Viewport
 import se.exuvo.aurora.Assets
-import se.exuvo.aurora.empires.components.WeaponsComponent
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.starsystems.StarSystemGeneration
@@ -44,13 +43,21 @@ import glm_.vec2.Vec2
 import glm_.vec2.Vec2i
 import com.artemis.utils.Bag
 import se.exuvo.aurora.starsystems.components.EntityReference
+import se.exuvo.aurora.empires.components.IdleTargetingComputersComponent
+import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
+import se.exuvo.aurora.starsystems.systems.TargetingSystem
 
 class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcessor {
+	companion object {
+		val WEAPON_FAMILY = Aspect.one(IdleTargetingComputersComponent::class.java, ActiveTargetingComputersComponent::class.java)
+	}
 
 	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	private val renderSystem by lazy (LazyThreadSafetyMode.NONE) { system.world.getSystem(RenderSystem::class.java) }
 	private val movementSystem by lazy (LazyThreadSafetyMode.NONE) { system.world.getSystem(MovementSystem::class.java) }
+	private val weaponSystem by lazy (LazyThreadSafetyMode.NONE) { system.world.getSystem(WeaponSystem::class.java) }
+	private val targetingSystem by lazy (LazyThreadSafetyMode.NONE) { system.world.getSystem(TargetingSystem::class.java) }
 	
 	private val uiScreen by lazy (LazyThreadSafetyMode.NONE) { AuroraGame.currentWindow.screenService[UIScreen::class] }
 
@@ -61,7 +68,8 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 	private val circleMapper = ComponentMapper.getFor(CircleComponent::class.java, system.world)
 	private val movementMapper = ComponentMapper.getFor(TimedMovementComponent::class.java, system.world)
 	private val starSystemMapper = ComponentMapper.getFor(StarSystemComponent::class.java, system.world)
-	private val weaponsComponentMapper = ComponentMapper.getFor(WeaponsComponent::class.java, system.world)
+	private val idleTargetingComputersComponentMapper = ComponentMapper.getFor(IdleTargetingComputersComponent::class.java, system.world)
+	private val activeTargetingComputersComponentMapper = ComponentMapper.getFor(ActiveTargetingComputersComponent::class.java, system.world)
 	private val shipMapper = ComponentMapper.getFor(ShipComponent::class.java, system.world)
 	
 	val allSubscription = system.world.getAspectSubscriptionManager().get(Aspect.all())
@@ -176,7 +184,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 		}
 		
 		x += Assets.fontUI.draw(spriteBatch, " ${system.updateTimeAverage.toInt() / 1000}us", x, 32f).width
-		x += Assets.fontUI.draw(spriteBatch, ", ${allSubscription.getActiveEntityIds().cardinality()}st", x, 32f).width
+		x += Assets.fontUI.draw(spriteBatch, ", ${allSubscription.getEntityCount()}st", x, 32f).width
 		
 		spriteBatch.end()
 	}
@@ -260,7 +268,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 	//TODO selection priorities, ships > planets > missiles
 	val directSelectionFamily = system.world.getAspectSubscriptionManager().get(Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, CircleComponent::class.java))
 	val indirectSelectionFamily = system.world.getAspectSubscriptionManager().get(Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java))
-	val weaponFamily = WeaponSystem.FAMILY.build(system.world)
+	val weaponFamily = WEAPON_FAMILY.build(system.world)
 	val movementFamily = MovementSystem.CAN_ACCELERATE_FAMILY.build(system.world)
 
 	var dragX = 0
@@ -363,33 +371,49 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 
 							if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
 								val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED).filter { entityRef ->
-
 									system == entityRef.system && weaponFamily.isInterested(entityRef.system.world.getEntity(entityRef.entityID))
 								}
-
-								var targetRef: EntityReference? = null
 								
-								if (entitiesUnderMouse.isNotEmpty()) {
-									targetRef = entitiesUnderMouse[0]
-									println("Attacking ${targetRef.system.world.getEntity(targetRef.entityID).printID()}")
+								if (selectedEntities.isEmpty()) {
+									println("No combat capable ship selected")
 									
 								} else {
-									println("Clearing attack target")
-								}
-
-								system.lock.write {
-									selectedEntities.forEachFast{ entityRef ->
-										val ship = shipMapper.get(entityRef.entityID)
-										var weaponsComponent = weaponsComponentMapper.get(entityRef.entityID)
-
-										weaponsComponent.targetingComputers.forEachFast{ tc ->
-											val tcState = ship.getPartState(tc)[TargetingComputerState::class]
-
+	
+									var targetRef: EntityReference? = null
+									
+									if (entitiesUnderMouse.isNotEmpty()) {
+										targetRef = entitiesUnderMouse[0]
+										println("Attacking ${targetRef.system.world.getEntity(targetRef.entityID).printID()}")
+										
+									} else {
+										println("Clearing attack target")
+									}
+									
+									system.lock.write {
+										
+										selectedEntities.forEachFast{ entityRef ->
+											val ship = shipMapper.get(entityRef.entityID)
+											val activeTCs = activeTargetingComputersComponentMapper.get(entityRef.entityID)
+											
+											if (activeTCs != null) {
+												activeTCs.targetingComputers.forEachFast{ tc ->
+													val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+		
+													if (targetRef != null) {
+														tcState.target = targetRef
+														
+													} else {
+														targetingSystem.clearTarget(entityRef.entityID, ship, tc)
+													}
+												}
+											}
+											
 											if (targetRef != null) {
-												tcState.target = system.getEntityReference(targetRef.entityID)
+												val idleTCs = idleTargetingComputersComponentMapper.get(entityRef.entityID)
 												
-											} else {
-												tcState.target = null
+												idleTCs.targetingComputers.forEachFast{ tc ->
+													targetingSystem.setTarget(entityRef.entityID, ship, tc, targetRef)
+												}
 											}
 										}
 									}

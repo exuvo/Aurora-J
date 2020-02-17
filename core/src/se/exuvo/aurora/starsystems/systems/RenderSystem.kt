@@ -15,7 +15,6 @@ import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.viewport.Viewport
 import se.exuvo.aurora.Assets
-import se.exuvo.aurora.empires.components.WeaponsComponent
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.galactic.TargetingComputer
 import se.exuvo.aurora.starsystems.components.CircleComponent
@@ -55,6 +54,9 @@ import se.exuvo.aurora.galactic.SimpleMunitionHull
 import se.exuvo.aurora.galactic.AdvancedMunitionHull
 import kotlin.math.sign
 import com.badlogic.gdx.math.MathUtils
+import se.exuvo.aurora.empires.components.IdleTargetingComputersComponent
+import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
+import se.exuvo.aurora.galactic.PartRef
 
 class RenderSystem : IteratingSystem(FAMILY) {
 	companion object {
@@ -82,7 +84,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	lateinit private var detectionMapper: ComponentMapper<DetectionComponent>
 	lateinit private var sensorsMapper: ComponentMapper<PassiveSensorsComponent>
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
-	lateinit private var weaponsComponentMapper: ComponentMapper<WeaponsComponent>
+	lateinit private var idleTargetingComputersComponentMapper: ComponentMapper<IdleTargetingComputersComponent>
+	lateinit private var activeTargetingComputersComponentMapper: ComponentMapper<ActiveTargetingComputersComponent>
 	lateinit private var laserShotMapper: ComponentMapper<LaserShotComponent>
 	lateinit private var railgunShotMapper: ComponentMapper<RailgunShotComponent>
 	lateinit private var missileMapper: ComponentMapper<MissileComponent>
@@ -180,15 +183,17 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 		entityIDs.forEachFast { entityID ->
 
-			if (selectedEntityIDs.contains(entityID) && movementMapper.has(entityID) && weaponsComponentMapper.has(entityID)) {
+			if (selectedEntityIDs.contains(entityID) && movementMapper.has(entityID) &&
+				(idleTargetingComputersComponentMapper.has(entityID) || activeTargetingComputersComponentMapper.has(entityID))) {
 
+				//TODO needs both
+				val tcs: List<PartRef<TargetingComputer>> = idleTargetingComputersComponentMapper.get(entityID)?.targetingComputers ?: activeTargetingComputersComponentMapper.get(entityID).targetingComputers
+				
 				val movement = movementMapper.get(entityID).get(galaxy.time).value
 				val ship = shipMapper.get(entityID)
-				val weaponsComponent = weaponsComponentMapper.get(entityID)
 				
 				var x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
 				var y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
-				val tcs = weaponsComponent.targetingComputers
 				val timeToImpact = 10 // s
 				
 				//TODO draw at mouse pos if x is held
@@ -578,18 +583,20 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		val usedTargets = HashSet<Int>()
 
 		selectedEntityIDs.forEachFast { entityID ->
-			if (weaponsComponentMapper.has(entityID)) {
+			
+			val tcc = activeTargetingComputersComponentMapper.get(entityID)
+			
+			if (tcc != null) {
 
 				val movement = movementMapper.get(entityID).get(galaxy.time).value
 				val x = (movement.getXinKM() - cameraOffset.x).toFloat()
 				val y = (movement.getYinKM() - cameraOffset.y).toFloat()
 
 				val ship = shipMapper.get(entityID)
-				val tcs = ship.hull[TargetingComputer::class]
 
 				usedTargets.clear()
 
-				tcs.forEachFast { tc ->
+				tcc.targetingComputers.forEachFast { tc ->
 					val tcState = ship.getPartState(tc)[TargetingComputerState::class]
 					val target = tcState.target
 
@@ -969,6 +976,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.projectionMatrix = viewport.camera.combined
 		
 //		gravSystem.render(viewport, cameraOffset)
+		
+		//TODO dont interpolate new positions if timeDiff * velocity is not noticable at current zoom level 
 		
 		drawDetections(entityIDs)
 

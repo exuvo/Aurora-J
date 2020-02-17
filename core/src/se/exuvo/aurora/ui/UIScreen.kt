@@ -194,6 +194,8 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 		shipDebugger.set(ctx, galaxy, galaxyGroupSystem)
 		shipDesigner.set(ctx, galaxy, galaxyGroupSystem)
 		colonyManager.set(ctx, galaxy, galaxyGroupSystem)
+		
+		shipDebugger.visible = true
 	}
 
 	override fun show() {

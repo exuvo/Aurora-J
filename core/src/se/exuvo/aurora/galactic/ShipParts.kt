@@ -4,8 +4,6 @@ import se.exuvo.aurora.starsystems.components.Spectrum
 import java.util.Objects
 import java.security.InvalidParameterException
 import org.apache.commons.math3.util.FastMath
-import se.exuvo.aurora.utils.ResetableLazy
-import se.exuvo.aurora.utils.resetDelegate
 
 abstract class Part {
 	var name: String = ""
@@ -14,10 +12,22 @@ abstract class Part {
 	var maxHealth: Byte = 1 - 128
 	var crewRequirement = 1
 
-	val mass by ResetableLazy (::calculateMass)
-	val volume by ResetableLazy (::calculateVolume)
-	private val hashcode by ResetableLazy (::calculateHashCode)
-		
+	var mass = -1L
+		get() {
+			if (field == -1L) { field = calculateMass() }
+			return field
+		}
+	var volume = -1L
+		get() {
+			if (field == -1L) { field = calculateVolume() }
+			return field
+		}
+	private var hashcode = -1
+		get() {
+			if (field == -1) { field = calculateHashCode() }
+			return field
+		}
+	
 	// In kg
 	fun calculateMass(): Long = FastMath.max(1, cost.values.sum())
 	
@@ -54,12 +64,9 @@ abstract class Part {
 	}
 	
 	fun resetLazyCache() {
-//		::mass.resetDelegate()
-//		::volume.resetDelegate()
-//		::hashcode.resetDelegate()
-		(this::mass.getDelegate() as ResetableLazy).reset()
-		(this::volume.getDelegate() as ResetableLazy).reset()
-		(this::hashcode.getDelegate() as ResetableLazy).reset()
+		hashcode = -1
+		mass = -1L
+		volume = -1L
 	}
 }
 
@@ -120,14 +127,14 @@ class ThrustingPartImpl(override val thrust: Long) : ThrustingPart
 
 class Battery(powerConsumption: Long = 0,
 							power: Long = 0,
-							val efficiency: Float = 1f,
+							val efficiency: Int = 100,
 							capacity: Long // Ws
 ) : Part(),
 		PoweredPart by PoweredPartImpl(powerConsumption),
 		PoweringPart by PoweringPartImpl(power),
 		ChargedPart by ChargedPartImpl(capacity)
 
-class SolarPanel(val efficiency: Float = 0.46f
+class SolarPanel(val efficiency: Int = 46
 ) : Part(),
 		PoweringPart by PoweringPartImpl(0)
 
@@ -258,14 +265,12 @@ class Railgun(powerConsumption: Long = 0,
 		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.SABOTS, ammunitionSize, reloadTime),
 		HeatingPart
 
-class MissileLauncher(powerConsumption: Long = 0,
-								 			ammunitionSize: Int,
-								 			ammunitionAmount: Int,
+class MissileLauncher(ammunitionSize: Int,
+											ammunitionAmount: Int,
 											reloadTime: Int,
 											val launchForce: Long = 1 // Newtons
 ) : Part(),
 		WeaponPart,
-		PoweredPart by PoweredPartImpl(powerConsumption),
 		AmmunitionPart by AmmunitionPartImpl(ammunitionAmount, Resource.MISSILES, ammunitionSize, reloadTime) {
 	init {
 		if (launchForce <= 0L) throw InvalidParameterException("launchForce must be greater than 0")

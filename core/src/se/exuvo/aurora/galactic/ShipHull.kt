@@ -7,8 +7,8 @@ import se.exuvo.aurora.utils.sumByLong
 import se.exuvo.aurora.empires.components.ShipyardType
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.forEachFast
-import se.exuvo.aurora.utils.ResetableLazy
 import org.apache.commons.math3.util.FastMath
+import java.util.Collections
 
 class ShipHull() {
 	companion object {
@@ -37,14 +37,46 @@ class ShipHull() {
 	
 	var comment: String = ""
 	
-	val emptyMass by ResetableLazy (::calculateEmptyMass)
-	val loadedMass by ResetableLazy (::calculateLoadedMass)
-	val preferredCargoMass by ResetableLazy (::calculatePreferredCargoMass)
-	val preferredMunitionMass by ResetableLazy (::calculatePreferredMunitionMass)
-	val volume by ResetableLazy (::calculateVolume)
-	val surfaceArea by ResetableLazy (::calculateSurfaceArea)
-	val cost by ResetableLazy (::calculateCost)
-	private val hashcode by ResetableLazy (::calculateHashCode)
+	var emptyMass = -1L
+		get() {
+			if (field == -1L) { field = calculateEmptyMass() }
+			return field
+		}
+	var loadedMass = -1L
+		get() {
+			if (field == -1L) { field = calculateLoadedMass() }
+			return field
+		}
+	var preferredCargoMass = -1L
+		get() {
+			if (field == -1L) { field = calculatePreferredCargoMass() }
+			return field
+		}
+	var preferredMunitionMass = -1L
+		get() {
+			if (field == -1L) { field = calculatePreferredMunitionMass() }
+			return field
+		}
+	var volume = -1L
+		get() {
+			if (field == -1L) { field = calculateVolume() }
+			return field
+		}
+	var surfaceArea = -1L
+		get() {
+			if (field == -1L) { field = calculateSurfaceArea() }
+			return field
+		}
+	var cost: Map<Resource, Long> = Collections.emptyMap()
+		get() {
+			if (field === Collections.EMPTY_MAP) { field = calculateCost() }
+			return field
+		}
+	private var hashcode = -1
+		get() {
+			if (field == -1) { field = calculateHashCode() }
+			return field
+		}
 	
 	constructor(parentHull: ShipHull): this() {
 		this.parentHull = parentHull
@@ -78,6 +110,11 @@ class ShipHull() {
 		
 		parentHull.derivatives += this
 	}
+ 
+ fun finalize() {
+	locked = true
+	//TODO sort target controls to after weapons in parts and partRefs
+ }
 
 	@Suppress("UNCHECKED_CAST")
 	operator fun <T: Part> get(partClass: KClass<T>) : List<PartRef<T>> = partRefs.filter { partClass.isInstance(it.part) } as List<PartRef<T>>
@@ -213,14 +250,14 @@ class ShipHull() {
 	override fun hashCode(): Int = hashcode
 
  fun resetLazyCache() {
-		(this::emptyMass.getDelegate() as ResetableLazy).reset()
-		(this::loadedMass.getDelegate() as ResetableLazy).reset()
-		(this::preferredCargoMass.getDelegate() as ResetableLazy).reset()
-		(this::preferredMunitionMass.getDelegate() as ResetableLazy).reset()
-		(this::volume.getDelegate() as ResetableLazy).reset()
-		(this::surfaceArea.getDelegate() as ResetableLazy).reset()
-		(this::cost.getDelegate() as ResetableLazy).reset()
-		(this::hashcode.getDelegate() as ResetableLazy).reset()
+		emptyMass = -1
+		loadedMass = -1
+		preferredCargoMass = -1
+		preferredMunitionMass = -1
+		volume = -1
+		surfaceArea = -1
+		cost = Collections.emptyMap()
+		hashcode = -1
 	}
 }
 

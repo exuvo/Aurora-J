@@ -112,88 +112,88 @@ inline fun <T> Iterable<T>.sumByLong(selector: (T) -> Long): Long {
     return sum
 }
 
-fun KProperty0<*>.resetDelegate() {
-	isAccessible = true
-	(getDelegate() as ResetableLazy).reset()
-}
+//fun KProperty0<*>.resetDelegate() {
+//	isAccessible = true
+//	(getDelegate() as ResetableLazy).reset()
+//}
 
 inline fun <reified R> KProperty0<*>.delegateAs(): R {
 	isAccessible = true
 	return getDelegate() as R
 }
 
-fun ResetableLazy(init: () -> Int): ResetableLazyInt {
-	return ResetableLazyInt(init)
-}
-
-fun ResetableLazy(init: () -> Long): ResetableLazyLong {
-	return ResetableLazyLong(init)
-}
-
-fun <T: Any> ResetableLazy(init: () -> T): ResetableLazyGeneric<T> {
-	return ResetableLazyGeneric<T>(init)
-}
-
-interface ResetableLazy {
-	fun reset()
-}
-
-class ResetableLazyGeneric<out T>(private val initializer: () -> T): Lazy<T>, ResetableLazy {
-	private var _value: Any? = null
-
-	override val value: T
-		get() {
-			if (_value == null) {
-				_value = initializer()
-			}
-			@Suppress("UNCHECKED_CAST")
-			return _value as T
-		}
-	
-	override fun isInitialized(): Boolean = _value != null
-
-	override fun toString(): String = if (isInitialized()) value.toString() else "Lazy value not initialized yet."
-	
-	override fun reset() {
-		_value = null
-	}
-}
-
-class ResetableLazyInt(private val initializer: () -> Int): ResetableLazy {
-	private var _value: Int = 0
-	private var initialized = false
-
-	operator fun getValue(thisRef: Any?, property: KProperty<*>): Int {
-			if (!initialized) {
-				_value = initializer()
-			}
-			return _value
-		}
-	
-	override fun toString(): String = if (initialized) _value.toString() else "Lazy value not initialized yet."
-	
-	override fun reset() {
-		initialized = false
-	}
-}
-
-class ResetableLazyLong(private val initializer: () -> Long): ResetableLazy {
-	private var _value: Long = 0
-	private var initialized = false
-
-	operator fun getValue(thisRef: Any?, property: KProperty<*>): Long {
-			if (!initialized) {
-				_value = initializer()
-			}
-			return _value
-		}
-	
-	override fun toString(): String = if (initialized) _value.toString() else "Lazy value not initialized yet."
-	
-	override fun reset() {
-		initialized = false
-	}
-}
+//fun ResetableLazy(init: () -> Int): ResetableLazyInt {
+//	return ResetableLazyInt(init)
+//}
+//
+//fun ResetableLazy(init: () -> Long): ResetableLazyLong {
+//	return ResetableLazyLong(init)
+//}
+//
+//fun <T: Any> ResetableLazy(init: () -> T): ResetableLazyGeneric<T> {
+//	return ResetableLazyGeneric<T>(init)
+//}
+//
+//interface ResetableLazy {
+//	fun reset()
+//}
+//
+//class ResetableLazyGeneric<out T>(private val initializer: () -> T): Lazy<T>, ResetableLazy {
+//	private var _value: Any? = null
+//
+//	override val value: T
+//		get() {
+//			if (_value == null) {
+//				_value = initializer()
+//			}
+//			@Suppress("UNCHECKED_CAST")
+//			return _value as T
+//		}
+//	
+//	override fun isInitialized(): Boolean = _value != null
+//
+//	override fun toString(): String = if (isInitialized()) value.toString() else "Lazy value not initialized yet."
+//	
+//	override fun reset() {
+//		_value = null
+//	}
+//}
+//
+//class ResetableLazyInt(private val initializer: () -> Int): ResetableLazy {
+//	private var _value: Int = 0
+//	private var initialized = false
+//
+//	operator fun getValue(thisRef: Any?, property: KProperty<*>): Int {
+//			if (!initialized) {
+//				_value = initializer()
+//			}
+//			return _value
+//		}
+//	
+//	override fun toString(): String = if (initialized) _value.toString() else "Lazy value not initialized yet."
+//	
+//	override fun reset() {
+//		initialized = false
+//	}
+//}
+//
+//class ResetableLazyLong(private val initializer: () -> Long): ResetableLazy {
+//	private var _value: Long = 0
+//	private var initialized = false
+//
+//	operator fun getValue(thisRef: Any?, property: KProperty<*>): Long {
+//			if (!initialized) {
+//				_value = initializer()
+//			}
+//			return _value
+//		}
+//	
+//	override fun toString(): String = if (initialized) _value.toString() else "Lazy value not initialized yet."
+//	
+//	override fun reset() {
+//		initialized = false
+//	}
+//}
 
 fun exponentialAverage(newValue: Double, expAverage: Double, delay: Double) : Double = newValue + Math.pow(Math.E, -1/delay) * (expAverage - newValue)
 
