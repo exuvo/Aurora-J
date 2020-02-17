@@ -499,6 +499,8 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										tcState.readyWeapons.remove(weapon)
 										tcState.chargingWeapons.add(weapon)
 										
+										chargedState.charge -= part.capacitor
+										
 										if (ammoState.amount == 1 && ammoState.reloadedAt == 0L) {
 											println("Unpowering $part due to no more ammo")
 											powerSystem.deactivatePart(entityID, ship, weapon)
@@ -507,7 +509,6 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 											tcState.reloadingWeapons.add(weapon)
 										}
 										
-										chargedState.charge -= part.capacitor
 										ammoState.amount -= 1
 										
 									} else {
