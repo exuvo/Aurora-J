@@ -118,6 +118,7 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 	private val shipDebugger = ShipDebugger()
 	private val shipDesigner = ShipDesigner()
 	private val colonyManager = ColonyManager()
+	private val profiler = ProfilerWindow();
 
 	class ImGuiGlobalStorage(val ctx: Context): Disposable {
 		override fun dispose() {}
@@ -194,11 +195,11 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 		shipDebugger.set(ctx, galaxy, galaxyGroupSystem)
 		shipDesigner.set(ctx, galaxy, galaxyGroupSystem)
 		colonyManager.set(ctx, galaxy, galaxyGroupSystem)
-		
-		shipDebugger.visible = true
+		profiler.set(ctx, galaxy, galaxyGroupSystem)
 	}
 
 	override fun show() {
+		profiler.visible = true
 	}
 
 	private var demoVisible = false
@@ -281,6 +282,7 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 			shipDebugger.draw()
 			shipDesigner.draw()
 			colonyManager.draw()
+			profiler.draw()
 
 			ImGui.render()
 			gl3.renderDrawData(ctx.drawData)
@@ -383,6 +385,10 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 		} else if (action == KeyActions_UIScreen.SHIP_DESIGNER) {
 			shipDesigner.visible = !shipDesigner.visible;
 			return true;
+			
+		} else if (action == KeyActions_UIScreen.PROFILER) {
+			profiler.visible = !profiler.visible;
+			return true;
 		}
 
 		return false
@@ -479,7 +485,7 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 		lateinit var galaxy: Galaxy
 		lateinit var galaxyGroupSystem: GroupSystem
 		
-		var visible = false
+		open var visible = false
 		
 		fun set(ctx: Context, galaxy: Galaxy, galaxyGroupSystem: GroupSystem) {
 			this.ctx = ctx

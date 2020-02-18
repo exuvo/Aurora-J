@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty0
 import kotlin.reflect.jvm.isAccessible
+import kotlin.reflect.full.*
 
 private val log = LogManager.getLogger("se.exuvo.aurora.utils")
 
@@ -87,6 +88,20 @@ fun Entity.printID(): String {
 
 	return "${this.printName()} (${this.getUUID()})"
 }
+
+inline fun <reified T> T.callPrivateFunc(name: String, vararg args: Any?): Any? =
+	T::class
+		.declaredMemberFunctions
+		.firstOrNull { it.name == name }
+		?.apply { isAccessible = true }
+		?.call(this, *args)
+
+inline fun <reified T : Any, R> T.getPrivateProperty(name: String): R? =
+	T::class
+		.memberProperties
+		.firstOrNull { it.name == name }
+		?.apply { isAccessible = true }
+		?.get(this) as? R
 
 inline fun <T> Bag<T>.sumByLong(selector: (T) -> Long): Long {
     var sum = 0L

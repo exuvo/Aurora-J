@@ -25,6 +25,14 @@ public class Units {
 		return String.format("%d.%06dms", milli, nanos);
 	}
 	
+	public static String nanoToMicroString(long nanotime) {
+
+		int nanos = (int) (nanotime % NANO_MICRO);
+		int micro = (int) (nanotime / NANO_MICRO);
+		
+		return String.format("%d.%03dus", micro, nanos);
+	}
+	
 	public static String milliToString(long millitime) {
 
 		int micros = (int) (millitime % 1000);

@@ -192,6 +192,7 @@ enum class KeyActions_UIScreen(override val defaultKey: Int? = null,
 	SHIP_DEBUG(Input.Keys.F1),
 	COLONY_MANAGER(Input.Keys.F2),
 	SHIP_DESIGNER(Input.Keys.F3),
+	PROFILER(Input.Keys.F4),
 	;
 	
 	constructor (char: Char): this(char.toInt(), KeyPressType.TRANSLATED)

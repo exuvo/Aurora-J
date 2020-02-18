@@ -170,6 +170,8 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		worldBuilder.with(RenderSystem())
 		worldBuilder.register(CustomSystemInvocationStrategy())
 		//TODO add system to send changes over network
+		
+		//TODO profiler, port UI from https://bitbucket.org/wolfpld/tracy/src/master/
 
 		val worldConfig = worldBuilder.build()
 		worldConfig.register(this)

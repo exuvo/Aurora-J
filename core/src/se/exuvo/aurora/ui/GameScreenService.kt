@@ -40,6 +40,18 @@ class GameScreenService : Disposable, InputProcessor {
 		
 		throw NullPointerException()
 	}
+	
+	@Suppress("UNCHECKED_CAST")
+	operator fun <T : GameScreen> invoke(screenClass: KClass<T>): T? {
+		
+		screens.forEach { screen ->
+			if (screenClass.isInstance(screen)) {
+				return screen as T
+			}
+		}
+		
+		return null
+	}
 
 	var lastDrawStart = System.nanoTime()
 	var frameStartTime = 0L
@@ -50,12 +62,15 @@ class GameScreenService : Disposable, InputProcessor {
 
 			for (screen in addQueue) {
 				screens.addFirst(screen)
-				screen.show()
-				screen.resize(Gdx.graphics.width, Gdx.graphics.height)
 
 				if (screen is InputProcessor) {
 					inputMultiplexer.addProcessor(screen)
 				}
+			}
+			
+			for (screen in addQueue) {
+				screen.show()
+				screen.resize(Gdx.graphics.width, Gdx.graphics.height)
 			}
 
 			addQueue.clear()

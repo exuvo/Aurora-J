@@ -6,7 +6,7 @@ import com.artemis.WorldConfigurationBuilder.Priority
 import com.artemis.utils.Sort
 import se.exuvo.aurora.utils.forEachFast
 
-class CustomSystemInvocationStrategy : SystemInvocationStrategy() {
+open class CustomSystemInvocationStrategy : SystemInvocationStrategy() {
 	lateinit var preSystems: Bag<PreSystem>
 	lateinit var postSystems: Bag<PostSystem>
 
@@ -39,28 +39,24 @@ class CustomSystemInvocationStrategy : SystemInvocationStrategy() {
 	}
 
 	override fun process() {
-//		println("process")
 		
 		updateEntityStates()
 
 		preSystems.forEachFast { i, system ->
-			if (!disabled.get(i)) {
-//				println("pre ${data[i]::class.simpleName}")
+			if (!disabled.unsafeGet(i)) {
 				system.preProcessSystem()
 			}
 		}
 
 		systems.forEachFast { i, system ->
-			if (!disabled.get(i)) {
-//				println("pro ${data[i]::class.simpleName}")
+			if (!disabled.unsafeGet(i)) {
 				system.process()
 				updateEntityStates()
 			}
 		}
 
 		postSystems.forEachFast { i, system ->
-			if (!disabled.get(i)) {
-//				println("post ${data[i]::class.simpleName}")
+			if (!disabled.unsafeGet(i)) {
 				system.postProcessSystem()
 			}
 		}
