@@ -9,7 +9,7 @@ import glm_.vec2.Vec2
 import glm_.*
 
 import imgui.*
-import imgui.ImGui.getId
+import imgui.ImGui.getID
 import imgui.internal.*
 import imgui.imgui.widgets.*
 import imgui.api.g
@@ -248,7 +248,7 @@ fun EndPiePopup(): Unit {
 			var text_pos: Vec2 = Vec2(
 				s_oPieMenuContext.m_oCenter.x + glm.cos((item_inner_ang_min + item_inner_ang_max) * 0.5f) * (fMinRadius + fMaxRadius) * 0.5f - text_size.x * 0.5f,
 				s_oPieMenuContext.m_oCenter.y + glm.sin((item_inner_ang_min + item_inner_ang_max) * 0.5f) * (fMinRadius + fMaxRadius) * 0.5f - text_size.y * 0.5f);
-			pDrawList.addText(text_pos, COL32(255, 255, 255, 255), item_label.toCharArray());
+			pDrawList.addText(text_pos, COL32(255, 255, 255, 255), item_label);
 
 			if (hovered) {
 				item_hovered = item_n;
@@ -306,7 +306,7 @@ fun BeginPieMenu(pName: String, bEnabled: Boolean = true): Boolean
 {
 	val oPieMenu: PieMenu = s_oPieMenuContext.m_oPieMenuStack[s_oPieMenuContext.m_iCurrentIndex];
 
-	val oTextSize: Vec2 = calcTextSize(pName, -1, true);
+	val oTextSize: Vec2 = calcTextSize(pName, true, -1f);
 	
 	if (oPieMenu.m_oItemSizes.size <= oPieMenu.m_iCurrentIndex) {
 		oPieMenu.m_oItemSizes.add(oTextSize)
@@ -347,7 +347,7 @@ fun EndPieMenu(): Unit {
 fun PieMenuItem(pName: String, bEnabled: Boolean = true): Boolean {
 	var oPieMenu: PieMenu = s_oPieMenuContext.m_oPieMenuStack[s_oPieMenuContext.m_iCurrentIndex];
 
-	var oTextSize: Vec2 = calcTextSize(pName, -1, true);
+	var oTextSize: Vec2 = calcTextSize(pName, true, -1f);
 	
 	if (oPieMenu.m_oItemSizes.size <= oPieMenu.m_iCurrentIndex) {
 		oPieMenu.m_oItemSizes.add(oTextSize)

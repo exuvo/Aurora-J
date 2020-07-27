@@ -137,7 +137,7 @@ class ColonyManager : UIWindow() {
 									val system = entry.key
 									system.lock.read {
 										
-										if (treeNodeExV(system.galacticEntityID.toString(), TreeNodeFlag.DefaultOpen or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen, "System ${system.initialName}")) {
+										if (treeNodeEx(system.galacticEntityID.toString(), TreeNodeFlag.DefaultOpen or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen, "System ${system.initialName}")) {
 											
 											var newSelectedColony: EntityReference? = null
 											
@@ -156,7 +156,7 @@ class ColonyManager : UIWindow() {
 													nodeFlags = nodeFlags or TreeNodeFlag.Selected
 												}
 												
-												treeNodeExV(idx.toString(), nodeFlags, "$name - ${colony.population}")
+												treeNodeEx(idx.toString(), nodeFlags, "$name - ${colony.population}")
 			
 												if (isItemClicked()) {
 													newSelectedColony = colonyRef
@@ -225,7 +225,7 @@ class ColonyManager : UIWindow() {
 												val storage = ctx.currentWindow!!.dc.stateStorage
 												
 												val buttonIDString = "##" + shipyard.hashCode().toString()
-												val buttonID = getId(buttonIDString)
+												val buttonID = getID(buttonIDString)
 												val shipyardOpen = storage.int(buttonID, 1) != 0
 												
 												if (arrowButtonEx(buttonIDString, if (shipyardOpen) Dir.Down else Dir.Right, Vec2(ctx.fontSize), 0)) {

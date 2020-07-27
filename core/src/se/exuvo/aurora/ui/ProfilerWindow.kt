@@ -159,110 +159,91 @@ class ProfilerWindow : UIWindow() {
 					
 					window("Profiler", ::visible, WindowFlag.HorizontalScrollbar.i) {
 						
-//						child("Timeline", Vec2(), true, WindowFlag.HorizontalScrollbar.i) {
-//							child("Time", Vec2(0, 50), false, WindowFlag.None.i) {
-								text("TODO time")
-//							}
-							
-//							child("StarSystem", Vec2(0, 200), false, WindowFlag.None.i) {
-								
-								val system = system
-								if (system != null) {
-									system.lock.read {
-										
-										text("Star System ${system.sid} - ${systemEvents.size()} events")
-										
-										val window = currentWindow
-										
-										var size = systemEvents.size()
-										if (size > 0) {
-											
-//											run { // text debug
-//												var x = cursorPosX
-//												
-//												for(item in systemEvents) {
-//													cursorPosX = x
-//													text("$item")
-//													x += if (item.name != null) 10 else -10 
-//												}
-//											}
-											
-											val backupPaddingY = style.framePadding.y
-											style.framePadding.y = 0f
-											
-											val timeOffset = systemEvents.data[0].time
-											var x = window.dc.cursorPos.x
-											var y = window.dc.cursorPos.y
-											var maxY = y
-											
-											fun eventBar(x: Float, y: Float, start: Long, end: Long, name: String): Boolean {
-												val id = window.getId("event")
-												val pos = Vec2(x + start.toFloat() * zoom, y)
-												val size = Vec2((end - start).toFloat() * zoom, ctx.fontSize + 1)
-												val bb = Rect(pos, pos + size)
-												val labelSize = calcTextSize(name, false)
-												
-												itemSize(size)
-												if (!itemAdd(bb, id)) return false
-												
-												val flags = 0
-												val (pressed, hovered, held) = buttonBehavior(bb, id, flags)
-												
-												//Render
-												val col = if (hovered) Col.ButtonHovered.u32 else Vec4(0.3f, 0.5f, 0.3f, 1f).u32
-												renderNavHighlight(bb, id)
-												renderFrame(bb.min, bb.max, col, true, 1f)
-												renderTextClipped(bb.min.plus(1f, -1f), bb.max - 1, name, -1, labelSize, Vec2(0f, 0.5f), bb)
-					
-												if (y + size.y > maxY) {
-													maxY = y + size.y
-												}
-												
-												return hovered
-											}
-											
-											fun drawEvents(i: Int): Int {
-												var i = i
-												val startEvent = systemEvents.data[i++]
-												
-												var endEvent = systemEvents.data[i]
-												
-												while (endEvent.name != null) {
-													y += 15
-													i = drawEvents(i)
-													y -= 15
-													endEvent = systemEvents.data[i]
-												}
-												
-												val name = startEvent.name ?: "null"
-												
-												if (eventBar(x, y, startEvent.time - timeOffset, endEvent.time - timeOffset, name)) {
-													setTooltip("$name ${Units.nanoToMicroString(endEvent.time - startEvent.time)}")
-												}
-												
-												return i + 1
-											}
-											
-											var i = 0;
-											
-											while(i < size - 1) {
-												i = drawEvents(i)
-											}
-											
-											window.dc.cursorPos.y = maxY
-											window.dc.cursorMaxPos.y = maxY
-											
-											style.framePadding.y = backupPaddingY
-										}
-									}
-								}
-//							}
-							
-//							child("Renderer", Vec2(0, 100), false, WindowFlag.None.i) {
-								text("Renderer ${renderEvents.size()} events")
-//							}
-//						}
+						text("TODO time")
 						
+						val system = system
+						if (system != null) {
+							system.lock.read {
+								
+								text("Star System ${system.sid} - ${systemEvents.size()} events")
+								
+								val window = currentWindow
+								
+								var size = systemEvents.size()
+								if (size > 0) {
+									
+									val backupPaddingY = style.framePadding.y
+									style.framePadding.y = 0f
+									
+									val timeOffset = systemEvents.data[0].time
+									var x = window.dc.cursorPos.x
+									var y = window.dc.cursorPos.y
+									var maxY = y
+									
+									fun eventBar(x: Float, y: Float, start: Long, end: Long, name: String): Boolean {
+										val id = window.getID("event")
+										val pos = Vec2(x + start.toFloat() * zoom, y)
+										val size = Vec2((end - start).toFloat() * zoom, ctx.fontSize + 1)
+										val bb = Rect(pos, pos + size)
+										val labelSize = calcTextSize(name, false)
+										
+										itemSize(size)
+										if (!itemAdd(bb, id)) return false
+										
+										val flags = 0
+										val (pressed, hovered, held) = buttonBehavior(bb, id, flags)
+										
+										//Render
+										val col = if (hovered) Col.ButtonHovered.u32 else Vec4(0.3f, 0.5f, 0.3f, 1f).u32
+										renderNavHighlight(bb, id)
+										renderFrame(bb.min, bb.max, col, true, 1f)
+										//TODO maybe change
+										renderTextClipped(bb.min.plus(1f, -1f), bb.max - 1, name, labelSize, Vec2(0f, 0.5f), bb)
+			
+										if (y + size.y > maxY) {
+											maxY = y + size.y
+										}
+										
+										return hovered
+									}
+									
+									fun drawEvents(i: Int): Int {
+										var i = i
+										val startEvent = systemEvents.data[i++]
+										
+										var endEvent = systemEvents.data[i]
+										
+										while (endEvent.name != null) {
+											y += 15
+											i = drawEvents(i)
+											y -= 15
+											endEvent = systemEvents.data[i]
+										}
+										
+										val name = startEvent.name ?: "null"
+										
+										if (eventBar(x, y, startEvent.time - timeOffset, endEvent.time - timeOffset, name)) {
+											setTooltip("$name ${Units.nanoToMicroString(endEvent.time - startEvent.time)}")
+										}
+										
+										return i + 1
+									}
+									
+									var i = 0;
+									
+									while(i < size - 1) {
+										i = drawEvents(i)
+									}
+									
+									window.dc.cursorPos.y = maxY
+									window.dc.cursorMaxPos.y = maxY
+									
+									style.framePadding.y = backupPaddingY
+								}
+							}
+						}
+					
+						text("Renderer ${renderEvents.size()} events")
 					}
 				}
 			}

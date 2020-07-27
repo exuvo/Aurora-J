@@ -206,7 +206,7 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 	private var mainDebugVisible = false
 
 	var slider = 1f
-	var stringbuf = CharArray(10)
+	var stringbuf = ByteArray(10)
 	var img = Assets.textures.findRegion("strategic/sun")
 	var menuBarState = BooleanArray(1)
 	var graphValues = floatArrayOf(0f, 5f, 2f, 4f)

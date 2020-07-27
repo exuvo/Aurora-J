@@ -9,9 +9,32 @@ import java.lang.IllegalStateException
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.galactic.MunitionHull
 
+class PlanetComponent() : Component() {
+	var cleanWater = 0L
+	var pollutedWater = 0L 
+	var usableLandArea = 0L // km²
+	var blockedLandArea = 0L
+	var gravity = 100 // percentage of earth
+	var atmosphericDensity = 1225 // g/m³ at 1013.25 hPa (abs) and 15°C
+	var atmospheBreathability = 100 // percentage
+	var temperature = 20 // celcius
+	val minableResources = LinkedHashMap<Resource, Long>()
+	val resourceAccessibility = LinkedHashMap<Resource, Int>()
+}
+
+// stellaris like districts: housing, farming, mining, industry. consumes land area. no districts on outpost.
+// industry produces supplies and does construction (buildings and shipyard modifications)
+// building slots like stellaris (probably more slots that stellaris) for colonies and outposts
+// ratio of clean to polluted affects farming and population growth
+
 //TODO part storage
 class ColonyComponent() : Component() {
 	var population: Long = 0
+	var housingLandArea = 0L
+	var farmingLandArea = 0L
+	var industrialLandArea = 0L // pollutes water
+	var miningLandArea = 0L // pollutes water
+	var buildings = ArrayList<Building>()
 	val resources = LinkedHashMap<Resource, Long>()
 	val munitions = LinkedHashMap<MunitionHull, Int>()
 	val shipyards = ArrayList<Shipyard>()
@@ -95,6 +118,15 @@ class ColonyComponent() : Component() {
 
 		return retrievedAmount
 	}
+}
+
+abstract class Building {
+	var name: String = "";
+	val cost = LinkedHashMap<Resource, Long>()
+}
+
+class EmptyBuildingSlot : Building() {
+	
 }
 
 class Shipyard (

@@ -124,7 +124,7 @@ class ShipDebugger : UIWindow() {
 						val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED)
 		
 						if (selectedEntities.isEmpty()) {
-							text("Nothing selected")
+							textUnformatted("Nothing selected")
 		
 						} else {
 							
@@ -150,7 +150,7 @@ class ShipDebugger : UIWindow() {
 									
 									val entity = system.world.getEntity(entityRef.entityID)
 			
-									text("Entity ${entity.printID()}")
+									textUnformatted("Entity ${entity.printID()}")
 									
 									if (collapsingHeader("Components", 0)) { // TreeNodeFlag.DefaultOpen.i
 			
@@ -170,12 +170,12 @@ class ShipDebugger : UIWindow() {
 														
 														if (treeNode("${field.name}: ${collection.size}")) {
 															for(item in collection) {
-																text("$item")
+																textUnformatted("$item")
 															}
 															treePop()
 														}
 													} else {
-														text("${field.name}: ${field.get(component)}")
+														textUnformatted("${field.name}: ${field.get(component)}")
 													}
 												}
 			
@@ -195,77 +195,77 @@ class ShipDebugger : UIWindow() {
 			
 													if (partRef.part is PoweringPart) {
 														val state = shipComponent.getPartState(partRef)[PoweringPartState::class]
-														text("availiablePower ${Units.powerToString(state.availiablePower)}")
-														text("producedPower ${Units.powerToString(state.producedPower)}")
+														textUnformatted("availiablePower ${Units.powerToString(state.availiablePower)}")
+														textUnformatted("producedPower ${Units.powerToString(state.producedPower)}")
 													}
 			
 													if (partRef.part is PoweredPart) {
 														val state = shipComponent.getPartState(partRef)[PoweredPartState::class]
-														text("requestedPower ${Units.powerToString(state.requestedPower)}")
-														text("givenPower ${Units.powerToString(state.givenPower)}")
+														textUnformatted("requestedPower ${Units.powerToString(state.requestedPower)}")
+														textUnformatted("givenPower ${Units.powerToString(state.givenPower)}")
 													}
 			
 													if (partRef.part is ChargedPart) {
 														val state = shipComponent.getPartState(partRef)[ChargedPartState::class]
-														text("charge ${Units.powerToString(state.charge)}")
-														text("expectedFullAt ${Units.secondsToString(state.expectedFullAt)}")
+														textUnformatted("charge ${Units.powerToString(state.charge)}")
+														textUnformatted("expectedFullAt ${Units.secondsToString(state.expectedFullAt)}")
 													}
 			
 													if (partRef.part is PassiveSensor) {
 														val state = shipComponent.getPartState(partRef)[PassiveSensorState::class]
-														text("lastScan ${state.lastScan}")
+														textUnformatted("lastScan ${state.lastScan}")
 													}
 			
 													if (partRef.part is AmmunitionPart) {
 														val state = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
-														text("type ${state.type?.name}")
-														text("amount ${state.amount}/${partRef.part.ammunitionAmount}")
-														text("reloadedAt ${Units.secondsToString(state.reloadedAt)}")
+														textUnformatted("type ${state.type?.name}")
+														textUnformatted("amount ${state.amount}/${partRef.part.ammunitionAmount}")
+														textUnformatted("reloadedAt ${Units.secondsToString(state.reloadedAt)}")
 													}
 			
 													if (partRef.part is FueledPart) {
 														val state = shipComponent.getPartState(partRef)[FueledPartState::class]
-														text("fuelEnergyRemaining ${state.fuelEnergyRemaining}")
-														text("totalFuelEnergyRemaining ${state.totalFuelEnergyRemaining}")
+														textUnformatted("fuelEnergyRemaining ${state.fuelEnergyRemaining}")
+														textUnformatted("totalFuelEnergyRemaining ${state.totalFuelEnergyRemaining}")
 													}
 			
 													if (partRef.part is TargetingComputer) {
 														
 														val state = shipComponent.getPartState(partRef)[TargetingComputerState::class]
-														text("target ${state.target?.entityID}")
-														text("lockCompletionAt ${state.lockCompletionAt}")
+														textUnformatted("target ${state.target?.entityID}")
+														textUnformatted("lockCompletionAt ${state.lockCompletionAt}")
 														
 														if (treeNode("linkedWeapons ${state.linkedWeapons.size()}###linked")) {
 															for(weaponRef in state.linkedWeapons) {
-																text("$weaponRef")
+																textUnformatted("$weaponRef")
 															}
 															treePop()
 														}
 														
 														if (treeNode("readyWeapons ${state.readyWeapons.size()}###ready")) {
 															for(weaponRef in state.readyWeapons) {
-																text("$weaponRef")
+																textUnformatted("$weaponRef")
 															}
 															treePop()
 														}
 														
 														if (treeNode("chargingWeapons ${state.chargingWeapons.size}###charging")) {
 															for(weaponRef in state.chargingWeapons) {
-																text("$weaponRef")
+																textUnformatted("$weaponRef")
 															}
 															treePop()
 														}
 														
 														if (treeNode("reloadingWeapons ${state.reloadingWeapons.size}###reloading")) {
 															for(weaponRef in state.reloadingWeapons) {
-																text("$weaponRef")
+																textUnformatted("$weaponRef")
 															}
 															treePop()
 														}
 														
 														if (treeNode("disabledWeapons ${state.disabledWeapons.size()}###disabled")) {
 															for(weaponRef in state.disabledWeapons) {
-																text("$weaponRef")
+																textUnformatted("$weaponRef")
 															}
 															treePop()
 														}
@@ -274,18 +274,18 @@ class ShipDebugger : UIWindow() {
 														
 														val weaponTestDistanceL = weaponTestDistance.toLong()
 														
-														text("radialDivergence ${partRef.part.getRadialDivergence() * 1000} mrad")
-														text("beamRadiusAtDistance ${partRef.part.getBeamRadiusAtDistance(weaponTestDistanceL)} m")
-														text("beamArea ${partRef.part.getBeamArea(weaponTestDistanceL)} m²")
-														text("deliveredEnergyTo1MSquareAtDistance ${Units.powerToString(partRef.part.getDeliveredEnergyTo1MSquareAtDistance(weaponTestDistanceL))}")
+														textUnformatted("radialDivergence ${partRef.part.getRadialDivergence() * 1000} mrad")
+														textUnformatted("beamRadiusAtDistance ${partRef.part.getBeamRadiusAtDistance(weaponTestDistanceL)} m")
+														textUnformatted("beamArea ${partRef.part.getBeamArea(weaponTestDistanceL)} m²")
+														textUnformatted("deliveredEnergyTo1MSquareAtDistance ${Units.powerToString(partRef.part.getDeliveredEnergyTo1MSquareAtDistance(weaponTestDistanceL))}")
 														
 														val projectileSpeed = Units.C * 1000
 														val timeToIntercept = FastMath.ceil(weaponTestDistance / projectileSpeed).toLong()
 														val galacticTime = timeToIntercept + galaxy.time
 														val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
 														
-														text("projectileSpeed $projectileSpeed m/s")
-														text("timeToIntercept ${timeToIntercept} s, at ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
+														textUnformatted("projectileSpeed $projectileSpeed m/s")
+														textUnformatted("timeToIntercept ${timeToIntercept} s, at ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
 														
 													} else if (partRef.part is Railgun) {
 														
@@ -301,8 +301,8 @@ class ShipDebugger : UIWindow() {
 															val galacticTime = timeToIntercept + galaxy.time
 															val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
 															
-															text("projectileSpeed $projectileSpeed m/s")
-															text("timeToIntercept ${timeToIntercept} s, at ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
+															textUnformatted("projectileSpeed $projectileSpeed m/s")
+															textUnformatted("timeToIntercept ${timeToIntercept} s, at ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
 														}
 														
 													} else if (partRef.part is MissileLauncher) {
@@ -316,7 +316,7 @@ class ShipDebugger : UIWindow() {
 															val missileAcceleration = munitionClass.getAverageAcceleration()
 															val missileLaunchSpeed = partRef.part.launchForce / munitionClass.loadedMass
 															
-															text("launchSpeed $missileLaunchSpeed m/s + acceleration ${missileAcceleration} m/s²")
+															textUnformatted("launchSpeed $missileLaunchSpeed m/s + acceleration ${missileAcceleration} m/s²")
 															
 															val a: Double = missileAcceleration.toDouble() / 2
 															val b: Double = missileLaunchSpeed.toDouble()
@@ -328,9 +328,9 @@ class ShipDebugger : UIWindow() {
 															val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
 															val impactVelocity = missileLaunchSpeed + missileAcceleration * FastMath.min(timeToIntercept, munitionClass.thrustTime.toLong())
 															
-															text("impactVelocity ${impactVelocity} m/s")
-															text("timeToIntercept ${timeToIntercept} s / thrustTime ${munitionClass.thrustTime} s")
-															text("interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
+															textUnformatted("impactVelocity ${impactVelocity} m/s")
+															textUnformatted("timeToIntercept ${timeToIntercept} s / thrustTime ${munitionClass.thrustTime} s")
+															textUnformatted("interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
 														}
 													}
 			
@@ -352,7 +352,7 @@ class ShipDebugger : UIWindow() {
 											val tmpColor = Vec4(0f, 0f, 0f, 1f)
 											
 											fun armorBlock(hp: Float, maxHP: Float): Boolean {
-												val id = window.getId("armor")
+												val id = window.getID("armor")
 												val pos = Vec2(window.dc.cursorPos)
 												
 												val size = Vec2(5f, 5f)
@@ -381,7 +381,7 @@ class ShipDebugger : UIWindow() {
 														}
 													}
 													
-													pushId(y * 31 + x)
+													pushID(y * 31 + x)
 													
 													val armorHP = 128 + shipComponent.armor[y][x]
 													val maxArmorHP = 128 + shipComponent.hull.armorBlockHP[y]
@@ -390,13 +390,13 @@ class ShipDebugger : UIWindow() {
 														setTooltip("$armorHP / $maxArmorHP, resistance ${shipComponent.hull.armorEnergyPerDamage[y]}")
 													}
 													
-													popId()
+													popID()
 												}
 											}
 											
 											style.framePadding.y = backupPaddingY
 											
-											text("totalPartHP ${shipComponent.totalPartHP}")
+											textUnformatted("totalPartHP ${shipComponent.totalPartHP}")
 											
 											val sortedParts = Bag<PartRef<Part>>(shipComponent.hull.getPartRefs().size)
 											for(partRef in shipComponent.hull.getPartRefs()) {
@@ -411,7 +411,7 @@ class ShipDebugger : UIWindow() {
 											
 											sortedParts.forEachFast{ partRef ->
 												val hitChance = (100 * partRef.part.volume) / shipComponent.hull.volume
-												text("${shipComponent.getPartHP(partRef)} / ${128 + partRef.part.maxHealth} ${String.format("%3d", hitChance)}% ${partRef.part}")
+												textUnformatted("${shipComponent.getPartHP(partRef)} / ${128 + partRef.part.maxHealth} ${String.format("%3d", hitChance)}% ${partRef.part}")
 											}
 											
 											sliderScalar("Damage amount", DataType.Long, ::testDmgAmount, 0L, 1_000_000L, "$testDmgAmount", 2.5f)
@@ -448,7 +448,7 @@ class ShipDebugger : UIWindow() {
 			
 											if (solarIrradiance != null) {
 			
-												text("Solar irradiance ${solarIrradiance.irradiance} W/m2")
+												textUnformatted("Solar irradiance ${solarIrradiance.irradiance} W/m2")
 											}
 			
 											val powerComponent = powerMapper.get(entityRef.entityID)
@@ -486,7 +486,7 @@ class ShipDebugger : UIWindow() {
 														progressBar(power, Vec2(), "${Units.powerToString(poweringState.producedPower)}/${Units.powerToString(poweringState.availiablePower)}")
 			
 														sameLine(0f, style.itemInnerSpacing.x)
-														text("${partRef.part}")
+														textUnformatted("${partRef.part}")
 			
 														if (partRef is FueledPart && partRef is PoweringPart) {
 			
@@ -494,7 +494,7 @@ class ShipDebugger : UIWindow() {
 															val fuelRemaining = Units.secondsToString(fueledState.fuelEnergyRemaining / partRef.power)
 															val totalFuelRemaining = Units.secondsToString(fueledState.totalFuelEnergyRemaining / partRef.power)
 			
-															text("Fuel $fuelRemaining/$totalFuelRemaining W")
+															textUnformatted("Fuel $fuelRemaining/$totalFuelRemaining W")
 														}
 			
 														if (partRef.part is Battery) {
@@ -509,7 +509,7 @@ class ShipDebugger : UIWindow() {
 															if (poweringState.producedPower > 0L) {
 			
 																sameLine(0f, style.itemInnerSpacing.x)
-																text("${Units.secondsToString(charge / poweringState.producedPower)}")
+																textUnformatted("${Units.secondsToString(charge / poweringState.producedPower)}")
 															}
 														}
 													})
@@ -526,7 +526,7 @@ class ShipDebugger : UIWindow() {
 														progressBar(power, Vec2(), "${Units.powerToString(poweredState.givenPower)}/${Units.powerToString(poweredState.requestedPower)}")
 			
 														sameLine(0f, style.itemInnerSpacing.x)
-														text("${part.part}")
+														textUnformatted("${part.part}")
 													})
 			
 													treePop()
@@ -546,11 +546,11 @@ class ShipDebugger : UIWindow() {
 												progressBar(usage, Vec2(), "$usedMass kg, ${usedVolume / 1000}/${maxVolume / 1000} m³")
 			
 												sameLine(0f, style.itemInnerSpacing.x)
-												text("${cargo.name}")
+												textUnformatted("${cargo.name}")
 			
 												if (cargo == CargoType.AMMUNITION) {
 													for (entry in shipComponent.munitionCargo.entries) {
-														text("${entry.value} ${entry.key}")
+														textUnformatted("${entry.value} ${entry.key}")
 													}
 												}
 											}
@@ -603,7 +603,7 @@ class ShipDebugger : UIWindow() {
 													progressBar(usage, Vec2(), "$usedMass kg, ${usedVolume / 1000}/${maxVolume / 1000} m³")
 			
 													sameLine(0f, style.itemInnerSpacing.x)
-													text("${resource.name}")
+													textUnformatted("${resource.name}")
 												}
 			
 												treePop()
