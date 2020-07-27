@@ -39,13 +39,14 @@ task explodeForWeave(type: Sync) {
 	dependsOn classes, configurations.runtimeClasspath
 	into project.weaveDir
 	
+	from configurations.runtimeClasspath.findAll{it.name.endsWith('jar')}.collect{zipTree(it)}
+	//from {configurations.compile.collect {zipTree(it)}}
+	
 	from files(sourceSets.main.output.classesDirs) {
 		exclude "**/*.kt"
 	}
 	from files(sourceSets.main.output.resourcesDir)
-	from configurations.runtimeClasspath.findAll{it.name.endsWith('jar')}.collect{zipTree(it)}
-	//from {configurations.compile.collect {zipTree(it)}}
-
+	
 	from new File("$projectDir/log4j2.xml")
 	
 	into ("assets") {
