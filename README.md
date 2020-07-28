@@ -1,1 +1,1 @@
-# Aurora-J
+# Aurora-J (placeholder name)
