@@ -561,7 +561,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					
 					cShader.setUniformf("u_center", x, y)
 					cShader.setUniformf("u_radius", radius)
-					cShader.setUniformf("u_color", wep.color)
+					cShader.setUniformf("u_color", wep.color.r, wep.color.g, wep.color.b)
 					
 					vertexIdx = 0
 					indiceIdx = 0
@@ -590,10 +590,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				
 				dShader.begin()
 				dShader.setUniformMatrix("u_projTrans", projectionMatrix);
-//				dShader.setUniformf("u_scale", scale);
 	
 				// Render inner circle
-				dShader.setUniformf("u_color", 0f, 0f, 0f, 0f)
 				weaponRanges.forEachFast rangeLoop@{ wep ->
 					val x = wep.x
 					val y = wep.y
