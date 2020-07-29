@@ -28,7 +28,7 @@ object GameServices : Disposable {
 }
 
 @Suppress("UNCHECKED_CAST")
-class Storage: Disposable {
+class Storage: Disposable, Iterable<Disposable> {
 	private val storage = HashMap<KClass<*>, Disposable>()
 
 	operator fun <T : Disposable> get(storageClass: KClass<T>) = storage[storageClass] as T
@@ -43,6 +43,8 @@ class Storage: Disposable {
 	fun <T : Disposable> put(data: T, savedClass: KClass<T>) {
 		storage[savedClass] = data
 	}
+	
+	override fun iterator() = storage.values.iterator()
 
 	override fun dispose() {
 		storage.values.forEach { it.dispose() }

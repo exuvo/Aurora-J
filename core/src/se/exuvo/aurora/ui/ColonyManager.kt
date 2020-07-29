@@ -185,7 +185,7 @@ class ColonyManager : UIWindow() {
 							val colonyRef = selectedColony
 							
 							if (colonyRef == null) {
-								text("No colony selected")
+								textUnformatted("No colony selected")
 								
 							} else if (beginTabBar("Tabs", TabBarFlag.Reorderable or TabBarFlag.TabListPopupButton or TabBarFlag.FittingPolicyResizeDown)) {
 								
@@ -203,19 +203,19 @@ class ColonyManager : UIWindow() {
 											//TODO replace with tables when that is done https://github.com/ocornut/imgui/issues/125
 											columns(7)
 											
-											text("Type")
+											textUnformatted("Type")
 											nextColumn()
-											text("Capacity")
+											textUnformatted("Capacity")
 											nextColumn()
-											text("Tooled Hull")
+											textUnformatted("Tooled Hull")
 											nextColumn()
-											text("Activity")
+											textUnformatted("Activity")
 											nextColumn()
-											text("Progress")
+											textUnformatted("Progress")
 											nextColumn()
-											text("Remaining")
+											textUnformatted("Remaining")
 											nextColumn()
-											text("Completion")
+											textUnformatted("Completion")
 											
 											colony.shipyards.forEach { shipyard ->
 												nextColumn()
@@ -241,14 +241,14 @@ class ColonyManager : UIWindow() {
 												nextColumn()
 												rightAlignedColumnText(Units.volumeToString(shipyard.capacity))
 												nextColumn()
-												text("${shipyard.tooledHull}")
+												textUnformatted("${shipyard.tooledHull}")
 												nextColumn()
 												
 												val modActivity = shipyard.modificationActivity
 												
 												if (modActivity != null) {
 													
-													text("${modActivity.getDescription()}")
+													textUnformatted("${modActivity.getDescription()}")
 													nextColumn()
 													
 													if (shipyard.modificationProgress == 0L) {
@@ -263,16 +263,16 @@ class ColonyManager : UIWindow() {
 													
 													rightAlignedColumnText(Units.daysToRemaining(daysToCompletion.toInt()))
 													nextColumn()
-													text(Units.daysToDate(galaxy.day + daysToCompletion.toInt()))
+													textUnformatted(Units.daysToDate(galaxy.day + daysToCompletion.toInt()))
 													
 												} else {
-													text("")
+													textUnformatted("")
 													nextColumn()
-													text("")
+													textUnformatted("")
 													nextColumn()
-													text("")
+													textUnformatted("")
 													nextColumn()
-													text("")
+													textUnformatted("")
 												}
 	
 												if (shipyardOpen) {
@@ -294,30 +294,30 @@ class ColonyManager : UIWindow() {
 															nextColumn()
 															rightAlignedColumnText(Units.volumeToString(hull.volume))
 															nextColumn()
-															text("${hull}")
+															textUnformatted("${hull}")
 															nextColumn()
-															text("Building")
+															textUnformatted("Building")
 															nextColumn()
-															text("${slipway.progress()}%")
+															textUnformatted("${slipway.progress()}%")
 															nextColumn()
 															val daysToCompletion = (slipway.totalCost() - slipway.usedResources()) / (24 * shipyard.buildRate)
 															rightAlignedColumnText(Units.daysToRemaining(daysToCompletion.toInt()))
 															nextColumn()
-															text(Units.daysToDate(galaxy.day + daysToCompletion.toInt()))
+															textUnformatted(Units.daysToDate(galaxy.day + daysToCompletion.toInt()))
 														} else {
 															sameLineRightAlignedColumnText("-")
 															nextColumn()
 															rightAlignedColumnText("-")
 															nextColumn()
-															text("-")
+															textUnformatted("-")
 															nextColumn()
-															text("None")
+															textUnformatted("None")
 															nextColumn()
-															text("-")
+															textUnformatted("-")
 															nextColumn()
 															rightAlignedColumnText("-")
 															nextColumn()
-															text("-")
+															textUnformatted("-")
 														}
 													}
 												}
@@ -336,7 +336,7 @@ class ColonyManager : UIWindow() {
 											if (hull != null) {
 												
 												alignTextToFramePadding()
-												text("Building: ${hull.name}")
+												textUnformatted("Building: ${hull.name}")
 												sameLine()
 												
 												if (button("Cancel")) {
@@ -351,10 +351,10 @@ class ColonyManager : UIWindow() {
 													
 												} else {
 													
-													text("Used/Remaining resources:")
+													textUnformatted("Used/Remaining resources:")
 													group {
 														slipway.hullCost.forEach { entry ->
-															text(entry.key.name)
+															textUnformatted(entry.key.name)
 														}
 													}
 													sameLine()
@@ -366,7 +366,7 @@ class ColonyManager : UIWindow() {
 														slipway.usedResources.forEach { entry ->
 															val string = Units.massToString(entry.value)
 															ImGui.cursorPosX = ImGui.cursorPosX + maxWidth - calcTextSize(string).x - ImGui.scrollX
-															text(string)
+															textUnformatted(string)
 														}
 													}
 													sameLine()
@@ -376,11 +376,11 @@ class ColonyManager : UIWindow() {
 															maxWidth = kotlin.math.max(maxWidth, calcTextSize(Units.massToString(entry.value)).x)
 														}
 														slipway.hullCost.forEach { entry ->
-															text("/")
+															textUnformatted("/")
 															sameLine()
 															val string = Units.massToString(entry.value)
 															ImGui.cursorPosX = ImGui.cursorPosX + maxWidth - calcTextSize(string).x - ImGui.scrollX
-															text(string)
+															textUnformatted(string)
 														}
 													}
 												}
@@ -393,7 +393,7 @@ class ColonyManager : UIWindow() {
 											if (modification != null) {
 												
 												alignTextToFramePadding()
-												text("${modification.getDescription()}")
+												textUnformatted("${modification.getDescription()}")
 												sameLine()
 												
 												if (button("Cancel")) {
@@ -405,14 +405,14 @@ class ColonyManager : UIWindow() {
 													
 												} else {
 													
-													text("Used/Remaining resources:")
-													text(Resource.GENERIC.name)
+													textUnformatted("Used/Remaining resources:")
+													textUnformatted(Resource.GENERIC.name)
 													sameLine()
-													text(Units.massToString(shipyard.modificationProgress))
+													textUnformatted(Units.massToString(shipyard.modificationProgress))
 													sameLine()
-													text("/")
+													textUnformatted("/")
 													sameLine()
-													text(Units.massToString(modification.getCost(shipyard)))
+													textUnformatted(Units.massToString(modification.getCost(shipyard)))
 												}
 												
 											} else {
@@ -560,10 +560,10 @@ class ColonyManager : UIWindow() {
 									
 									if (beginTabItem("Industry")) {
 										
-										text("Munitions:")
+										textUnformatted("Munitions:")
 										group {
 											colony.munitions.forEach { hull, _ ->
-												text(hull.name)
+												textUnformatted(hull.name)
 											}
 										}
 										sameLine()
@@ -575,7 +575,7 @@ class ColonyManager : UIWindow() {
 											colony.munitions.forEach { _, amount ->
 												val string = amount.toString()
 												ImGui.cursorPosX = ImGui.cursorPosX + maxWidth - calcTextSize(string).x - ImGui.scrollX
-												text(string)
+												textUnformatted(string)
 											}
 										}
 										
@@ -584,10 +584,10 @@ class ColonyManager : UIWindow() {
 									
 									if (beginTabItem("Mining")) {
 										
-										text("Resources:")
+										textUnformatted("Resources:")
 										group {
 											colony.resources.forEach { entry ->
-												text(entry.key.name)
+												textUnformatted(entry.key.name)
 											}
 										}
 										sameLine()
@@ -599,7 +599,7 @@ class ColonyManager : UIWindow() {
 											colony.resources.forEach { entry ->
 												val string = Units.massToString(entry.value)
 												ImGui.cursorPosX = ImGui.cursorPosX + maxWidth - calcTextSize(string).x - ImGui.scrollX
-												text(string)
+												textUnformatted(string)
 											}
 										}
 										

@@ -38,6 +38,10 @@ interface AuroraGame : ApplicationListener {
 	}
 }
 
+interface Resizable {
+	fun resize(width: Int, height: Int)
+}
+
 class AuroraGameMainWindow() : AuroraGame {
 	val log = LogManager.getLogger(this.javaClass)
 	override lateinit var screenService: GameScreenService
@@ -72,6 +76,12 @@ class AuroraGameMainWindow() : AuroraGame {
 
 	override fun resize(width: Int, height: Int) {
 		screenService.resize(width, height)
+		
+		storage.forEach {
+			if (it is Resizable) {
+				it.resize(width, height)
+			}
+		}
 	}
 
 	override fun update() {

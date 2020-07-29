@@ -118,7 +118,7 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 	private val shipDebugger = ShipDebugger()
 	private val shipDesigner = ShipDesigner()
 	private val colonyManager = ColonyManager()
-	private val profiler = ProfilerWindow();
+	private val profiler = ProfilerWindow()
 
 	class ImGuiGlobalStorage(val ctx: Context): Disposable {
 		override fun dispose() {}
@@ -199,7 +199,7 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 	}
 
 	override fun show() {
-		profiler.visible = true
+//		profiler.visible = true
 	}
 
 	private var demoVisible = false
@@ -254,6 +254,9 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 							if (ImGui.menuItem("DisableStrategicView", "", RenderSystem.debugDisableStrategicView)) {
 								RenderSystem.debugDisableStrategicView = !RenderSystem.debugDisableStrategicView
 							}
+							if (ImGui.menuItem("DrawWeaponRangesWithoutShader", "", RenderSystem.debugDrawWeaponRangesWithoutShader)) {
+								RenderSystem.debugDrawWeaponRangesWithoutShader = !RenderSystem.debugDrawWeaponRangesWithoutShader
+							}
 							ImGui.endMenu();
 						}
 						ImGui.endMenuBar();
@@ -288,7 +291,7 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 			gl3.renderDrawData(ctx.drawData)
 			
 		} catch (e: Throwable) {
-			log.error("Error drawing debug window", e)
+			log.error("Error drawing windows", e)
 		}
 	}
 	

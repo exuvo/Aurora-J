@@ -98,7 +98,7 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 
 			if (!shader.isCompiled || shader.getLog().length != 0) {
 				println("shader errors: ${shader.getLog()}")
-				throw RuntimeException()
+				throw RuntimeException("Shader compile error: ${shader.getLog()}")
 			}
 			
 			vertices = FloatArray(MAX_VERTICES * (window.mesh.getVertexAttributes().vertexSize / 4));
@@ -486,7 +486,7 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 		//		texture.load(textureData)
 		
 		Gdx.gl.glClearColor(0.2f, 0.3f, 0.4f, 0.8f)
-    Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
+		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 		
 		val id = Gdx.gl.glGenTexture()
 		if (id == 0) {

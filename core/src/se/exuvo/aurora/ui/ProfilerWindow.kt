@@ -154,8 +154,8 @@ class ProfilerWindow : UIWindow() {
 			with(ImGui) {
 				with(imgui.dsl) {
 					
-					val itemSpaceX = style.itemSpacing.x
-					val itemSpaceY = style.itemSpacing.y
+//					val itemSpaceX = style.itemSpacing.x
+//					val itemSpaceY = style.itemSpacing.y
 					
 					window("Profiler", ::visible, WindowFlag.HorizontalScrollbar.i) {
 						
@@ -183,11 +183,11 @@ class ProfilerWindow : UIWindow() {
 									fun eventBar(x: Float, y: Float, start: Long, end: Long, name: String): Boolean {
 										val id = window.getID("event")
 										val pos = Vec2(x + start.toFloat() * zoom, y)
-										val size = Vec2((end - start).toFloat() * zoom, ctx.fontSize + 1)
-										val bb = Rect(pos, pos + size)
+										val itemSize = Vec2((end - start).toFloat() * zoom, ctx.fontSize + 1)
+										val bb = Rect(pos, pos + itemSize)
 										val labelSize = calcTextSize(name, false)
 										
-										itemSize(size)
+										itemSize(itemSize)
 										if (!itemAdd(bb, id)) return false
 										
 										val flags = 0
@@ -200,24 +200,24 @@ class ProfilerWindow : UIWindow() {
 										//TODO maybe change
 										renderTextClipped(bb.min.plus(1f, -1f), bb.max - 1, name, labelSize, Vec2(0f, 0.5f), bb)
 			
-										if (y + size.y > maxY) {
-											maxY = y + size.y
+										if (y + itemSize.y > maxY) {
+											maxY = y + itemSize.y
 										}
 										
 										return hovered
 									}
 									
 									fun drawEvents(i: Int): Int {
-										var i = i
-										val startEvent = systemEvents.data[i++]
+										var j = i
+										val startEvent = systemEvents.data[j++]
 										
-										var endEvent = systemEvents.data[i]
+										var endEvent = systemEvents.data[j]
 										
 										while (endEvent.name != null) {
 											y += 15
-											i = drawEvents(i)
+											j = drawEvents(j)
 											y -= 15
-											endEvent = systemEvents.data[i]
+											endEvent = systemEvents.data[j]
 										}
 										
 										val name = startEvent.name ?: "null"
@@ -226,7 +226,7 @@ class ProfilerWindow : UIWindow() {
 											setTooltip("$name ${Units.nanoToMicroString(endEvent.time - startEvent.time)}")
 										}
 										
-										return i + 1
+										return j + 1
 									}
 									
 									var i = 0;

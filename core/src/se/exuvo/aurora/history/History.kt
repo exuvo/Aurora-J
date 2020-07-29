@@ -169,6 +169,8 @@ class History : Disposable {
 		log.info("Closed history DB")
 	}
 
+	//TODO Group multiple inserts and updates in single transaction improves speed
+	
 	private fun execute(f: () -> Unit) {
 		executorService.execute(object : Runnable {
 			override fun run() {

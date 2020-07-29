@@ -57,6 +57,17 @@ import com.badlogic.gdx.math.MathUtils
 import se.exuvo.aurora.empires.components.IdleTargetingComputersComponent
 import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
 import se.exuvo.aurora.galactic.PartRef
+import com.badlogic.gdx.utils.Disposable
+import com.badlogic.gdx.graphics.Mesh
+import com.badlogic.gdx.graphics.VertexAttributes
+import com.badlogic.gdx.graphics.glutils.ShaderProgram
+import se.exuvo.aurora.starsystems.systems.GravimetricSensorSystem.GravWindowData
+import com.badlogic.gdx.graphics.VertexAttribute
+import com.badlogic.gdx.graphics.glutils.FrameBuffer
+import com.badlogic.gdx.graphics.Pixmap
+import se.exuvo.aurora.Resizable
+import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.g2d.TextureRegion
 
 class RenderSystem : IteratingSystem(FAMILY) {
 	companion object {
@@ -66,10 +77,12 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		val MISSILE_FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, MissileComponent::class.java)
 		
 		const val STRATEGIC_ICON_SIZE = 24f
+		const val MAX_VERTICES = 128
+		const val MAX_INDICES = 256
 
 		var debugPassiveSensors = Settings.getBol("Systems/Render/debugPassiveSensors", false)
 		var debugDisableStrategicView = Settings.getBol("Systems/Render/debugDisableStrategicView", false)
-		var debugDrawPassiveSensors = Settings.getBol("Systems/Render/debugDrawPassiveSensors", true)
+		var debugDrawWeaponRangesWithoutShader = Settings.getBol("Systems/Render/debugDrawWeaponRangesWithoutShader", false)
 	}
 
 	lateinit private var circleMapper: ComponentMapper<CircleComponent>
@@ -118,6 +131,15 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	private var uiCamera: OrthographicCamera = AuroraGame.currentWindow.screenService.uiCamera
 	private var displaySize: Int = 0
 
+	init {
+		var globalData = galaxy.storage(RenderGlobalData::class)
+		
+		if (globalData == null) {
+			globalData = RenderGlobalData()
+			galaxy.storage + globalData
+		}
+	}
+	
 	override fun initialize() {
 		super.initialize()
 
@@ -131,6 +153,69 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	override fun checkProcessing() = false
 
 	override fun process(entityID: Int) {}
+	
+	class RenderGlobalData(): Disposable {
+		val circleShader: ShaderProgram
+		val diskShader: ShaderProgram
+		val vertices: FloatArray
+		val indices: ShortArray
+
+		init {
+			circleShader = Assets.circleShaderProgram
+
+			if (!circleShader.isCompiled || circleShader.getLog().length != 0) {
+				println("shader errors: ${circleShader.getLog()}")
+				throw RuntimeException("Shader compile error: ${circleShader.getLog()}")
+			}
+			
+			diskShader = Assets.diskShaderProgram
+
+			if (!diskShader.isCompiled || diskShader.getLog().length != 0) {
+				println("shader errors: ${diskShader.getLog()}")
+				throw RuntimeException("Shader compile error: ${diskShader.getLog()}")
+			}
+			
+			vertices = FloatArray(MAX_VERTICES);
+			indices = ShortArray(MAX_INDICES);
+		}
+		
+		override fun dispose() {}
+	}
+	
+	class RenderWindowData(): Disposable, Resizable {
+
+		var fbo: FrameBuffer
+		val mesh: Mesh
+
+		init {
+			fbo = FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(),Gdx.graphics.getHeight(), false)
+			mesh = Mesh(false, MAX_VERTICES, MAX_INDICES,
+			            VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE)
+			);
+		}
+		
+		override fun resize(width: Int, height: Int) {
+			fbo.dispose()
+			fbo = FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(),Gdx.graphics.getHeight(), false)
+		}
+
+		override fun dispose() {
+			mesh.dispose()
+		}
+	}
+	
+	fun wData(): RenderWindowData {
+		var wData = AuroraGame.currentWindow.storage(RenderWindowData::class)
+		
+		if (wData == null) {
+			wData = RenderWindowData()
+			AuroraGame.currentWindow.storage + wData
+		}
+		
+		return wData
+	}
+	
+	fun gData() = galaxy.storage[RenderGlobalData::class]
 	
 	private final fun drawEntities(entityIDs: IntBag) {
 
@@ -177,104 +262,401 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 	
+	private class WeaponRange() {
+		var radius: Float = 0f
+		var color: Color = Color.WHITE
+		var x: Float = 0f
+		var y: Float = 0f
+	}
+	private val railgunRanges = ArrayList<WeaponRange>()
+	private val laserRanges = ArrayList<WeaponRange>()
+	private val missileRanges = ArrayList<WeaponRange>()
+	
 	private final fun drawWeaponRanges(entityIDs: IntBag, selectedEntityIDs: List<Int>) {
 
-		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+		if (debugDrawWeaponRangesWithoutShader) {
+		
+			shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+			
+			entityIDs.forEachFast { entityID ->
 
-		entityIDs.forEachFast { entityID ->
-
-			if (selectedEntityIDs.contains(entityID) && movementMapper.has(entityID) &&
-				(idleTargetingComputersComponentMapper.has(entityID) || activeTargetingComputersComponentMapper.has(entityID))) {
-
-				//TODO needs both
-				val tcs: List<PartRef<TargetingComputer>> = idleTargetingComputersComponentMapper.get(entityID)?.targetingComputers ?: activeTargetingComputersComponentMapper.get(entityID).targetingComputers
-				
-				val movement = movementMapper.get(entityID).get(galaxy.time).value
-				val ship = shipMapper.get(entityID)
-				
-				var x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
-				var y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
-				val timeToImpact = 10 // s
-				
-				//TODO draw at mouse pos if x is held
-				
-				tcs.forEachFast{ tc ->
-					val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+				if (selectedEntityIDs.contains(entityID) && movementMapper.has(entityID) &&
+					(idleTargetingComputersComponentMapper.has(entityID) || activeTargetingComputersComponentMapper.has(entityID))) {
+	
+					//TODO needs both
+					val tcs: List<PartRef<TargetingComputer>> = idleTargetingComputersComponentMapper.get(entityID)?.targetingComputers ?: activeTargetingComputersComponentMapper.get(entityID).targetingComputers
 					
-					tcState.linkedWeapons.forEachFast weaponLoop@{ weapon ->
-						if (ship.isPartEnabled(weapon)) {
-							val part = weapon.part
-							
-							val range: Long
-							
-							when (part) {
-								is BeamWeapon -> {
-									val projectileSpeed = (Units.C * 1000).toLong()
-									var damage: Long = (part.efficiency * part.capacitor) / 100
-									val dmg1Range = FastMath.sqrt(damage / FastMath.PI) / FastMath.tan(part.getRadialDivergence())
-									val timeRange = projectileSpeed * timeToImpact
-									
-//									println("damage $damage, dmg1Range $dmg1Range, timeRange $timeRange")
-									range = FastMath.min(timeRange, dmg1Range.toLong())
-									
-									shapeRenderer.color = Color.PURPLE
-								}
-								is Railgun -> {
-									val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
-									val munitionHull = ammoState.type as? SimpleMunitionHull
-									
-									if (munitionHull == null) {
+					val movement = movementMapper.get(entityID).get(galaxy.time).value
+					val ship = shipMapper.get(entityID)
+					
+					var x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
+					var y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
+					val timeToImpact = 10 // s
+					
+					//TODO draw at mouse pos if x is held
+					
+					tcs.forEachFast{ tc ->
+						val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+						
+						tcState.linkedWeapons.forEachFast weaponLoop@{ weapon ->
+							if (ship.isPartEnabled(weapon)) {
+								val part = weapon.part
+								
+								val range: Long
+								
+								when (part) {
+									is BeamWeapon -> {
+										val projectileSpeed = (Units.C * 1000).toLong()
+										var damage: Long = (part.efficiency * part.capacitor) / 100
+										val dmg1Range = FastMath.sqrt(damage / FastMath.PI) / FastMath.tan(part.getRadialDivergence())
+										val timeRange = projectileSpeed * timeToImpact
+										
+	//									println("damage $damage, dmg1Range $dmg1Range, timeRange $timeRange")
+										range = FastMath.min(timeRange, dmg1Range.toLong())
+										
+										shapeRenderer.color = Color.PURPLE
+									}
+									is Railgun -> {
+										val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
+										val munitionHull = ammoState.type as? SimpleMunitionHull
+										
+										if (munitionHull == null) {
+											return@weaponLoop
+										}
+										
+										val projectileSpeed = (part.capacitor * part.efficiency) / (100 * munitionHull.loadedMass)
+										range = projectileSpeed * timeToImpact
+										
+										shapeRenderer.color = Color.ORANGE
+									}
+									is MissileLauncher -> {
+										val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
+										val advMunitionHull = ammoState.type!! as? AdvancedMunitionHull
+										
+										if (advMunitionHull == null) {
+											return@weaponLoop
+										}
+										
+										val missileAcceleration = advMunitionHull.getAverageAcceleration()
+										val missileLaunchSpeed = (100 * part.launchForce) / advMunitionHull.loadedMass
+										val flightTime = advMunitionHull.fuelMass
+										
+										range = (missileLaunchSpeed * flightTime + (missileAcceleration * flightTime * flightTime) / 2) / 100
+										
+										shapeRenderer.color = Color.RED
+									}
+									else -> {
 										return@weaponLoop
 									}
-									
-									val projectileSpeed = (part.capacitor * part.efficiency) / (100 * munitionHull.loadedMass)
-									range = projectileSpeed * timeToImpact
-									
-									shapeRenderer.color = Color.ORANGE
 								}
-								is MissileLauncher -> {
-									val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
-									val advMunitionHull = ammoState.type!! as? AdvancedMunitionHull
-									
-									if (advMunitionHull == null) {
-										return@weaponLoop
-									}
-									
-									val missileAcceleration = advMunitionHull.getAverageAcceleration()
-									val missileLaunchSpeed = (100 * part.launchForce) / advMunitionHull.loadedMass
-									val flightTime = advMunitionHull.fuelMass
-									
-									range = (missileLaunchSpeed * flightTime + (missileAcceleration * flightTime * flightTime) / 2) / 100
-									
-									shapeRenderer.color = Color.RED
-								}
-								else -> {
-									return@weaponLoop
-								}
-							}
-							
-							// everything in km
-							val radius = (range / 1000).toFloat()
-							val cameraDistance = (tempL.set(movement.position).div(1000).dst(cameraOffset)).toFloat()
-							val viewLength = scale * displaySize
-							
-							//TODO use on all line circles
-							val cameraEdgeInsideCircle =  cameraDistance < radius - viewLength/2
-							val circleOutsideCamera = cameraDistance > radius + viewLength/2
-							
-							if (radius / scale > 20 && !cameraEdgeInsideCircle && !circleOutsideCamera) {
 								
-								val segments = getCircleSegments(radius, scale)
+								// everything in km
+								val radius = (range / 1000).toFloat()
+								val cameraDistance = (tempL.set(movement.position).div(1000).dst(cameraOffset)).toFloat()
+								val viewLength = scale * displaySize
 								
-								shapeRenderer.circle(x, y, radius, segments)
+								//TODO use on all line circles
+								val cameraEdgeInsideCircle =  cameraDistance < radius - viewLength/2
+								val circleOutsideCamera = cameraDistance > radius + viewLength/2
+								
+								if (radius / scale > 20 && !cameraEdgeInsideCircle && !circleOutsideCamera) {
+									
+									val segments = getCircleSegments(radius, scale)
+									shapeRenderer.circle(x, y, radius, segments)
+								}
 							}
 						}
 					}
 				}
 			}
-		}
+			
+			shapeRenderer.end()
+			
+		} else {
 
-		shapeRenderer.end()
+			val rangePool = starSystem.pools.getPool(WeaponRange::class.java)
+
+			missileRanges.forEachFast { it ->
+				rangePool.free(it)
+			}
+			laserRanges.forEachFast { it ->
+				rangePool.free(it)
+			}
+			railgunRanges.forEachFast { it ->
+				rangePool.free(it)
+			}
+			
+			missileRanges.clear();
+			laserRanges.clear();
+			railgunRanges.clear();
+
+			entityIDs.forEachFast { entityID ->
+
+				if (selectedEntityIDs.contains(entityID) && movementMapper.has(entityID)) {
+
+					var idleTCs = idleTargetingComputersComponentMapper.get(entityID)
+					var activeTCs = activeTargetingComputersComponentMapper.get(entityID)
+
+					if (idleTCs != null || activeTCs != null) {
+
+						val movement = movementMapper.get(entityID).get(galaxy.time).value
+						val ship = shipMapper.get(entityID)
+
+						var x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
+						var y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
+						val timeToImpact = 10 // s
+
+						fun getRanges(tcs: List<PartRef<TargetingComputer>>) {
+							tcs.forEachFast { tc ->
+								val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+
+								tcState.linkedWeapons.forEachFast weaponLoop@{ weapon ->
+									if (ship.isPartEnabled(weapon)) {
+										val part = weapon.part
+
+										val range: Long
+										val color: Color
+
+										when (part) {
+											is BeamWeapon -> {
+												val projectileSpeed = (Units.C * 1000).toLong()
+												var damage: Long = (part.efficiency * part.capacitor) / 100
+												val dmg1Range = FastMath.sqrt(damage / FastMath.PI) / FastMath.tan(part.getRadialDivergence())
+												val timeRange = projectileSpeed * timeToImpact
+
+												//									println("damage $damage, dmg1Range $dmg1Range, timeRange $timeRange")
+												range = FastMath.min(timeRange, dmg1Range.toLong())
+
+												color = Color.PURPLE
+											}
+											is Railgun -> {
+												val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
+												val munitionHull = ammoState.type as? SimpleMunitionHull
+
+												if (munitionHull == null) {
+													return@weaponLoop
+												}
+
+												val projectileSpeed = (part.capacitor * part.efficiency) / (100 * munitionHull.loadedMass)
+												range = projectileSpeed * timeToImpact
+
+												color = Color.ORANGE
+											}
+											is MissileLauncher -> {
+												val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
+												val advMunitionHull = ammoState.type!! as? AdvancedMunitionHull
+
+												if (advMunitionHull == null) {
+													return@weaponLoop
+												}
+
+												val missileAcceleration = advMunitionHull.getAverageAcceleration()
+												val missileLaunchSpeed = (100 * part.launchForce) / advMunitionHull.loadedMass
+												val flightTime = advMunitionHull.fuelMass
+
+												range =
+													(missileLaunchSpeed * flightTime + (missileAcceleration * flightTime * flightTime) / 2) / 100
+
+												color = Color.RED
+											}
+											else -> {
+												return@weaponLoop
+											}
+										}
+
+										// everything in km
+										val radius = (range / 1000).toFloat()
+										val cameraDistance = (tempL.set(movement.position).div(1000).dst(cameraOffset)).toFloat()
+										val viewLength = scale * displaySize
+
+										val cameraEdgeInsideCircle = cameraDistance < radius - viewLength / 2
+										val circleOutsideCamera = cameraDistance > radius + viewLength / 2
+
+										if (radius / scale > 20 && !cameraEdgeInsideCircle && !circleOutsideCamera) {
+
+											val weaponRange = rangePool.obtain()
+											weaponRange.radius = radius
+											weaponRange.color = color
+											weaponRange.x = x
+											weaponRange.y = y
+											
+											when (part) {
+												is BeamWeapon -> {
+													laserRanges += weaponRange
+												}
+												is Railgun -> {
+													railgunRanges += weaponRange
+												}
+												is MissileLauncher -> {
+													missileRanges += weaponRange
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+						
+						if (idleTCs != null ) {
+							getRanges(idleTCs.targetingComputers)
+						}
+						
+						if (activeTCs != null) {
+							getRanges(activeTCs.targetingComputers)
+						}
+					}
+				}
+			}
+			
+			val projectionMatrix = viewport.camera.combined
+
+			val gData = gData()
+			val wData = wData()
+
+			val vertices = gData.vertices
+			val indices = gData.indices
+			val cShader = gData.circleShader
+			val dShader = gData.diskShader
+			val mesh = wData.mesh
+			val fbo = wData.fbo
+
+			var vertexIdx = 0
+			var indiceIdx = 0
+			val padding = 1 * scale
+			
+			fun vertex(x: Float, y: Float) {
+				vertices[vertexIdx++] = x;
+				vertices[vertexIdx++] = y;
+			}
+			
+			fun drawWeaponRanges2(weaponRanges: List<WeaponRange>) {
+				
+				fbo.begin();
+				Gdx.gl.glClearColor(0f, 0f, 0f, 0f)
+				Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
+	
+				Gdx.gl.glDisable(GL20.GL_BLEND);
+				
+				cShader.begin()
+				cShader.setUniformMatrix("u_projTrans", projectionMatrix);
+				cShader.setUniformf("u_scale", scale);
+				
+				// Render outer circle
+				weaponRanges.forEachFast rangeLoop@{ wep ->
+					val x = wep.x
+					val y = wep.y
+					val radius = wep.radius
+					
+					val minX = FastMath.max(x - radius - padding, -viewport.getScreenWidth()/2 * scale)
+					val maxX = FastMath.min(x + radius + padding, viewport.getScreenWidth()/2 * scale)
+					val minY = FastMath.max(y - radius - padding, -viewport.getScreenHeight()/2 * scale)
+					val maxY = FastMath.min(y + radius + padding, viewport.getScreenHeight()/2 * scale)
+					
+					val width = maxX - minX
+					val height  = maxY - minY
+					
+					if (height < 0 || width < 0) {
+						return@rangeLoop
+					}
+					
+					cShader.setUniformf("u_center", x, y)
+					cShader.setUniformf("u_radius", radius)
+					cShader.setUniformf("u_color", wep.color)
+					
+					vertexIdx = 0
+					indiceIdx = 0
+					
+					// Triangle 1
+					indices[indiceIdx++] = 1.toShort()
+					indices[indiceIdx++] = 0.toShort()
+					indices[indiceIdx++] = 2.toShort()
+					
+					// Triangle 2
+					indices[indiceIdx++] = 0.toShort()
+					indices[indiceIdx++] = 3.toShort()
+					indices[indiceIdx++] = 2.toShort()
+					
+					vertex(minX, minY);
+					vertex(maxX, minY);
+					vertex(maxX, maxY);
+					vertex(minX, maxY);
+					
+					mesh.setVertices(vertices, 0, vertexIdx)
+					mesh.setIndices(indices, 0, indiceIdx)
+					mesh.render(cShader, GL20.GL_TRIANGLES)
+				}
+				
+				cShader.end()
+				
+				dShader.begin()
+				dShader.setUniformMatrix("u_projTrans", projectionMatrix);
+//				dShader.setUniformf("u_scale", scale);
+	
+				// Render inner circle
+				dShader.setUniformf("u_color", 0f, 0f, 0f, 0f)
+				weaponRanges.forEachFast rangeLoop@{ wep ->
+					val x = wep.x
+					val y = wep.y
+					val radius = wep.radius - 1 * scale
+					
+					val minX = FastMath.max(x - radius - padding, -viewport.getScreenWidth()/2 * scale)
+					val maxX = FastMath.min(x + radius + padding, viewport.getScreenWidth()/2 * scale)
+					val minY = FastMath.max(y - radius - padding, -viewport.getScreenHeight()/2 * scale)
+					val maxY = FastMath.min(y + radius + padding, viewport.getScreenHeight()/2 * scale)
+					
+					val width = maxX - minX
+					val height  = maxY - minY
+					
+					if (height < 0 || width < 0) {
+						return@rangeLoop
+					}
+					
+					dShader.setUniformf("u_center", x, y)
+					dShader.setUniformf("u_radius", radius)
+					
+					vertexIdx = 0
+					indiceIdx = 0
+					
+					// Triangle 1
+					indices[indiceIdx++] = 1.toShort()
+					indices[indiceIdx++] = 0.toShort()
+					indices[indiceIdx++] = 2.toShort()
+					
+					// Triangle 2
+					indices[indiceIdx++] = 0.toShort()
+					indices[indiceIdx++] = 3.toShort()
+					indices[indiceIdx++] = 2.toShort()
+					
+					vertex(minX, minY);
+					vertex(maxX, minY);
+					vertex(maxX, maxY);
+					vertex(minX, maxY);
+					
+					mesh.setVertices(vertices, 0, vertexIdx)
+					mesh.setIndices(indices, 0, indiceIdx)
+					mesh.render(dShader, GL20.GL_TRIANGLES)
+				}
+				
+				dShader.end()
+				fbo.end()
+			
+				Gdx.gl.glEnable(GL20.GL_BLEND);
+				Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+				
+				val fboTex = fbo.getColorBufferTexture()
+				
+				spriteBatch.begin()
+				spriteBatch.setColor(Color.WHITE)
+				spriteBatch.draw(fboTex, 0f, 0f, viewport.getScreenWidth().toFloat(), viewport.getScreenHeight().toFloat(), 0, 0, fboTex.getWidth(), fboTex.getHeight(), false, true)
+				spriteBatch.end()
+				
+				Gdx.gl.glDisable(GL20.GL_BLEND);
+			}
+			
+			drawWeaponRanges2(missileRanges)
+			drawWeaponRanges2(laserRanges)
+			drawWeaponRanges2(railgunRanges)
+		}
 	}
 	
 	private final fun drawProjectiles() {

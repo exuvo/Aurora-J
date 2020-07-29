@@ -28,6 +28,8 @@ object Assets : Disposable {
 	var skinUI by Delegates.notNull<Skin>()
 	var textures by Delegates.notNull<TextureAtlas>()
 	var gravimetricShaderProgram by Delegates.notNull<ShaderProgram>()
+	var circleShaderProgram by Delegates.notNull<ShaderProgram>()
+	var diskShaderProgram by Delegates.notNull<ShaderProgram>()
 
 	fun startLoad() {
 		val resolver = manager.getFileHandleResolver()
@@ -82,6 +84,8 @@ object Assets : Disposable {
 		
 		manager.load("images/aurora.atlas", TextureAtlas::class.java);
 		
+		manager.load("shaders/circle.vert", ShaderProgram::class.java)
+		manager.load("shaders/disk.vert", ShaderProgram::class.java)
 		manager.load("shaders/gravimetric.vert", ShaderProgram::class.java)
 		
 		log.info("Queued ${manager.queuedAssets} assets for loading")
@@ -90,8 +94,13 @@ object Assets : Disposable {
 	fun finishLoad() {
 		fontMap = manager.get("fontMap.ttf", BitmapFont::class.java)
 		fontMapSmall = manager.get("fontMapSmall.ttf", BitmapFont::class.java)
+		
 		skinUI = manager.get("ui/uiskin.json", Skin::class.java)
+		
 		textures = manager.get("images/aurora.atlas")
+		
+		circleShaderProgram = manager.get("shaders/circle.vert")
+		diskShaderProgram = manager.get("shaders/disk.vert")
 		gravimetricShaderProgram = manager.get("shaders/gravimetric.vert")
 	}
 
