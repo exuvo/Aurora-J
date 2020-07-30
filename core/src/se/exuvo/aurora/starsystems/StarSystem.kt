@@ -154,6 +154,8 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 
 		val worldBuilder = WorldConfigurationBuilder()
 //		worldBuilder.dependsOn(ProfilerPlugin::class.java)
+//		worldBuilder.with(DebugPlugin.thatLogsErrorsIn("net.mostlyoriginal"))
+//		worldBuilder.with(DebugPlugin.thatLogsEverythingIn("net.mostlyoriginal"))
 		worldBuilder.with(EventSystem(PooledFastEventDispatcher(pools), SubscribeAnnotationFinder()))
 		worldBuilder.with(OrbitSystem())
 		worldBuilder.with(ColonySystem())

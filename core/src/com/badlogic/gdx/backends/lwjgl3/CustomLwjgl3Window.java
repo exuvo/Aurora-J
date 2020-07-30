@@ -1,8 +1,5 @@
 package com.badlogic.gdx.backends.lwjgl3;
 
-import java.nio.IntBuffer;
-
-import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWDropCallback;
 import org.lwjgl.glfw.GLFWImage;
@@ -27,15 +24,10 @@ public class CustomLwjgl3Window extends Lwjgl3Window {
 	private long windowHandle;
 	private final AuroraGame listener;
 	private boolean listenerInitialized = false;
-	private Lwjgl3WindowListener windowListener;
 	private Lwjgl3Graphics graphics;
 	private Lwjgl3Input input;
-	private final Lwjgl3ApplicationConfiguration config;
 	private final Array<Runnable> runnables = new Array<Runnable>();
 	private final Array<Runnable> executedRunnables = new Array<Runnable>();
-	private final IntBuffer tmpBuffer;
-	private final IntBuffer tmpBuffer2;
-	private boolean iconified = false;
 
 	private final GLFWWindowFocusCallback focusCallback = new GLFWWindowFocusCallback() {
 
@@ -150,21 +142,17 @@ public class CustomLwjgl3Window extends Lwjgl3Window {
 		}
 	};
 
-	CustomLwjgl3Window(ApplicationListener listener, Lwjgl3ApplicationConfiguration config) {
-		super(listener, config);
+	CustomLwjgl3Window(ApplicationListener listener, Lwjgl3ApplicationConfiguration config, Lwjgl3ApplicationBase application) {
+		super(listener, config, application);
 
 		this.listener = (AuroraGame) listener;
-		this.windowListener = config.windowListener;
-		this.config = config;
-		this.tmpBuffer = BufferUtils.createIntBuffer(1);
-		this.tmpBuffer2 = BufferUtils.createIntBuffer(1);
 	}
 
 	void create(long windowHandle) {
 		this.windowHandle = windowHandle;
-		this.input = new Lwjgl3Input(this);
+		this.input = application.createInput(this);
 		this.graphics = new Lwjgl3Graphics(this);
-
+		
 		GLFW.glfwSetWindowFocusCallback(windowHandle, focusCallback);
 		GLFW.glfwSetWindowIconifyCallback(windowHandle, iconifyCallback);
 		GLFW.glfwSetWindowMaximizeCallback(windowHandle, maximizeCallback);
@@ -207,24 +195,6 @@ public class CustomLwjgl3Window extends Lwjgl3Window {
 	 **/
 	public void setPosition(int x, int y) {
 		GLFW.glfwSetWindowPos(windowHandle, x, y);
-	}
-
-	/**
-	 * @return the window position in logical coordinates. All monitors span a virtual surface together. The coordinates are relative to the
-	 *         first monitor in the virtual surface.
-	 **/
-	public int getPositionX() {
-		GLFW.glfwGetWindowPos(windowHandle, tmpBuffer, tmpBuffer2);
-		return tmpBuffer.get(0);
-	}
-
-	/**
-	 * @return the window position in logical coordinates. All monitors span a virtual surface together. The coordinates are relative to the
-	 *         first monitor in the virtual surface.
-	 **/
-	public int getPositionY() {
-		GLFW.glfwGetWindowPos(windowHandle, tmpBuffer, tmpBuffer2);
-		return tmpBuffer2.get(0);
 	}
 
 	/**
@@ -340,11 +310,6 @@ public class CustomLwjgl3Window extends Lwjgl3Window {
 		setSizeLimits(windowHandle, minWidth, minHeight, maxWidth, maxHeight);
 	}
 
-	static void setSizeLimits(long windowHandle, int minWidth, int minHeight, int maxWidth, int maxHeight) {
-		GLFW.glfwSetWindowSizeLimits(windowHandle, minWidth > -1 ? minWidth : GLFW.GLFW_DONT_CARE, minHeight > -1 ? minHeight : GLFW.GLFW_DONT_CARE, maxWidth > -1 ? maxWidth : GLFW.GLFW_DONT_CARE,
-				maxHeight > -1 ? maxHeight : GLFW.GLFW_DONT_CARE);
-	}
-
 	Lwjgl3Graphics getGraphics() {
 		return graphics;
 	}
@@ -396,10 +361,6 @@ public class CustomLwjgl3Window extends Lwjgl3Window {
 
 	boolean shouldClose() {
 		return GLFW.glfwWindowShouldClose(windowHandle);
-	}
-
-	Lwjgl3ApplicationConfiguration getConfig() {
-		return config;
 	}
 
 	boolean isListenerInitialized() {

@@ -75,6 +75,8 @@ class AuroraGameMainWindow() : AuroraGame {
 	}
 
 	override fun resize(width: Int, height: Int) {
+		println("resize width $width height $height bbw ${Gdx.graphics.getBackBufferWidth()} bbh ${Gdx.graphics.getBackBufferHeight()}")
+//		Gdx.gl.glViewport(0, 0, 1024, 1024);
 		screenService.resize(width, height)
 		
 		storage.forEach {
@@ -133,6 +135,12 @@ class AuroraGameSecondaryWindow(val system: StarSystem) : AuroraGame {
 
 	override fun resize(width: Int, height: Int) {
 		screenService.resize(width, height)
+		
+		storage.forEach {
+			if (it is Resizable) {
+				it.resize(width, height)
+			}
+		}
 	}
 
 	override fun update() {

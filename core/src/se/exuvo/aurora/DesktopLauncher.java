@@ -70,7 +70,7 @@ public class DesktopLauncher {
 		log.info("Changed log level to " + level);
 		
 		//https://github.com/LWJGL/lwjgl3-wiki/wiki/2.5.-Troubleshooting
-		Configuration.DEBUG.set(true);
+//		Configuration.DEBUG.set(true);
 //		Configuration.DEBUG_STREAM.set(IoBuilder.forLogger(glLog).setLevel(Level.INFO).buildPrintStream());
 		
 		Lwjgl3ApplicationConfiguration windowConfig = new Lwjgl3ApplicationConfiguration();
@@ -125,6 +125,9 @@ public class DesktopLauncher {
 		} else {
 
 			windowConfig.setWindowedMode(Settings.getInt("Window/width", defaultWidth), Settings.getInt("Window/height", defaultHeight));
+//			windowConfig.setMaximized(true);
+//			windowConfig.setMaximizedMonitor(Lwjgl3ApplicationConfiguration.getMonitors()[0]);
+			//TODO parts of window are not rendered until resize when on main GPU
 		}
 
 //		windowConfig.foregroundFPS = Settings.getInt("Window/FrameLimit", 60);

@@ -48,7 +48,7 @@ fun getFontWidth(font: BitmapFont, text: String): Float {
 class LoadingScreen() : GameScreenImpl() {
 
 	private val assetManager = GameServices[AssetManager::class]
-	private val uiCamera = OrthographicCamera()
+	private var uiCamera: OrthographicCamera = AuroraGame.currentWindow.screenService.uiCamera
 	private var texturePackerTask = TexturePackerTask(assetManager)
 
 	override fun show() {
@@ -72,10 +72,6 @@ class LoadingScreen() : GameScreenImpl() {
 //		profiler.setListener(GLErrorListener.THROWING_LISTENER)
 
 		Assets.startLoad()
-	}
-
-	override fun resize(width: Int, height: Int) {
-		uiCamera.setToOrtho(false, width.toFloat(), height.toFloat())
 	}
 
 	override fun update(deltaRealTime: Float) {

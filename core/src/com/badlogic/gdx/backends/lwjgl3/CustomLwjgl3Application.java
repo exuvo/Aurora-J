@@ -4,9 +4,9 @@ import java.io.File;
 import java.io.PrintStream;
 import java.nio.IntBuffer;
 
+import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
-import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.AMDDebugOutput;
 import org.lwjgl.opengl.ARBDebugOutput;
 import org.lwjgl.opengl.GL;
@@ -28,16 +28,8 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.LifecycleListener;
 import com.badlogic.gdx.Net;
 import com.badlogic.gdx.Preferences;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationLogger;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Clipboard;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Cursor;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3FileHandle;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3NativesLoader;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Preferences;
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowConfiguration;
-import com.badlogic.gdx.backends.lwjgl3.audio.OpenALAudio;
+import com.badlogic.gdx.backends.lwjgl3.audio.Lwjgl3Audio;
+import com.badlogic.gdx.backends.lwjgl3.audio.OpenALLwjgl3Audio;
 import com.badlogic.gdx.backends.lwjgl3.audio.mock.MockAudio;
 import com.badlogic.gdx.graphics.glutils.GLVersion;
 import com.badlogic.gdx.utils.Array;
@@ -48,12 +40,12 @@ import com.badlogic.gdx.utils.SharedLibraryLoader;
 
 import se.unlogic.standardutils.threads.ThreadUtils;
 
-public class CustomLwjgl3Application implements Application {
+public class CustomLwjgl3Application implements Lwjgl3ApplicationBase {
 
 	private final Lwjgl3ApplicationConfiguration config;
-	private final Array<CustomLwjgl3Window> windows = new Array<CustomLwjgl3Window>();
+	final Array<CustomLwjgl3Window> windows = new Array<CustomLwjgl3Window>();
 	private volatile CustomLwjgl3Window currentWindow;
-	private Audio audio;
+	private Lwjgl3Audio audio;
 	private final Files files;
 	private final ObjectMap<String, Preferences> preferences = new ObjectMap<String, Preferences>();
 	private final Lwjgl3Clipboard clipboard;
@@ -83,21 +75,27 @@ public class CustomLwjgl3Application implements Application {
 	public CustomLwjgl3Application(ApplicationListener listener, Lwjgl3ApplicationConfiguration config, int framerate) {
 		initializeGlfw();
 		setApplicationLogger(new Lwjgl3ApplicationLogger());
-		this.config = Lwjgl3ApplicationConfiguration.copy(config);
 		
-		if (this.config.title == null) {
-			this.config.title = listener.getClass().getSimpleName();
+		if (config.title == null) {
+			config.title = listener.getClass().getSimpleName();
 		}
+		
+		this.config = Lwjgl3ApplicationConfiguration.copy(config);
 	
 		Gdx.app = this;
 		
-		try {
-			this.audio = Gdx.audio = new OpenALAudio(config.audioDeviceSimultaneousSources, config.audioDeviceBufferCount, config.audioDeviceBufferSize);
-			
-		} catch (Throwable t) {
-			log("Lwjgl3Application", "Couldn't initialize audio, disabling audio", t);
-			this.audio = Gdx.audio = new MockAudio();
+		if (!config.disableAudio) {
+			try {
+				this.audio = createAudio(config);
+			} catch (Throwable t) {
+				log("Lwjgl3Application", "Couldn't initialize audio, disabling audio", t);
+				this.audio = new MockAudio();
+			}
+		} else {
+			this.audio = new MockAudio();
 		}
+		
+		Gdx.audio = audio;
 		
 		this.files = Gdx.files = new Lwjgl3Files();
 		this.clipboard = new Lwjgl3Clipboard();
@@ -122,18 +120,15 @@ public class CustomLwjgl3Application implements Application {
 		}
 	}
 
-	private void loop() {
+	protected void loop() {
 		Array<CustomLwjgl3Window> closedWindows = new Array<CustomLwjgl3Window>();
-		boolean updateAudio = audio instanceof OpenALAudio;
 		
 		long accumulator = 0L;
 		long lastRun = System.nanoTime();
 		
 		while (running && windows.size > 0) {
 			// FIXME put it on a separate thread
-			if (updateAudio) {
-				((OpenALAudio) audio).update();
-			}
+			audio.update();
 
 			if (closedWindows.size > 0) {
 				closedWindows.clear();
@@ -216,7 +211,7 @@ public class CustomLwjgl3Application implements Application {
 		}
 	}
 
-	private void cleanupWindows() {
+	protected void cleanupWindows() {
 		synchronized (lifecycleListeners) {
 			for (LifecycleListener lifecycleListener : lifecycleListeners) {
 				lifecycleListener.pause();
@@ -229,11 +224,9 @@ public class CustomLwjgl3Application implements Application {
 		windows.clear();
 	}
 
-	private void cleanup() {
+	protected void cleanup() {
 		Lwjgl3Cursor.disposeSystemCursors();
-		if (audio instanceof OpenALAudio) {
-			((OpenALAudio) audio).dispose();
-		}
+		audio.dispose();
 		errorCallback.free();
 		errorCallback = null;
 		if (glDebugCallback != null) {
@@ -384,6 +377,17 @@ public class CustomLwjgl3Application implements Application {
 			lifecycleListeners.removeValue(listener, true);
 		}
 	}
+	
+	@Override
+	public Lwjgl3Audio createAudio (Lwjgl3ApplicationConfiguration config) {
+		return new OpenALLwjgl3Audio(config.audioDeviceSimultaneousSources,
+			config.audioDeviceBufferCount, config.audioDeviceBufferSize);
+	}
+
+	@Override
+	public Lwjgl3Input createInput (Lwjgl3Window window) {
+		return new DefaultLwjgl3Input(window);
+	}
 
 	/**
 	 * Creates a new {@link CustomLwjgl3Window} using the provided listener and {@link Lwjgl3WindowConfiguration}. This function only just
@@ -397,7 +401,7 @@ public class CustomLwjgl3Application implements Application {
 	}
 
 	private CustomLwjgl3Window createWindow(Lwjgl3ApplicationConfiguration config, ApplicationListener listener, long sharedContext) {
-		CustomLwjgl3Window window = new CustomLwjgl3Window(listener, config);
+		CustomLwjgl3Window window = new CustomLwjgl3Window(listener, config, this);
 		if (sharedContext == 0) {
 			// the main window is created immediately
 			createWindow(window, config, sharedContext);
@@ -428,6 +432,7 @@ public class CustomLwjgl3Application implements Application {
 		GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_FALSE);
 		GLFW.glfwWindowHint(GLFW.GLFW_RESIZABLE, config.windowResizable ? GLFW.GLFW_TRUE : GLFW.GLFW_FALSE);
 		GLFW.glfwWindowHint(GLFW.GLFW_MAXIMIZED, config.windowMaximized ? GLFW.GLFW_TRUE : GLFW.GLFW_FALSE);
+		GLFW.glfwWindowHint(GLFW.GLFW_AUTO_ICONIFY, config.autoIconify ? GLFW.GLFW_TRUE : GLFW.GLFW_FALSE);
 
 		if (sharedContextWindow == 0) {
 			GLFW.glfwWindowHint(GLFW.GLFW_RED_BITS, config.r);
@@ -450,6 +455,10 @@ public class CustomLwjgl3Application implements Application {
 				GLFW.glfwWindowHint(GLFW.GLFW_OPENGL_PROFILE, GLFW.GLFW_OPENGL_CORE_PROFILE);
 			}
 		}
+		
+		if (config.transparentFramebuffer) {
+			GLFW.glfwWindowHint(GLFW.GLFW_TRANSPARENT_FRAMEBUFFER, GLFW.GLFW_TRUE);
+		}
 
 		if (config.debug) {
 			GLFW.glfwWindowHint(GLFW.GLFW_OPENGL_DEBUG_CONTEXT, GLFW.GLFW_TRUE);
@@ -458,7 +467,7 @@ public class CustomLwjgl3Application implements Application {
 		long windowHandle = 0;
 
 		if (config.fullscreenMode != null) {
-			// glfwWindowHint(GLFW.GLFW_REFRESH_RATE, config.fullscreenMode.refreshRate);
+			GLFW.glfwWindowHint(GLFW.GLFW_REFRESH_RATE, config.fullscreenMode.refreshRate);
 			windowHandle = GLFW.glfwCreateWindow(config.fullscreenMode.width, config.fullscreenMode.height, config.title, config.fullscreenMode.getMonitor(), sharedContextWindow);
 		} else {
 			GLFW.glfwWindowHint(GLFW.GLFW_DECORATED, config.windowDecorated ? GLFW.GLFW_TRUE : GLFW.GLFW_FALSE);
@@ -468,16 +477,34 @@ public class CustomLwjgl3Application implements Application {
 			throw new GdxRuntimeException("Couldn't create window");
 		}
 		CustomLwjgl3Window.setSizeLimits(windowHandle, config.windowMinWidth, config.windowMinHeight, config.windowMaxWidth, config.windowMaxHeight);
-		if (config.fullscreenMode == null && !config.windowMaximized) {
+		if (config.fullscreenMode == null) {
 			if (config.windowX == -1 && config.windowY == -1) {
 				int windowWidth = Math.max(config.windowWidth, config.windowMinWidth);
 				int windowHeight = Math.max(config.windowHeight, config.windowMinHeight);
 				if (config.windowMaxWidth > -1) windowWidth = Math.min(windowWidth, config.windowMaxWidth);
 				if (config.windowMaxHeight > -1) windowHeight = Math.min(windowHeight, config.windowMaxHeight);
-				GLFWVidMode vidMode = GLFW.glfwGetVideoMode(GLFW.glfwGetPrimaryMonitor());
-				GLFW.glfwSetWindowPos(windowHandle, vidMode.width() / 2 - windowWidth / 2, vidMode.height() / 2 - windowHeight / 2);
+				
+				long monitorHandle = GLFW.glfwGetPrimaryMonitor();
+				if (config.windowMaximized && config.maximizedMonitor != null) {
+					monitorHandle = config.maximizedMonitor.monitorHandle;
+				}
+
+				IntBuffer areaXPos = BufferUtils.createIntBuffer(1);
+				IntBuffer areaYPos = BufferUtils.createIntBuffer(1);
+				IntBuffer areaWidth = BufferUtils.createIntBuffer(1);
+				IntBuffer areaHeight = BufferUtils.createIntBuffer(1);
+				GLFW.glfwGetMonitorWorkarea(monitorHandle, areaXPos, areaYPos, areaWidth, areaHeight);
+
+				GLFW.glfwSetWindowPos(windowHandle,
+				         areaXPos.get(0) + areaWidth.get(0) / 2 - windowWidth / 2,
+				         areaYPos.get(0) + areaHeight.get(0) / 2 - windowHeight / 2);
+				
 			} else {
 				GLFW.glfwSetWindowPos(windowHandle, config.windowX, config.windowY);
+			}
+			
+			if (config.windowMaximized) {
+				GLFW.glfwMaximizeWindow(windowHandle);
 			}
 		}
 		if (config.windowIconPaths != null) {
@@ -500,7 +527,7 @@ public class CustomLwjgl3Application implements Application {
 			glDebugCallback = GLUtil.setupDebugMessageCallback(config.debugStream);
 			setGLDebugMessageControl(GLDebugMessageSeverity.NOTIFICATION, false);
 		}
-
+		
 		return windowHandle;
 	}
 
@@ -517,9 +544,26 @@ public class CustomLwjgl3Application implements Application {
 	}
 
 	public enum GLDebugMessageSeverity {
-		HIGH(GL43.GL_DEBUG_SEVERITY_HIGH, KHRDebug.GL_DEBUG_SEVERITY_HIGH, ARBDebugOutput.GL_DEBUG_SEVERITY_HIGH_ARB, AMDDebugOutput.GL_DEBUG_SEVERITY_HIGH_AMD), MEDIUM(GL43.GL_DEBUG_SEVERITY_MEDIUM,
-				KHRDebug.GL_DEBUG_SEVERITY_MEDIUM, ARBDebugOutput.GL_DEBUG_SEVERITY_MEDIUM_ARB, AMDDebugOutput.GL_DEBUG_SEVERITY_MEDIUM_AMD), LOW(GL43.GL_DEBUG_SEVERITY_LOW, KHRDebug.GL_DEBUG_SEVERITY_LOW,
-						ARBDebugOutput.GL_DEBUG_SEVERITY_LOW_ARB, AMDDebugOutput.GL_DEBUG_SEVERITY_LOW_AMD), NOTIFICATION(GL43.GL_DEBUG_SEVERITY_NOTIFICATION, KHRDebug.GL_DEBUG_SEVERITY_NOTIFICATION, -1, -1);
+		HIGH(
+				GL43.GL_DEBUG_SEVERITY_HIGH,
+				KHRDebug.GL_DEBUG_SEVERITY_HIGH,
+				ARBDebugOutput.GL_DEBUG_SEVERITY_HIGH_ARB,
+				AMDDebugOutput.GL_DEBUG_SEVERITY_HIGH_AMD),
+		MEDIUM(
+				GL43.GL_DEBUG_SEVERITY_MEDIUM,
+				KHRDebug.GL_DEBUG_SEVERITY_MEDIUM,
+				ARBDebugOutput.GL_DEBUG_SEVERITY_MEDIUM_ARB,
+				AMDDebugOutput.GL_DEBUG_SEVERITY_MEDIUM_AMD),
+		LOW(
+				GL43.GL_DEBUG_SEVERITY_LOW,
+				KHRDebug.GL_DEBUG_SEVERITY_LOW,
+				ARBDebugOutput.GL_DEBUG_SEVERITY_LOW_ARB,
+				AMDDebugOutput.GL_DEBUG_SEVERITY_LOW_AMD),
+		NOTIFICATION(
+				GL43.GL_DEBUG_SEVERITY_NOTIFICATION,
+				KHRDebug.GL_DEBUG_SEVERITY_NOTIFICATION,
+				-1,
+				-1);
 
 		final int gl43, khr, arb, amd;
 
