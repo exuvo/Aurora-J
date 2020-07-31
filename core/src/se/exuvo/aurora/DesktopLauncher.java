@@ -3,7 +3,7 @@ package se.exuvo.aurora;
 import java.nio.file.Paths;
 
 import com.badlogic.gdx.Files.FileType;
-import com.badlogic.gdx.backends.lwjgl3.CustomLwjgl3Application;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 
 public class DesktopLauncher {
@@ -19,7 +19,7 @@ public class DesktopLauncher {
 		windowConfig.setPreferencesConfig(Paths.get("").toAbsolutePath().toString(), FileType.Absolute);
 
 		try {
-			new CustomLwjgl3Application(new AuroraGameMainWindow(), windowConfig, 60);
+			new Lwjgl3Application(new AuroraGameMainWindow(), windowConfig);
 			
 		} catch (Throwable e) {
 			e.printStackTrace();
