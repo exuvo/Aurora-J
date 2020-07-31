@@ -11,7 +11,7 @@ public class DesktopLauncher {
 	public static void main(String[] args) {
 		
 		Lwjgl3ApplicationConfiguration windowConfig = new Lwjgl3ApplicationConfiguration();
-		windowConfig.setTitle("Aurora J");
+		windowConfig.setTitle("test");
 		windowConfig.useOpenGL3(true, 3, 2);
 		windowConfig.setWindowedMode(1024, 1024);
 		windowConfig.useVsync(false);
