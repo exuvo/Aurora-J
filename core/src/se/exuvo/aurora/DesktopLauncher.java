@@ -76,8 +76,9 @@ public class DesktopLauncher {
 		Lwjgl3ApplicationConfiguration windowConfig = new Lwjgl3ApplicationConfiguration();
 		windowConfig.setTitle("Aurora J");
 		//TODO auto try latest or 4.4, 4.2, 3.2, 2.1
-		windowConfig.useOpenGL3(true, 4, 4);
-//		windowConfig.useOpenGL3(false, 2, 1);
+		windowConfig.useOpenGL3(true, 4, 2);
+//		windowConfig.useOpenGL3(true, 3, 2); // for mac
+//		windowConfig.useOpenGL3(false, 2, 1); // for laptop
 		windowConfig.enableGLDebugOutput(true, IoBuilder.forLogger(glLog).setLevel(Level.WARN).buildPrintStream());
 		
 		final int defaultWidth = 1024;
@@ -125,6 +126,8 @@ public class DesktopLauncher {
 		} else {
 
 			windowConfig.setWindowedMode(Settings.getInt("Window/width", defaultWidth), Settings.getInt("Window/height", defaultHeight));
+//			windowConfig.setWindowPosition(2000, 100);
+
 //			windowConfig.setMaximized(true);
 //			windowConfig.setMaximizedMonitor(Lwjgl3ApplicationConfiguration.getMonitors()[0]);
 			//TODO parts of window are not rendered until resize when on main GPU

@@ -521,7 +521,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			val fbo = wData.fbo
 
 			var vertexIdx = 0
-			var indiceIdx = 0
+			var indiceIdx: Int
 			val padding = 1 * scale
 			
 			fun vertex(x: Float, y: Float) {
@@ -538,7 +538,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	
 				Gdx.gl.glDisable(GL20.GL_BLEND);
 				
-				cShader.begin()
+				cShader.bind()
 				cShader.setUniformMatrix("u_projTrans", projectionMatrix);
 				cShader.setUniformf("u_scale", scale);
 				
@@ -587,9 +587,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					mesh.render(cShader, GL20.GL_TRIANGLES)
 				}
 				
-				cShader.end()
-				
-				dShader.begin()
+				dShader.bind()
 				dShader.setUniformMatrix("u_projTrans", projectionMatrix);
 	
 				// Render inner circle
@@ -636,7 +634,6 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					mesh.render(dShader, GL20.GL_TRIANGLES)
 				}
 				
-				dShader.end()
 				fbo.end()
 			
 				Gdx.gl.glEnable(GL20.GL_BLEND);
