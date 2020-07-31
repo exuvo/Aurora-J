@@ -529,6 +529,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				vertices[vertexIdx++] = y;
 			}
 			
+			// https://gamedev.stackexchange.com/questions/81686/how-to-make-unit-selection-circles-merge
 			fun drawWeaponRanges2(weaponRanges: List<WeaponRange>) {
 				
 				fbo.begin();
