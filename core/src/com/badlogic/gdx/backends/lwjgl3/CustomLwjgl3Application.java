@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.PrintStream;
 import java.nio.IntBuffer;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -42,6 +44,8 @@ import se.unlogic.standardutils.threads.ThreadUtils;
 
 public class CustomLwjgl3Application implements Lwjgl3ApplicationBase {
 
+	private static final Logger log = LogManager.getLogger("se.exuvo.aurora.CustomLwjgl3Application");
+	
 	private final Lwjgl3ApplicationConfiguration config;
 	final Array<CustomLwjgl3Window> windows = new Array<CustomLwjgl3Window>();
 	private volatile CustomLwjgl3Window currentWindow;
@@ -445,6 +449,7 @@ public class CustomLwjgl3Application implements Lwjgl3ApplicationBase {
 		}
 
 		if (config.useGL30) {
+			// uncomment for auto latest
 			GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MAJOR, config.gles30ContextMajorVersion);
 			GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MINOR, config.gles30ContextMinorVersion);
 			if (SharedLibraryLoader.isMac) {
@@ -514,7 +519,7 @@ public class CustomLwjgl3Application implements Lwjgl3ApplicationBase {
 		GLFW.glfwSwapInterval(config.vSyncEnabled ? 1 : 0);
 		GL.createCapabilities();
 
-		initiateGL();
+		readGLVersion();
 		if (!glVersion.isVersionEqualToOrHigher(2, 0))
 			throw new GdxRuntimeException("OpenGL 2.0 or higher with the FBO extension is required. OpenGL version: " + GL11.glGetString(GL11.GL_VERSION) + "\n" + glVersion.getDebugVersionString());
 
@@ -531,11 +536,13 @@ public class CustomLwjgl3Application implements Lwjgl3ApplicationBase {
 		return windowHandle;
 	}
 
-	private static void initiateGL() {
+	private static void readGLVersion() {
 		String versionString = GL11.glGetString(GL11.GL_VERSION);
 		String vendorString = GL11.glGetString(GL11.GL_VENDOR);
 		String rendererString = GL11.glGetString(GL11.GL_RENDERER);
 		glVersion = new GLVersion(Application.ApplicationType.Desktop, versionString, vendorString, rendererString);
+		
+		log.info(glVersion.getDebugVersionString().replace('\n', ' '));
 	}
 
 	private static boolean supportsFBO() {

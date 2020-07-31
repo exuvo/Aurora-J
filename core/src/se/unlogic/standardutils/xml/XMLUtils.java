@@ -620,6 +620,7 @@ public class XMLUtils {
 		return DOCUMENT_BUILDER_FACTORY;
 	}
 	
+	@SuppressWarnings("deprecation")
 	public static <T extends XMLParserPopulateable> T parseBean(Element element, Class<T> beanClass) throws Exception {
 		
 		T bean = beanClass.newInstance();

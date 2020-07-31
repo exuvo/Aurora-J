@@ -28,6 +28,7 @@ import se.unlogic.standardutils.string.DummyStringyfier;
 import se.unlogic.standardutils.string.StringUtils;
 import se.unlogic.standardutils.string.Stringyfier;
 
+@SuppressWarnings("deprecation")
 public class XMLGenerator {
 
 	private static ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
@@ -201,7 +202,6 @@ public class XMLGenerator {
 		return getClassInfo(clazz).getElementName();
 	}
 	
-	@SuppressWarnings("unchecked")
 	private static ClassXMLInfo getClassInfo(Class<?> clazz) {
 
 		ClassXMLInfo classInfo = null;

@@ -33,7 +33,7 @@ import se.unlogic.standardutils.populators.EnumPopulator;
 import se.unlogic.standardutils.reflection.ReflectionUtils;
 import se.unlogic.standardutils.string.StringUtils;
 
-
+@SuppressWarnings("deprecation")
 public class AnnotatedResultSetPopulator<T> implements BeanResultSetPopulator<T>{
 
 	protected Class<T> beanClass;
@@ -47,7 +47,6 @@ public class AnnotatedResultSetPopulator<T> implements BeanResultSetPopulator<T>
 		this(beanClass,Arrays.asList(populators));
 	}
 
-	@SuppressWarnings("unchecked")
 	public AnnotatedResultSetPopulator(Class<T> beanClass, List<? extends BeanStringPopulator<?>> populators) throws UnsupportedFieldTypeException{
 
 		this.beanClass = beanClass;

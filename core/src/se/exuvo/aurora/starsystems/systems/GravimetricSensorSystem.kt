@@ -41,7 +41,7 @@ import se.exuvo.aurora.AuroraGame
 import com.badlogic.gdx.utils.Disposable
 
 //TODO render as displacement of elastic plane weighted down by mass
-
+@Suppress("DEPRECATION")
 class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Units.C).toLong()) { // 
 	companion object {
 		val SENSOR_ASPECT = Aspect.all(GravimetricSensorsComponent::class.java)

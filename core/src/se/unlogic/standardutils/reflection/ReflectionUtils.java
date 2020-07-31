@@ -23,6 +23,7 @@ import se.unlogic.standardutils.populators.BeanStringPopulatorRegistery;
 import se.unlogic.standardutils.populators.UnableToFindSuitablePopulatorException;
 import se.unlogic.standardutils.string.StringUtils;
 
+@SuppressWarnings("deprecation")
 public class ReflectionUtils {
 
 	public static Object getInstance(String className) throws NoClassDefFoundError, ClassNotFoundException, InstantiationException, IllegalAccessException {

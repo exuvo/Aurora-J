@@ -5,7 +5,7 @@ import java.lang.reflect.Method;
 
 import se.unlogic.standardutils.reflection.ReflectionUtils;
 
-
+@SuppressWarnings("deprecation")
 public class ReflectedRunnable implements Runnable {
 
 	protected final Object object;

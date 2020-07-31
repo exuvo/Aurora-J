@@ -12,11 +12,11 @@ varying vec2 v_renderPosition;
 // https://thebookofshaders.com/07/
 float circle(in vec2 center, in float radius) {
 	float dist = distance(center, u_center);
-	return smoothstep(radius - 1 * u_scale,
+	return smoothstep(radius - 1.0 * u_scale,
 	                  radius - 0.5 * u_scale,
 	                  dist)
 	     - smoothstep(radius + 0.5 * u_scale,
-	                  radius + 1 * u_scale,
+	                  radius + 1.0 * u_scale,
 	                  dist)
 	;
 }

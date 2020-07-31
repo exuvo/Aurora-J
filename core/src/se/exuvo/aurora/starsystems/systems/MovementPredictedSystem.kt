@@ -45,8 +45,25 @@ class MovementPredictedSystem : BaseEntitySystem(ASPECT) {
 	
 	private var queue = PriorityQueue<Int>(object : Comparator<Int> {
 		override fun compare(a: Int, b: Int): Int {
-			val timeA = movementMapper.get(a).next!!.time
-			val timeB = movementMapper.get(b).next!!.time
+			val movA = movementMapper.get(a);
+			val movB = movementMapper.get(b);
+			val nextA = movA.next
+			val nextB = movB.next
+			
+			if (nextA == null && nextB == null) {
+				return 0
+			}
+			
+			if (nextA == null) {
+				return 1
+			}
+			
+			if (nextB == null) {
+				return -1
+			}
+			
+			val timeA = nextA.time
+			val timeB = nextB.time
 			
 			return timeA.compareTo(timeB)
 		}

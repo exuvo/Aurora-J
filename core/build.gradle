@@ -36,10 +36,30 @@ task debug(dependsOn: classes, type: JavaExec) {
 // https://github.com/junkdog/artemis-odb/wiki/Weaving-LibGDX
 // Prepare folder with all dependencies exploded.
 task explodeForWeave(type: Sync) {
+	duplicatesStrategy = "include"
 	dependsOn classes, configurations.runtimeClasspath
 	into project.weaveDir
 	
-	from configurations.runtimeClasspath.findAll{it.name.endsWith('jar')}.collect{zipTree(it)}
+	from (configurations.runtimeClasspath.findAll{it.name.endsWith("jar")}.collect{zipTree(it)}) {
+		exclude "fonts/ArialUni.TTF"
+		exclude "org/sqlite/native/FreeBSD/**"
+		exclude "org/sqlite/native/Linux/ppc64/**"
+		exclude "org/sqlite/native/Linux/armv6/**"
+		exclude "org/sqlite/native/Linux/armv7/**"
+		exclude "org/sqlite/native/Linux/arm/**"
+		exclude "org/sqlite/native/Linux/aarch64/**"
+		exclude "org/sqlite/native/Linux/android-arm/**"
+		exclude "linux/arm32/**"
+		exclude "linux/arm64/**"
+		//TODO remove these and make overwrite work instead
+		exclude "com/artemis/EntitySubscription.class"
+		exclude "com/artemis/EntitySubscription\$SubscriptionExtra.class"
+		exclude "com/artemis/EntitySubscription\$SubscriptionListener.class"
+		exclude "com/badlogic/gdx/Lwjgl3Graphics.class"
+		exclude "com/badlogic/gdx/Lwjgl3Graphics\$1.class"
+		exclude "com/badlogic/gdx/Lwjgl3Graphics\$Lwjgl3DisplayMode.class"
+		exclude "com/badlogic/gdx/Lwjgl3Graphics\$Lwjgl3Monitor.class"
+	}
 	//from {configurations.compile.collect {zipTree(it)}}
 	
 	from files(sourceSets.main.output.classesDirs) {
@@ -52,8 +72,6 @@ task explodeForWeave(type: Sync) {
 	into ("assets") {
 		from files(project.assetsDir)
 	}
-	
-	//TODO remove weird architecture natives for sqllite
 }
 
 // artemis-odb: weaving settings.

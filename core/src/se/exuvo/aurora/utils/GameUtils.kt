@@ -23,7 +23,7 @@ import kotlin.reflect.KProperty0
 import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.full.*
 
-private val log = LogManager.getLogger("se.exuvo.aurora.utils")
+private val utilLog = LogManager.getLogger("se.exuvo.aurora.utils")
 
 inline fun IntBag.forEachFast(action: (entityID: Int) -> Unit) {
 	for (i in 0 .. size() - 1) {
@@ -253,7 +253,7 @@ fun consumeFuel(deltaGameTime: Int, entity: Entity, ship: ShipComponent, partRef
 			val removedFuel = ship.retrieveCargo(part.fuel, fuelRequired)
 
 			if (removedFuel != fuelRequired) {
-				log.warn("Entity ${entity.printID()} was expected to consume $fuelRequired but only had $removedFuel left")
+				utilLog.warn("Entity ${entity.printID()} was expected to consume $fuelRequired but only had $removedFuel left")
 			}
 
 		} else {

@@ -19,7 +19,7 @@ import java.util.Map.Entry;
 import se.unlogic.standardutils.datatypes.SimpleEntry;
 import se.unlogic.standardutils.reflection.ReflectionUtils;
 
-
+@SuppressWarnings("deprecation")
 public class BeanTagSourceFactory<T> implements TagSourceFactory<T>{
 
 	private Class<T> beanClass;

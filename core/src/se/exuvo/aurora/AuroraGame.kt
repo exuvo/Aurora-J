@@ -52,7 +52,7 @@ class AuroraGameMainWindow() : AuroraGame {
 	override fun create() {
 		com.esotericsoftware.minlog.Log.setLogger(MinlogTolog4j())
 		com.esotericsoftware.minlog.Log.set(com.esotericsoftware.minlog.Log.LEVEL_WARN)
-
+		
 		Lwjgl3Application.setGLDebugMessageControl(GLDebugMessageSeverity.HIGH, true)
 		Lwjgl3Application.setGLDebugMessageControl(GLDebugMessageSeverity.MEDIUM, true)
 		Lwjgl3Application.setGLDebugMessageControl(GLDebugMessageSeverity.LOW, true)

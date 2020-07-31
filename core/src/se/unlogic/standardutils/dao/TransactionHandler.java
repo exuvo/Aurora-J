@@ -179,6 +179,7 @@ public class TransactionHandler {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	protected void finalize() throws Throwable {
 
 		if (!commited && !aborted) {

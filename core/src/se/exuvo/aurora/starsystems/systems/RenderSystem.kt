@@ -68,6 +68,7 @@ import com.badlogic.gdx.graphics.Pixmap
 import se.exuvo.aurora.Resizable
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.g2d.TextureRegion
+import org.apache.logging.log4j.LogManager
 
 class RenderSystem : IteratingSystem(FAMILY) {
 	companion object {
@@ -83,6 +84,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		var debugPassiveSensors = Settings.getBol("Systems/Render/debugPassiveSensors", false)
 		var debugDisableStrategicView = Settings.getBol("Systems/Render/debugDisableStrategicView", false)
 		var debugDrawWeaponRangesWithoutShader = Settings.getBol("Systems/Render/debugDrawWeaponRangesWithoutShader", false)
+		val log = LogManager.getLogger(RenderSystem::class.java)
 	}
 
 	lateinit private var circleMapper: ComponentMapper<CircleComponent>
@@ -164,15 +166,15 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			circleShader = Assets.circleShaderProgram
 
 			if (!circleShader.isCompiled || circleShader.getLog().length != 0) {
-				println("shader errors: ${circleShader.getLog()}")
-				throw RuntimeException("Shader compile error: ${circleShader.getLog()}")
+				log.error("Shader circleShader compile error ${circleShader.getLog()}")
+				debugDrawWeaponRangesWithoutShader = true
 			}
 			
 			diskShader = Assets.diskShaderProgram
 
 			if (!diskShader.isCompiled || diskShader.getLog().length != 0) {
-				println("shader errors: ${diskShader.getLog()}")
-				throw RuntimeException("Shader compile error: ${diskShader.getLog()}")
+				log.error("Shader diskShader compile error ${circleShader.getLog()}")
+				debugDrawWeaponRangesWithoutShader = true
 			}
 			
 			vertices = FloatArray(MAX_VERTICES);

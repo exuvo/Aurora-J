@@ -17,7 +17,7 @@ buildscript {
 allprojects {
 	apply plugin: "eclipse"
 
-	version = '1.0'
+	version = '0.1'
 	ext {
 		appName = "Aurora J"
 		gdxVersion = '1.9.11'
@@ -47,13 +47,13 @@ subprojects {
 //	}
 	
 	tasks.withType(JavaCompile).all {
-		sourceCompatibility = "12"
-		targetCompatibility = "12"
+		sourceCompatibility = "11"
+		targetCompatibility = "11"
 	}
 	
 	tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 		kotlinOptions {
-			jvmTarget = "12"
+			jvmTarget = "11"
 			freeCompilerArgs = ["-Xno-param-assertions", "-Xno-call-assertions", "-Xno-receiver-assertions"]
 		}
 	}
@@ -72,6 +72,8 @@ project(":core") {
 		//compile "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
 		compile "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
 		compile "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-windows"
+		compile "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-linux"
+		compile "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-macos"
 		compile "org.apache.logging.log4j:log4j-iostreams:$log4jVersion"
 	
 		compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"

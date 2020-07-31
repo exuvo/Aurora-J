@@ -6,7 +6,7 @@ import java.util.List;
 
 import se.unlogic.standardutils.reflection.ReflectionUtils;
 
-
+@SuppressWarnings("deprecation")
 public class AnnotatedBeanTagSourceFactory<T> extends BeanTagSourceFactory<T> {
 
 	public AnnotatedBeanTagSourceFactory(Class<T> beanClass, String defaultPrefix) {
