@@ -3,12 +3,9 @@ package se.exuvo.aurora.starsystems.systems
 
 import com.artemis.Aspect
 import com.artemis.ComponentMapper
-import com.artemis.EntitySubscription.SubscriptionListener
 import com.artemis.systems.IteratingSystem
-import com.artemis.utils.IntBag
 import net.mostlyoriginal.api.event.common.EventSystem
 import org.apache.logging.log4j.LogManager
-import se.exuvo.aurora.empires.components.InCombatComponent
 import se.exuvo.aurora.galactic.AmmunitionPart
 import se.exuvo.aurora.galactic.BeamWeapon
 import se.exuvo.aurora.galactic.ChargedPart
@@ -16,7 +13,6 @@ import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.galactic.MissileLauncher
 import se.exuvo.aurora.galactic.PoweredPart
 import se.exuvo.aurora.galactic.Railgun
-import se.exuvo.aurora.galactic.TargetingComputer
 import se.exuvo.aurora.starsystems.components.AmmunitionPartState
 import se.exuvo.aurora.starsystems.components.ChargedPartState
 import se.exuvo.aurora.starsystems.components.NameComponent
@@ -28,15 +24,12 @@ import se.exuvo.aurora.starsystems.events.PowerEvent
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.Vector2L
-import com.badlogic.gdx.math.Vector2
 import se.exuvo.aurora.utils.Vector2D
 import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import se.exuvo.aurora.starsystems.StarSystem
 import com.artemis.annotations.Wire
 import se.exuvo.aurora.starsystems.components.MovementValues
 import se.exuvo.aurora.utils.Units
-import org.apache.commons.math3.analysis.solvers.PegasusSolver
-import org.apache.commons.math3.analysis.polynomials.PolynomialFunction
 import org.apache.commons.math3.analysis.solvers.LaguerreSolver
 import org.apache.commons.math3.exception.TooManyEvaluationsException
 import org.apache.commons.math3.util.FastMath
@@ -54,7 +47,6 @@ import se.exuvo.aurora.galactic.PartRef
 import se.exuvo.aurora.galactic.Part
 import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
 import se.exuvo.aurora.empires.components.IdleTargetingComputersComponent
-import se.exuvo.aurora.utils.printID
 
 class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -740,10 +732,10 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			}
 		}
 		
-		applyHullDamage(ship, damage)
+		applyHullDamage(entityID, ship, damage)
 	}
 	
-	fun applyHullDamage(ship: ShipComponent, damageEnergy: Long) {
+	fun applyHullDamage(entityID: Int, ship: ShipComponent, damageEnergy: Long) {
 		var damage = damageEnergy / 1000
 		
 		if (damage > 0 && ship.totalPartHP > 0) {
@@ -778,6 +770,8 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			
 			if (damage > 0) {
 				println("Ship destroyed")
+				//TODO create derelict
+				starSystem.unregisterShip(entityID, ship)
 			}
 		}
 	}

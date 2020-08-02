@@ -64,7 +64,7 @@ class ColonyManager : UIWindow() {
 									val system = entry.key
 									system.lock.read {
 										
-										if (treeNodeEx(system.galacticEntityID.toString(), TreeNodeFlag.DefaultOpen or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen, "System ${system.initialName}")) {
+										if (treeNodeEx(system.galacticEntityID.toString(), TreeNodeFlag.DefaultOpen or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen, "System ${system.getName()}")) {
 											
 											var newSelectedColony: EntityReference? = null
 											

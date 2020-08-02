@@ -6,7 +6,6 @@ import com.artemis.EntitySubscription
 import com.artemis.EntitySubscription.SubscriptionListener
 import com.artemis.World
 import com.artemis.WorldConfigurationBuilder
-import com.artemis.annotations.EntityId
 import com.artemis.utils.IntBag
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.RandomXS128
@@ -26,7 +25,6 @@ import se.exuvo.aurora.galactic.FuelContainerPart
 import se.exuvo.aurora.galactic.FueledThruster
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.galactic.MissileLauncher
-import se.exuvo.aurora.galactic.MunitionHull
 import se.exuvo.aurora.galactic.NuclearContainerPart
 import se.exuvo.aurora.galactic.PartRef
 import se.exuvo.aurora.galactic.PassiveSensor
@@ -56,8 +54,6 @@ import se.exuvo.aurora.starsystems.components.TintComponent
 import se.exuvo.aurora.starsystems.components.UUIDComponent
 import se.exuvo.aurora.starsystems.events.PooledFastEventDispatcher
 import se.exuvo.aurora.starsystems.systems.CustomSystemInvocationStrategy
-import se.exuvo.aurora.starsystems.systems.GravimetricSensorSystem
-import se.exuvo.aurora.starsystems.systems.GroupSystem
 import se.exuvo.aurora.starsystems.systems.MovementSystem
 import se.exuvo.aurora.starsystems.systems.OrbitSystem
 import se.exuvo.aurora.starsystems.systems.PassiveSensorSystem
@@ -73,7 +69,6 @@ import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.plusAssign
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
 import se.exuvo.aurora.galactic.ShipHull
@@ -96,6 +91,7 @@ import se.exuvo.aurora.galactic.Shield
 import se.exuvo.aurora.starsystems.systems.MovementPredictedSystem
 import se.exuvo.aurora.empires.components.InCombatComponent
 import se.exuvo.aurora.starsystems.systems.TargetingSystem
+import uk.co.omegaprime.btreemap.LongObjectBTreeMap
 
 class StarSystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener, Disposable {
 	companion object {
@@ -127,6 +123,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	val pools = PoolsCollection()
 	val uuidSubscription: EntitySubscription
 	val inCombatSubscription: EntitySubscription
+	val empireShips = LinkedHashMap<Empire, LongObjectBTreeMap<IntBag>>()
 
 	lateinit private var solarSystemMapper: ComponentMapper<StarSystemComponent>
 	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
@@ -400,6 +397,8 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 			println("Failed to add missiles")
 		}
 		
+		registerShip(entity4, empire1, shipHull.emptyMass)
+		
 		val entity5 = createEntity(Empire.GAIA)
 		timedMovementMapper.create(entity5).apply {previous.value.velocity.set(0L, 1000 * 100L); previous.value.position.set(- (Units.AU * 1000 * 0.5).toLong(), 0) }
 		renderMapper.create(entity5)
@@ -438,32 +437,78 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 			
 			shipMovement.set(colonyPos.value.position, shipMovement.previous.value.velocity, Vector2L.Zero, galaxy.time)
 			
-			hull.preferredCargo.forEach{ resource, amount ->
+			hull.preferredCargo.forEach{ (resource, amount) ->
 				shipComponent.addCargo(resource, colony.retrieveCargo(resource, amount))
 			}
 			
-			hull.preferredMunitions.forEach{ munitionHull, amount ->
+			hull.preferredMunitions.forEach{ (munitionHull, amount) ->
 				shipComponent.addCargo(munitionHull, colony.retrieveCargo(munitionHull, amount))
 			}
 			
 		} else {
 			
-			hull.preferredCargo.forEach{ resource, amount ->
+			hull.preferredCargo.forEach{ (resource, amount) ->
 				shipComponent.addCargo(resource, amount)
 			}
 			
-			hull.preferredMunitions.forEach{ munitionHull, amount ->
+			hull.preferredMunitions.forEach{ (munitionHull, amount) ->
 				shipComponent.addCargo(munitionHull, amount)
 			}
 		}
 		
+		registerShip(shipEntity, empire, hull.emptyMass)
+		
 		return shipEntity
+	}
+	
+	fun registerShip(entityID: Int,
+									 empire: Empire = ownerMapper.get(entityID).empire,
+									 emptyMass: Long = shipMapper.get(entityID).hull.emptyMass)
+	{
+		var map = empireShips[empire]
+		
+		if (map == null) {
+			map = LongObjectBTreeMap.create<IntBag>()!!
+			empireShips[empire] = map
+		}
+		
+		var ships = map[emptyMass]
+		
+		if (ships == null) {
+			ships = IntBag()
+			map[emptyMass] = ships
+		}
+		
+		ships.add(entityID)
+	}
+	
+	fun unregisterShip(entityID: Int, ship: ShipComponent = shipMapper.get(entityID)) {
+		val empire = ownerMapper.get(entityID)!!.empire
+		var map = empireShips[empire]
+		
+		if (map == null) {
+			log.error("Attempt to remove ship $entityID but empire $empire has no registered ships in this system $this")
+			return
+		}
+		
+		val mass = ship.hull.emptyMass
+		
+		var ships = map[mass]
+		
+		if (ships == null) {
+			log.error("Attempt to remove ship $entityID but empire $empire has no registered ships of mass $mass in this system $this")
+			return
+		}
+		
+		if (!ships.removeValue(entityID)) {
+			log.error("Attempt to remove ship $entityID from empire $empire but it is not registered in this system $this")
+		}
 	}
 	
 	fun createEntity(empire: Empire): Int {
 		val entityID = world.create()
 		solarSystemMapper.create(entityID).set(this)
-		uuidMapper.create(entityID).set(EntityUUID(sid, empire.id, getNewEntitityID()))
+		uuidMapper.create(entityID).set(EntityUUID(sid, empire.id, getNewEntityID()))
 
 		history.entityCreated(entityID, world)
 		
@@ -530,7 +575,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 				
 				world.setDelta(1f)
 				
-				for (i in 0 .. deltaGameTime.toInt()) {
+				for (i in 0 .. deltaGameTime) {
 					world.process()
 				}
 				
@@ -548,11 +593,13 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 //		Thread.sleep(delay)
 	}
 
-	private fun getNewEntitityID(): Long {
+	private fun getNewEntityID(): Long {
 		return entityUIDGenerator++
 	}
 	
-	fun <T: Event> getEvent(eventClass: KClass<T>) = pools.obtain(eventClass.java)
+	fun <T: Event> getEvent(eventClass: KClass<T>): T = pools.obtain(eventClass.java)
+	
+	fun getName() = galaxy.world.getMapper(NameComponent::class.java).get(galacticEntityID).name
 	
 	override fun dispose() {
 		world.dispose()
