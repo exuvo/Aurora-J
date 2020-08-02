@@ -68,70 +68,71 @@ subprojects {
 project(":core") {
 	dependencies {
 		//DesktopLauncher
-		compile "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
-		//compile "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
-		compile "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
-		compile "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-windows"
-		compile "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-linux"
-		compile "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-macos"
-		compile "org.apache.logging.log4j:log4j-iostreams:$log4jVersion"
+		runtimeOnly "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+		//runtimeOnly "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
+		runtimeOnly "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
+		runtimeOnly "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-windows"
+		runtimeOnly "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-linux"
+		runtimeOnly "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-macos"
+		implementation "org.apache.logging.log4j:log4j-iostreams:$log4jVersion"
 	
-		compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-		compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+		implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+		implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 				
-		compile "com.badlogicgames.gdx:gdx:$gdxVersion"
-		compile "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
-		//compile "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
-		//compile "com.badlogicgames.gdx:gdx-ai:1.8.1"
-		compile "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
-		//compile "com.badlogicgames.box2dlights:box2dlights:1.4"
+		implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
+		implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+		//implementation "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
+		//implementation "com.badlogicgames.gdx:gdx-ai:1.8.1"
+		implementation "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
+		//implementation "com.badlogicgames.box2dlights:box2dlights:1.4"
 		
-		//compile "io.github.libktx:ktx-actors:$ktxVersion"
-		//compile "io.github.libktx:ktx-app:$ktxVersion"
-		//compile "io.github.libktx:ktx-assets:$ktxVersion"
-		//compile "io.github.libktx:ktx-collections:$ktxVersion"
-		//compile "io.github.libktx:ktx-freetype:$ktxVersion"
-		//compile "io.github.libktx:ktx-freetype-async:$ktxVersion"
-		//compile "io.github.libktx:ktx-math:$ktxVersion"
-		//compile "io.github.libktx:ktx-scene2d:$ktxVersion"
-		//compile "io.github.libktx:ktx-style:$ktxVersion"
+		//implementation "io.github.libktx:ktx-actors:$ktxVersion"
+		//implementation "io.github.libktx:ktx-app:$ktxVersion"
+		//implementation "io.github.libktx:ktx-assets:$ktxVersion"
+		//implementation "io.github.libktx:ktx-collections:$ktxVersion"
+		//implementation "io.github.libktx:ktx-freetype:$ktxVersion"
+		//implementation "io.github.libktx:ktx-freetype-async:$ktxVersion"
+		//implementation "io.github.libktx:ktx-math:$ktxVersion"
+		//implementation "io.github.libktx:ktx-scene2d:$ktxVersion"
+		//implementation "io.github.libktx:ktx-style:$ktxVersion"
 		
-		compile "org.apache.logging.log4j:log4j-core:$log4jVersion"
-		compile "com.martiansoftware:jsap:$jsapVersion"
-		compile "com.esotericsoftware:kryo:4.0.1"
-		compile "com.esotericsoftware:jsonbeans:0.7"
-		compile "org.xerial:sqlite-jdbc:3.30.1"
-		//compile files("lib/sqlite-jdbc-3.30.1.jar")
-		compile "org.jasypt:jasypt:1.9.2"
+		implementation "org.apache.logging.log4j:log4j-core:$log4jVersion"
+		implementation "com.martiansoftware:jsap:$jsapVersion"
+		implementation "com.esotericsoftware:kryo:4.0.1"
+		implementation "com.esotericsoftware:jsonbeans:0.7"
+		implementation "org.xerial:sqlite-jdbc:3.30.1"
+		//implementation files("lib/sqlite-jdbc-3.30.1.jar")
+		implementation "org.jasypt:jasypt:1.9.2"
 		
-		compile "net.onedaybeard.artemis:artemis-odb:$artemisVersion"
-		//compile "net.onedaybeard.artemis:artemis-odb-serializer-json-libgdx:$artemisVersion"
-		//compile "net.onedaybeard.artemis:artemis-odb-serializer-kryo:$artemisVersion"
-		compile "net.mostlyoriginal.artemis-odb:contrib-core:$artemisContribVersion"
-		compile "net.mostlyoriginal.artemis-odb:contrib-eventbus:$artemisContribVersion"
-		//compile "net.mostlyoriginal.artemis-odb:contrib-plugin-operations:$artemisContribVersion"
-		//compile "net.mostlyoriginal.artemis-odb:contrib-plugin-profiler:$artemisContribVersion"
+		implementation "net.onedaybeard.artemis:artemis-odb:$artemisVersion"
+		//implementation "net.onedaybeard.artemis:artemis-odb-serializer-json-libgdx:$artemisVersion"
+		//implementation "net.onedaybeard.artemis:artemis-odb-serializer-kryo:$artemisVersion"
+		implementation "net.mostlyoriginal.artemis-odb:contrib-core:$artemisContribVersion"
+		implementation "net.mostlyoriginal.artemis-odb:contrib-eventbus:$artemisContribVersion"
+		//implementation "net.mostlyoriginal.artemis-odb:contrib-plugin-operations:$artemisContribVersion"
+		//implementation "net.mostlyoriginal.artemis-odb:contrib-plugin-profiler:$artemisContribVersion"
 		
-		compile "org.apache.commons:commons-math3:3.6.1"
-		compile "uk.co.omega-prime:btreemap:1.2.0" // https://github.com/batterseapower/btreemap
+		implementation "org.apache.commons:commons-math3:3.6.1"
+		implementation "uk.co.omega-prime:btreemap:1.2.0" // https://github.com/batterseapower/btreemap
 		
-		compile "org.lwjgl:lwjgl:$lwjglVersion"
-		compile "org.lwjgl:lwjgl-glfw:$lwjglVersion"
-		compile "org.lwjgl:lwjgl-jemalloc:$lwjglVersion"
-		compile "org.lwjgl:lwjgl-opengl:$lwjglVersion"
-		compile "org.lwjgl:lwjgl-openal:$lwjglVersion"
-		compile "org.lwjgl:lwjgl-opencl:$lwjglVersion"
-		compile "org.lwjgl:lwjgl-stb:$lwjglVersion"
-		
+		implementation "org.lwjgl:lwjgl:$lwjglVersion"
+		implementation "org.lwjgl:lwjgl-glfw:$lwjglVersion"
+		implementation "org.lwjgl:lwjgl-jemalloc:$lwjglVersion"
+		implementation "org.lwjgl:lwjgl-opengl:$lwjglVersion"
+		implementation "org.lwjgl:lwjgl-openal:$lwjglVersion"
+		implementation "org.lwjgl:lwjgl-opencl:$lwjglVersion"
+		implementation "org.lwjgl:lwjgl-stb:$lwjglVersion"
+
 		["gl", "glfw", "core"].each {
-			compile ("com.github.kotlin-graphics.imgui:imgui-$it:-SNAPSHOT") {
+			implementation ("com.github.kotlin-graphics.imgui:imgui-$it:v1.76") {
 				exclude group: 'org.lwjgl'
 				exclude group: 'org.jetbrains.kotlin'
 				exclude(group: 'com.github.kotlin-graphics.uno-sdk', module: "uno-awt")
 				exclude(group: 'com.github.kotlin-graphics.uno-sdk', module: "uno-vk")
 			}
 		}
-
+		compileOnly "com.github.kotlin-graphics:glm:1b4ac18dd1a3c23440d3f33596688aac60bc0141"
+		compileOnly "com.github.kotlin-graphics.uno-sdk:uno-core:402f5f495429b7f2178a1d200c32bb5ed2f7e6fa"
 	}
 }
 
