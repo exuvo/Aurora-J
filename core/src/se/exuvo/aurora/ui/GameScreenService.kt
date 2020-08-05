@@ -18,13 +18,74 @@ import se.exuvo.aurora.utils.exponentialAverage
 import se.exuvo.aurora.AuroraGame
 import kotlin.reflect.KClass
 import com.badlogic.gdx.Screen
+import com.badlogic.gdx.graphics.Mesh
+import com.badlogic.gdx.graphics.Pixmap
+import com.badlogic.gdx.graphics.VertexAttribute
+import com.badlogic.gdx.graphics.VertexAttributes
+import com.badlogic.gdx.graphics.glutils.FrameBuffer
+import com.badlogic.gdx.graphics.glutils.ShaderProgram
+import org.apache.logging.log4j.LogManager
+import org.lwjgl.BufferUtils
+import org.lwjgl.opengl.GL30
+import se.exuvo.aurora.AuroraGameMainWindow
+import se.exuvo.aurora.Resizable
+import se.exuvo.aurora.starsystems.systems.RenderSystem
+import java.nio.IntBuffer
 
 class GameScreenService : Disposable, InputProcessor {
+	companion object {
+		val log = LogManager.getLogger(GameScreenService::class.java)
+		
+		const val MAX_VERTICES = 16
+		const val MAX_INDICES = 6
+		
+		var gamma = Settings.getFloat("Systems/Render/gamma", 2.2f)
+	}
+	
 	private val inputMultiplexer = InputMultiplexer()
 	val uiCamera = OrthographicCamera()
+	private var fbo: FrameBuffer = createFBO()
 	private val screens = LinkedList<GameScreen>()
 	private val addQueue = LinkedList<GameScreen>()
-
+	
+	init {
+		var globalData = AuroraGame.storage(GameScreenServiceGlobalData::class)
+		
+		if (globalData == null) {
+			globalData = GameScreenServiceGlobalData()
+			AuroraGame.storage + globalData
+		}
+	}
+	
+	private fun createFBO() = FrameBuffer(Pixmap.Format.RGBA16, Gdx.graphics.getWidth(),Gdx.graphics.getHeight(), false)
+	
+	fun gData() = AuroraGame.storage[GameScreenServiceGlobalData::class]
+	
+	class GameScreenServiceGlobalData(): Disposable {
+		val gammaShader: ShaderProgram = Assets.gammaShaderProgram
+		val vertices: FloatArray
+		val indices: ShortArray
+		val mesh: Mesh
+		
+		init {
+			if (!gammaShader.isCompiled || gammaShader.getLog().isNotEmpty()) {
+				throw RuntimeException("Shader gammaShader compile error ${gammaShader.getLog()}")
+			}
+			
+			vertices = FloatArray(MAX_VERTICES);
+			indices = ShortArray(MAX_INDICES)
+			
+			mesh = Mesh(false, MAX_VERTICES, MAX_INDICES,
+					VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE),
+					VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, ShaderProgram.TEXCOORD_ATTRIBUTE)
+			);
+		}
+		
+		override fun dispose() {
+			mesh.dispose()
+		}
+	}
+	
 	fun <T : GameScreen> add(screen: T) {
 		addQueue.add(screen)
 	}
@@ -105,21 +166,79 @@ class GameScreenService : Disposable, InputProcessor {
 	private val clearColor = Color.BLACK
 	var renderTimeAverage = 0.0
 	
+	// gamma correction https://github.com/ocornut/imgui/issues/578#issuecomment-379467586
 	fun render() {
-		val spriteBatch = AuroraGame.currentWindow.spriteBatch
 		val now = System.nanoTime()
 		
 		frameStartTime = now - lastDrawStart
 		lastDrawStart = now
 		
+		val gData = gData()
+		val vertices = gData.vertices
+		val indices = gData.indices
+		val mesh = gData.mesh
+		val fbo = fbo
+		val gammaShader = gData.gammaShader
+		
+		fbo.begin()
 		Gdx.gl.glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a)
     Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
 		screens.forEach { it.draw() }
 		
+		fbo.end()
+		
+		Gdx.gl.glDisable(GL20.GL_BLEND);
+		Gdx.gl.glDisable(GL30.GL_FRAMEBUFFER_SRGB)
+		
+		gammaShader.bind()
+		gammaShader.setUniformMatrix("u_projTrans", uiCamera.combined);
+		gammaShader.setUniformi("u_texture", 15);
+		gammaShader.setUniformf("u_gamma", gamma);
+
+		val fboTex = fbo.getColorBufferTexture()
+		Gdx.gl.glActiveTexture(GL20.GL_TEXTURE15)
+		fboTex.bind()
+		Gdx.gl.glActiveTexture(GL20.GL_TEXTURE0)
+
+		var vertexIdx = 0
+		var indiceIdx = 0
+
+		fun vertex(x: Float, y: Float, u: Float, v: Float) {
+			vertices[vertexIdx++] = x;
+			vertices[vertexIdx++] = y;
+			vertices[vertexIdx++] = u;
+			vertices[vertexIdx++] = v;
+		}
+
+		// Triangle 1
+		indices[indiceIdx++] = 1.toShort()
+		indices[indiceIdx++] = 0.toShort()
+		indices[indiceIdx++] = 2.toShort()
+
+		// Triangle 2
+		indices[indiceIdx++] = 0.toShort()
+		indices[indiceIdx++] = 3.toShort()
+		indices[indiceIdx++] = 2.toShort()
+
+		val maxX = Gdx.graphics.width.toFloat()
+		val maxY = Gdx.graphics.height.toFloat()
+
+		vertex(0f, 0f, 0f, 0f);
+		vertex(maxX, 0f, 1f, 0f);
+		vertex(maxX, maxY, 1f, 1f);
+		vertex(0f, maxY, 0f, 1f);
+
+		mesh.setVertices(vertices, 0, vertexIdx)
+		mesh.setIndices(indices, 0, indiceIdx)
+		mesh.render(gammaShader, GL20.GL_TRIANGLES)
+		
 		val renderTime = System.nanoTime() - now
 		renderTimeAverage = exponentialAverage(renderTime.toDouble(), renderTimeAverage, 10.0)
-
+		
+		
+		val spriteBatch = AuroraGame.currentWindow.spriteBatch
+		
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
 
@@ -139,6 +258,9 @@ class GameScreenService : Disposable, InputProcessor {
 	}
 
 	fun resize(width: Int, height: Int) {
+		fbo.dispose()
+		fbo = createFBO()
+		
 		uiCamera.setToOrtho(false, width.toFloat(), height.toFloat())
 		screens.forEach { it.resize(width, height) }
 	}
@@ -149,6 +271,7 @@ class GameScreenService : Disposable, InputProcessor {
 
 	override fun dispose() {
 		screens.forEach { it.dispose() }
+		fbo.dispose()
 	}
 
 	override fun keyDown(keycode: Int): Boolean {

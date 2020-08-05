@@ -55,10 +55,7 @@ task explodeForWeave(type: Sync) {
 		exclude "com/artemis/EntitySubscription.class"
 		exclude "com/artemis/EntitySubscription\$SubscriptionExtra.class"
 		exclude "com/artemis/EntitySubscription\$SubscriptionListener.class"
-		exclude "com/badlogic/gdx/Lwjgl3Graphics.class"
-		exclude "com/badlogic/gdx/Lwjgl3Graphics\$1.class"
-		exclude "com/badlogic/gdx/Lwjgl3Graphics\$Lwjgl3DisplayMode.class"
-		exclude "com/badlogic/gdx/Lwjgl3Graphics\$Lwjgl3Monitor.class"
+		//TODO Gdx2DPixmap
 	}
 	//from {configurations.compile.collect {zipTree(it)}}
 	

@@ -7,30 +7,32 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics
 import com.badlogic.gdx.utils.Disposable
 import glm_.vec2.Vec2
 import glm_.vec2.Vec2d
+import glm_.vec4.Vec4
 import imgui.Col
-import imgui.classes.Context
 import imgui.ImGui
 import imgui.WindowFlag
+import imgui.classes.Context
+import imgui.imgui.widgets.beginPieMenu
+import imgui.imgui.widgets.beginPiePopup
+import imgui.imgui.widgets.endPieMenu
+import imgui.imgui.widgets.endPiePopup
+import imgui.imgui.widgets.pieMenuItem
+import imgui.impl.gl.GLInterface
+import imgui.impl.gl.ImplBestGL
+import imgui.impl.glfw.ImplGlfw
 import org.apache.logging.log4j.LogManager
 import org.lwjgl.glfw.GLFW
 import se.exuvo.aurora.Assets
+import se.exuvo.aurora.AuroraGame
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.starsystems.systems.GroupSystem
 import se.exuvo.aurora.starsystems.systems.RenderSystem
-import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.ui.keys.KeyActions_UIScreen
 import se.exuvo.aurora.ui.keys.KeyMappings
+import se.exuvo.aurora.utils.GameServices
+import se.exuvo.aurora.utils.toLinearRGB
 import uno.glfw.GlfwWindow
 import uno.glfw.GlfwWindowHandle
-import imgui.impl.glfw.ImplGlfw
-import imgui.impl.gl.GLInterface
-import imgui.impl.gl.ImplBestGL
-import imgui.imgui.widgets.beginPiePopup
-import imgui.imgui.widgets.pieMenuItem
-import imgui.imgui.widgets.beginPieMenu
-import imgui.imgui.widgets.endPieMenu
-import imgui.imgui.widgets.endPiePopup
-import glm_.vec4.Vec4
 
 class UIScreen : GameScreenImpl(), InputProcessor {
 	companion object {
@@ -91,12 +93,12 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 		gdxGLFWKeyMap[Input.Keys.Y] = GLFW.GLFW_KEY_Y
 		gdxGLFWKeyMap[Input.Keys.Z] = GLFW.GLFW_KEY_Z
 
-		var firstContext = galaxy.storage(ImGuiGlobalStorage::class)
+		var firstContext = AuroraGame.storage(ImGuiGlobalStorage::class)
 //		
 		if (firstContext == null) {
 			ctx = Context()
 //			ctx.io.configFlags = ctx.io.configFlags or ConfigFlag.NavEnableKeyboard.i
-			galaxy.storage + ImGuiGlobalStorage(ctx)
+			AuroraGame.storage + ImGuiGlobalStorage(ctx)
 			
 		} else {
 			ctx = Context(firstContext.ctx.io.fonts)
@@ -120,6 +122,11 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 			colors[Col.PlotLines.i]             (0.80f, 0.80f, 0.80f, 1.00f)
 			colors[Col.PlotHistogram.i]         (0.90f, 0.70f, 0.00f, 1.00f)
 			//@formatter:on
+		}
+		
+		// convert style from sRGB to linear https://github.com/ocornut/imgui/issues/578#issuecomment-577222389
+		for (i in 0 until ImGui.style.colors.size) {
+			ImGui.style.colors[i].toLinearRGB()
 		}
 		
 		lwjglGlfw = ImplGlfw(GlfwWindow(GlfwWindowHandle((Gdx.graphics as Lwjgl3Graphics).window.windowHandle)), false)

@@ -8,6 +8,7 @@ import se.exuvo.aurora.empires.components.ShipyardType
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.forEachFast
 import org.apache.commons.math3.util.FastMath
+import se.exuvo.aurora.starsystems.components.ChargedPartState
 import java.util.Collections
 
 class ShipHull() {
@@ -25,12 +26,13 @@ class ShipHull() {
 	private val partRefs: MutableList<PartRef<Part>> = ArrayList()
 	var armorLayers = 1 // Centimeters of armor
 	var armorBlockHP = ByteArray(1, { 100 - 128 })
-	var armorEnergyPerDamage = ShortArray(1, { 1000 }) // In J
+	var armorEnergyPerDamage = ShortArray(1, { 1000 }) // In joules
 	val preferredCargo: MutableMap<Resource, Long> = LinkedHashMap()
 	val preferredMunitions: MutableMap<MunitionHull, Int> = LinkedHashMap()
 	val preferredPartMunitions: MutableMap<PartRef<out Part>, MunitionHull> = LinkedHashMap()
 	var powerScheme: PowerScheme = PowerScheme.SOLAR_BATTERY_REACTOR
 	val defaultWeaponAssignments: MutableMap<PartRef<TargetingComputer>, List<PartRef<Part>>> = LinkedHashMap()
+	val shields: MutableList<PartRef<Part>> = ArrayList()
 	
 	var parentHull: ShipHull? = null
 	val derivatives: MutableList<ShipHull> = ArrayList()
@@ -78,6 +80,12 @@ class ShipHull() {
 			return field
 		}
 	
+	var maxShieldHP = -1L
+		get() {
+			if (field == -1L) { field = calculateMaxShieldHP() }
+			return field
+		}
+	
 	constructor(parentHull: ShipHull): this() {
 		this.parentHull = parentHull
 		
@@ -110,11 +118,17 @@ class ShipHull() {
 		
 		parentHull.derivatives += this
 	}
- 
- fun finalize() {
-	locked = true
-	//TODO sort target controls to after weapons in parts and partRefs
- }
+	
+	fun finalize() {
+		locked = true
+		//TODO sort target controls to after weapons in parts and partRefs
+		
+		partRefs.forEachFast { partRef ->
+			if (partRef.part is Shield) {
+				shields += partRef
+			}
+		}
+	}
 
 	@Suppress("UNCHECKED_CAST")
 	operator fun <T: Part> get(partClass: KClass<T>) : List<PartRef<T>> = partRefs.filter { partClass.isInstance(it.part) } as List<PartRef<T>>
@@ -180,8 +194,8 @@ class ShipHull() {
 	fun calculatePreferredMunitionMass(): Long {
 		var mass = 0L
 		
-		for((munitonHull, amount) in preferredMunitions) {
-			mass += amount * munitonHull.loadedMass
+		for((munitionHull, amount) in preferredMunitions) {
+			mass += amount * munitionHull.loadedMass
 		}
 		
 		return mass
@@ -228,6 +242,16 @@ class ShipHull() {
 		return cost
 	}
 	
+	fun calculateMaxShieldHP(): Long {
+		return parts.sumByLong {
+			if (it is Shield) {
+				it.capacitor
+			} else {
+				0L
+			}
+		}
+	}
+	
 	override fun toString(): String {
 		val parentHull = parentHull
 		
@@ -248,8 +272,8 @@ class ShipHull() {
 	}
 
 	override fun hashCode(): Int = hashcode
-
- fun resetLazyCache() {
+	
+	fun resetLazyCache() {
 		emptyMass = -1
 		loadedMass = -1
 		preferredCargoMass = -1
@@ -257,6 +281,7 @@ class ShipHull() {
 		volume = -1
 		surfaceArea = -1
 		cost = Collections.emptyMap()
+	 	maxShieldHP = -1
 		hashcode = -1
 	}
 }

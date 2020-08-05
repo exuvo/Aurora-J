@@ -72,6 +72,28 @@ public class Units {
 		}
 	}
 	
+	public static String capacityToString(long capacity) {
+		
+		if (capacity < KILO) {
+			return String.format("%d J", capacity);
+			
+		} else if (capacity < MEGA) {
+			return String.format("%d.%02d kJ", capacity / KILO, capacity % KILO / 10);
+			
+		} else if (capacity < GIGA) {
+			return String.format("%d.%02d MJ", capacity / MEGA, capacity % MEGA / 10 / KILO);
+			
+		} else if (capacity < TERA) {
+			return String.format("%d.%02d GJ", capacity / GIGA, capacity % GIGA / 10 / MEGA);
+			
+		} else if (capacity < 1000 * TERA) {
+			return String.format("%d.%02d TJ", capacity / TERA, capacity % TERA / 10 / GIGA);
+			
+		} else {
+			return String.format("%d TJ", capacity / TERA);
+		}
+	}
+	
 	public static String volumeToString(long volume) {
 		
 		if (volume < CUBIC_DECIMETRE) {

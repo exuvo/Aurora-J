@@ -348,7 +348,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				var size = tcState.readyWeapons.size()
 				
 				while (i < size) {
-					val weapon = tcState.readyWeapons.data[i++]
+					val weapon = tcState.readyWeapons[i++]
 					val part = weapon.part
 
 					when (part) {

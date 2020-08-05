@@ -203,7 +203,7 @@ class PassiveSensor(powerConsumption: Long = 0,
 // Blocks all laser and explosive, lets 50% kinetic through
 class Shield(capacitor: Long,
              powerConsumption: Long,
-             val efficiency: Int = 50 // Percent Energy to damage
+             val efficiency: Int = 50 // Percent Energy to shield HP
 ) : Part(),
 		ChargedPart by ChargedPartImpl(capacitor),
 		PoweredPart by PoweredPartImpl(powerConsumption)

@@ -18,6 +18,7 @@ import net.mostlyoriginal.api.utils.pooling.ObjectPool
 import se.exuvo.aurora.starsystems.systems.ProfilingSystemInvocationStrategy
 import se.exuvo.aurora.utils.callPrivateFunc
 import se.exuvo.aurora.starsystems.systems.CustomSystemInvocationStrategy
+import se.exuvo.aurora.utils.toLinearRGB
 
 // Inspiration https://bitbucket.org/wolfpld/tracy/src/master/
 class ProfilerWindow : UIWindow() {
@@ -107,7 +108,7 @@ class ProfilerWindow : UIWindow() {
 										val (pressed, hovered, held) = buttonBehavior(bb, id, flags)
 										
 										//Render
-										val col = if (hovered) Col.ButtonHovered.u32 else Vec4(0.3f, 0.5f, 0.3f, 1f).u32
+										val col = if (hovered) Col.ButtonHovered.u32 else Vec4(0.3f, 0.5f, 0.3f, 1f).toLinearRGB().u32
 										renderNavHighlight(bb, id)
 										renderFrame(bb.min, bb.max, col, true, 1f)
 										//TODO maybe change

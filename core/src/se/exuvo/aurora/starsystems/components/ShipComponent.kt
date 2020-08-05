@@ -24,6 +24,8 @@ import se.exuvo.aurora.galactic.MunitionHull
 import se.exuvo.aurora.utils.forEachFast
 import com.artemis.Entity
 import com.artemis.utils.Bag
+import se.exuvo.aurora.galactic.Shield
+import se.exuvo.aurora.utils.sumByLong
 import java.util.TreeMap
 import uk.co.omegaprime.btreemap.LongObjectBTreeMap
 import java.util.PriorityQueue
@@ -177,6 +179,19 @@ class ShipComponent() : Component() {
 		}
 		
 		return mass
+	}
+	
+	fun shieldHP(): Long {
+		
+		var shieldHP = 0L
+		
+		hull.shields.forEachFast { partRef ->
+			if (isPartEnabled(partRef)) {
+				shieldHP += partState[partRef.index][ChargedPartState::class].charge
+			}
+		}
+		
+		return shieldHP
 	}
 
 	fun getPartState(partRef: PartRef<out Part>): PartState {
@@ -555,7 +570,7 @@ data class ShipCargo(val type: CargoType) {
 
 @Suppress("UNCHECKED_CAST")
 class PartState {
-	private val states = HashMap<KClass<*>, Any>() //TODO to fixed array with hard index
+	private val states = HashMap<KClass<*>, Any>() //TODO to fixed array with static index
 
 	operator fun <T : Any> get(serviceClass: KClass<T>) = states[serviceClass] as T
 	fun <T : Any> tryGet(serviceClass: KClass<T>) = states[serviceClass] as? T

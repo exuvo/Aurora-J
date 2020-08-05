@@ -446,6 +446,7 @@ public class CustomLwjgl3Application implements Lwjgl3ApplicationBase {
 			GLFW.glfwWindowHint(GLFW.GLFW_STENCIL_BITS, config.stencil);
 			GLFW.glfwWindowHint(GLFW.GLFW_DEPTH_BITS, config.depth);
 			GLFW.glfwWindowHint(GLFW.GLFW_SAMPLES, config.samples);
+			GLFW.glfwWindowHint(GLFW.GLFW_SRGB_CAPABLE, GLFW.GLFW_FALSE);
 		}
 
 		if (config.useGL30) {

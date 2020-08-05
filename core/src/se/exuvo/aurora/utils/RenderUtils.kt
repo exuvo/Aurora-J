@@ -1,9 +1,85 @@
 package se.exuvo.aurora.utils
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType
 import com.badlogic.gdx.math.MathUtils
-import com.badlogic.gdx.graphics.Color
+import glm_.vec3.Vec3
+import glm_.vec4.Vec4
+import org.apache.commons.math3.util.FastMath
+
+fun sRGBtoLinearRGB(color: Float): Float {
+	if (color <= 0.04045) {
+		return color / 12.92f
+	}
+	return FastMath.pow((color + 0.055) / 1.055, 2.4).toFloat()
+}
+
+fun linearRGBtoSRGB(color: Float): Float {
+	if (color <= 0.0031308) {
+		return color * 12.92f
+	}
+	return (1.055 * FastMath.pow(color.toDouble(), 1 / 2.4) - 0.055).toFloat()
+}
+
+fun sRGBtoLinearRGB(color: Color): Color {
+	return Color(sRGBtoLinearRGB(color.r), sRGBtoLinearRGB(color.g), sRGBtoLinearRGB(color.b), color.a)
+}
+
+fun sRGBtoLinearRGB(color: Vec3): Vec3 {
+	return Vec3(sRGBtoLinearRGB(color.r), sRGBtoLinearRGB(color.g), sRGBtoLinearRGB(color.b))
+}
+
+fun sRGBtoLinearRGB(color: Vec4): Vec4 {
+	return Vec4(sRGBtoLinearRGB(color.r), sRGBtoLinearRGB(color.g), sRGBtoLinearRGB(color.b), color.a)
+}
+
+fun linearRGBtoSRGB(color: Color): Color {
+	return Color(linearRGBtoSRGB(color.r), linearRGBtoSRGB(color.g), linearRGBtoSRGB(color.b), color.a)
+}
+
+fun linearRGBtoSRGB(color: Vec3): Vec3 {
+	return Vec3(linearRGBtoSRGB(color.r), linearRGBtoSRGB(color.g), linearRGBtoSRGB(color.b))
+}
+
+fun linearRGBtoSRGB(color: Vec4): Vec4 {
+	return Vec4(linearRGBtoSRGB(color.r), linearRGBtoSRGB(color.g), linearRGBtoSRGB(color.b), color.a)
+}
+
+fun Color.toLinearRGB(): Color {
+	r = sRGBtoLinearRGB(r)
+	g = sRGBtoLinearRGB(g)
+	b = sRGBtoLinearRGB(b)
+	return this
+}
+
+fun Vec3.toLinearRGB(): Vec3 {
+	r = sRGBtoLinearRGB(r)
+	g = sRGBtoLinearRGB(g)
+	b = sRGBtoLinearRGB(b)
+	return this
+}
+
+fun Vec4.toLinearRGB(): Vec4 {
+	r = sRGBtoLinearRGB(r)
+	g = sRGBtoLinearRGB(g)
+	b = sRGBtoLinearRGB(b)
+	return this
+}
+
+fun Vec3.toSRGB(): Vec3 {
+	r = linearRGBtoSRGB(r)
+	g = linearRGBtoSRGB(g)
+	b = linearRGBtoSRGB(b)
+	return this
+}
+
+fun Vec4.toSRGB(): Vec4 {
+	r = linearRGBtoSRGB(r)
+	g = linearRGBtoSRGB(g)
+	b = linearRGBtoSRGB(b)
+	return this
+}
 
 fun lerpColors(lerp: Float, low: Color, mid: Color, high: Color, result: Color) {
 	result.set(mid)

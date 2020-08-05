@@ -2,73 +2,75 @@ package se.exuvo.aurora.starsystems.systems
 
 import com.artemis.Aspect
 import com.artemis.ComponentMapper
-import com.artemis.Entity
+import com.artemis.EntitySubscription
+import com.artemis.annotations.Wire
 import com.artemis.systems.IteratingSystem
+import com.artemis.utils.IntBag
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.GL30
+import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.graphics.OrthographicCamera
+import com.badlogic.gdx.graphics.Pixmap
+import com.badlogic.gdx.graphics.VertexAttribute
+import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.glutils.FrameBuffer
+import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.utils.Disposable
 import com.badlogic.gdx.utils.viewport.Viewport
+import org.apache.commons.math3.util.FastMath
+import org.apache.logging.log4j.LogManager
+import org.lwjgl.BufferUtils
 import se.exuvo.aurora.Assets
+import se.exuvo.aurora.AuroraGame
+import se.exuvo.aurora.Resizable
+import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
+import se.exuvo.aurora.empires.components.IdleTargetingComputersComponent
+import se.exuvo.aurora.galactic.AdvancedMunitionHull
+import se.exuvo.aurora.galactic.BeamWeapon
 import se.exuvo.aurora.galactic.Galaxy
+import se.exuvo.aurora.galactic.MissileLauncher
+import se.exuvo.aurora.galactic.PartRef
+import se.exuvo.aurora.galactic.Railgun
+import se.exuvo.aurora.galactic.SimpleMunitionHull
 import se.exuvo.aurora.galactic.TargetingComputer
+import se.exuvo.aurora.starsystems.StarSystem
+import se.exuvo.aurora.starsystems.components.AmmunitionPartState
 import se.exuvo.aurora.starsystems.components.CircleComponent
 import se.exuvo.aurora.starsystems.components.DetectionComponent
+import se.exuvo.aurora.starsystems.components.LaserShotComponent
+import se.exuvo.aurora.starsystems.components.MissileComponent
 import se.exuvo.aurora.starsystems.components.MoveToEntityComponent
 import se.exuvo.aurora.starsystems.components.MoveToPositionComponent
 import se.exuvo.aurora.starsystems.components.NameComponent
 import se.exuvo.aurora.starsystems.components.PassiveSensorsComponent
+import se.exuvo.aurora.starsystems.components.RailgunShotComponent
 import se.exuvo.aurora.starsystems.components.RenderComponent
 import se.exuvo.aurora.starsystems.components.ShipComponent
 import se.exuvo.aurora.starsystems.components.Spectrum
 import se.exuvo.aurora.starsystems.components.StrategicIconComponent
 import se.exuvo.aurora.starsystems.components.TargetingComputerState
-import se.exuvo.aurora.starsystems.components.TextComponent
 import se.exuvo.aurora.starsystems.components.ThrustComponent
 import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import se.exuvo.aurora.starsystems.components.TintComponent
-import se.exuvo.aurora.ui.GameScreenService
-import se.exuvo.aurora.ui.StarSystemScreen
-import se.exuvo.aurora.utils.*
+import se.exuvo.aurora.utils.GameServices
+import se.exuvo.aurora.utils.Units
+import se.exuvo.aurora.utils.Vector2D
+import se.exuvo.aurora.utils.Vector2L
+import se.exuvo.aurora.utils.forEachFast
+import se.exuvo.aurora.utils.sRGBtoLinearRGB
+import se.exuvo.aurora.utils.scanCircleSector
+import se.exuvo.aurora.utils.toLinearRGB
 import se.exuvo.settings.Settings
-import com.artemis.utils.IntBag
-import se.exuvo.aurora.AuroraGame
-import se.exuvo.aurora.galactic.Player
-import se.exuvo.aurora.starsystems.StarSystem
-import com.artemis.annotations.Wire
-import se.exuvo.aurora.starsystems.components.LaserShotComponent
-import se.exuvo.aurora.starsystems.components.RailgunShotComponent
-import com.artemis.EntitySubscription
-import org.apache.commons.math3.util.FastMath
-import se.exuvo.aurora.starsystems.components.MissileComponent
-import se.exuvo.aurora.galactic.BeamWeapon
-import se.exuvo.aurora.galactic.Railgun
-import se.exuvo.aurora.galactic.MissileLauncher
-import se.exuvo.aurora.starsystems.components.AmmunitionPartState
-import se.exuvo.aurora.galactic.SimpleMunitionHull
-import se.exuvo.aurora.galactic.AdvancedMunitionHull
+import java.nio.IntBuffer
 import kotlin.math.sign
-import com.badlogic.gdx.math.MathUtils
-import se.exuvo.aurora.empires.components.IdleTargetingComputersComponent
-import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
-import se.exuvo.aurora.galactic.PartRef
-import com.badlogic.gdx.utils.Disposable
-import com.badlogic.gdx.graphics.Mesh
-import com.badlogic.gdx.graphics.VertexAttributes
-import com.badlogic.gdx.graphics.glutils.ShaderProgram
-import se.exuvo.aurora.starsystems.systems.GravimetricSensorSystem.GravWindowData
-import com.badlogic.gdx.graphics.VertexAttribute
-import com.badlogic.gdx.graphics.glutils.FrameBuffer
-import com.badlogic.gdx.graphics.Pixmap
-import se.exuvo.aurora.Resizable
-import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.graphics.g2d.TextureRegion
-import org.apache.logging.log4j.LogManager
 
 class RenderSystem : IteratingSystem(FAMILY) {
 	companion object {
@@ -89,7 +91,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	lateinit private var circleMapper: ComponentMapper<CircleComponent>
 	lateinit private var tintMapper: ComponentMapper<TintComponent>
-	lateinit private var textMapper: ComponentMapper<TextComponent>
+//	lateinit private var textMapper: ComponentMapper<TextComponent>
 	lateinit private var nameMapper: ComponentMapper<NameComponent>
 	lateinit private var moveToEntityMapper: ComponentMapper<MoveToEntityComponent>
 	lateinit private var moveToPositionMapper: ComponentMapper<MoveToPositionComponent>
@@ -101,9 +103,9 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
 	lateinit private var idleTargetingComputersComponentMapper: ComponentMapper<IdleTargetingComputersComponent>
 	lateinit private var activeTargetingComputersComponentMapper: ComponentMapper<ActiveTargetingComputersComponent>
-	lateinit private var laserShotMapper: ComponentMapper<LaserShotComponent>
-	lateinit private var railgunShotMapper: ComponentMapper<RailgunShotComponent>
-	lateinit private var missileMapper: ComponentMapper<MissileComponent>
+//	lateinit private var laserShotMapper: ComponentMapper<LaserShotComponent>
+//	lateinit private var railgunShotMapper: ComponentMapper<RailgunShotComponent>
+//	lateinit private var missileMapper: ComponentMapper<MissileComponent>
 
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	private val galaxy = GameServices[Galaxy::class]
@@ -111,7 +113,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	@Wire
 	lateinit private var starSystem: StarSystem
 	
-	lateinit private var groupSystem: GroupSystem
+//	lateinit private var groupSystem: GroupSystem
 	lateinit private var orbitSystem: OrbitSystem
 //	lateinit private var gravSystem: GravimetricSensorSystem
 	
@@ -124,6 +126,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	private val tempD = Vector2D()
 	private val tempF = Vector2()
 	private val temp3F = Vector3()
+	private val tmpIntBuffer: IntBuffer = BufferUtils.createIntBuffer(4)
 	
 	private var scale: Float = 1f
 	lateinit private var viewport: Viewport
@@ -134,11 +137,11 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	private var displaySize: Int = 0
 
 	init {
-		var globalData = galaxy.storage(RenderGlobalData::class)
+		var globalData = AuroraGame.storage(RenderGlobalData::class)
 		
 		if (globalData == null) {
 			globalData = RenderGlobalData()
-			galaxy.storage + globalData
+			AuroraGame.storage + globalData
 		}
 	}
 	
@@ -156,21 +159,21 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	override fun process(entityID: Int) {}
 	
-	class RenderGlobalData(): Disposable {
-		val circleShader: ShaderProgram
-		val diskShader: ShaderProgram
+	class RenderGlobalData: Disposable {
+		val circleShader: ShaderProgram = Assets.circleShaderProgram
+		val diskShader: ShaderProgram = Assets.diskShaderProgram
 		val vertices: FloatArray
 		val indices: ShortArray
+		val mesh: Mesh
 
 		init {
-			circleShader = Assets.circleShaderProgram
-
+			
 			if (!circleShader.isCompiled || circleShader.getLog().length != 0) {
 				log.error("Shader circleShader compile error ${circleShader.getLog()}")
 				debugDrawWeaponRangesWithoutShader = true
 			}
 			
-			diskShader = Assets.diskShaderProgram
+			
 
 			if (!diskShader.isCompiled || diskShader.getLog().length != 0) {
 				log.error("Shader diskShader compile error ${circleShader.getLog()}")
@@ -178,22 +181,25 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			}
 			
 			vertices = FloatArray(MAX_VERTICES);
-			indices = ShortArray(MAX_INDICES);
+			indices = ShortArray(MAX_INDICES)
+			
+			mesh = Mesh(false, MAX_VERTICES, MAX_INDICES,
+					VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE)
+			);
 		}
 		
-		override fun dispose() {}
+		override fun dispose() {
+			mesh.dispose()
+		}
 	}
 	
 	class RenderWindowData(): Disposable, Resizable {
 
 		var fbo: FrameBuffer
-		val mesh: Mesh
 
 		init {
 			fbo = FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(),Gdx.graphics.getHeight(), false)
-			mesh = Mesh(false, MAX_VERTICES, MAX_INDICES,
-			            VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE)
-			);
+			
 		}
 		
 		override fun resize(width: Int, height: Int) {
@@ -202,7 +208,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 
 		override fun dispose() {
-			mesh.dispose()
+			fbo.dispose()
 		}
 	}
 	
@@ -217,9 +223,9 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		return wData
 	}
 	
-	fun gData() = galaxy.storage[RenderGlobalData::class]
+	fun gData() = AuroraGame.storage[RenderGlobalData::class]
 	
-	private final fun drawEntities(entityIDs: IntBag) {
+	private fun drawEntities(entityIDs: IntBag) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
 
@@ -232,8 +238,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				val x = (movement.getXinKM() - cameraOffset.x).toFloat()
 				val y = (movement.getYinKM() - cameraOffset.y).toFloat()
 
-				val color = Color(tintComponent?.color ?: Color.WHITE)
-				shapeRenderer.color = color
+				shapeRenderer.color = sRGBtoLinearRGB(Color(tintComponent?.color ?: Color.WHITE))
 
 				val circle = circleMapper.get(entityID)
 				shapeRenderer.circle(x, y, circle.radius / 1000, getCircleSegments(circle.radius, scale))
@@ -243,10 +248,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 
-	private final fun drawEntityCenters(entityIDs: IntBag) {
+	private fun drawEntityCenters(entityIDs: IntBag) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-		shapeRenderer.color = Color.PINK
+		shapeRenderer.color = sRGBtoLinearRGB(Color.PINK)
 
 		entityIDs.forEachFast { entityID ->
 
@@ -264,9 +269,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 	
-	private class WeaponRange() {
+	private class WeaponRange {
 		var radius: Float = 0f
-		var color: Color = Color.WHITE
 		var x: Float = 0f
 		var y: Float = 0f
 	}
@@ -274,7 +278,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	private val laserRanges = ArrayList<WeaponRange>()
 	private val missileRanges = ArrayList<WeaponRange>()
 	
-	private final fun drawWeaponRanges(entityIDs: IntBag, selectedEntityIDs: List<Int>) {
+	private fun drawWeaponRanges(entityIDs: IntBag, selectedEntityIDs: List<Int>) {
 
 		if (debugDrawWeaponRangesWithoutShader) {
 		
@@ -285,17 +289,14 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				if (selectedEntityIDs.contains(entityID) && movementMapper.has(entityID) &&
 					(idleTargetingComputersComponentMapper.has(entityID) || activeTargetingComputersComponentMapper.has(entityID))) {
 	
-					//TODO needs both
 					val tcs: List<PartRef<TargetingComputer>> = idleTargetingComputersComponentMapper.get(entityID)?.targetingComputers ?: activeTargetingComputersComponentMapper.get(entityID).targetingComputers
 					
 					val movement = movementMapper.get(entityID).get(galaxy.time).value
 					val ship = shipMapper.get(entityID)
 					
-					var x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
-					var y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
+					val x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
+					val y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
 					val timeToImpact = 10 // s
-					
-					//TODO draw at mouse pos if x is held
 					
 					tcs.forEachFast{ tc ->
 						val tcState = ship.getPartState(tc)[TargetingComputerState::class]
@@ -309,14 +310,13 @@ class RenderSystem : IteratingSystem(FAMILY) {
 								when (part) {
 									is BeamWeapon -> {
 										val projectileSpeed = (Units.C * 1000).toLong()
-										var damage: Long = (part.efficiency * part.capacitor) / 100
+										val damage: Long = (part.efficiency * part.capacitor) / 100
 										val dmg1Range = FastMath.sqrt(damage / FastMath.PI) / FastMath.tan(part.getRadialDivergence())
 										val timeRange = projectileSpeed * timeToImpact
 										
-	//									println("damage $damage, dmg1Range $dmg1Range, timeRange $timeRange")
 										range = FastMath.min(timeRange, dmg1Range.toLong())
 										
-										shapeRenderer.color = Color.PURPLE
+										shapeRenderer.color = sRGBtoLinearRGB(Color.PURPLE)
 									}
 									is Railgun -> {
 										val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
@@ -329,7 +329,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 										val projectileSpeed = (part.capacitor * part.efficiency) / (100 * munitionHull.loadedMass)
 										range = projectileSpeed * timeToImpact
 										
-										shapeRenderer.color = Color.ORANGE
+										shapeRenderer.color = sRGBtoLinearRGB(Color.ORANGE)
 									}
 									is MissileLauncher -> {
 										val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
@@ -345,7 +345,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 										
 										range = (missileLaunchSpeed * flightTime + (missileAcceleration * flightTime * flightTime) / 2) / 100
 										
-										shapeRenderer.color = Color.RED
+										shapeRenderer.color = sRGBtoLinearRGB(Color.RED)
 									}
 									else -> {
 										return@weaponLoop
@@ -396,16 +396,16 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 				if (selectedEntityIDs.contains(entityID) && movementMapper.has(entityID)) {
 
-					var idleTCs = idleTargetingComputersComponentMapper.get(entityID)
-					var activeTCs = activeTargetingComputersComponentMapper.get(entityID)
+					val idleTCs = idleTargetingComputersComponentMapper.get(entityID)
+					val activeTCs = activeTargetingComputersComponentMapper.get(entityID)
 
 					if (idleTCs != null || activeTCs != null) {
 
 						val movement = movementMapper.get(entityID).get(galaxy.time).value
 						val ship = shipMapper.get(entityID)
 
-						var x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
-						var y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
+						val x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
+						val y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
 						val timeToImpact = 10 // s
 
 						fun getRanges(tcs: List<PartRef<TargetingComputer>>) {
@@ -417,19 +417,16 @@ class RenderSystem : IteratingSystem(FAMILY) {
 										val part = weapon.part
 
 										val range: Long
-										val color: Color
 
 										when (part) {
 											is BeamWeapon -> {
 												val projectileSpeed = (Units.C * 1000).toLong()
-												var damage: Long = (part.efficiency * part.capacitor) / 100
+												val damage: Long = (part.efficiency * part.capacitor) / 100
 												val dmg1Range = FastMath.sqrt(damage / FastMath.PI) / FastMath.tan(part.getRadialDivergence())
 												val timeRange = projectileSpeed * timeToImpact
 
 												//									println("damage $damage, dmg1Range $dmg1Range, timeRange $timeRange")
 												range = FastMath.min(timeRange, dmg1Range.toLong())
-
-												color = Color.PURPLE
 											}
 											is Railgun -> {
 												val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
@@ -441,8 +438,6 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 												val projectileSpeed = (part.capacitor * part.efficiency) / (100 * munitionHull.loadedMass)
 												range = projectileSpeed * timeToImpact
-
-												color = Color.ORANGE
 											}
 											is MissileLauncher -> {
 												val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
@@ -456,10 +451,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 												val missileLaunchSpeed = (100 * part.launchForce) / advMunitionHull.loadedMass
 												val flightTime = advMunitionHull.fuelMass
 
-												range =
-													(missileLaunchSpeed * flightTime + (missileAcceleration * flightTime * flightTime) / 2) / 100
-
-												color = Color.RED
+												range = (missileLaunchSpeed * flightTime + (missileAcceleration * flightTime * flightTime) / 2) / 100
 											}
 											else -> {
 												return@weaponLoop
@@ -478,7 +470,6 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 											val weaponRange = rangePool.obtain()
 											weaponRange.radius = radius
-											weaponRange.color = color
 											weaponRange.x = x
 											weaponRange.y = y
 											
@@ -519,7 +510,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			val indices = gData.indices
 			val cShader = gData.circleShader
 			val dShader = gData.diskShader
-			val mesh = wData.mesh
+			val mesh = gData.mesh
 			val fbo = wData.fbo
 
 			var vertexIdx = 0
@@ -532,7 +523,15 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			}
 			
 			// https://gamedev.stackexchange.com/questions/81686/how-to-make-unit-selection-circles-merge
-			fun drawWeaponRanges2(weaponRanges: List<WeaponRange>) {
+			fun drawWeaponRanges2(weaponRanges: List<WeaponRange>, color: Color) {
+				
+				if (weaponRanges.isEmpty()) {
+					return
+				}
+				
+				Gdx.gl.glGetIntegerv(GL20.GL_FRAMEBUFFER_BINDING, tmpIntBuffer)
+				val oldFrameBufferHandle = tmpIntBuffer.get(0)
+				Gdx.gl.glGetIntegerv(GL20.GL_VIEWPORT, tmpIntBuffer)
 				
 				fbo.begin();
 				Gdx.gl.glClearColor(0f, 0f, 0f, 0f)
@@ -543,6 +542,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				cShader.bind()
 				cShader.setUniformMatrix("u_projTrans", projectionMatrix);
 				cShader.setUniformf("u_scale", scale);
+				val wepColor = sRGBtoLinearRGB(color)
+				cShader.setUniformf("u_color", wepColor.r, wepColor.g, wepColor.b)
+				
+				//TODO draw at mouse pos if x is held
 				
 				// Render outer circle
 				weaponRanges.forEachFast rangeLoop@{ wep ->
@@ -564,7 +567,6 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					
 					cShader.setUniformf("u_center", x, y)
 					cShader.setUniformf("u_radius", radius)
-					cShader.setUniformf("u_color", wep.color.r, wep.color.g, wep.color.b)
 					
 					vertexIdx = 0
 					indiceIdx = 0
@@ -636,8 +638,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					mesh.render(dShader, GL20.GL_TRIANGLES)
 				}
 				
-				fbo.end()
-			
+				// Restore previous framebuffer instead of default as fbo.end() would do
+				Gdx.gl20.glBindFramebuffer(GL20.GL_FRAMEBUFFER, oldFrameBufferHandle);
+				Gdx.gl20.glViewport(tmpIntBuffer.get(0), tmpIntBuffer.get(1), tmpIntBuffer.get(2), tmpIntBuffer.get(3));
+				
 				Gdx.gl.glEnable(GL20.GL_BLEND);
 				Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 				
@@ -651,16 +655,16 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				Gdx.gl.glDisable(GL20.GL_BLEND);
 			}
 			
-			drawWeaponRanges2(missileRanges)
-			drawWeaponRanges2(laserRanges)
-			drawWeaponRanges2(railgunRanges)
+			drawWeaponRanges2(missileRanges, Color.RED)
+			drawWeaponRanges2(laserRanges, Color.PURPLE)
+			drawWeaponRanges2(railgunRanges, Color.ORANGE)
 		}
 	}
 	
-	private final fun drawProjectiles() {
+	private fun drawProjectiles() {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-		shapeRenderer.color = Color.BLUE
+		shapeRenderer.color = sRGBtoLinearRGB(Color.BLUE)
 		
 		laserShotSubscription.getEntities().forEachFast { entityID ->
 
@@ -681,7 +685,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 		
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Point)
-		shapeRenderer.color = Color.GRAY
+		shapeRenderer.color = sRGBtoLinearRGB(Color.GRAY)
 		
 		railgunShotSubscription.getEntities().forEachFast { entityID ->
 			
@@ -692,7 +696,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			shapeRenderer.point(x, y, 0f)
 		}
 		
-		shapeRenderer.color = Color.WHITE
+		shapeRenderer.color = sRGBtoLinearRGB(Color.WHITE)
 		
 		missileSubscription.getEntities().forEachFast { entityID ->
 			
@@ -708,7 +712,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		// Draw intercept position
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 
-		shapeRenderer.color = Color.RED
+		shapeRenderer.color = sRGBtoLinearRGB(Color.RED)
 		laserShotSubscription.getEntities().forEachFast { entityID ->
 
 			val movement = movementMapper.get(entityID).next
@@ -770,7 +774,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		return radius / scale < 5f
 	}
 
-	private final fun drawStrategicEntities(entityIDs: IntBag) {
+	private fun drawStrategicEntities(entityIDs: IntBag) {
 
 		spriteBatch.begin()
 
@@ -784,15 +788,13 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				var y = (movement.getYinKM() - cameraOffset.y).toFloat()
 				val texture = strategicIconMapper.get(entityID).texture
 
-				val color = Color(tintComponent?.color ?: Color.WHITE)
-
 				// https://github.com/libgdx/libgdx/wiki/Spritebatch%2C-Textureregions%2C-and-Sprites
-				spriteBatch.setColor(color.r, color.g, color.b, color.a);
+				spriteBatch.color = sRGBtoLinearRGB(Color(tintComponent?.color ?: Color.WHITE));
 
 				val width = scale * STRATEGIC_ICON_SIZE
 				val height = scale * STRATEGIC_ICON_SIZE
-				x = x - width / 2
-				y = y - height / 2
+				x -= width / 2
+				y -= height / 2
 
 				if (thrustMapper.has(entityID)) {
 
@@ -814,10 +816,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		spriteBatch.end()
 	}
 
-	private final fun drawSelections(selectedEntityIDs: List<Int>) {
+	private fun drawSelections(selectedEntityIDs: List<Int>) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-		shapeRenderer.color = Color.RED
+		shapeRenderer.color = sRGBtoLinearRGB(Color.RED)
 
 		selectedEntityIDs.forEachFast { entityID ->
 
@@ -843,7 +845,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 
-	private final fun drawTimedMovement(entityIDs: IntBag, selectedEntityIDs: List<Int>) {
+	private fun drawTimedMovement(entityIDs: IntBag, selectedEntityIDs: List<Int>) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 
@@ -871,11 +873,11 @@ class RenderSystem : IteratingSystem(FAMILY) {
 						val segments = getCircleSegments(radius, scale)
 
 						if (selectedEntityIDs.contains(entityID)) {
-							shapeRenderer.color = Color.GREEN
+							shapeRenderer.color = sRGBtoLinearRGB(Color.GREEN)
 							shapeRenderer.circle(x, y, radius, segments)
 						}
 
-						shapeRenderer.color = Color.PINK
+						shapeRenderer.color = sRGBtoLinearRGB(Color.PINK)
 						shapeRenderer.circle(x2, y2, radius, segments)
 
 					} else {
@@ -885,11 +887,11 @@ class RenderSystem : IteratingSystem(FAMILY) {
 						val segments = getCircleSegments(radius, scale)
 
 						if (selectedEntityIDs.contains(entityID)) {
-							shapeRenderer.color = Color.GREEN
+							shapeRenderer.color = sRGBtoLinearRGB(Color.GREEN)
 							shapeRenderer.circle(x, y, radius, segments)
 						}
 
-						shapeRenderer.color = Color.PINK
+						shapeRenderer.color = sRGBtoLinearRGB(Color.PINK)
 						shapeRenderer.circle(x2, y2, radius, segments)
 					}
 					
@@ -900,7 +902,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 						val x3 = (((aimTarget.x.sign * 500 + aimTarget.x) / 1000L) - cameraOffset.x).toFloat()
 						val y3 = (((aimTarget.y.sign * 500 + aimTarget.y) / 1000L) - cameraOffset.y).toFloat()
 						
-						shapeRenderer.color = Color.ORANGE
+						shapeRenderer.color = sRGBtoLinearRGB(Color.ORANGE)
 						
 						if (strategic) {
 	
@@ -925,10 +927,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 
-	private final fun drawSelectionMoveTargets(selectedEntityIDs: List<Int>) {
+	private fun drawSelectionMoveTargets(selectedEntityIDs: List<Int>) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-		shapeRenderer.color = Color(0.8f, 0.8f, 0.8f, 0.5f)
+		shapeRenderer.color = Color(0.8f, 0.8f, 0.8f, 0.5f).toLinearRGB()
 
 		for (entityID in selectedEntityIDs) {
 			val movement = movementMapper.get(entityID).get(galaxy.time).value
@@ -955,10 +957,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 
-	private final fun drawAttackTargets(selectedEntityIDs: List<Int>) {
+	private fun drawAttackTargets(selectedEntityIDs: List<Int>) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-		shapeRenderer.color = Color(0.8f, 0f, 0f, 0.5f)
+		shapeRenderer.color = Color(0.8f, 0f, 0f, 0.5f).toLinearRGB()
 
 		val usedTargets = HashSet<Int>()
 
@@ -994,26 +996,27 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 	
-	private final fun drawOrders() {
+	//TODO implement
+	private fun drawOrders() {
 
-		val empire = Player.current.empire;
-		if (empire != null) {
-			
-			val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
-
-			shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-			shapeRenderer.color = Color(0.8f, 0f, 0f, 0.5f)
-
-			empire.orders.forEach {
-
-			}
-
-			shapeRenderer.end()
-		}
+//		val empire = Player.current.empire;
+//		if (empire != null) {
+//
+//			val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
+//
+//			shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+//			shapeRenderer.color = Color(0.8f, 0f, 0f, 0.5f).toLinearRGB()
+//
+//			empire.orders.forEach {
+//
+//			}
+//
+//			shapeRenderer.end()
+//		}
 	}
 
 	//TODO draw with shader
-	private final fun drawDetections(entityIDs: IntBag) {
+	private fun drawDetections(entityIDs: IntBag) {
 
 		//TODO if multiple detections with the same strength overlap (ie they see the same things), only draw overlap
 
@@ -1037,15 +1040,15 @@ class RenderSystem : IteratingSystem(FAMILY) {
 							when (sensor.part.spectrum) {
 
 								Spectrum.Thermal -> {
-									shapeRenderer.color = Color.CORAL
+									shapeRenderer.color = sRGBtoLinearRGB(Color.CORAL)
 								}
 
 								Spectrum.Electromagnetic -> {
-									shapeRenderer.color = Color.VIOLET
+									shapeRenderer.color = sRGBtoLinearRGB(Color.VIOLET)
 								}
 
 								else -> {
-									shapeRenderer.color = Color.WHITE
+									shapeRenderer.color = sRGBtoLinearRGB(Color.WHITE)
 								}
 							}
 
@@ -1054,18 +1057,18 @@ class RenderSystem : IteratingSystem(FAMILY) {
 							when (sensor.part.spectrum) {
 
 								Spectrum.Thermal -> {
-									shapeRenderer.color = Color.CORAL.cpy()
-									shapeRenderer.color.a = 0.2f
+									shapeRenderer.color = sRGBtoLinearRGB(Color.CORAL)
+									shapeRenderer.color.a = 0.05f
 								}
 
 								Spectrum.Electromagnetic -> {
-									shapeRenderer.color = Color.VIOLET.cpy()
-									shapeRenderer.color.a = 0.3f
+									shapeRenderer.color = sRGBtoLinearRGB(Color.VIOLET)
+									shapeRenderer.color.a = 0.05f
 								}
 
 								else -> {
-									shapeRenderer.color = Color.WHITE.cpy()
-									shapeRenderer.color.a = 0.2f
+									shapeRenderer.color = sRGBtoLinearRGB(Color.WHITE)
+									shapeRenderer.color.a = 0.05f
 								}
 							}
 						}
@@ -1109,7 +1112,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 		if (debugPassiveSensors) {
 			shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-			shapeRenderer.color = Color.PINK
+			shapeRenderer.color = sRGBtoLinearRGB(Color.PINK)
 
 			entityIDs.forEachFast { entityID ->
 				val detection = detectionMapper.get(entityID)
@@ -1138,7 +1141,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 	}
 
-	private final fun drawSelectionDetectionZones(selectedEntityIDs: List<Int>) {
+	private fun drawSelectionDetectionZones(selectedEntityIDs: List<Int>) {
 
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 
@@ -1156,18 +1159,18 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					when (sensor.part.spectrum) {
 	
 						Spectrum.Thermal -> {
-							shapeRenderer.color = Color.CORAL.cpy()
-							shapeRenderer.color.a = 0.2f
+							shapeRenderer.color = sRGBtoLinearRGB(Color.CORAL)
+							shapeRenderer.color.a = 0.1f
 						}
 	
 						Spectrum.Electromagnetic -> {
-							shapeRenderer.color = Color.VIOLET.cpy()
-							shapeRenderer.color.a = 0.3f
+							shapeRenderer.color = sRGBtoLinearRGB(Color.VIOLET)
+							shapeRenderer.color.a = 0.1f
 						}
 	
 						else -> {
-							shapeRenderer.color = Color.WHITE.cpy()
-							shapeRenderer.color.a = 0.2f
+							shapeRenderer.color = sRGBtoLinearRGB(Color.WHITE)
+							shapeRenderer.color.a = 0.1f
 						}
 					}
 	
@@ -1182,6 +1185,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 						val arcAngle = i * arcWidth + sensor.part.angleOffset
 	
 						shapeRenderer.scanCircleSector(x, y, maxRadius, minRadius, arcAngle, arcWidth, segments)
+						shapeRenderer.flush()
 						i++
 					}
 				}
@@ -1191,12 +1195,12 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end()
 	}
 
-	private final fun drawSelectionDetectionStrength(selectedEntityIDs: List<Int>) {
+	private fun drawSelectionDetectionStrength(selectedEntityIDs: List<Int>) {
 
 		val screenPosition = temp3F
 
 		val font = Assets.fontMap
-		font.color = Color.WHITE
+		font.color = sRGBtoLinearRGB(Color.WHITE)
 
 		selectedEntityIDs.filter { detectionMapper.has(it) }.forEach {
 
@@ -1238,7 +1242,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 						screenPosition.set(x, y, 0f)
 						viewport.camera.project(screenPosition)
 
-						font.color = Color.GREEN
+						font.color = sRGBtoLinearRGB(Color.GREEN)
 						font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceXadvance * .5f, screenPosition.y - textRow * font.lineHeight)
 					}
 				}
@@ -1248,12 +1252,12 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 	}
 
-	private final fun drawNames(entityIDs: IntBag) {
+	private fun drawNames(entityIDs: IntBag) {
 
 		val screenPosition = temp3F
 
 		val font = Assets.fontMap
-		font.color = Color.WHITE
+		font.color = sRGBtoLinearRGB(Color.WHITE)
 
 		entityIDs.forEachFast { entityID ->
 			if (nameMapper.has(entityID)) {
@@ -1283,12 +1287,12 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 	}
 
-	private final fun drawMovementTimes(entityIDs: IntBag, selectedEntityIDs: List<Int>) {
+	private fun drawMovementTimes(entityIDs: IntBag, selectedEntityIDs: List<Int>) {
 
 		val screenPosition = temp3F
 
 		val font = Assets.fontMap
-		font.color = Color.WHITE
+		font.color = sRGBtoLinearRGB(Color.WHITE)
 
 		entityIDs.forEachFast { entityID ->
 			if (movementMapper.has(entityID)) {
@@ -1318,7 +1322,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 						screenPosition.set(x, y - radius * 1.2f, 0f)
 						viewport.camera.project(screenPosition)
 
-						font.color = Color.GREEN
+						font.color = sRGBtoLinearRGB(Color.GREEN)
 						font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceXadvance * .5f, screenPosition.y - 1.5f * font.lineHeight)
 					}
 
@@ -1331,7 +1335,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 						screenPosition.set(x, y - radius * 1.2f, 0f)
 						viewport.camera.project(screenPosition)
 
-						font.color = Color.RED
+						font.color = sRGBtoLinearRGB(Color.RED)
 						font.draw(spriteBatch, text, screenPosition.x - text.length * font.spaceXadvance * .5f, screenPosition.y - 1.5f * font.lineHeight)
 					}
 				}
@@ -1339,7 +1343,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 	}
 
-	final fun render(viewport: Viewport, cameraOffset: Vector2L) {
+	fun render(viewport: Viewport, cameraOffset: Vector2L) {
 
 		this.viewport = viewport
 		this.cameraOffset = cameraOffset
@@ -1394,26 +1398,23 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		drawMovementTimes(entityIDs, selectedEntityIDs)
 
 		spriteBatch.end()
-		
-		//TODO gamma correction https://github.com/ocornut/imgui/issues/578#issuecomment-379467586
-		// check if we use sRGB https://github.com/ocornut/imgui/issues/1927#issuecomment-553844370
 	}
 
-	var lastBump = 0L
-	fun waterBump(mouseInGameCoordinates: Vector2L) {
-		val now = System.currentTimeMillis()
-		if (now - lastBump > 100) {
-			lastBump = now
-			
-			val x = GravimetricSensorSystem.WATER_SIZE / 2 + (mouseInGameCoordinates.x / 1000L) / GravimetricSensorSystem.H_SQUARE_SIZE_KM
-			val y = GravimetricSensorSystem.WATER_SIZE / 2 + (mouseInGameCoordinates.y / 1000L) / GravimetricSensorSystem.H_SQUARE_SIZE_KM
-			
-			if (x > 0 && x < GravimetricSensorSystem.WATER_SIZE-1 && y > 0 && y < GravimetricSensorSystem.WATER_SIZE-1 ){
-				//TODO don't add water, only move
+//	var lastBump = 0L
+//	fun waterBump(mouseInGameCoordinates: Vector2L) {
+//		val now = System.currentTimeMillis()
+//		if (now - lastBump > 100) {
+//			lastBump = now
+//
+//			val x = GravimetricSensorSystem.WATER_SIZE / 2 + (mouseInGameCoordinates.x / 1000L) / GravimetricSensorSystem.H_SQUARE_SIZE_KM
+//			val y = GravimetricSensorSystem.WATER_SIZE / 2 + (mouseInGameCoordinates.y / 1000L) / GravimetricSensorSystem.H_SQUARE_SIZE_KM
+//
+//			if (x > 0 && x < GravimetricSensorSystem.WATER_SIZE-1 && y > 0 && y < GravimetricSensorSystem.WATER_SIZE-1 ){
+//				//TODO don't add water, only move
 //				gravSystem.waveHeight[x.toInt() * GravimetricSensorSystem.WATER_SIZE + y.toInt()] += 10f
-			}
-		}
-	}
+//			}
+//		}
+//	}
 
 //	private fun drawDottedLine(dotDist: Float, x1: Float, y1: Float, x2: Float, y2: Float) {
 //		

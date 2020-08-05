@@ -35,6 +35,7 @@ interface AuroraGame : ApplicationListener {
 	
 	companion object {
 		public lateinit var currentWindow: AuroraGame
+		val storage = Storage()
 	}
 }
 
@@ -64,6 +65,8 @@ class AuroraGameMainWindow() : AuroraGame {
 		GameServices + AssetManager(AuroraAssetsResolver())
 		GameServices + GroupSystem(ReentrantReadWriteLock())
 		GameServices + History()
+		
+		Assets.earlyLoad()
 
 		screenService = GameScreenService()
 		shapeRenderer = ShapeRenderer()
@@ -75,8 +78,6 @@ class AuroraGameMainWindow() : AuroraGame {
 	}
 
 	override fun resize(width: Int, height: Int) {
-		println("resize width $width height $height bbw ${Gdx.graphics.getBackBufferWidth()} bbh ${Gdx.graphics.getBackBufferHeight()}")
-//		Gdx.gl.glViewport(0, 0, 1024, 1024);
 		screenService.resize(width, height)
 		
 		storage.forEach {

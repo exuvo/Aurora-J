@@ -61,7 +61,6 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 
 	private val groupSystem by lazy(LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	val players = ArrayList<Player>()
-	val storage = Storage()
 
 	val worldLock = ReentrantReadWriteLock()
 	val world: World

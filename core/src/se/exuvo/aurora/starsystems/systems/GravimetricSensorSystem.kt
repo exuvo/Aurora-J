@@ -39,6 +39,7 @@ import se.exuvo.aurora.utils.lerpColors
 import java.nio.FloatBuffer
 import se.exuvo.aurora.AuroraGame
 import com.badlogic.gdx.utils.Disposable
+import se.exuvo.aurora.AuroraGameMainWindow
 
 //TODO render as displacement of elastic plane weighted down by mass
 @Suppress("DEPRECATION")
@@ -202,7 +203,7 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 		return wData
 	}
 	
-	fun gData() = galaxy.storage[GravGlobalData::class]
+	fun gData() = AuroraGame.storage[GravGlobalData::class]
 	
 	init {
 		if (MAX_INDICES / 6 * 4 != MAX_VERTICES) {
@@ -216,11 +217,11 @@ class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Uni
 			AuroraGame.currentWindow.storage + windowData
 		}
 		
-		var globalData = galaxy.storage(GravGlobalData::class)
+		var globalData = AuroraGame.storage(GravGlobalData::class)
 		
 		if (globalData == null) {
 			globalData = GravGlobalData(windowData)
-			galaxy.storage + globalData
+			AuroraGame.storage + globalData
 		}
 		
 		strideSize = windowData.mesh.getVertexAttributes().vertexSize / 4

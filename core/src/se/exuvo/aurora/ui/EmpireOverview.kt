@@ -106,15 +106,29 @@ class EmpireOverview : UIWindow() {
 									}
 								}
 							}
-							//TODO star systems in which we have ships/colonies sorted by distance from largest colony
+							
+							/*
+								View modes
+									relative: current system at top
+									heliocentric: home system first, rest sorted by distance from home
+									
+								system tree
+									name
+									force overview dots (all factions)
+									
+									repeat for us, enemy, friendly, neutral
+										planets (only colonised)
+										stations
+										large ships
+										small ships
+							*/
+							
+							//TODO only star systems in which we have a presence in
 							val starSystems = Bag<StarSystem>()
 							
 							empire.colonies
 							empire.stations
 							empire.ships
-							// system tree
-							//  planets
-							//  ships
 							
 							// each system gathers up ships for the player in a list sorted by ship mass
 							// galaxy adds them all together after systems tick and we use that list here

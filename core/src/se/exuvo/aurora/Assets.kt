@@ -20,23 +20,24 @@ import kotlin.properties.Delegates
 object Assets : Disposable {
 
 	val log = LogManager.getLogger(this.javaClass)
-	private val manager by lazy (LazyThreadSafetyMode.NONE) { GameServices[AssetManager::class] }
+	private val manager = GameServices[AssetManager::class]
 
 	var fontMap by Delegates.notNull<BitmapFont>()
 	var fontMapSmall by Delegates.notNull<BitmapFont>()
 	var fontUI by Delegates.notNull<BitmapFont>()
 	var skinUI by Delegates.notNull<Skin>()
 	var textures by Delegates.notNull<TextureAtlas>()
+	var gammaShaderProgram by Delegates.notNull<ShaderProgram>()
 	var gravimetricShaderProgram by Delegates.notNull<ShaderProgram>()
 	var circleShaderProgram by Delegates.notNull<ShaderProgram>()
 	var diskShaderProgram by Delegates.notNull<ShaderProgram>()
 
-	fun startLoad() {
+	fun earlyLoad() {
 		val resolver = manager.getFileHandleResolver()
 		manager.setLoader(FreeTypeFontGenerator::class.java, FreeTypeFontGeneratorLoader(resolver))
 		manager.setLoader(BitmapFont::class.java, ".ttf", FreetypeFontLoader(resolver))
 		manager.setLoader(BitmapFont::class.java, ".otf", FreetypeFontLoader(resolver))
-
+		
 		val fontUILoadParams = FreeTypeFontLoaderParameter().apply {
 			fontFileName = "fonts/PrintClearly.otf"
 			fontParameters.apply {
@@ -46,13 +47,18 @@ object Assets : Disposable {
 				magFilter = TextureFilter.Linear
 			}
 		}
-
-		manager.load("fontUI.otf", BitmapFont::class.java, fontUILoadParams);
 		
-		// Load font now as it is used on the loading screen
+		manager.load("fontUI.otf", BitmapFont::class.java, fontUILoadParams);
+		manager.load("shaders/gamma.vert", ShaderProgram::class.java)
+		
 		manager.finishLoading()
+		
+		gammaShaderProgram = manager.get("shaders/gamma.vert")
 		fontUI = manager.get("fontUI.otf", BitmapFont::class.java)
 		fontUI.data.setScale(0.5f)
+	}
+	
+	fun startLoad() {
 		
 		val fontMapLoadParams = FreeTypeFontLoaderParameter().apply {
 			fontFileName = "fonts/13PXBUS.TTF"

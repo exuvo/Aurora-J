@@ -303,16 +303,25 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		shipHull.addPart(chemicalThruster)
 		
 		val shield = Shield(1 * Units.MEGA, 200 * Units.KILO, 50)
+		shield.name = "X-Booster"
 		shipHull.addPart(shield)
+		
+		val shield2 = Shield(1 * Units.KILO, 10 * Units.KILO, 80)
+		shield2.name = "S-Booster"
+		shipHull.addPart(shield2)
 		
 		shipHull.preferredCargo[Resource.NUCLEAR_FISSION] = 100
 		shipHull.preferredCargo[Resource.ROCKET_FUEL] = 10000
 		shipHull.preferredMunitions[sabot] = 100
 		shipHull.preferredMunitions[missile] = 50
 		
+		shipHull.finalize()
+		
 		val shipHull2 = ShipHull(shipHull)
 		shipHull2.name = "Elodin"
 		shipHull2.designDay = galaxy.day + 700
+		
+		shipHull2.finalize()
 		
 		if (empire1.shipHulls.size == 0) {
 			empire1.shipHulls += shipHull

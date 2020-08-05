@@ -70,7 +70,6 @@ class LoadingScreen() : GameScreenImpl() {
 		 */
 		
 //		profiler.setListener(GLErrorListener.THROWING_LISTENER)
-
 		Assets.startLoad()
 	}
 

@@ -48,7 +48,9 @@ import imgui.u32
 import se.exuvo.aurora.galactic.DamagePattern
 import se.exuvo.aurora.galactic.PartRef
 import se.exuvo.aurora.galactic.Part
+import se.exuvo.aurora.galactic.Shield
 import se.exuvo.aurora.ui.UIScreen.UIWindow
+import se.exuvo.aurora.utils.toLinearRGB
 
 class ShipDebugger : UIWindow() {
 	
@@ -296,9 +298,9 @@ class ShipDebugger : UIWindow() {
 											val backupPaddingY = style.framePadding.y
 											style.framePadding.y = 0f
 											
-											val fullArmorColor = Vec4(0f, 1f, 0f, 1f)
-											val emptyArmorColor = Vec4(1f, 0f, 0f, 1f)
-											val tmpColor = Vec4(0f, 0f, 0f, 1f)
+											val fullArmorColor =  Vec4(0f, 1f, 0f, 1f).toLinearRGB()
+											val emptyArmorColor = Vec4(1f, 0f, 0f, 1f).toLinearRGB()
+											val tmpColor =        Vec4(0f, 0f, 0f, 1f).toLinearRGB()
 											
 											fun armorBlock(hp: Float, maxHP: Float): Boolean {
 												val id = window.getID("armor")
@@ -320,8 +322,38 @@ class ShipDebugger : UIWindow() {
 												return hovered
 											}
 											
-											for (y in 0..shipComponent.hull.armorLayers - 1) { // layer
-												for (x in 0..shipComponent.hull.getArmorWidth() - 1) {
+											val filledShieldColor =      Vec4(0.3f, 0.3f, 1.0f, 1f).toLinearRGB()
+											val depletedShieldColor =    Vec4(0.3f, 0.3f, 0.6f, 1f).toLinearRGB()
+											val selDepletedShieldColor = Vec4(0.3f, 0.3f, 0.8f, 1f).toLinearRGB()
+											
+											fun shieldBar(hp: Double, maxHP: Double): Boolean {
+												val id = window.getID("shield")
+												val pos = Vec2(window.dc.cursorPos)
+												
+												val size = Vec2(5 * shipComponent.hull.getArmorWidth() + 1 * (shipComponent.hull.getArmorWidth() - 1), 5f)
+												val filledSize = Vec2(size.x * (hp / maxHP), 5f)
+												val bb = Rect(pos, pos + size)
+												val bbFilled = Rect(pos, pos + filledSize)
+												itemSize(size)
+												if (!itemAdd(bb, id)) return false
+												
+												val flags = 0
+												val (pressed, hovered, held) = buttonBehavior(bb, id, flags)
+												
+												//Render
+												renderNavHighlight(bb, id)
+												
+												var col = if (hovered) selDepletedShieldColor.u32 else depletedShieldColor.u32
+												renderFrame(bb.min, bb.max, col, true, style.frameRounding)
+												
+												col = if (hovered) Col.ButtonHovered.u32 else filledShieldColor.u32
+												window.drawList.addRectFilled(bbFilled.min, bbFilled.max, col, style.frameRounding)
+												
+												return hovered
+											}
+											
+											for (y in 0 until shipComponent.hull.armorLayers) { // layer
+												for (x in 0 until shipComponent.hull.getArmorWidth()) {
 													with (window) {
 														if (x == 0) {
 															dc.cursorPos.y = dc.cursorPos.y + 1 - style.itemSpacing.y
@@ -342,6 +374,31 @@ class ShipDebugger : UIWindow() {
 													popID()
 												}
 											}
+											
+											val shieldHP = shipComponent.shieldHP()
+											val maxShieldHP = shipComponent.hull.maxShieldHP
+											
+											if (shieldBar(shieldHP.toDouble(), maxShieldHP.toDouble())) {
+												tooltip {
+													shipComponent.hull.shields.forEachFast { partRef ->
+														val charge = shipComponent.getPartState(partRef)[ChargedPartState::class].charge
+														val capacity = (partRef.part as Shield).capacitor
+														
+														val text = "${partRef.part.name} ${Units.capacityToString(charge)} / ${Units.capacityToString(capacity)}"
+														
+														if (!shipComponent.isPartEnabled(partRef)) {
+															
+															withStyleColor(Col.Text, emptyArmorColor) {
+																textUnformatted(text)
+															}
+															
+														} else {
+															textUnformatted(text)
+														}
+													}
+												}
+											}
+											text("Shield %s / %s", Units.capacityToString(shieldHP), Units.capacityToString(maxShieldHP))
 											
 											style.framePadding.y = backupPaddingY
 											
