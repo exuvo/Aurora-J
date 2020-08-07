@@ -828,6 +828,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		coefs[0] = relativePosition.dot(relativePosition)
 		
 		try {
+			//TODO better start value, ex distance divided by speed^2
 			val complexRoots = polynomialSolver.solveAllComplex(coefs, 1.0, POLYNOMIAL_MAX_ITERATIONS)
 			
 			var solvedTime: Double? = null

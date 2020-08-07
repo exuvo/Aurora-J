@@ -69,8 +69,6 @@ import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.plusAssign
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.locks.ReentrantReadWriteLock
-import kotlin.concurrent.write
 import se.exuvo.aurora.galactic.ShipHull
 import se.exuvo.aurora.empires.components.ColonyComponent
 import se.exuvo.aurora.empires.components.ShipyardLocation
@@ -112,18 +110,26 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	var updateTimeAverage = 0.0
 
 	private var entityUIDGenerator = 1L
-	private val galaxy = GameServices[Galaxy::class]
+	val galaxy = GameServices[Galaxy::class]
 	private val history = GameServices[History::class]
 	val sid = starSystemIDGenerator.getAndIncrement()
 	val galacticEntityID: Int = galaxy.world.create()
 
-	val lock = ReentrantReadWriteLock()
 	val world: World
 	val random = RandomXS128()
 	val pools = PoolsCollection()
+	
+	val empireShips = LinkedHashMap<Empire, LongObjectBTreeMap<IntBag>>()
+	
+	val allSubscription: EntitySubscription
 	val uuidSubscription: EntitySubscription
 	val inCombatSubscription: EntitySubscription
-	val empireShips = LinkedHashMap<Empire, LongObjectBTreeMap<IntBag>>()
+	
+	// Will in practice have 3 shadowWorlds alive
+	var workingShadow: ShadowStarSystem
+	var shadow: ShadowStarSystem // Always safe to use from other StarSystems
+	var uiShadow: ShadowStarSystem // Requires UI lock
+	var retiredUIShadow: ShadowStarSystem? = null
 
 	lateinit private var solarSystemMapper: ComponentMapper<StarSystemComponent>
 	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
@@ -176,9 +182,14 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		worldConfig.register(this)
 		world = World(worldConfig)
 
-		world.getAspectSubscriptionManager().get(Aspect.all()).addSubscriptionListener(this)
+		allSubscription = world.getAspectSubscriptionManager().get(Aspect.all())
+		allSubscription.addSubscriptionListener(this)
 		world.inject(this)
-
+		
+		workingShadow = ShadowStarSystem(this)
+		shadow  = ShadowStarSystem(this)
+		uiShadow = shadow
+		
 		world.getAspectSubscriptionManager().get(Aspect.all()).addSubscriptionListener(object : SubscriptionListener {
 			override fun inserted(entityIDs: IntBag) {
 				entityIDs.forEachFast { entityID ->
@@ -552,7 +563,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 
 	fun getEntityByUUID(entityUUID: EntityUUID): Int? {
 		
-		uuidSubscription.getEntities().forEachFast{ entityID ->
+		uuidSubscription.getEntities().forEachFast { entityID ->
 			val uuid = uuidMapper.get(entityID).uuid
 			
 			if (uuid.hashCode() == entityUUID.hashCode()) {
@@ -578,22 +589,21 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 //	var delay = (Math.random() * 30).toLong()
 	fun update(deltaGameTime: Int) {
 
-		lock.write {
+		if (inCombatSubscription.getEntityCount() > 0) {
 			
-			if (inCombatSubscription.getEntityCount() > 0) {
-				
-				world.setDelta(1f)
-				
-				for (i in 0 .. deltaGameTime) {
-					world.process()
-				}
-				
-			} else {
+			world.setDelta(1f)
 			
-				world.setDelta(deltaGameTime.toFloat())
+			for (i in 0 .. deltaGameTime) {
 				world.process()
 			}
+			
+		} else {
+		
+			world.setDelta(deltaGameTime.toFloat())
+			world.process()
 		}
+	
+		workingShadow.update()
 		
 //		if (Math.random() > 0.97) {
 //			delay = (Math.random() * 30).toLong()
@@ -612,5 +622,8 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	
 	override fun dispose() {
 		world.dispose()
+		workingShadow.dispose()
+		shadow.dispose()
+		uiShadow?.dispose()
 	}
 }

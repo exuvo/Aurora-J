@@ -392,6 +392,8 @@ class GalaxyScreen(var lastSystemScreen: StarSystemScreen) : GameScreenImpl(), I
 		}
 
 		camera.update();
+		
+		//TODO allow zooming in to system level, make jump not noticeable
 
 		return true;
 	}

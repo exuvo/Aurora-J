@@ -6,7 +6,7 @@ import com.artemis.utils.IntBag;
 
 /**
  * Maintains the list of entities matched by an aspect. Entity subscriptions are automatically updated during
- * {@link com.artemis.World#process()}. Any {@link com.artemis.NormalEntitySubscription.SubscriptionListener listeners} are informed when
+ * {@link com.artemis.World#process()}. Any {@link com.artemis.EntitySubscription.SubscriptionListener listeners} are informed when
  * entities are added or removed. Be careful! Subscriptions do not immediately reflect changes by the active system. Subscriptions only
  * guarantee contained entities matched before the current system started processing. Access entities and components defensively.
  */

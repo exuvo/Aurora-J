@@ -16,6 +16,7 @@ import com.artemis.utils.IntBag
 import com.badlogic.gdx.Gdx
 import org.apache.logging.log4j.LogManager
 import com.artemis.utils.Bag
+import com.artemis.utils.ImmutableBag
 import org.apache.commons.math3.util.FastMath
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KProperty
@@ -46,6 +47,18 @@ inline fun <T> Bag<T>.forEachFast(action: (T) -> Unit) {
 inline fun <T> Bag<T>.forEachFast(action: (index: Int, T) -> Unit) {
 	for (i in 0 .. size() - 1) {
 		action(i, data[i])
+	}
+}
+
+inline fun <T> ImmutableBag<T>.forEachFast(action: (T) -> Unit) {
+	for (i in 0 .. size() - 1) {
+		action(get(i))
+	}
+}
+
+inline fun <T> ImmutableBag<T>.forEachFast(action: (index: Int, T) -> Unit) {
+	for (i in 0 .. size() - 1) {
+		action(i, get(i))
 	}
 }
 

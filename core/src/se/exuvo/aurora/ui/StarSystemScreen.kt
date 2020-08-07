@@ -46,6 +46,7 @@ import se.exuvo.aurora.starsystems.components.EntityReference
 import se.exuvo.aurora.empires.components.IdleTargetingComputersComponent
 import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
 import se.exuvo.aurora.starsystems.systems.TargetingSystem
+import kotlin.concurrent.withLock
 
 class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcessor {
 	companion object {
@@ -128,13 +129,13 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val uiCamera = AuroraGame.currentWindow.screenService.uiCamera
 
-		system.lock.read {
+		galaxy.uiLock.withLock {
 			renderSystem.render(viewport, cameraOffset)
 			
-			if (Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
-				val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(Gdx.input.x, Gdx.input.y))
-				renderSystem.waterBump(mouseInGameCoordinates)
-			}
+//			if (Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
+//				val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(Gdx.input.x, Gdx.input.y))
+//				renderSystem.waterBump(mouseInGameCoordinates)
+//			}
 		}
 
 		if (dragSelect) {
@@ -213,7 +214,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 
 		} else if (action == KeyActions_StarSystemScreen.ATTACK) {
 
-			system.lock.read {
+			galaxy.uiLock.withLock {
 				if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
 					selectedAction = KeyActions_StarSystemScreen.ATTACK
 					println("Selected action " + action)
@@ -282,7 +283,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 					
 					commandMenuPotentialStart = false
 
-					system.lock.read {
+					galaxy.uiLock.withLock {
 
 						val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
 						val entitiesUnderMouse = Bag<EntityReference>()
@@ -386,31 +387,28 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 										println("Clearing attack target")
 									}
 									
-									system.lock.write {
+									selectedEntities.forEachFast{ entityRef ->
+										val ship = shipMapper.get(entityRef.entityID)
+										val activeTCs = activeTargetingComputersComponentMapper.get(entityRef.entityID)
 										
-										selectedEntities.forEachFast{ entityRef ->
-											val ship = shipMapper.get(entityRef.entityID)
-											val activeTCs = activeTargetingComputersComponentMapper.get(entityRef.entityID)
-											
-											if (activeTCs != null) {
-												activeTCs.targetingComputers.forEachFast{ tc ->
-													val tcState = ship.getPartState(tc)[TargetingComputerState::class]
-		
-													if (targetRef != null) {
-														tcState.target = targetRef
-														
-													} else {
-														targetingSystem.clearTarget(entityRef.entityID, ship, tc)
-													}
+										if (activeTCs != null) {
+											activeTCs.targetingComputers.forEachFast{ tc ->
+												val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+	
+												if (targetRef != null) {
+													tcState.target = targetRef
+													
+												} else {
+													targetingSystem.clearTarget(entityRef.entityID, ship, tc)
 												}
 											}
+										}
+										
+										if (targetRef != null) {
+											val idleTCs = idleTargetingComputersComponentMapper.get(entityRef.entityID)
 											
-											if (targetRef != null) {
-												val idleTCs = idleTargetingComputersComponentMapper.get(entityRef.entityID)
-												
-												idleTCs.targetingComputers.forEachFast{ tc ->
-													targetingSystem.setTarget(entityRef.entityID, ship, tc, targetRef)
-												}
+											idleTCs.targetingComputers.forEachFast{ tc ->
+												targetingSystem.setTarget(entityRef.entityID, ship, tc, targetRef)
 											}
 										}
 									}
@@ -479,7 +477,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 	
 				val entitiesInSelection = Bag<EntityReference>()
 				
-				system.lock.read {
+				galaxy.uiLock.withLock {
 					val entityIDs = indirectSelectionFamily.entities
 					val testRectangle = RectangleL(p1GameCoordinates.x, p1GameCoordinates.y, p2GameCoordinates.x - p1GameCoordinates.x, p2GameCoordinates.y - p1GameCoordinates.y)
 		//			println("testRectangle $testRectangle")
@@ -523,7 +521,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 
 				if (selectedEntities.isNotEmpty()) {
 
-					system.lock.read {
+					galaxy.uiLock.withLock {
 
 						val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
 						val entitiesUnderMouse = ArrayList<Entity>()
@@ -726,6 +724,8 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 		}
 
 		camera.update();
+		
+		//TODO allow zooming out to galaxy level, make jump not noticeable
 
 		return true;
 	}

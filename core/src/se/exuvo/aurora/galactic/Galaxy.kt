@@ -8,36 +8,28 @@ import com.artemis.World
 import com.artemis.WorldConfigurationBuilder
 import com.artemis.utils.Bag
 import com.artemis.utils.IntBag
-import com.artemis.utils.Sort
 import com.badlogic.gdx.utils.Disposable
 import net.mostlyoriginal.api.event.common.EventSystem
+import org.apache.commons.math3.util.FastMath
 import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.galactic.systems.GalacticRenderSystem
+import se.exuvo.aurora.starsystems.ShadowStarSystem
 import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.starsystems.components.ChangingWorldComponent
+import se.exuvo.aurora.starsystems.components.EntityReference
+import se.exuvo.aurora.starsystems.components.EntityUUID
 import se.exuvo.aurora.starsystems.components.MovementValues
 import se.exuvo.aurora.starsystems.components.StarSystemComponent
 import se.exuvo.aurora.starsystems.systems.CustomSystemInvocationStrategy
 import se.exuvo.aurora.starsystems.systems.GroupSystem
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
+import se.exuvo.aurora.utils.exponentialAverage
 import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.settings.Settings
-import se.unlogic.standardutils.threads.SimpleTaskGroup
-import se.unlogic.standardutils.threads.ThreadPoolTaskGroupHandler
 import se.unlogic.standardutils.threads.ThreadUtils
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.locks.ReentrantReadWriteLock
-import kotlin.concurrent.write
-import kotlin.concurrent.read
-import se.exuvo.aurora.utils.Storage
-import se.exuvo.aurora.starsystems.components.EntityReference
-import se.exuvo.aurora.starsystems.components.EntityUUID
-import se.exuvo.aurora.utils.exponentialAverage
-import org.apache.commons.math3.util.FastMath
-import java.util.concurrent.locks.Condition
-import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantLock
 
 class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, Disposable {
 	companion object {
@@ -62,8 +54,14 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 	private val groupSystem by lazy(LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	val players = ArrayList<Player>()
 
-	val worldLock = ReentrantReadWriteLock()
 	val world: World
+	
+	var workingShadow: ShadowGalaxy
+	var shadow: ShadowGalaxy // Always safe to use from other StarSystems
+	var uiShadow: ShadowGalaxy // Requires UI lock
+	var retiredUIShadow: ShadowGalaxy? = null
+	
+	val uiLock = ReentrantLock()
 	
 	init {
 		GameServices.put(this)
@@ -79,6 +77,10 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		
 		world = World(worldBuilder.build())
 		world.inject(this)
+		
+		workingShadow = ShadowGalaxy(this)
+		shadow  = ShadowGalaxy(this)
+		uiShadow = shadow
 		
 		world.getAspectSubscriptionManager().get(Aspect.all()).addSubscriptionListener(object: SubscriptionListener {
 			override fun inserted(entityIDs: IntBag) {
@@ -145,12 +147,13 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 					if (accumulator >= speed) {
 
 						//TODO automatically adjust based on computer speed
-						tickSize = if (speed >= Units.NANO_MILLI) 1 else (Units.NANO_MILLI / speed).toInt()
-
-						// max sensible tick size is 1 minute, unless there is combat..
-						if (tickSize > 60) {
-							tickSize = 60
-						}
+						tickSize = 1
+//						tickSize = if (speed >= Units.NANO_MILLI) 1 else (Units.NANO_MILLI / speed).toInt()
+//
+//						// max sensible tick size is 1 minute, unless there is combat..
+//						if (tickSize > 60) {
+//							tickSize = 60
+//						}
 						
 						val tickSpeed = speed * tickSize
 						
@@ -170,15 +173,94 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 							threadsCondition.notifyAll()
 						}
 
-						worldLock.write {
-							world.setDelta(tickSize.toFloat())
-							world.process()
-						}
+						world.setDelta(tickSize.toFloat())
+						world.process()
+						
+						workingShadow.update()
 						
 						while (completedWorkCounter.getOpaque() < systems.size() && !shutdown) {
 							ThreadUtils.sleep(100)
 						}
-
+						
+						if (uiLock.tryLock()) { // promote shadowWorlds
+							
+							try {
+								systems.forEachFast { system ->
+									val oldShadowWorld = system.shadow
+									val oldUIShadowWorld = system.uiShadow
+									
+									system.shadow = system.workingShadow
+									system.uiShadow = system.workingShadow
+									system.workingShadow = oldShadowWorld
+									
+									if (oldShadowWorld != oldUIShadowWorld) {
+										assert(system.retiredUIShadow == null)
+										system.retiredUIShadow = oldUIShadowWorld
+									}
+								}
+								
+								val oldShadowWorld = shadow
+								val oldUIShadowWorld = uiShadow
+								
+								shadow = workingShadow
+								uiShadow = workingShadow
+								workingShadow = oldShadowWorld
+								
+								if (oldShadowWorld != oldUIShadowWorld) {
+									assert(retiredUIShadow == null)
+									retiredUIShadow = oldUIShadowWorld
+								}
+								
+							} finally {
+								uiLock.unlock()
+							}
+							
+						} else { // skip promoting shadowWorlds to UI
+							
+							systems.forEachFast { system ->
+								val oldShadow = system.shadow
+								val oldUIShadow = system.uiShadow
+								
+								system.shadow = system.workingShadow
+								system.workingShadow = oldUIShadow
+								
+								//TODO optimize is same for all systems, if once on galaxy and then do same for all
+								if (oldShadow != system.uiShadow) {
+									system.workingShadow = oldShadow
+									
+								} else {
+									val retiredUIShadow = system.retiredUIShadow
+									
+									if (retiredUIShadow != null) {
+										system.workingShadow = retiredUIShadow
+										
+									} else {
+										system.workingShadow = ShadowStarSystem(system)
+									}
+								}
+							}
+							
+							val oldShadow = shadow
+							val oldUIShadow = uiShadow
+							
+							shadow = workingShadow
+							workingShadow = oldUIShadow
+							
+							if (oldShadow != uiShadow) {
+								workingShadow = oldShadow
+								
+							} else {
+								val retiredUIShadow = retiredUIShadow
+								
+								if (retiredUIShadow != null) {
+									workingShadow = retiredUIShadow
+									
+								} else {
+									workingShadow = ShadowGalaxy(this)
+								}
+							}
+						}
+						
 						val systemUpdateDuration = (System.nanoTime() - systemUpdateStart)
 						speedLimited = systemUpdateDuration > speed
 						
@@ -346,10 +428,8 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 	
 	fun resolveEntityReference(entityReference: EntityReference): EntityReference? {
 		
-		entityReference.system.lock.read {
-			if (entityReference.system.isEntityReferenceValid(entityReference)) {
-				return entityReference
-			}
+		if (entityReference.system.isEntityReferenceValid(entityReference)) {
+			return entityReference
 		}
 		
 		return getEntityReferenceByUUID(entityReference.entityUUID, entityReference)
@@ -357,18 +437,14 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 	
 	fun getEntityReferenceByUUID(entityUUID: EntityUUID, oldEntityReference: EntityReference? = null): EntityReference? {
 		
-		//TODO release current write lock during operation and re-aquire after
-		
 		systems.forEachFast{ system ->
-			system.lock.read {
-				val entityID = system.getEntityByUUID(entityUUID)
-				
-				if (entityID != null) {
-					if (oldEntityReference != null) {
-						return system.updateEntityReference(entityID, oldEntityReference)
-					} else {
-						return system.getEntityReference(entityID)
-					}
+			val entityID = system.getEntityByUUID(entityUUID)
+			
+			if (entityID != null) {
+				if (oldEntityReference != null) {
+					return system.updateEntityReference(entityID, oldEntityReference)
+				} else {
+					return system.getEntityReference(entityID)
 				}
 			}
 		}
@@ -384,6 +460,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		
 	}
 	
+	// If traveling non-instant move entity when at midpoint between systems
 	fun moveEntity(targetSystem: StarSystem, entity: Entity, targetPosition: MovementValues) {
 		val sourceWorld = entity.world
 		

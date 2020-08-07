@@ -13,6 +13,7 @@ class PlanetComponent() : Component() {
 	var cleanWater = 0L
 	var pollutedWater = 0L 
 	var usableLandArea = 0L // km²
+	var farmableLandArea = 0L // km² (subtracts from usable when used)
 	var blockedLandArea = 0L
 	var gravity = 100 // percentage of earth
 	var atmosphericDensity = 1225 // g/m³ at 1013.25 hPa (abs) and 15°C
