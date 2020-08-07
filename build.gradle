@@ -1,35 +1,16 @@
-buildscript {
-	ext.kotlin_version = '1.3.72'
-	// '1.3.60' bugged daemons get stuck
-
-	repositories {
-		mavenLocal()
-		mavenCentral()
-		maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
-		jcenter()
-	}
-	dependencies {
-		classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-		classpath "net.onedaybeard.artemis:artemis-odb-gradle-plugin:2.2.0"
-	}
-}
-
 plugins {
 	id "idea"
 }
 
-allprojects {
-	apply plugin: "eclipse"
-
-	version = '0.1'
+subprojects {
 	ext {
-		appName = "Aurora J"
+		kotlin_version = '1.3.72'
 		gdxVersion = '1.9.11'
 		ktxVersion = '1.9.11-b1'
 		lwjglVersion = '3.2.3'
 		log4jVersion = '2.13.3'
 		jsapVersion = '2.1'
-		artemisVersion = '2.3.0'
+		artemisVersion = '2.4.0-SNAPSHOT'
 		artemisContribVersion = '2.5.0'
 	}
 
@@ -40,105 +21,4 @@ allprojects {
 		maven { url "https://oss.sonatype.org/content/repositories/releases/" }
 		maven { url 'https://jitpack.io' }
 	}
-}
-
-subprojects {
-	apply plugin: "java"
-	apply plugin: "kotlin"
-	
-//	plugins {
-//		id "org.jetbrains.kotlin.jvm" version "$kotlin_version"
-//	}
-	
-	tasks.withType(JavaCompile).all {
-		sourceCompatibility = "11"
-		targetCompatibility = "11"
-	}
-	
-	tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
-		kotlinOptions {
-			jvmTarget = "11"
-			freeCompilerArgs = ["-Xno-param-assertions", "-Xno-call-assertions", "-Xno-receiver-assertions"]
-		}
-	}
-		
-	[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
-	
-	eclipse.classpath {
-		containers 'org.jetbrains.kotlin.core.KOTLIN_CONTAINER'
-	}
-}
-
-project(":core") {
-	dependencies {
-		runtimeOnly "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
-		//runtimeOnly "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
-		runtimeOnly "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
-		runtimeOnly "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-windows"
-		runtimeOnly "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-linux"
-		runtimeOnly "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-macos"
-		implementation "org.apache.logging.log4j:log4j-iostreams:$log4jVersion"
-	
-		implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-		implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-				
-		implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
-		implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
-		//implementation "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
-		//implementation "com.badlogicgames.gdx:gdx-ai:1.8.1"
-		implementation "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
-		//implementation "com.badlogicgames.box2dlights:box2dlights:1.4"
-		
-		//implementation "io.github.libktx:ktx-actors:$ktxVersion"
-		//implementation "io.github.libktx:ktx-app:$ktxVersion"
-		//implementation "io.github.libktx:ktx-assets:$ktxVersion"
-		//implementation "io.github.libktx:ktx-collections:$ktxVersion"
-		//implementation "io.github.libktx:ktx-freetype:$ktxVersion"
-		//implementation "io.github.libktx:ktx-freetype-async:$ktxVersion"
-		//implementation "io.github.libktx:ktx-math:$ktxVersion"
-		//implementation "io.github.libktx:ktx-scene2d:$ktxVersion"
-		//implementation "io.github.libktx:ktx-style:$ktxVersion"
-		
-		implementation "org.apache.logging.log4j:log4j-core:$log4jVersion"
-		implementation "com.martiansoftware:jsap:$jsapVersion"
-		implementation "com.esotericsoftware:kryo:4.0.1"
-		implementation "com.esotericsoftware:jsonbeans:0.7"
-		implementation "org.xerial:sqlite-jdbc:3.30.1"
-		//implementation files("lib/sqlite-jdbc-3.30.1.jar")
-		implementation "org.jasypt:jasypt:1.9.2"
-		
-		implementation "net.onedaybeard.artemis:artemis-odb:$artemisVersion"
-		//implementation "net.onedaybeard.artemis:artemis-odb-serializer-json-libgdx:$artemisVersion"
-		//implementation "net.onedaybeard.artemis:artemis-odb-serializer-kryo:$artemisVersion"
-		implementation "net.mostlyoriginal.artemis-odb:contrib-core:$artemisContribVersion"
-		implementation "net.mostlyoriginal.artemis-odb:contrib-eventbus:$artemisContribVersion"
-		//implementation "net.mostlyoriginal.artemis-odb:contrib-plugin-operations:$artemisContribVersion"
-		//implementation "net.mostlyoriginal.artemis-odb:contrib-plugin-profiler:$artemisContribVersion"
-		
-		implementation "org.apache.commons:commons-math3:3.6.1"
-		implementation "uk.co.omega-prime:btreemap:1.2.0" // https://github.com/batterseapower/btreemap
-		
-		implementation "org.lwjgl:lwjgl:$lwjglVersion"
-		implementation "org.lwjgl:lwjgl-glfw:$lwjglVersion"
-		implementation "org.lwjgl:lwjgl-jemalloc:$lwjglVersion"
-		implementation "org.lwjgl:lwjgl-opengl:$lwjglVersion"
-		implementation "org.lwjgl:lwjgl-openal:$lwjglVersion"
-		implementation "org.lwjgl:lwjgl-opencl:$lwjglVersion"
-		implementation "org.lwjgl:lwjgl-stb:$lwjglVersion"
-
-		["gl", "glfw", "core"].each {
-			implementation ("com.github.kotlin-graphics.imgui:imgui-$it:v1.76") {
-				exclude group: 'org.lwjgl'
-				exclude group: 'org.jetbrains.kotlin'
-				exclude(group: 'com.github.kotlin-graphics.uno-sdk', module: "uno-awt")
-				exclude(group: 'com.github.kotlin-graphics.uno-sdk', module: "uno-vk")
-			}
-		}
-		compileOnly "com.github.kotlin-graphics:glm:1b4ac18dd1a3c23440d3f33596688aac60bc0141"
-		compileOnly "com.github.kotlin-graphics.uno-sdk:uno-core:402f5f495429b7f2178a1d200c32bb5ed2f7e6fa"
-	}
-}
-
-tasks.eclipse.doLast {
-	delete ".project"
 }

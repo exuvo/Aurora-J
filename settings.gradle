@@ -1,7 +1,11 @@
-// if (file('../imgui').exists()) includeBuild "../imgui"
-
 include 'core'
+includeBuild("artemis-odb") {
+	dependencySubstitution {
+		substitute module('net.onedaybeard.artemis:artemis-odb') with project(':artemis-core:artemis')
+	}
+}
 
+// if (file('../imgui').exists()) includeBuild "../imgui"
 
 // awful hack in settings.grade to reflectively enable logging
 def LoggerFactory = Class.forName("org.slf4j.LoggerFactory")
