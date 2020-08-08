@@ -1,7 +1,6 @@
 package se.exuvo.aurora.starsystems.components
 
 import com.artemis.Component
-import com.artemis.Entity
 
 // See https://en.wikipedia.org/wiki/Orbital_elements
 class OrbitComponent() : Component() {

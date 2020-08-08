@@ -182,30 +182,17 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		worldConfig.register(this)
 		world = World(worldConfig)
 
+		world.inject(this)
+		
 		allSubscription = world.getAspectSubscriptionManager().get(Aspect.all())
 		allSubscription.addSubscriptionListener(this)
-		world.inject(this)
+		
+		uuidSubscription = world.getAspectSubscriptionManager().get(UUID_ASPECT)
+		inCombatSubscription = world.getAspectSubscriptionManager().get(IN_COMBAT_ASPECT)
 		
 		workingShadow = ShadowStarSystem(this)
 		shadow  = ShadowStarSystem(this)
 		uiShadow = shadow
-		
-		world.getAspectSubscriptionManager().get(Aspect.all()).addSubscriptionListener(object : SubscriptionListener {
-			override fun inserted(entityIDs: IntBag) {
-				entityIDs.forEachFast { entityID ->
-					galaxy.entityAdded(world, entityID)
-				}
-			}
-
-			override fun removed(entityIDs: IntBag) {
-				entityIDs.forEachFast { entityID ->
-					galaxy.entityRemoved(world, entityID)
-				}
-			}
-		})
-		
-		uuidSubscription = world.getAspectSubscriptionManager().get(UUID_ASPECT)
-		inCombatSubscription = world.getAspectSubscriptionManager().get(IN_COMBAT_ASPECT)
 	}
 
 	fun init() {

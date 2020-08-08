@@ -47,22 +47,44 @@ class EmpireOverview : UIWindow() {
 						var flags = WindowFlag.NoSavedSettings or WindowFlag.NoMove or WindowFlag.NoResize
 						window("Empire Overview", null, flags) {
 							
-							system.lock.read {
-								flags = TreeNodeFlag.DefaultOpen or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen
-								if (treeNodeEx(system.galacticEntityID.toString(), flags, system.getName())) {
+							flags = TreeNodeFlag.DefaultOpen or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen
+							if (treeNodeEx(system.galacticEntityID.toString(), flags, system.getName())) {
+								
+								val nameMapper = ComponentMapper.getFor(NameComponent::class.java, system.world)
+								val colonyMapper = ComponentMapper.getFor(ColonyComponent::class.java, system.world)
+								val shipMapper = ComponentMapper.getFor(ShipComponent::class.java, system.world)
+								
+								val systemColonies = empire.colonies.filter { ref -> ref.system == system }
+								
+								systemColonies.forEachIndexed { idx, colonyRef ->
 									
-									val nameMapper = ComponentMapper.getFor(NameComponent::class.java, system.world)
-									val colonyMapper = ComponentMapper.getFor(ColonyComponent::class.java, system.world)
-									val shipMapper = ComponentMapper.getFor(ShipComponent::class.java, system.world)
+									val entityID = colonyRef.entityID
 									
-									val systemColonies = empire.colonies.filter { ref -> ref.system == system }
+									val name = nameMapper.get(entityID).name
+									val colony = colonyMapper.get(entityID)
 									
-									systemColonies.forEachIndexed { idx, colonyRef ->
+									var nodeFlags = TreeNodeFlag.Leaf or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen
+									
+									if (isSelected(entityID, system)) {
+										nodeFlags = nodeFlags or TreeNodeFlag.Selected
+									}
+									
+									treeNodeEx("c$idx", nodeFlags, "$name - ${colony.population}")
+									
+									if (isItemClicked()) {
+										if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+											galaxyGroupSystem.clear(GroupSystem.SELECTED)
+										}
 										
-										val entityID = colonyRef.entityID
+										galaxyGroupSystem.add(system.getEntityReference(entityID), GroupSystem.SELECTED)
+									}
+								}
+								
+								system.empireShips[empire]?.values?.forEach { bag ->
+									bag.forEachFast { entityID ->
 										
 										val name = nameMapper.get(entityID).name
-										val colony = colonyMapper.get(entityID)
+										val ship = shipMapper.get(entityID)
 										
 										var nodeFlags = TreeNodeFlag.Leaf or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen
 										
@@ -70,7 +92,7 @@ class EmpireOverview : UIWindow() {
 											nodeFlags = nodeFlags or TreeNodeFlag.Selected
 										}
 										
-										treeNodeEx("c$idx", nodeFlags, "$name - ${colony.population}")
+										treeNodeEx("s$entityID", nodeFlags, "$name - ${ship.hull.toString()}")
 										
 										if (isItemClicked()) {
 											if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
@@ -78,30 +100,6 @@ class EmpireOverview : UIWindow() {
 											}
 											
 											galaxyGroupSystem.add(system.getEntityReference(entityID), GroupSystem.SELECTED)
-										}
-									}
-									
-									system.empireShips[empire]?.values?.forEach { bag ->
-										bag.forEachFast { entityID ->
-											
-											val name = nameMapper.get(entityID).name
-											val ship = shipMapper.get(entityID)
-											
-											var nodeFlags = TreeNodeFlag.Leaf or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen
-											
-											if (isSelected(entityID, system)) {
-												nodeFlags = nodeFlags or TreeNodeFlag.Selected
-											}
-											
-											treeNodeEx("s$entityID", nodeFlags, "$name - ${ship.hull.toString()}")
-											
-											if (isItemClicked()) {
-												if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-													galaxyGroupSystem.clear(GroupSystem.SELECTED)
-												}
-												
-												galaxyGroupSystem.add(system.getEntityReference(entityID), GroupSystem.SELECTED)
-											}
 										}
 									}
 								}

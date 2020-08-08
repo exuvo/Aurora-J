@@ -1,6 +1,10 @@
 package se.exuvo.aurora.utils
 
-import org.apache.logging.log4j.Logger
+import com.artemis.World
+import com.artemis.utils.Bag
+import com.artemis.utils.ImmutableBag
+import com.artemis.utils.IntBag
+import org.apache.logging.log4j.LogManager
 import org.jasypt.digest.StandardStringDigester
 import se.exuvo.aurora.galactic.FuelWastePart
 import se.exuvo.aurora.galactic.FueledPart
@@ -10,19 +14,10 @@ import se.exuvo.aurora.starsystems.components.FueledPartState
 import se.exuvo.aurora.starsystems.components.NameComponent
 import se.exuvo.aurora.starsystems.components.ShipComponent
 import se.exuvo.aurora.starsystems.components.UUIDComponent
-import com.artemis.Entity
-import com.artemis.ComponentMapper
-import com.artemis.utils.IntBag
-import com.badlogic.gdx.Gdx
-import org.apache.logging.log4j.LogManager
-import com.artemis.utils.Bag
-import com.artemis.utils.ImmutableBag
-import org.apache.commons.math3.util.FastMath
-import java.util.concurrent.atomic.AtomicReference
-import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty0
+import kotlin.reflect.full.declaredMemberFunctions
+import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
-import kotlin.reflect.full.*
 
 private val utilLog = LogManager.getLogger("se.exuvo.aurora.utils")
 
@@ -81,14 +76,14 @@ operator fun <T> Bag<T>.plusAssign(element: T): Unit  {
 	add(element)
 }
 
-fun Entity.getUUID(): String {
+fun getUUID(entityID: Int, world: World): String {
 
-	return world.getMapper(UUIDComponent::class.java).get(this)?.uuid.toString();
+	return world.getMapper(UUIDComponent::class.java).get(entityID)?.uuid.toString();
 }
 
-fun Entity.printName(): String {
+fun getEntityName(entityID: Int, world: World): String {
 
-	val nameComponent = world.getMapper(NameComponent::class.java).get(this)
+	val nameComponent = world.getMapper(NameComponent::class.java).get(entityID)
 
 	if (nameComponent != null) {
 		return nameComponent.name
@@ -97,9 +92,9 @@ fun Entity.printName(): String {
 	return "";
 }
 
-fun Entity.printID(): String {
+fun printEntity(entityID: Int, world: World): String {
 
-	return "${this.printName()} (${this.getUUID()})"
+	return "${getEntityName(entityID, world)} (${getUUID(entityID, world)})"
 }
 
 inline fun <reified T> T.callPrivateFunc(name: String, vararg args: Any?): Any? =
@@ -225,7 +220,7 @@ inline fun <reified R> KProperty0<*>.delegateAs(): R {
 
 fun exponentialAverage(newValue: Double, expAverage: Double, delay: Double) : Double = newValue + Math.pow(Math.E, -1/delay) * (expAverage - newValue)
 
-fun consumeFuel(deltaGameTime: Int, entity: Entity, ship: ShipComponent, partRef: PartRef<Part>, energyConsumed: Long, fuelEnergy: Long) {
+fun consumeFuel(deltaGameTime: Int, entityID: Int, world: World, ship: ShipComponent, partRef: PartRef<Part>, energyConsumed: Long, fuelEnergy: Long) {
 	val part = partRef.part
 	if (part is FueledPart) {
 		val fueledState = ship.getPartState(partRef)[FueledPartState::class]
@@ -266,7 +261,7 @@ fun consumeFuel(deltaGameTime: Int, entity: Entity, ship: ShipComponent, partRef
 			val removedFuel = ship.retrieveCargo(part.fuel, fuelRequired)
 
 			if (removedFuel != fuelRequired) {
-				utilLog.warn("Entity ${entity.printID()} was expected to consume $fuelRequired but only had $removedFuel left")
+				utilLog.warn("Entity ${printEntity(entityID, world)} was expected to consume $fuelRequired but only had $removedFuel left")
 			}
 
 		} else {

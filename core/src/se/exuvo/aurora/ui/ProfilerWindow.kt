@@ -77,83 +77,81 @@ class ProfilerWindow : UIWindow() {
 						
 						val system = system
 						if (system != null) {
-							system.lock.read {
+							
+							text("Star System ${system.sid} - ${systemEvents.size()} events")
+							
+							val window = currentWindow
+							
+							var size = systemEvents.size()
+							if (size > 0) {
 								
-								text("Star System ${system.sid} - ${systemEvents.size()} events")
+								val backupPaddingY = style.framePadding.y
+								style.framePadding.y = 0f
 								
-								val window = currentWindow
+								val timeOffset = systemEvents.data[0].time
+								var x = window.dc.cursorPos.x
+								var y = window.dc.cursorPos.y
+								var maxY = y
 								
-								var size = systemEvents.size()
-								if (size > 0) {
+								fun eventBar(x: Float, y: Float, start: Long, end: Long, name: String): Boolean {
+									val id = window.getID("event")
+									val pos = Vec2(x + start.toFloat() * zoom, y)
+									val itemSize = Vec2((end - start).toFloat() * zoom, ctx.fontSize + 1)
+									val bb = Rect(pos, pos + itemSize)
+									val labelSize = calcTextSize(name, false)
 									
-									val backupPaddingY = style.framePadding.y
-									style.framePadding.y = 0f
+									itemSize(itemSize)
+									if (!itemAdd(bb, id)) return false
 									
-									val timeOffset = systemEvents.data[0].time
-									var x = window.dc.cursorPos.x
-									var y = window.dc.cursorPos.y
-									var maxY = y
+									val flags = 0
+									val (pressed, hovered, held) = buttonBehavior(bb, id, flags)
 									
-									fun eventBar(x: Float, y: Float, start: Long, end: Long, name: String): Boolean {
-										val id = window.getID("event")
-										val pos = Vec2(x + start.toFloat() * zoom, y)
-										val itemSize = Vec2((end - start).toFloat() * zoom, ctx.fontSize + 1)
-										val bb = Rect(pos, pos + itemSize)
-										val labelSize = calcTextSize(name, false)
-										
-										itemSize(itemSize)
-										if (!itemAdd(bb, id)) return false
-										
-										val flags = 0
-										val (pressed, hovered, held) = buttonBehavior(bb, id, flags)
-										
-										//Render
-										val col = if (hovered) Col.ButtonHovered.u32 else Vec4(0.3f, 0.5f, 0.3f, 1f).toLinearRGB().u32
-										renderNavHighlight(bb, id)
-										renderFrame(bb.min, bb.max, col, true, 1f)
-										//TODO maybe change
-										renderTextClipped(bb.min.plus(1f, -1f), bb.max - 1, name, labelSize, Vec2(0f, 0.5f), bb)
-			
-										if (y + itemSize.y > maxY) {
-											maxY = y + itemSize.y
-										}
-										
-										return hovered
+									//Render
+									val col = if (hovered) Col.ButtonHovered.u32 else Vec4(0.3f, 0.5f, 0.3f, 1f).toLinearRGB().u32
+									renderNavHighlight(bb, id)
+									renderFrame(bb.min, bb.max, col, true, 1f)
+									//TODO maybe change
+									renderTextClipped(bb.min.plus(1f, -1f), bb.max - 1, name, labelSize, Vec2(0f, 0.5f), bb)
+		
+									if (y + itemSize.y > maxY) {
+										maxY = y + itemSize.y
 									}
 									
-									fun drawEvents(i: Int): Int {
-										var j = i
-										val startEvent = systemEvents.data[j++]
-										
-										var endEvent = systemEvents.data[j]
-										
-										while (endEvent.name != null) {
-											y += 15
-											j = drawEvents(j)
-											y -= 15
-											endEvent = systemEvents.data[j]
-										}
-										
-										val name = startEvent.name ?: "null"
-										
-										if (eventBar(x, y, startEvent.time - timeOffset, endEvent.time - timeOffset, name)) {
-											setTooltip("$name ${Units.nanoToMicroString(endEvent.time - startEvent.time)}")
-										}
-										
-										return j + 1
-									}
-									
-									var i = 0;
-									
-									while(i < size - 1) {
-										i = drawEvents(i)
-									}
-									
-									window.dc.cursorPos.y = maxY
-									window.dc.cursorMaxPos.y = maxY
-									
-									style.framePadding.y = backupPaddingY
+									return hovered
 								}
+								
+								fun drawEvents(i: Int): Int {
+									var j = i
+									val startEvent = systemEvents.data[j++]
+									
+									var endEvent = systemEvents.data[j]
+									
+									while (endEvent.name != null) {
+										y += 15
+										j = drawEvents(j)
+										y -= 15
+										endEvent = systemEvents.data[j]
+									}
+									
+									val name = startEvent.name ?: "null"
+									
+									if (eventBar(x, y, startEvent.time - timeOffset, endEvent.time - timeOffset, name)) {
+										setTooltip("$name ${Units.nanoToMicroString(endEvent.time - startEvent.time)}")
+									}
+									
+									return j + 1
+								}
+								
+								var i = 0;
+								
+								while(i < size - 1) {
+									i = drawEvents(i)
+								}
+								
+								window.dc.cursorPos.y = maxY
+								window.dc.cursorMaxPos.y = maxY
+								
+								style.framePadding.y = backupPaddingY
 							}
 						}
 					

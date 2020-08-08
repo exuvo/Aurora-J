@@ -1,9 +1,9 @@
 package se.exuvo.aurora.galactic
 
+import com.artemis.Aspect
 import com.artemis.ComponentMapper
 import com.artemis.ComponentType
 import com.artemis.EntitySubscription
-import com.artemis.ShadowWorld
 import com.artemis.World
 import com.artemis.WorldConfigurationBuilder
 import com.badlogic.gdx.utils.Disposable
@@ -32,13 +32,17 @@ import se.exuvo.aurora.utils.forEachFast
 
 // World with no systems only entities
 class ShadowGalaxy(val galaxy: Galaxy) : Disposable {
-	val world: ShadowWorld
+	val world: World
 	var time = 0L
 		set(newTime) {
 			field = newTime
 			day = (time / (24L * 60L * 60L)).toInt()
 		}
 	var day = 0
+	
+	lateinit var positionMapper: ComponentMapper<GalacticPositionComponent>
+	
+	val allSubscription: EntitySubscription
 	
 	init {
 		val worldBuilder = WorldConfigurationBuilder()
@@ -53,11 +57,24 @@ class ShadowGalaxy(val galaxy: Galaxy) : Disposable {
 		}
 		
 		world.inject(this)
+		
+		allSubscription = world.getAspectSubscriptionManager().get(Aspect.all())
 	}
 	
 	fun update() {
 		
-	
+		allSubscription.entities.forEachFast { entityID ->
+			world.delete(entityID)
+		}
+		
+		world.process()
+		world.entityManager.resetNextID()
+		
+		galaxy.allSubscription.entities.forEachFast { entityID ->
+			//TODO create entity with specific ID
+		}
+		
+		world.process()
 	}
 	
 	override fun dispose() {

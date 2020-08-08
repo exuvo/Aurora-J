@@ -455,7 +455,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 				if (part is Reactor) {
 
 					// deltaGameTime: Int, entityID: Entity, ship: ShipComponent, partRef: PartRef<Part>, energyConsumed: Long, fuelEnergy: Long
-					consumeFuel(deltaGameTime, world.getEntity(entityID), ship, partRef, poweringState.producedPower.toLong(), part.power)
+					consumeFuel(deltaGameTime, entityID, world, ship, partRef, poweringState.producedPower.toLong(), part.power)
 
 				} else if (part is Battery) {
 

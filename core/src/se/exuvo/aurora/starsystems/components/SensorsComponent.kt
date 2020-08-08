@@ -4,7 +4,6 @@ import com.artemis.Component
 import se.exuvo.aurora.galactic.PassiveSensor
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.galactic.PartRef
-import com.artemis.Entity
 
 enum class Spectrum(val short: String) {
 	Visible_Light("L"),

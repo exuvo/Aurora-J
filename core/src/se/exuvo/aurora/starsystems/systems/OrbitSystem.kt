@@ -5,7 +5,6 @@ import com.artemis.ComponentMapper
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.MathUtils
-import com.badlogic.gdx.math.Vector2
 import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.AuroraGame
 import se.exuvo.aurora.starsystems.components.MassComponent
@@ -58,7 +57,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 
 		// 1 point each day
 		val points = FastMath.min(FastMath.max((orbitalPeriod / (24 * 60 * 60)).toInt(), 5), 1000)
-		log.debug("Calculating orbit for new entityID ${world.getEntity(entityID).getUUID()} using $points points, orbitalPeriod ${orbitalPeriod / (24 * 60 * 60)} days")
+		log.debug("Calculating orbit for new entityID ${getUUID(entityID, world)} using $points points, orbitalPeriod ${orbitalPeriod / (24 * 60 * 60)} days")
 		val orbitPoints = Array<Vector2D>(points, { Vector2D() })
 
 		// If set more dots represent higher speed, else the time between dots is constant

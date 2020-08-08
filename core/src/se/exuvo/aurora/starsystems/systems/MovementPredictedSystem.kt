@@ -112,7 +112,7 @@ class MovementPredictedSystem : BaseEntitySystem(ASPECT) {
 					
 					queue.poll()
 					
-					if (CAN_ACCELERATE_ASPECT.isInterested(world.getEntity(entityID))) {
+					if (CAN_ACCELERATE_ASPECT.isInterested(entityID)) {
 						println("Movement: target reached predicted time for $entityID")
 					}
 					

@@ -3,7 +3,6 @@ package se.exuvo.aurora.starsystems.components
 import com.badlogic.gdx.math.Vector2
 import se.exuvo.aurora.utils.Vector2L
 import com.artemis.Component
-import com.artemis.Entity
 import com.artemis.annotations.PooledWeaver
 import com.artemis.PooledComponent
 

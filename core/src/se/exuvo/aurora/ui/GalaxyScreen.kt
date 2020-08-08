@@ -30,6 +30,7 @@ import se.exuvo.aurora.galactic.Player
 import se.exuvo.aurora.AuroraGameSecondaryWindow
 import com.badlogic.gdx.backends.lwjgl3.CustomLwjgl3Application
 import se.exuvo.aurora.AuroraGame
+import kotlin.concurrent.withLock
 
 class GalaxyScreen(var lastSystemScreen: StarSystemScreen) : GameScreenImpl(), InputProcessor {
 
@@ -91,7 +92,7 @@ class GalaxyScreen(var lastSystemScreen: StarSystemScreen) : GameScreenImpl(), I
 	}
 
 	override fun draw() {
-		galaxy.worldLock.read {
+		galaxy.uiLock.withLock {
 			renderSystem.render(viewport, cameraOffset)
 		}
 
@@ -178,8 +179,8 @@ class GalaxyScreen(var lastSystemScreen: StarSystemScreen) : GameScreenImpl(), I
 
 			when (button) {
 				Input.Buttons.LEFT -> {
-
-					galaxy.worldLock.read {
+					
+					galaxy.uiLock.withLock {
 
 						val mouseInGalacticCoordinates = toGalacticWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
 						val entityIDs = selectionFamily.entities

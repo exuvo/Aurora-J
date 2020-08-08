@@ -4,9 +4,7 @@ import com.artemis.Aspect
 import com.artemis.ComponentMapper
 import com.artemis.ComponentType
 import com.artemis.EntitySubscription
-import com.artemis.ShadowWorld
 import com.artemis.World
-import com.artemis.WorldConfigurationBuilder
 import com.badlogic.gdx.utils.Disposable
 import se.exuvo.aurora.empires.components.ColonyComponent
 import se.exuvo.aurora.starsystems.components.CircleComponent
@@ -31,7 +29,7 @@ import se.exuvo.aurora.utils.forEachFast
 
 // World with no systems only entities
 class ShadowStarSystem(val system: StarSystem) : Disposable {
-	val world: ShadowWorld
+	val world: World
 	var time = 0L
 		set(newTime) {
 			field = newTime
@@ -61,9 +59,7 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 	val uuidSubscription: EntitySubscription
 	
 	init {
-		val worldBuilder = WorldConfigurationBuilder()
-		val worldConfig = worldBuilder.build()
-		world = ShadowWorld(worldConfig)
+		world = World()
 		
 		// copy system component order
 		system.world.componentManager.componentTypes.forEachFast { type: ComponentType ->
@@ -83,8 +79,7 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 		}
 		
 		world.process()
-		world.entityManager.reset() // produces a lot of garbage
-		world.process()
+		world.entityManager.resetNextID()
 		
 		system.allSubscription.entities.forEachFast { entityID ->
 			//TODO create entity with specific ID

@@ -1352,7 +1352,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		uiCamera = AuroraGame.currentWindow.screenService.uiCamera
 		
 		val entityIDs = subscription.getEntities()
-		val selectedEntityIDs = galaxyGroupSystem.get(GroupSystem.SELECTED).filter { it.system == starSystem && familyAspect.isInterested(world.getEntity(it.entityID)) }.map { it.entityID }
+		val selectedEntityIDs = galaxyGroupSystem.get(GroupSystem.SELECTED).filter { it.system == starSystem && familyAspect.isInterested(it.entityID) }.map { it.entityID }
 
 		viewport.apply()
 		scale = (viewport.camera as OrthographicCamera).zoom

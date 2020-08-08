@@ -106,7 +106,7 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 						}
 
 						if (thrustComponent != null && thrustComponent.thrusting) {
-							consumeFuel(deltaGameTime, world.getEntity(entityID), ship, thruster, part.thrust.toLong(), part.thrust.toLong())
+							consumeFuel(deltaGameTime, entityID, world, ship, thruster, part.thrust.toLong(), part.thrust.toLong())
 						}
 					}
 				}

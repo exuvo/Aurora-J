@@ -2,60 +2,40 @@ package se.exuvo.aurora.starsystems.systems
 
 import com.artemis.Aspect
 import com.artemis.ComponentMapper
+import com.artemis.EntitySubscription
 import com.artemis.EntitySubscription.SubscriptionListener
+import com.artemis.annotations.Wire
 import com.artemis.systems.IteratingSystem
 import com.artemis.utils.IntBag
 import net.mostlyoriginal.api.event.common.EventSystem
 import org.apache.logging.log4j.LogManager
-import se.exuvo.aurora.empires.components.InCombatComponent
-import se.exuvo.aurora.galactic.AmmunitionPart
-import se.exuvo.aurora.galactic.BeamWeapon
+import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
+import se.exuvo.aurora.empires.components.IdleTargetingComputersComponent
 import se.exuvo.aurora.galactic.ChargedPart
 import se.exuvo.aurora.galactic.Galaxy
-import se.exuvo.aurora.galactic.MissileLauncher
-import se.exuvo.aurora.galactic.PoweredPart
-import se.exuvo.aurora.galactic.Railgun
+import se.exuvo.aurora.galactic.PartRef
 import se.exuvo.aurora.galactic.TargetingComputer
-import se.exuvo.aurora.starsystems.components.AmmunitionPartState
+import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.starsystems.components.ChargedPartState
+import se.exuvo.aurora.starsystems.components.EntityReference
+import se.exuvo.aurora.starsystems.components.LaserShotComponent
+import se.exuvo.aurora.starsystems.components.MissileComponent
 import se.exuvo.aurora.starsystems.components.NameComponent
+import se.exuvo.aurora.starsystems.components.OnPredictedMovementComponent
+import se.exuvo.aurora.starsystems.components.OwnerComponent
 import se.exuvo.aurora.starsystems.components.PoweredPartState
+import se.exuvo.aurora.starsystems.components.RailgunShotComponent
+import se.exuvo.aurora.starsystems.components.RenderComponent
 import se.exuvo.aurora.starsystems.components.ShipComponent
 import se.exuvo.aurora.starsystems.components.TargetingComputerState
+import se.exuvo.aurora.starsystems.components.TimedLifeComponent
+import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import se.exuvo.aurora.starsystems.components.UUIDComponent
 import se.exuvo.aurora.starsystems.events.PowerEvent
 import se.exuvo.aurora.utils.GameServices
-import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.Vector2L
-import com.badlogic.gdx.math.Vector2
-import se.exuvo.aurora.utils.Vector2D
-import se.exuvo.aurora.starsystems.components.TimedMovementComponent
-import se.exuvo.aurora.starsystems.StarSystem
-import com.artemis.annotations.Wire
-import se.exuvo.aurora.starsystems.components.MovementValues
-import se.exuvo.aurora.utils.Units
-import org.apache.commons.math3.analysis.solvers.PegasusSolver
-import org.apache.commons.math3.analysis.polynomials.PolynomialFunction
-import org.apache.commons.math3.analysis.solvers.LaguerreSolver
-import org.apache.commons.math3.exception.TooManyEvaluationsException
-import org.apache.commons.math3.util.FastMath
-import se.exuvo.aurora.starsystems.components.OwnerComponent
-import se.exuvo.aurora.starsystems.components.RenderComponent
-import se.exuvo.aurora.galactic.AdvancedMunitionHull
-import se.exuvo.aurora.galactic.DamagePattern
-import se.exuvo.aurora.galactic.SimpleMunitionHull
-import se.exuvo.aurora.starsystems.components.LaserShotComponent
-import se.exuvo.aurora.starsystems.components.RailgunShotComponent
-import se.exuvo.aurora.starsystems.components.TimedLifeComponent
-import se.exuvo.aurora.starsystems.components.MissileComponent
-import se.exuvo.aurora.starsystems.components.OnPredictedMovementComponent
-import se.exuvo.aurora.galactic.PartRef
-import se.exuvo.aurora.galactic.Part
-import se.exuvo.aurora.empires.components.IdleTargetingComputersComponent
-import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
-import se.exuvo.aurora.starsystems.components.EntityReference
-import com.artemis.EntitySubscription
-import se.exuvo.aurora.utils.printID
+import se.exuvo.aurora.utils.forEachFast
+import se.exuvo.aurora.utils.printEntity
 
 class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -141,7 +121,7 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 	
 	fun setTarget(entityID: Int, ship: ShipComponent, tc: PartRef<TargetingComputer>, targetRef: EntityReference) {
 		
-		println("Setting target for ${world.getEntity(entityID).printID()}.$tc to ${world.getEntity(targetRef.entityID).printID()}")
+		println("Setting target for ${printEntity(entityID, world)}.$tc to ${printEntity(targetRef.entityID, world)}")
 		
 		val tcState = ship.getPartState(tc)[TargetingComputerState::class]
 		tcState.lockCompletionAt = galaxy.time + tc.part.lockingTime
@@ -165,7 +145,7 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 	
 	fun clearTarget(entityID: Int, ship: ShipComponent, tc: PartRef<TargetingComputer>) {
 		
-		println("Clearing target for ${world.getEntity(entityID).printID()}.$tc")
+		println("Clearing target for ${printEntity(entityID, world)}.$tc")
 		
 		val tcState = ship.getPartState(tc)[TargetingComputerState::class]
 		tcState.lockCompletionAt = 0

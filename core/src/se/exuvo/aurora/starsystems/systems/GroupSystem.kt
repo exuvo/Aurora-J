@@ -7,7 +7,6 @@ import kotlin.concurrent.read
 import kotlin.concurrent.write
 import se.exuvo.aurora.utils.DummyReentrantReadWriteLock
 import se.exuvo.aurora.utils.forEachFast
-import com.artemis.EntitySystem
 import com.artemis.Aspect
 import se.exuvo.aurora.starsystems.components.EntityReference
 import com.artemis.utils.Bag

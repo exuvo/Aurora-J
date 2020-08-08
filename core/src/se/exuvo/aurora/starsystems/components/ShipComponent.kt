@@ -22,7 +22,6 @@ import se.exuvo.aurora.galactic.PartRef
 import kotlin.Suppress
 import se.exuvo.aurora.galactic.MunitionHull
 import se.exuvo.aurora.utils.forEachFast
-import com.artemis.Entity
 import com.artemis.utils.Bag
 import se.exuvo.aurora.galactic.Shield
 import se.exuvo.aurora.utils.sumByLong

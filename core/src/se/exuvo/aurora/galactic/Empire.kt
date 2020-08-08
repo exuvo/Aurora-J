@@ -1,6 +1,5 @@
 package se.exuvo.aurora.galactic
 
-import com.artemis.Entity
 import org.apache.logging.log4j.LogManager
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantReadWriteLock

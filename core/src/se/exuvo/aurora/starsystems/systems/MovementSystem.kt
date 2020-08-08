@@ -126,12 +126,12 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 	override fun preProcessSystem() {
 		subscription.getEntities().forEachFast { entityID ->
 
-			if (CAN_ACCELERATE_ASPECT.isInterested(world.getEntity(entityID))) {
+			if (CAN_ACCELERATE_ASPECT.isInterested(entityID)) {
 				val movement = movementMapper.get(entityID)
 				val velocity = movement.previous.value.velocity
 				val thrustComponent = thrustMapper.get(entityID)
 
-				if (!DESTINATION_ASPECT.isInterested(world.getEntity(entityID))) {
+				if (!DESTINATION_ASPECT.isInterested(entityID)) {
 					thrustComponent.thrusting = !velocity.isZero()
 
 				} else {
@@ -201,7 +201,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 		val position = shipMovementValue.position
 		val acceleration = shipMovementValue.acceleration
 
-		if (!CAN_ACCELERATE_ASPECT.isInterested(world.getEntity(entityID))) {
+		if (!CAN_ACCELERATE_ASPECT.isInterested(entityID)) {
 
 			tempVelocity.set(velocity).scl(deltaGameTime)
 			position.addDiv(tempVelocity, 100)
@@ -218,7 +218,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 		val tickAcceleration = currentAcceleration * deltaGameTime
 		val maxTickAcceleration = maxAcceleration * deltaGameTime
 
-		if (!DESTINATION_ASPECT.isInterested(world.getEntity(entityID))) {
+		if (!DESTINATION_ASPECT.isInterested(entityID)) {
 
 			if (!velocity.isZero()) {
 				val velocityMagnitute = velocity.len()

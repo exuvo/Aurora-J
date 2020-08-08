@@ -1,13 +1,11 @@
 package se.exuvo.aurora.ui
 
 import com.artemis.ComponentMapper
-import com.artemis.Entity
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputProcessor
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.OrthographicCamera
-import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.viewport.ScreenViewport
@@ -18,8 +16,6 @@ import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.starsystems.StarSystemGeneration
 import se.exuvo.aurora.starsystems.components.ApproachType
 import se.exuvo.aurora.starsystems.components.CircleComponent
-import se.exuvo.aurora.starsystems.components.MoveToEntityComponent
-import se.exuvo.aurora.starsystems.components.MoveToPositionComponent
 import se.exuvo.aurora.starsystems.components.StarSystemComponent
 import se.exuvo.aurora.starsystems.components.RenderComponent
 import se.exuvo.aurora.starsystems.components.ShipComponent
@@ -33,15 +29,11 @@ import se.exuvo.aurora.utils.*
 import se.exuvo.aurora.ui.keys.KeyActions_StarSystemScreen
 import se.exuvo.aurora.ui.keys.KeyMappings
 import se.exuvo.settings.Settings
-import kotlin.concurrent.read
-import kotlin.concurrent.write
-import kotlin.properties.Delegates
 import com.artemis.Aspect
 import se.exuvo.aurora.galactic.Player
 import se.exuvo.aurora.AuroraGame
-import glm_.vec2.Vec2
-import glm_.vec2.Vec2i
 import com.artemis.utils.Bag
+import com.artemis.utils.IntBag
 import se.exuvo.aurora.starsystems.components.EntityReference
 import se.exuvo.aurora.empires.components.IdleTargetingComputersComponent
 import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
@@ -369,7 +361,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 
 							if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
 								val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED).filter { entityRef ->
-									system == entityRef.system && weaponFamily.isInterested(entityRef.system.world.getEntity(entityRef.entityID))
+									system == entityRef.system && weaponFamily.isInterested(entityRef.entityID)
 								}
 								
 								if (selectedEntities.isEmpty()) {
@@ -381,7 +373,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 									
 									if (entitiesUnderMouse.isNotEmpty()) {
 										targetRef = entitiesUnderMouse[0]
-										println("Attacking ${targetRef.system.world.getEntity(targetRef.entityID).printID()}")
+										println("Attacking ${printEntity(targetRef.entityID, targetRef.system.world)}")
 										
 									} else {
 										println("Clearing attack target")
@@ -516,7 +508,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 
 				val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED).filter { entityRef ->
 
-					system == entityRef.system && movementFamily.isInterested(entityRef.system.world.getEntity(entityRef.entityID))
+					system == entityRef.system && movementFamily.isInterested(entityRef.entityID)
 				}
 
 				if (selectedEntities.isNotEmpty()) {
@@ -524,7 +516,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 					galaxy.uiLock.withLock {
 
 						val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
-						val entitiesUnderMouse = ArrayList<Entity>()
+						val entitiesUnderMouse = IntBag()
 						val entityIDs = directSelectionFamily.entities
 						val testCircle = CircleL()
 						val zoom = camera.zoom
@@ -546,7 +538,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 							testCircle.set(position, radius * 1000)
 
 							if (testCircle.contains(mouseInGameCoordinates)) {
-								entitiesUnderMouse.add(system.world.getEntity(entityID))
+								entitiesUnderMouse.add(entityID)
 							}
 						}
 
@@ -568,16 +560,16 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 								testCircle.set(position, radius * 1000)
 
 								if (testCircle.contains(mouseInGameCoordinates)) {
-									entitiesUnderMouse.add(system.world.getEntity(entityID))
+									entitiesUnderMouse.add(entityID)
 								}
 							}
 						}
 
-						if (entitiesUnderMouse.isNotEmpty()) {
+						if (!entitiesUnderMouse.isEmpty) {
 
 //							println("Issuing move to entity order")
 
-							val targetEntity = entitiesUnderMouse.get(0)
+							val targetEntityID = entitiesUnderMouse.get(0)
 							var approachType = ApproachType.BRACHISTOCHRONE
 
 							if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
@@ -585,7 +577,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 							}
 
 							selectedEntities.forEachFast{ entityRef ->
-								movementSystem.moveToEntity(entityRef.entityID, targetEntity.id, approachType)
+								movementSystem.moveToEntity(entityRef.entityID, targetEntityID, approachType)
 							}
 
 						} else {

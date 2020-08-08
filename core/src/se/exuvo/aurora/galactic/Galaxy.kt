@@ -2,7 +2,7 @@ package se.exuvo.aurora.galactic
 
 import com.artemis.Aspect
 import com.artemis.ComponentMapper
-import com.artemis.Entity
+import com.artemis.EntitySubscription
 import com.artemis.EntitySubscription.SubscriptionListener
 import com.artemis.World
 import com.artemis.WorldConfigurationBuilder
@@ -56,6 +56,8 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 
 	val world: World
 	
+	val allSubscription: EntitySubscription
+	
 	var workingShadow: ShadowGalaxy
 	var shadow: ShadowGalaxy // Always safe to use from other StarSystems
 	var uiShadow: ShadowGalaxy // Requires UI lock
@@ -78,23 +80,11 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		world = World(worldBuilder.build())
 		world.inject(this)
 		
+		allSubscription = world.getAspectSubscriptionManager().get(Aspect.all())
+		
 		workingShadow = ShadowGalaxy(this)
 		shadow  = ShadowGalaxy(this)
 		uiShadow = shadow
-		
-		world.getAspectSubscriptionManager().get(Aspect.all()).addSubscriptionListener(object: SubscriptionListener {
-			override fun inserted(entityIDs: IntBag) {
-				entityIDs.forEachFast { entityID ->
-					entityAdded(world, entityID)
-				}
-			}
-
-			override fun removed(entityIDs: IntBag) {
-				entityIDs.forEachFast { entityID ->
-					entityRemoved(world, entityID)
-				}
-			}
-		})
 	}
 	
 	fun init(systems: Bag<StarSystem>) {
@@ -422,10 +412,6 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		throw IllegalArgumentException("$id")
 	}
 	
-	fun getStarSystemByEntity(entity: Entity): StarSystem {
-		return ComponentMapper.getFor(StarSystemComponent::class.java, entity.world).get(entity).system
-	}
-	
 	fun resolveEntityReference(entityReference: EntityReference): EntityReference? {
 		
 		if (entityReference.system.isEntityReferenceValid(entityReference)) {
@@ -452,19 +438,11 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		return null
 	}
 	
-	fun entityAdded(world: World, entityID: Int) {
-		
-	}
-
-	fun entityRemoved(world: World, entityID: Int) {
-		
-	}
-	
 	// If traveling non-instant move entity when at midpoint between systems
-	fun moveEntity(targetSystem: StarSystem, entity: Entity, targetPosition: MovementValues) {
-		val sourceWorld = entity.world
+	fun moveEntity(entityID: Int, sourceSystem: StarSystem, targetSystem: StarSystem,  targetPosition: MovementValues) {
+		val sourceWorld = sourceSystem.world
 		
-		ComponentMapper.getFor(ChangingWorldComponent::class.java, sourceWorld).create(entity)
+		ComponentMapper.getFor(ChangingWorldComponent::class.java, sourceWorld).create(entityID)
 		
 		//TODO could we just move it? or does that cause problems
 		//TODO serialize entity, add to target system, remove from old system
