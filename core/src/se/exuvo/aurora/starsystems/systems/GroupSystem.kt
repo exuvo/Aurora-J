@@ -15,16 +15,13 @@ class GroupSystem(val lock: ReentrantReadWriteLock = DummyReentrantReadWriteLock
 	companion object {
 		const val SELECTED = "selected"
 		
-		@JvmStatic
-		val EmptyBag = Bag<Any>(0)
+		@JvmField val EmptyBag = Bag<Any>(0)
 		
 		@Suppress("UNCHECKED_CAST")
-		@JvmStatic
-		val EmptyEntityBag = EmptyBag as Bag<EntityReference>
+		@JvmField val EmptyEntityBag = EmptyBag as Bag<EntityReference>
 		
 		@Suppress("UNCHECKED_CAST")
-		@JvmStatic
-		val EmptyGroupBag = EmptyBag as Bag<String>
+		@JvmField val EmptyGroupBag = EmptyBag as Bag<String>
 	}
 
 	private val groupMembershipMap = HashMap<String, HashMap<EntityReference, Int>?>()

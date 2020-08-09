@@ -18,11 +18,12 @@ import se.exuvo.aurora.utils.getUUID
 import se.exuvo.settings.Settings
 import java.util.Collections
 import org.apache.commons.math3.util.FastMath
+import java.util.concurrent.ConcurrentHashMap
 
 //TODO sorted system by no parents first then outwards
 class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 	companion object {
-		val FAMILY = Aspect.all(OrbitComponent::class.java, TimedMovementComponent::class.java)
+		@JvmField val FAMILY = Aspect.all(OrbitComponent::class.java, TimedMovementComponent::class.java)
 		const val gravitationalConstant = 6.67408e-11
 	}
 
@@ -31,7 +32,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 	lateinit private var orbitMapper: ComponentMapper<OrbitComponent>
 	lateinit private var massMapper: ComponentMapper<MassComponent>
 	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>
-	private val orbitsCache = HashMap<Int, OrbitCache>()
+	val orbitsCache = ConcurrentHashMap<Int, OrbitCache>()
 	private val moonsCache = HashMap<Int, MutableSet<Int>?>()
 
 	override fun inserted(entityID: Int) {
@@ -171,26 +172,6 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 		
 		movement.value.velocity.set(oldPosition)
 		movement.time = galaxy.time
-	}
-
-	fun render(cameraOffset: Vector2L) {
-		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
-		
-		shapeRenderer.color = Color.GRAY
-		shapeRenderer.begin(ShapeRenderer.ShapeType.Point);
-		subscription.getEntities().forEachFast { entityID ->
-			val orbit = orbitMapper.get(entityID)
-			val orbitCache: OrbitCache = orbitsCache.get(entityID)!!
-			val parentEntity = orbit.parent
-			val parentMovement = movementMapper.get(parentEntity).get(galaxy.time).value
-			val x = (parentMovement.getXinKM() - cameraOffset.x).toDouble()
-			val y = (parentMovement.getYinKM() - cameraOffset.y).toDouble()
-
-			for (point in orbitCache.orbitPoints) {
-				shapeRenderer.point((x + point.x).toFloat(), (y + point.y).toFloat(), 0f);
-			}
-		}
-		shapeRenderer.end();
 	}
 
 	data class OrbitCache(val orbitalPeriod: Double, val apoapsis: Double, val periapsis: Double, val orbitPoints: Array<Vector2D>)

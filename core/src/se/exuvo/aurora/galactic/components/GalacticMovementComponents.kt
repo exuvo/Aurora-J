@@ -6,6 +6,7 @@ import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.utils.Vector2L
 import com.artemis.Component
 
+//TODO copy TimedMovementComponent
 // In milli light years
 class GalacticPositionComponent() : Component() {
 	val position: Vector2L = Vector2L()

@@ -3,11 +3,9 @@ package se.exuvo.aurora.galactic
 import com.artemis.Aspect
 import com.artemis.ComponentMapper
 import com.artemis.EntitySubscription
-import com.artemis.EntitySubscription.SubscriptionListener
 import com.artemis.World
 import com.artemis.WorldConfigurationBuilder
 import com.artemis.utils.Bag
-import com.artemis.utils.IntBag
 import com.badlogic.gdx.utils.Disposable
 import net.mostlyoriginal.api.event.common.EventSystem
 import org.apache.commons.math3.util.FastMath
@@ -19,7 +17,6 @@ import se.exuvo.aurora.starsystems.components.ChangingWorldComponent
 import se.exuvo.aurora.starsystems.components.EntityReference
 import se.exuvo.aurora.starsystems.components.EntityUUID
 import se.exuvo.aurora.starsystems.components.MovementValues
-import se.exuvo.aurora.starsystems.components.StarSystemComponent
 import se.exuvo.aurora.starsystems.systems.CustomSystemInvocationStrategy
 import se.exuvo.aurora.starsystems.systems.GroupSystem
 import se.exuvo.aurora.utils.GameServices
@@ -33,8 +30,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, Disposable {
 	companion object {
-		@JvmStatic
-		val log = LogManager.getLogger(Galaxy::class.java)
+		@JvmField val log = LogManager.getLogger(Galaxy::class.java)
 	}
 
 	lateinit var systems: Bag<StarSystem>
@@ -153,25 +149,53 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 
 						time += tickSize;
 						updateDay()
-
+						
+						val profilerEvents = workingShadow.profilerEvents
+						profilerEvents.clear()
+						
 						val systemUpdateStart = System.nanoTime()
+						
+						profilerEvents.start("commands")
+						empires.forEachFast { empire ->
+							while(true) {
+								val command = empire.commandQueue.poll() ?: break
+								
+								if (command.isValid()) {
+									command.apply()
+								}
+							}
+						}
+						profilerEvents.end()
 						
 						takenWorkCounter.set(0)
 						completedWorkCounter.set(0)
 						
+						profilerEvents.start("run threads")
 						synchronized(threadsCondition) {
 							threadsCondition.notifyAll()
 						}
-
+						
+						profilerEvents.start("process")
 						world.setDelta(tickSize.toFloat())
 						world.process()
+						profilerEvents.end()
 						
+						profilerEvents.start("shadow update")
 						workingShadow.update()
+						profilerEvents.end()
 						
 						while (completedWorkCounter.getOpaque() < systems.size() && !shutdown) {
-							ThreadUtils.sleep(100)
+							try {
+								Thread.sleep(100)
+							} catch (e: InterruptedException) {
+								if (completedWorkCounter.get() == systems.size() || shutdown) {
+									break
+								}
+							}
 						}
+						profilerEvents.end()
 						
+						profilerEvents.start("promote shadows")
 						if (uiLock.tryLock()) { // promote shadowWorlds
 							
 							try {
@@ -250,6 +274,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 								}
 							}
 						}
+						profilerEvents.end()
 						
 						val systemUpdateDuration = (System.nanoTime() - systemUpdateStart)
 						speedLimited = systemUpdateDuration > speed
@@ -265,6 +290,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 //						println()
 						
 						// If one system took a noticable larger time to process than others, schedule it earlier
+						profilerEvents.start("system sort")
 						systems.sort(object : Comparator<StarSystem> {
 							val s = tickSpeed / 10
 							override fun compare(o1: StarSystem, o2: StarSystem): Int {
@@ -275,6 +301,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 								return 0
 							}
 						})
+						profilerEvents.end()
 						
 						lastProcess = now;
 					}
@@ -452,13 +479,13 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		day = (time / (24L * 60L * 60L)).toInt()
 		return day
 	}
-
-override fun dispose() {
+	
+	override fun dispose() {
 		shutdown = true
-			synchronized(threadsCondition) {
-		threadsCondition.notifyAll()
-	}
-
+		synchronized(threadsCondition) {
+			threadsCondition.notifyAll()
+		}
+		
 		thread?.join()
 		
 		systems.forEachFast { system ->

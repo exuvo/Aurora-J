@@ -17,10 +17,9 @@ import com.artemis.utils.BitVector
 
 class TimedLifeSystem : BaseEntitySystem(ASPECT) {
 	companion object {
-		val ASPECT = Aspect.all(TimedLifeComponent::class.java)
+		@JvmField val ASPECT = Aspect.all(TimedLifeComponent::class.java)
 		
-		@JvmStatic
-		val log = LogManager.getLogger(TimedLifeSystem::class.java)
+		@JvmField val log = LogManager.getLogger(TimedLifeSystem::class.java)
 	}
 
 	private val galaxy = GameServices[Galaxy::class]

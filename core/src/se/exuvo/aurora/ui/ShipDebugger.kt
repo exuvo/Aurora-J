@@ -32,8 +32,6 @@ import se.exuvo.aurora.starsystems.systems.GroupSystem
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.forEachFast
 import se.unlogic.standardutils.reflection.ReflectionUtils
-import kotlin.concurrent.read
-import kotlin.concurrent.write
 import se.exuvo.aurora.galactic.BeamWeapon
 import se.exuvo.aurora.galactic.Railgun
 import se.exuvo.aurora.galactic.MissileLauncher
@@ -86,15 +84,15 @@ class ShipDebugger : UIWindow() {
 							
 							sliderScalar("Selection", DataType.Int, ::selectionIndex, 0, selectedEntities.size() - 1, "${1 + selectionIndex} / ${selectedEntities.size()}", 2.0f)
 		
-							val entityRef = galaxy.resolveEntityReference(selectedEntities[selectionIndex])
+							val entityRef = selectedEntities[selectionIndex].system.uiShadow.resolveEntityReference(selectedEntities[selectionIndex])
 							
 							if (entityRef != null) {
 								
 								val system = entityRef.system
-			
-								val shipMapper = ComponentMapper.getFor(ShipComponent::class.java, system.world)
-								val powerMapper = ComponentMapper.getFor(PowerComponent::class.java, system.world)
-								val irradianceMapper = ComponentMapper.getFor(SolarIrradianceComponent::class.java, system.world)
+								
+								val shipMapper = system.uiShadow.shipMapper
+								val powerMapper = system.uiShadow.powerMapper
+								val irradianceMapper = system.uiShadow.solarIrradianceMapper
 			
 								val shipComponent = shipMapper.get(entityRef.entityID)
 								
@@ -102,7 +100,7 @@ class ShipDebugger : UIWindow() {
 								
 								if (collapsingHeader("Components", 0)) { // TreeNodeFlag.DefaultOpen.i
 		
-									val components = system.world.componentManager.getComponentsFor(entityRef.entityID, Bag<Component>())
+									val components = system.uiShadow.world.componentManager.getComponentsFor(entityRef.entityID, Bag<Component>())
 									
 									components.forEachFast{ component ->
 		
@@ -289,8 +287,6 @@ class ShipDebugger : UIWindow() {
 									
 									if (collapsingHeader("Armor", 0)) { // TreeNodeFlag.DefaultOpen.i
 										
-										val weaponSystem: WeaponSystem = system.world.getSystem(WeaponSystem::class.java)
-										
 										val window = currentWindow
 										val backupPaddingY = style.framePadding.y
 										style.framePadding.y = 0f
@@ -420,9 +416,11 @@ class ShipDebugger : UIWindow() {
 										sliderScalar("Damage amount", DataType.Long, ::testDmgAmount, 0L, 1_000_000L, "$testDmgAmount", 2.5f)
 										
 										if (button("damage")) {
-											weaponSystem.applyArmorDamage(entityRef.entityID, testDmgAmount, DamagePattern.LASER)
+											//TODO replace with command
+//											weaponSystem.applyArmorDamage(entityRef.entityID, testDmgAmount, DamagePattern.LASER)
 										}
 										
+										//TODO replace with command
 										if (button("kill armor")) {
 											for (y in 0..shipComponent.hull.armorLayers - 1) {
 												for (x in 0..shipComponent.hull.getArmorWidth() - 1) {
@@ -431,6 +429,7 @@ class ShipDebugger : UIWindow() {
 											}
 										}
 										
+										//TODO replace with command
 										if (button("repair")) {
 											for (y in 0..shipComponent.hull.armorLayers - 1) {
 												for (x in 0..shipComponent.hull.getArmorWidth() - 1) {
@@ -442,7 +441,6 @@ class ShipDebugger : UIWindow() {
 												shipComponent.setPartHP(partRef, 128 + partRef.part.maxHealth)
 											}
 										}
-										
 									}
 		
 									if (collapsingHeader("Power", 0)) {
@@ -465,9 +463,9 @@ class ShipDebugger : UIWindow() {
 											if (now - lastDebugTime > 500) {
 												lastDebugTime = now
 		
-												powerAvailiableValues[arrayIndex] = powerComponent.totalAvailiablePower.toFloat()
+												powerAvailiableValues[arrayIndex] = powerComponent.totalAvailablePower.toFloat()
 												powerRequestedValues[arrayIndex] = powerComponent.totalRequestedPower.toFloat()
-												powerUsedValues[arrayIndex] = powerComponent.totalUsedPower.toFloat() / powerComponent.totalAvailiablePower.toFloat()
+												powerUsedValues[arrayIndex] = powerComponent.totalUsedPower.toFloat() / powerComponent.totalAvailablePower.toFloat()
 												arrayIndex++
 		
 												if (arrayIndex >= 60) {
@@ -576,7 +574,8 @@ class ShipDebugger : UIWindow() {
 										}
 		
 										inputScalar("kg", DataType.Int, ::addResourceAmount, 10, 100, "%d", 0)
-		
+										
+										//TODO replace with command
 										if (button("Add")) {
 											if (!shipComponent.addCargo(addResource, addResourceAmount.toLong())) {
 												println("Cargo does not fit")
@@ -584,7 +583,8 @@ class ShipDebugger : UIWindow() {
 										}
 		
 										sameLine(0f, style.itemInnerSpacing.x)
-		
+										
+										//TODO replace with command
 										if (button("Remove")) {
 											if (shipComponent.retrieveCargo(addResource, addResourceAmount.toLong()) != addResourceAmount.toLong()) {
 												println("Does not have enough of specified cargo")

@@ -23,10 +23,9 @@ import se.exuvo.aurora.starsystems.components.OrbitComponent
 
 class MovementPredictedSystem : BaseEntitySystem(ASPECT) {
 	companion object {
-		val ASPECT = Aspect.all(TimedMovementComponent::class.java, OnPredictedMovementComponent::class.java).exclude(OrbitComponent::class.java)
+		@JvmField val ASPECT = Aspect.all(TimedMovementComponent::class.java, OnPredictedMovementComponent::class.java).exclude(OrbitComponent::class.java)
 		
-		@JvmStatic
-		val log = LogManager.getLogger(MovementPredictedSystem::class.java)
+		@JvmField val log = LogManager.getLogger(MovementPredictedSystem::class.java)
 	}
 
 	private val galaxy = GameServices[Galaxy::class]

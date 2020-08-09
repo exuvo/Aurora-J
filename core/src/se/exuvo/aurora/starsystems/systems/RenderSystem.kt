@@ -41,6 +41,7 @@ import se.exuvo.aurora.galactic.PartRef
 import se.exuvo.aurora.galactic.Railgun
 import se.exuvo.aurora.galactic.SimpleMunitionHull
 import se.exuvo.aurora.galactic.TargetingComputer
+import se.exuvo.aurora.starsystems.ShadowStarSystem
 import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.starsystems.components.AmmunitionPartState
 import se.exuvo.aurora.starsystems.components.CircleComponent
@@ -50,6 +51,7 @@ import se.exuvo.aurora.starsystems.components.MissileComponent
 import se.exuvo.aurora.starsystems.components.MoveToEntityComponent
 import se.exuvo.aurora.starsystems.components.MoveToPositionComponent
 import se.exuvo.aurora.starsystems.components.NameComponent
+import se.exuvo.aurora.starsystems.components.OrbitComponent
 import se.exuvo.aurora.starsystems.components.PassiveSensorsComponent
 import se.exuvo.aurora.starsystems.components.RailgunShotComponent
 import se.exuvo.aurora.starsystems.components.RenderComponent
@@ -74,21 +76,22 @@ import kotlin.math.sign
 
 class RenderSystem : IteratingSystem(FAMILY) {
 	companion object {
-		val FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, CircleComponent::class.java)
-		val LASER_SHOT_FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, LaserShotComponent::class.java)
-		val RAILGUN_SHOT_FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, RailgunShotComponent::class.java)
-		val MISSILE_FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, MissileComponent::class.java)
+		@JvmField val FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, CircleComponent::class.java)
+		@JvmField val LASER_SHOT_FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, LaserShotComponent::class.java)
+		@JvmField val RAILGUN_SHOT_FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, RailgunShotComponent::class.java)
+		@JvmField val MISSILE_FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, MissileComponent::class.java)
 		
 		const val STRATEGIC_ICON_SIZE = 24f
 		const val MAX_VERTICES = 128
 		const val MAX_INDICES = 256
-
-		var debugPassiveSensors = Settings.getBol("Systems/Render/debugPassiveSensors", false)
-		var debugDisableStrategicView = Settings.getBol("Systems/Render/debugDisableStrategicView", false)
-		var debugDrawWeaponRangesWithoutShader = Settings.getBol("Systems/Render/debugDrawWeaponRangesWithoutShader", false)
-		val log = LogManager.getLogger(RenderSystem::class.java)
+		
+		@JvmField var debugPassiveSensors = Settings.getBol("Systems/Render/debugPassiveSensors", false)
+		@JvmField var debugDisableStrategicView = Settings.getBol("Systems/Render/debugDisableStrategicView", false)
+		@JvmField var debugDrawWeaponRangesWithoutShader = Settings.getBol("Systems/Render/debugDrawWeaponRangesWithoutShader", false)
+		@JvmField val log = LogManager.getLogger(RenderSystem::class.java)
 	}
-
+	
+	lateinit private var orbitMapper: ComponentMapper<OrbitComponent>
 	lateinit private var circleMapper: ComponentMapper<CircleComponent>
 	lateinit private var tintMapper: ComponentMapper<TintComponent>
 //	lateinit private var textMapper: ComponentMapper<TextComponent>
@@ -103,9 +106,6 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
 	lateinit private var idleTargetingComputersComponentMapper: ComponentMapper<IdleTargetingComputersComponent>
 	lateinit private var activeTargetingComputersComponentMapper: ComponentMapper<ActiveTargetingComputersComponent>
-//	lateinit private var laserShotMapper: ComponentMapper<LaserShotComponent>
-//	lateinit private var railgunShotMapper: ComponentMapper<RailgunShotComponent>
-//	lateinit private var missileMapper: ComponentMapper<MissileComponent>
 
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	private val galaxy = GameServices[Galaxy::class]
@@ -113,14 +113,14 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	@Wire
 	lateinit private var starSystem: StarSystem
 	
-//	lateinit private var groupSystem: GroupSystem
-	lateinit private var orbitSystem: OrbitSystem
-//	lateinit private var gravSystem: GravimetricSensorSystem
+	@Wire
+	lateinit private var shadowSystem: ShadowStarSystem
 	
 	lateinit private var familyAspect: Aspect
 	lateinit private var laserShotSubscription: EntitySubscription
 	lateinit private var railgunShotSubscription: EntitySubscription
 	lateinit private var missileSubscription: EntitySubscription
+	lateinit private var orbitSubscription: EntitySubscription
 	
 	private val tempL = Vector2L()
 	private val tempD = Vector2D()
@@ -153,6 +153,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		laserShotSubscription = world.getAspectSubscriptionManager().get(LASER_SHOT_FAMILY)
 		railgunShotSubscription = world.getAspectSubscriptionManager().get(RAILGUN_SHOT_FAMILY)
 		missileSubscription  = world.getAspectSubscriptionManager().get(MISSILE_FAMILY)
+		orbitSubscription  = world.getAspectSubscriptionManager().get(OrbitSystem.FAMILY)
 	}
 
 	override fun checkProcessing() = false
@@ -1342,6 +1343,27 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			}
 		}
 	}
+	
+	fun renderOrbits(cameraOffset: Vector2L) {
+		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
+		val orbitsCache = starSystem.world.getSystem(OrbitSystem::class.java).orbitsCache
+		
+		shapeRenderer.color = Color.GRAY
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Point);
+		orbitSubscription.getEntities().forEachFast { entityID ->
+			val orbit = orbitMapper.get(entityID)
+			val orbitCache: OrbitSystem.OrbitCache = orbitsCache.get(entityID)!!
+			val parentEntity = orbit.parent
+			val parentMovement = movementMapper.get(parentEntity).get(galaxy.time).value
+			val x = (parentMovement.getXinKM() - cameraOffset.x).toDouble()
+			val y = (parentMovement.getYinKM() - cameraOffset.y).toDouble()
+			
+			for (point in orbitCache.orbitPoints) {
+				shapeRenderer.point((x + point.x).toFloat(), (y + point.y).toFloat(), 0f);
+			}
+		}
+		shapeRenderer.end();
+	}
 
 	fun render(viewport: Viewport, cameraOffset: Vector2L) {
 
@@ -1352,7 +1374,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		uiCamera = AuroraGame.currentWindow.screenService.uiCamera
 		
 		val entityIDs = subscription.getEntities()
-		val selectedEntityIDs = galaxyGroupSystem.get(GroupSystem.SELECTED).filter { it.system == starSystem && familyAspect.isInterested(it.entityID) }.map { it.entityID }
+		val selectedEntityIDs = galaxyGroupSystem.get(GroupSystem.SELECTED).filter { it.system == starSystem && world.entityManager.isActive(it.entityID) && familyAspect.isInterested(it.entityID) }.map { it.entityID }
 
 		viewport.apply()
 		scale = (viewport.camera as OrthographicCamera).zoom
@@ -1373,7 +1395,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			drawOrders()
 		}
 
-		orbitSystem.render(cameraOffset)
+		renderOrbits(cameraOffset)
 
 		drawWeaponRanges(entityIDs, selectedEntityIDs)
 		drawEntities(entityIDs)

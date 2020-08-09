@@ -7,16 +7,13 @@ import se.exuvo.aurora.galactic.Reactor
 import se.exuvo.aurora.galactic.SolarPanel
 import kotlin.reflect.KClass
 import java.security.InvalidParameterException
-import se.exuvo.aurora.galactic.PoweringPart
-import se.exuvo.aurora.galactic.ChargedPart
-import se.exuvo.aurora.galactic.PoweredPart
 import se.exuvo.aurora.galactic.PartRef
 
-class PowerComponent() : Component() {
+class PowerComponent() : Component(), CloneableComponent<PowerComponent> {
 	lateinit var powerScheme: PowerScheme
 	var stateChanged = true
-	var totalAvailiablePower = 0L
-	var totalAvailiableSolarPower = 0L
+	var totalAvailablePower = 0L
+	var totalAvailableSolarPower = 0L
 	var totalRequestedPower = 0L
 	var totalUsedPower = 0L
 	val poweringParts = ArrayList<PartRef<Part>>()
@@ -27,6 +24,30 @@ class PowerComponent() : Component() {
 		this.powerScheme = powerScheme
 		stateChanged = true
 		return this
+	}
+	
+	override fun copy(tc: PowerComponent) {
+		tc.powerScheme = powerScheme
+		tc.stateChanged = stateChanged
+		tc.totalAvailablePower = totalAvailablePower
+		tc.totalAvailableSolarPower = totalAvailableSolarPower
+		tc.totalRequestedPower = totalRequestedPower
+		tc.totalUsedPower = totalUsedPower
+		
+		if (poweringParts.hashCode() != tc.poweringParts.hashCode()) {
+			tc.poweringParts.clear()
+			tc.poweringParts.addAll(poweringParts)
+		}
+		
+		if (poweredParts.hashCode() != tc.poweredParts.hashCode()) {
+			tc.poweredParts.clear()
+			tc.poweredParts.addAll(poweredParts)
+		}
+		
+		if (chargedParts.hashCode() != tc.chargedParts.hashCode()) {
+			tc.chargedParts.clear()
+			tc.chargedParts.addAll(chargedParts)
+		}
 	}
 }
 

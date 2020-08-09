@@ -7,7 +7,7 @@ import se.exuvo.aurora.utils.Units
 
 class Player(var name: String) {
 	companion object {
-		var current = Player("local")
+		@JvmField var current = Player("local")
 	}
 
 	private val log = LogManager.getLogger(this.javaClass)

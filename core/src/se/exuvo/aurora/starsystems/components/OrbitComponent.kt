@@ -3,7 +3,7 @@ package se.exuvo.aurora.starsystems.components
 import com.artemis.Component
 
 // See https://en.wikipedia.org/wiki/Orbital_elements
-class OrbitComponent() : Component() {
+class OrbitComponent() : Component(), CloneableComponent<OrbitComponent> {
 	var parent: Int = -1
 	var e_eccentricity: Float = 0f // 0 = circle, 0 < elliptic < 1
 	var a_semiMajorAxis: Float = 1f // In AU
@@ -22,5 +22,9 @@ class OrbitComponent() : Component() {
 		this.w_argumentOfPeriapsis = w_argumentOfPeriapsis
 		this.M_meanAnomaly = M_meanAnomaly
 		return this
+	}
+	
+	override fun copy(tc: OrbitComponent) {
+		tc.set(parent, e_eccentricity, a_semiMajorAxis, w_argumentOfPeriapsis, M_meanAnomaly)
 	}
 }

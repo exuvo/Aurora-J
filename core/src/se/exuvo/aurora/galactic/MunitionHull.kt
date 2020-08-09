@@ -79,7 +79,7 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 	private val partRefs: MutableList<PartRef<Part>> = ArrayList()
 	
 	var armorLayers = 1 // Centimeters of armor
-	var armorBlockHP: Short = 100
+	var armorBlockHP: Byte = 100 - 128
 	
 	override var radius = -1
 		get() {

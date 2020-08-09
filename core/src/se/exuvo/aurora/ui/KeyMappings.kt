@@ -13,9 +13,8 @@ import kotlin.reflect.KClass
 
 @Suppress("UNCHECKED_CAST")
 object KeyMappings {
-	val log = LogManager.getLogger(this.javaClass)
-	@JvmField
-	var loaded = false
+	@JvmField val log = LogManager.getLogger(this.javaClass)
+	@JvmField var loaded = false
 	
 	private val keyActions = HashMap<KClass<out InputProcessor>, Array<out KeyAction>>()
 	private val keyRawMaps = HashMap<KClass<InputProcessor>, MutableMap<Int, KeyMapping>>()

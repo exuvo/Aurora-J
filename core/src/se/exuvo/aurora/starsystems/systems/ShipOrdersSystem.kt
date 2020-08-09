@@ -20,11 +20,10 @@ import java.util.Queue
 
 class ShipOrdersSystem : IteratingSystem(FAMILY) {
 	companion object {
-		val FAMILY = Aspect.all(ShipComponent::class.java, ShipOrdersComponent::class.java)
-		val SHIP_FAMILY = Aspect.all(ShipComponent::class.java)
+		@JvmField val FAMILY = Aspect.all(ShipComponent::class.java, ShipOrdersComponent::class.java)
+		@JvmField val SHIP_FAMILY = Aspect.all(ShipComponent::class.java)
+		@JvmField val log = LogManager.getLogger(ShipOrdersSystem::class.java)
 	}
-
-	val log = LogManager.getLogger(this.javaClass)
 
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
 	lateinit private var ordersMapper: ComponentMapper<ShipOrdersComponent<ShipWorldState>>

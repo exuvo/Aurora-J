@@ -23,7 +23,7 @@ import kotlin.concurrent.write
 
 class StarSystemGeneration(val system: StarSystem) {
 	companion object {
-		val FAMILY = Aspect.exclude(ThrustComponent::class.java)
+		@JvmField val FAMILY = Aspect.exclude(ThrustComponent::class.java)
 	}
 
 	val log = LogManager.getLogger(this.javaClass)

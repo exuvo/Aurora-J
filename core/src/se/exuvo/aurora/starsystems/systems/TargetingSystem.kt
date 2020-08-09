@@ -39,12 +39,11 @@ import se.exuvo.aurora.utils.printEntity
 
 class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
-		val FAMILY = Aspect.all(IdleTargetingComputersComponent::class.java) //TODO , InCombatComponent::class.java
-		val RELOAD_FAMILY = Aspect.all(IdleTargetingComputersComponent::class.java)
-		val SHIP_FAMILY = Aspect.all(ShipComponent::class.java)
+		@JvmField val FAMILY = Aspect.all(IdleTargetingComputersComponent::class.java) //TODO , InCombatComponent::class.java
+		@JvmField val RELOAD_FAMILY = Aspect.all(IdleTargetingComputersComponent::class.java)
+		@JvmField val SHIP_FAMILY = Aspect.all(ShipComponent::class.java)
 		
-		@JvmStatic
-		val log = LogManager.getLogger(WeaponSystem::class.java)
+		@JvmField val log = LogManager.getLogger(TargetingSystem::class.java)
 	}
 
 	lateinit private var idleTargetingComputersComponentMapper: ComponentMapper<IdleTargetingComputersComponent>

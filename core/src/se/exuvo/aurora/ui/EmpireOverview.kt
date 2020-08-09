@@ -35,9 +35,8 @@ class EmpireOverview : UIWindow() {
 					val itemSpaceY = style.itemSpacing.y
 					
 					val empire = Player.current.empire
-					val system = AuroraGame.currentWindow.screenService(StarSystemScreen::class)?.system
 					
-					if (empire != null && system != null) {
+					if (empire != null) {
 						
 						tmp.put(150, Gdx.graphics.getHeight() - 120)
 						setNextWindowSize(tmp)
@@ -47,44 +46,44 @@ class EmpireOverview : UIWindow() {
 						var flags = WindowFlag.NoSavedSettings or WindowFlag.NoMove or WindowFlag.NoResize
 						window("Empire Overview", null, flags) {
 							
-							flags = TreeNodeFlag.DefaultOpen or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen
-							if (treeNodeEx(system.galacticEntityID.toString(), flags, system.getName())) {
-								
-								val nameMapper = ComponentMapper.getFor(NameComponent::class.java, system.world)
-								val colonyMapper = ComponentMapper.getFor(ColonyComponent::class.java, system.world)
-								val shipMapper = ComponentMapper.getFor(ShipComponent::class.java, system.world)
-								
-								val systemColonies = empire.colonies.filter { ref -> ref.system == system }
-								
-								systemColonies.forEachIndexed { idx, colonyRef ->
-									
-									val entityID = colonyRef.entityID
-									
-									val name = nameMapper.get(entityID).name
-									val colony = colonyMapper.get(entityID)
-									
-									var nodeFlags = TreeNodeFlag.Leaf or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen
-									
-									if (isSelected(entityID, system)) {
-										nodeFlags = nodeFlags or TreeNodeFlag.Selected
-									}
-									
-									treeNodeEx("c$idx", nodeFlags, "$name - ${colony.population}")
-									
-									if (isItemClicked()) {
-										if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-											galaxyGroupSystem.clear(GroupSystem.SELECTED)
-										}
+							/*
+									View modes
+										relative: current system at top
+										heliocentric: home system first, rest sorted by distance from home
 										
-										galaxyGroupSystem.add(system.getEntityReference(entityID), GroupSystem.SELECTED)
-									}
-								}
-								
-								system.empireShips[empire]?.values?.forEach { bag ->
-									bag.forEachFast { entityID ->
+									system tree
+										name
+										force overview dots (all factions)
 										
-										val name = nameMapper.get(entityID).name
-										val ship = shipMapper.get(entityID)
+										repeat for us, enemy, friendly, neutral
+											planets (only colonised)
+											stations
+											large ships
+											small ships
+								*/
+							
+							//TODO only star systems in which we have a presence in
+							//TODO use icons
+							
+							galaxy.systems.forEachFast { system ->
+								
+								flags = TreeNodeFlag.DefaultOpen or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen
+								if (treeNodeEx(system.galacticEntityID.toString(), flags, system.getName())) {
+									
+									val shadow = system.uiShadow
+									
+									val nameMapper = shadow.nameMapper
+									val colonyMapper = shadow.colonyMapper
+									val shipMapper = shadow.shipMapper
+									
+									val systemColonies = empire.colonies.filter { ref -> ref.system == system }
+									
+									systemColonies.forEachIndexed { idx, colonyRef ->
+										
+										val entityID = colonyRef.entityID
+										
+										val name = nameMapper.get(entityID)?.name
+										val colony = colonyMapper.get(entityID)
 										
 										var nodeFlags = TreeNodeFlag.Leaf or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen
 										
@@ -92,44 +91,44 @@ class EmpireOverview : UIWindow() {
 											nodeFlags = nodeFlags or TreeNodeFlag.Selected
 										}
 										
-										treeNodeEx("s$entityID", nodeFlags, "$name - ${ship.hull.toString()}")
+										treeNodeEx("c${system.sid}-$idx", nodeFlags, "$name - ${colony.population}")
 										
 										if (isItemClicked()) {
 											if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
 												galaxyGroupSystem.clear(GroupSystem.SELECTED)
 											}
 											
-											galaxyGroupSystem.add(system.getEntityReference(entityID), GroupSystem.SELECTED)
+											galaxyGroupSystem.add(shadow.getEntityReference(entityID), GroupSystem.SELECTED)
 										}
 									}
+									
+									shadow.empireShips[empire]?.values?.forEach { bag ->
+										bag.forEachFast { entityID ->
+
+											val name = nameMapper.get(entityID).name
+											val ship = shipMapper.get(entityID)
+
+											var nodeFlags = TreeNodeFlag.Leaf or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen
+
+											if (isSelected(entityID, system)) {
+												nodeFlags = nodeFlags or TreeNodeFlag.Selected
+											}
+
+											treeNodeEx("s$entityID", nodeFlags, "$name - ${ship.hull.toString()}")
+
+											if (isItemClicked()) {
+												if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+													galaxyGroupSystem.clear(GroupSystem.SELECTED)
+												}
+
+												galaxyGroupSystem.add(shadow.getEntityReference(entityID), GroupSystem.SELECTED)
+											}
+										}
+									}
+									
+									//TODO show other factions
 								}
 							}
-							
-							/*
-								View modes
-									relative: current system at top
-									heliocentric: home system first, rest sorted by distance from home
-									
-								system tree
-									name
-									force overview dots (all factions)
-									
-									repeat for us, enemy, friendly, neutral
-										planets (only colonised)
-										stations
-										large ships
-										small ships
-							*/
-							
-							//TODO only star systems in which we have a presence in
-							val starSystems = Bag<StarSystem>()
-							
-							empire.colonies
-							empire.stations
-							empire.ships
-							
-							// each system gathers up ships for the player in a list sorted by ship mass
-							// galaxy adds them all together after systems tick and we use that list here
 						}
 					}
 				}
@@ -141,7 +140,8 @@ class EmpireOverview : UIWindow() {
 		val selection = galaxyGroupSystem.get(GroupSystem.SELECTED)
 		
 		for (i in 0 until selection.size()) {
-			val ref = galaxy.resolveEntityReference(selection[i])
+			val ref = system.uiShadow.resolveEntityReference(selection[i])
+			
 			if (ref != null && ref.system == system && ref.entityID == entityID) {
 				return true
 			}

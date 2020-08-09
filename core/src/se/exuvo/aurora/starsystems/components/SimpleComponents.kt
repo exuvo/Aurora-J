@@ -10,7 +10,7 @@ import com.artemis.PooledComponent
 
 class ChangingWorldComponent() : Component()
 
-class TextComponent() : PooledComponent() {
+class TextComponent() : PooledComponent(), CloneableComponent<TextComponent> {
 	lateinit var text: MutableList<String>
 
 	fun set(text: MutableList<String> = ArrayList()): TextComponent {
@@ -21,9 +21,15 @@ class TextComponent() : PooledComponent() {
 	override fun reset(): Unit {
 		text.clear()
 	}
+	
+	override fun copy(tc: TextComponent) {
+		if (text.hashCode() != tc.hashCode()) {
+			tc.set(ArrayList(text))
+		}
+	}
 }
 
-class TintComponent() : PooledComponent() {
+class TintComponent() : PooledComponent(), CloneableComponent<TintComponent> {
 	lateinit var color: Color
 
 	fun set(color: Color = Color(Color.WHITE)): TintComponent {
@@ -32,14 +38,18 @@ class TintComponent() : PooledComponent() {
 	}
 	
 	override fun reset(): Unit {}
+	override fun copy(tc: TintComponent) {
+		tc.set(color)
+	}
 }
 
-class RenderComponent() : PooledComponent() {
+class RenderComponent() : PooledComponent(), CloneableComponent<RenderComponent> {
 	
 	override fun reset(): Unit {}
+	override fun copy(tc: RenderComponent) {}
 }
 
-class StrategicIconComponent() : PooledComponent() {
+class StrategicIconComponent() : PooledComponent(), CloneableComponent<StrategicIconComponent> {
 	lateinit var texture: TextureRegion
 	
 	fun set(texture: TextureRegion): StrategicIconComponent {
@@ -48,9 +58,12 @@ class StrategicIconComponent() : PooledComponent() {
 	}
 	
 	override fun reset(): Unit {}
+	override fun copy(tc: StrategicIconComponent) {
+		tc.set(texture)
+	}
 }
 
-class CircleComponent() : PooledComponent() {
+class CircleComponent() : PooledComponent(), CloneableComponent<CircleComponent> {
 	var radius: Float = 1f
 	
 	fun set(radius: Float): CircleComponent {
@@ -59,9 +72,12 @@ class CircleComponent() : PooledComponent() {
 	}
 	
 	override fun reset(): Unit {}
+	override fun copy(tc: CircleComponent) {
+		tc.set(radius)
+	}
 }
 
-class StarSystemComponent() : PooledComponent() {
+class StarSystemComponent() : PooledComponent(), CloneableComponent<StarSystemComponent> {
 	lateinit var system: StarSystem
 
 	fun set(system: StarSystem): StarSystemComponent {
@@ -70,9 +86,12 @@ class StarSystemComponent() : PooledComponent() {
 	}
 	
 	override fun reset(): Unit {}
+	override fun copy(tc: StarSystemComponent) {
+		tc.set(system)
+	}
 }
 
-class OwnerComponent() : PooledComponent() {
+class OwnerComponent() : PooledComponent(), CloneableComponent<OwnerComponent> {
 	lateinit var empire: Empire
 
 	fun set(empire: Empire): OwnerComponent {
@@ -81,10 +100,13 @@ class OwnerComponent() : PooledComponent() {
 	}
 	
 	override fun reset(): Unit {}
+	override fun copy(tc: OwnerComponent) {
+		tc.set(empire)
+	}
 }
 
 // In kg
-class MassComponent() : PooledComponent() {
+class MassComponent() : PooledComponent(), CloneableComponent<MassComponent> {
 	var mass: Double = 0.0
 
 	fun set(mass: Double): MassComponent {
@@ -93,20 +115,27 @@ class MassComponent() : PooledComponent() {
 	}
 	
 	override fun reset(): Unit {}
+	override fun copy(tc: MassComponent) {
+		tc.set(mass)
+	}
 }
 
 // W/m2 @ 1 AU. https://en.wikipedia.org/wiki/Solar_constant
-class SunComponent() : Component() {
+class SunComponent() : Component(), CloneableComponent<SunComponent> {
 	var solarConstant: Int = 1361
 
 	fun set(solarConstant: Int): SunComponent {
 		this.solarConstant = solarConstant
 		return this
 	}
+	
+	override fun copy(tc: SunComponent) {
+		tc.set(solarConstant)
+	}
 }
 
 // W/m2
-class SolarIrradianceComponent() : PooledComponent() {
+class SolarIrradianceComponent() : PooledComponent(), CloneableComponent<SolarIrradianceComponent> {
 	var irradiance: Int = 0
 
 	fun set(irradiance: Int): SolarIrradianceComponent {
@@ -115,10 +144,16 @@ class SolarIrradianceComponent() : PooledComponent() {
 	}
 	
 	override fun reset(): Unit {}
+	override fun copy(tc: SolarIrradianceComponent) {
+		tc.set(irradiance)
+	}
 }
 
-class TimedLifeComponent() : PooledComponent() {
+class TimedLifeComponent() : PooledComponent(), CloneableComponent<TimedLifeComponent> {
 	var endTime: Long = 0
 	
 	override fun reset(): Unit {}
+	override fun copy(tc: TimedLifeComponent) {
+		tc.endTime = endTime
+	}
 }

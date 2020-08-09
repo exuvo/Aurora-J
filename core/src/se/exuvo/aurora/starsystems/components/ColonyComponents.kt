@@ -1,19 +1,17 @@
 package se.exuvo.aurora.empires.components
 
 import com.artemis.Component
-import se.exuvo.aurora.galactic.ShipHull
-import com.artemis.utils.Bag
-import se.exuvo.aurora.galactic.Resource
-import java.security.InvalidParameterException
-import java.lang.IllegalStateException
-import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.galactic.MunitionHull
+import se.exuvo.aurora.galactic.Resource
+import se.exuvo.aurora.galactic.ShipHull
+import se.exuvo.aurora.starsystems.components.CloneableComponent
+import se.exuvo.aurora.utils.Units
 
-class PlanetComponent() : Component() {
+class PlanetComponent() : Component(), CloneableComponent<PlanetComponent> {
 	var cleanWater = 0L
 	var pollutedWater = 0L 
 	var usableLandArea = 0L // km²
-	var farmableLandArea = 0L // km² (subtracts from usable when used)
+	var arableLandArea = 0L // km² (subtracts from usable when used)
 	var blockedLandArea = 0L
 	var gravity = 100 // percentage of earth
 	var atmosphericDensity = 1225 // g/m³ at 1013.25 hPa (abs) and 15°C
@@ -21,24 +19,35 @@ class PlanetComponent() : Component() {
 	var temperature = 20 // celcius
 	val minableResources = LinkedHashMap<Resource, Long>()
 	val resourceAccessibility = LinkedHashMap<Resource, Int>()
+	
+	override fun copy(c: PlanetComponent) {
+		c.cleanWater = cleanWater
+		c.pollutedWater = pollutedWater
+		c.usableLandArea = usableLandArea
+		c.arableLandArea = arableLandArea
+		c.blockedLandArea = blockedLandArea
+		c.gravity = gravity
+		c.atmosphericDensity = atmosphericDensity
+		c.atmospheBreathability = atmospheBreathability
+		c.temperature = temperature
+		c.minableResources.clear()
+		c.minableResources.putAll(minableResources)
+		c.resourceAccessibility.clear()
+		c.resourceAccessibility.putAll(resourceAccessibility)
+	}
 }
 
-// stellaris like districts: housing, farming, mining, industry. consumes land area. no districts on outpost.
-// industry produces supplies and does construction (buildings and shipyard modifications)
-// building slots like stellaris (probably more slots that stellaris) for colonies and outposts
-// ratio of clean to polluted affects farming and population growth
-
 //TODO part storage
-class ColonyComponent() : Component() {
-	var population: Long = 0
+class ColonyComponent() : Component(), CloneableComponent<ColonyComponent> {
+	var population = 0L
 	var housingLandArea = 0L
 	var farmingLandArea = 0L
 	var industrialLandArea = 0L // pollutes water
 	var miningLandArea = 0L // pollutes water
-	var buildings = ArrayList<Building>()
+	val buildings = ArrayList<Building>()
+	val shipyards = ArrayList<Shipyard>()
 	val resources = LinkedHashMap<Resource, Long>()
 	val munitions = LinkedHashMap<MunitionHull, Int>()
-	val shipyards = ArrayList<Shipyard>()
 	
 	init {
 		val exludedResources = listOf(Resource.MISSILES, Resource.SABOTS)
@@ -49,9 +58,28 @@ class ColonyComponent() : Component() {
 		}
 	}
 	
-	fun set(population: Long): ColonyComponent {
+	fun set(population: Long,
+					housingLandArea: Long,
+					farmingLandArea: Long,
+					industrialLandArea: Long
+	): ColonyComponent {
 		this.population = population
+		this.housingLandArea = housingLandArea
+		this.farmingLandArea = farmingLandArea
+		this.industrialLandArea = industrialLandArea
 		return this
+	}
+	
+	override fun copy(c: ColonyComponent) {
+		c.set(population, housingLandArea, farmingLandArea, industrialLandArea)
+		c.buildings.clear()
+		c.buildings.addAll(buildings)
+		c.shipyards.clear()
+		c.shipyards.addAll(shipyards) //TODO deep copy
+		c.resources.clear()
+		c.resources.putAll(resources)
+		c.munitions.clear()
+		c.munitions.putAll(munitions)
 	}
 	
 	fun getCargoAmount(resource: Resource): Long = resources[resource]!!

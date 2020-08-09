@@ -4,8 +4,9 @@ import se.exuvo.aurora.galactic.TargetingComputer
 import se.exuvo.aurora.galactic.PartRef
 import com.artemis.Component
 import com.artemis.PooledComponent
+import se.exuvo.aurora.starsystems.components.CloneableComponent
 
-class IdleTargetingComputersComponent() : PooledComponent() {
+class IdleTargetingComputersComponent() : PooledComponent(), CloneableComponent<IdleTargetingComputersComponent> {
 	lateinit var targetingComputers: MutableList<PartRef<TargetingComputer>>
 	
 	fun set(targetingComputers: MutableList<PartRef<TargetingComputer>>): IdleTargetingComputersComponent {
@@ -14,9 +15,12 @@ class IdleTargetingComputersComponent() : PooledComponent() {
 	}
 	
 	override fun reset(): Unit {}
+	override fun copy(tc: IdleTargetingComputersComponent) {
+		tc.set(targetingComputers)
+	}
 }
 
-class ActiveTargetingComputersComponent() : PooledComponent() {
+class ActiveTargetingComputersComponent() : PooledComponent(), CloneableComponent<ActiveTargetingComputersComponent> {
 	lateinit var targetingComputers: MutableList<PartRef<TargetingComputer>>
 	
 	fun set(targetingComputers: MutableList<PartRef<TargetingComputer>>): ActiveTargetingComputersComponent {
@@ -25,6 +29,9 @@ class ActiveTargetingComputersComponent() : PooledComponent() {
 	}
 	
 	override fun reset(): Unit {}
+	override fun copy(tc: ActiveTargetingComputersComponent) {
+		tc.set(targetingComputers)
+	}
 }
 
 // Manual attacking, Hostiles in system or enemy projectiles flying

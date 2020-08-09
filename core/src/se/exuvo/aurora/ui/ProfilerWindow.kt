@@ -7,7 +7,6 @@ import imgui.ImGui
 import imgui.WindowFlag
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.forEachFast
-import kotlin.concurrent.read
 import se.exuvo.aurora.AuroraGame
 import se.exuvo.aurora.starsystems.StarSystem
 import imgui.internal.classes.Rect
@@ -27,10 +26,9 @@ class ProfilerWindow : UIWindow() {
 	}
 	
 	var system: StarSystem? = null
-	var zoom = 0.001f
+	var zoom = 0.005f
 	var xScroll = 0L
 	
-	val systemEvents = ProfilerBag()
 	val renderEvents = ProfilerBag()
 
 	override var visible: Boolean
@@ -51,7 +49,7 @@ class ProfilerWindow : UIWindow() {
 				val world = system.world
 				
 				if (value) {
-					world.callPrivateFunc("setInvocationStrategy", ProfilingSystemInvocationStrategy(this))
+					world.callPrivateFunc("setInvocationStrategy", ProfilingSystemInvocationStrategy(system))
 					
 				} else {
 					world.callPrivateFunc("setInvocationStrategy", CustomSystemInvocationStrategy())
@@ -75,77 +73,84 @@ class ProfilerWindow : UIWindow() {
 						
 						text("TODO time")
 						
-						val system = system
-						if (system != null) {
+						var timeOffset = galaxy.uiShadow.profilerEvents.data[0].time
+						
+						galaxy.systems.forEachFast { system ->
+							val time = system.uiShadow.profilerEvents.data[0].time
+							if (time < timeOffset) {
+								timeOffset = time
+							}
+						}
+						
+						val window = currentWindow
+						val backupPaddingY = style.framePadding.y
+						
+						var x = window.dc.cursorPos.x
+						var y = window.dc.cursorPos.y
+						var maxY = y
+						
+						fun eventBar(x: Float, y: Float, start: Long, end: Long, name: String): Boolean {
+							val id = window.getID("event")
+							val pos = Vec2(x + start.toFloat() * zoom, y)
+							val itemSize = Vec2((end - start).toFloat() * zoom, ctx.fontSize + 1)
+							val bb = Rect(pos, pos + itemSize)
+							val labelSize = calcTextSize(name, false)
 							
-							text("Star System ${system.sid} - ${systemEvents.size()} events")
+							itemSize(itemSize)
+							if (!itemAdd(bb, id)) return false
 							
-							val window = currentWindow
+							val flags = 0
+							val (pressed, hovered, held) = buttonBehavior(bb, id, flags)
 							
-							var size = systemEvents.size()
+							//Render
+							val col = if (hovered) Col.ButtonHovered.u32 else Vec4(0.3f, 0.5f, 0.3f, 1f).toLinearRGB().u32
+							renderNavHighlight(bb, id)
+							renderFrame(bb.min, bb.max, col, true, 1f)
+							//TODO maybe change
+							renderTextClipped(bb.min.plus(1f, -1f), bb.max - 1, name, labelSize, Vec2(0f, 0.5f), bb)
+							
+							if (y + itemSize.y > maxY) {
+								maxY = y + itemSize.y
+							}
+							
+							return hovered
+						}
+						
+						fun drawEvents(i: Int, events: ProfilerBag): Int {
+							var j = i
+							val startEvent = events.data[j++]
+							
+							var endEvent = events.data[j]
+							
+							while (endEvent.name != null) {
+								y += 15
+								j = drawEvents(j, events)
+								y -= 15
+								endEvent = events.data[j]
+							}
+							
+							val name = startEvent.name ?: "null"
+							
+							if (eventBar(x, y, startEvent.time - timeOffset, endEvent.time - timeOffset, name)) {
+								setTooltip("$name ${Units.nanoToMicroString(endEvent.time - startEvent.time)}")
+							}
+							
+							return j + 1
+						}
+						
+						fun drawEvents(events: ProfilerBag) {
+							var size = events.size()
 							if (size > 0) {
 								
-								val backupPaddingY = style.framePadding.y
 								style.framePadding.y = 0f
-								
-								val timeOffset = systemEvents.data[0].time
-								var x = window.dc.cursorPos.x
-								var y = window.dc.cursorPos.y
-								var maxY = y
-								
-								fun eventBar(x: Float, y: Float, start: Long, end: Long, name: String): Boolean {
-									val id = window.getID("event")
-									val pos = Vec2(x + start.toFloat() * zoom, y)
-									val itemSize = Vec2((end - start).toFloat() * zoom, ctx.fontSize + 1)
-									val bb = Rect(pos, pos + itemSize)
-									val labelSize = calcTextSize(name, false)
-									
-									itemSize(itemSize)
-									if (!itemAdd(bb, id)) return false
-									
-									val flags = 0
-									val (pressed, hovered, held) = buttonBehavior(bb, id, flags)
-									
-									//Render
-									val col = if (hovered) Col.ButtonHovered.u32 else Vec4(0.3f, 0.5f, 0.3f, 1f).toLinearRGB().u32
-									renderNavHighlight(bb, id)
-									renderFrame(bb.min, bb.max, col, true, 1f)
-									//TODO maybe change
-									renderTextClipped(bb.min.plus(1f, -1f), bb.max - 1, name, labelSize, Vec2(0f, 0.5f), bb)
-		
-									if (y + itemSize.y > maxY) {
-										maxY = y + itemSize.y
-									}
-									
-									return hovered
-								}
-								
-								fun drawEvents(i: Int): Int {
-									var j = i
-									val startEvent = systemEvents.data[j++]
-									
-									var endEvent = systemEvents.data[j]
-									
-									while (endEvent.name != null) {
-										y += 15
-										j = drawEvents(j)
-										y -= 15
-										endEvent = systemEvents.data[j]
-									}
-									
-									val name = startEvent.name ?: "null"
-									
-									if (eventBar(x, y, startEvent.time - timeOffset, endEvent.time - timeOffset, name)) {
-										setTooltip("$name ${Units.nanoToMicroString(endEvent.time - startEvent.time)}")
-									}
-									
-									return j + 1
-								}
+								x = window.dc.cursorPos.x
+								y = window.dc.cursorPos.y
+								maxY = y
 								
 								var i = 0;
 								
 								while(i < size - 1) {
-									i = drawEvents(i)
+									i = drawEvents(i, events)
 								}
 								
 								window.dc.cursorPos.y = maxY
@@ -154,15 +159,35 @@ class ProfilerWindow : UIWindow() {
 								style.framePadding.y = backupPaddingY
 							}
 						}
-					
-						text("Renderer ${renderEvents.size()} events")
+						
+						run {
+							val events = galaxy.uiShadow.profilerEvents
+							
+							text("Galaxy ${events.size()} events")
+							drawEvents(events)
+						}
+						
+						galaxy.systems.forEachFast { system ->
+							
+							val events = system.uiShadow.profilerEvents
+							
+							text("Star System ${system.sid} - ${events.size()} events")
+							drawEvents(events)
+						}
+						
+						run {
+							val events = renderEvents
+							
+							text("Renderer ${events.size()} events")
+							drawEvents(events)
+						}
 					}
 				}
 			}
 		}
 	}
 	
-	inner class ProfilerBag : Bag<ProfilerEvent>(ProfilerEvent::class.java, BAG_SIZE) {
+	class ProfilerBag : Bag<ProfilerEvent>(ProfilerEvent::class.java, BAG_SIZE) {
 		val eventPool = EventPool()
 		
 		fun start(time: Long, name: String) {
@@ -178,7 +203,6 @@ class ProfilerWindow : UIWindow() {
 		}
 		
 		override fun clear() {
-			
 			this.forEachFast { event ->
 				eventPool.free(event)
 			}

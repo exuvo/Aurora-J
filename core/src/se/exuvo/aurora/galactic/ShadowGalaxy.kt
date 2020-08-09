@@ -8,6 +8,7 @@ import com.artemis.World
 import com.artemis.WorldConfigurationBuilder
 import com.badlogic.gdx.utils.Disposable
 import se.exuvo.aurora.empires.components.ColonyComponent
+import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.starsystems.components.CircleComponent
 import se.exuvo.aurora.starsystems.components.EmissionsComponent
 import se.exuvo.aurora.starsystems.components.EntityReference
@@ -28,6 +29,7 @@ import se.exuvo.aurora.starsystems.components.SunComponent
 import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import se.exuvo.aurora.starsystems.components.TintComponent
 import se.exuvo.aurora.starsystems.components.UUIDComponent
+import se.exuvo.aurora.ui.ProfilerWindow
 import se.exuvo.aurora.utils.forEachFast
 
 // World with no systems only entities
@@ -40,7 +42,15 @@ class ShadowGalaxy(val galaxy: Galaxy) : Disposable {
 		}
 	var day = 0
 	
+	val profilerEvents = ProfilerWindow.ProfilerBag()
+	
 	lateinit var positionMapper: ComponentMapper<GalacticPositionComponent>
+	lateinit var uuidMapper: ComponentMapper<UUIDComponent>
+	lateinit var renderMapper: ComponentMapper<RenderComponent>
+	lateinit var nameMapper: ComponentMapper<NameComponent>
+	lateinit var strategicIconMapper: ComponentMapper<StrategicIconComponent>
+	lateinit var shipMapper: ComponentMapper<ShipComponent>
+	lateinit var ownerMapper: ComponentMapper<OwnerComponent>
 	
 	val allSubscription: EntitySubscription
 	
@@ -68,13 +78,42 @@ class ShadowGalaxy(val galaxy: Galaxy) : Disposable {
 		}
 		
 		world.process()
-		world.entityManager.resetNextID()
+		val em = world.entityManager
 		
 		galaxy.allSubscription.entities.forEachFast { entityID ->
-			//TODO create entity with specific ID
+			em.setNextID(entityID)
+			world.create()
+			
+			//TODO copy components
 		}
 		
 		world.process()
+	}
+	
+	fun resolveEntityReference(entityReference: EntityReference): EntityReference? {
+		
+		if (entityReference.system.uiShadow.isEntityReferenceValid(entityReference)) {
+			return entityReference
+		}
+		
+		return getEntityReferenceByUUID(entityReference.entityUUID, entityReference)
+	}
+	
+	fun getEntityReferenceByUUID(entityUUID: EntityUUID, oldEntityReference: EntityReference? = null): EntityReference? {
+		
+		galaxy.systems.forEachFast{ system ->
+			val entityID = system.uiShadow.getEntityByUUID(entityUUID)
+			
+			if (entityID != null) {
+				if (oldEntityReference != null) {
+					return system.uiShadow.updateEntityReference(entityID, oldEntityReference)
+				} else {
+					return system.uiShadow.getEntityReference(entityID)
+				}
+			}
+		}
+		
+		return null
 	}
 	
 	override fun dispose() {

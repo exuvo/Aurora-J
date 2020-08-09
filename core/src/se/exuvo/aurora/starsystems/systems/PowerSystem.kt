@@ -38,8 +38,8 @@ import se.exuvo.aurora.galactic.Railgun
 
 class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
-		val FAMILY = Aspect.all(ShipComponent::class.java, PowerComponent::class.java)
-		val SHIP_FAMILY = Aspect.all(ShipComponent::class.java)
+		@JvmField val FAMILY = Aspect.all(ShipComponent::class.java, PowerComponent::class.java)
+		@JvmField val SHIP_FAMILY = Aspect.all(ShipComponent::class.java)
 	}
 
 	val log = LogManager.getLogger(this.javaClass)
@@ -229,9 +229,9 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 			val powerComponent = powerMapper.get(entityID)
 			val ship = shipMapper.get(entityID)
 
-			val powerWasStable = powerComponent.totalAvailiablePower > powerComponent.totalUsedPower
-			val powerWasSolarStable = powerComponent.totalAvailiableSolarPower > powerComponent.totalRequestedPower
-			val oldTotalAvailiablePower = powerComponent.totalAvailiablePower
+			val powerWasStable = powerComponent.totalAvailablePower > powerComponent.totalUsedPower
+			val powerWasSolarStable = powerComponent.totalAvailableSolarPower > powerComponent.totalRequestedPower
+			val oldTotalAvailiablePower = powerComponent.totalAvailablePower
 
 			// Pre checks
 			powerComponent.poweringParts.forEachFast{ partRef ->
@@ -254,8 +254,8 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 						powerComponent.stateChanged = true
 					}
 
-					powerComponent.totalAvailiablePower += producedPower - poweringState.availiablePower
-					powerComponent.totalAvailiableSolarPower += producedPower - poweringState.availiablePower
+					powerComponent.totalAvailablePower += producedPower - poweringState.availiablePower
+					powerComponent.totalAvailableSolarPower += producedPower - poweringState.availiablePower
 					poweringState.availiablePower = producedPower
 
 				} else if (part is Reactor) {
@@ -272,7 +272,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 						powerComponent.stateChanged = true
 					}
 
-					powerComponent.totalAvailiablePower += availiablePower - poweringState.availiablePower
+					powerComponent.totalAvailablePower += availiablePower - poweringState.availiablePower
 					poweringState.availiablePower = availiablePower
 
 				} else if (part is Battery) { // Charge empty or full
@@ -292,22 +292,22 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 
 					val availiablePower = Math.min(part.power, chargedState.charge)
 
-					powerComponent.totalAvailiablePower += availiablePower - poweringState.availiablePower
+					powerComponent.totalAvailablePower += availiablePower - poweringState.availiablePower
 					poweringState.availiablePower = availiablePower
 				}
 			}
 
 			if (!powerComponent.stateChanged) {
 
-				if (powerWasSolarStable && powerComponent.totalAvailiableSolarPower < powerComponent.totalRequestedPower) {
+				if (powerWasSolarStable && powerComponent.totalAvailableSolarPower < powerComponent.totalRequestedPower) {
 					powerComponent.stateChanged = true
 				}
 
 				if (powerWasStable) {
-					if (powerComponent.totalAvailiablePower < powerComponent.totalUsedPower) {
+					if (powerComponent.totalAvailablePower < powerComponent.totalUsedPower) {
 						powerComponent.stateChanged = true
 					}
-				} else if (powerComponent.totalAvailiablePower != oldTotalAvailiablePower) {
+				} else if (powerComponent.totalAvailablePower != oldTotalAvailiablePower) {
 					powerComponent.stateChanged = true
 				}
 			}
@@ -317,8 +317,8 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 				powerComponent.stateChanged = false
 
 				// Summarise availiable power
-				powerComponent.totalAvailiablePower = 0
-				powerComponent.totalAvailiableSolarPower = 0
+				powerComponent.totalAvailablePower = 0
+				powerComponent.totalAvailableSolarPower = 0
 				var availiableChargingPower = 0L
 
 				powerComponent.poweringParts.forEach({
@@ -328,10 +328,10 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 					if (ship.isPartEnabled(partRef)) {
 						val poweringState = ship.getPartState(partRef)[PoweringPartState::class]
 
-						powerComponent.totalAvailiablePower += poweringState.availiablePower
+						powerComponent.totalAvailablePower += poweringState.availiablePower
 
 						if (part is SolarPanel) {
-							powerComponent.totalAvailiableSolarPower += poweringState.availiablePower
+							powerComponent.totalAvailableSolarPower += poweringState.availiablePower
 						}
 
 						if (part is SolarPanel || (part is Reactor && powerComponent.powerScheme.chargeBatteryFromReactor)) {
@@ -379,13 +379,13 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 
 						if (part !is Battery) {
 
-							if (powerComponent.totalRequestedPower + poweredState.requestedPower <= powerComponent.totalAvailiablePower) {
+							if (powerComponent.totalRequestedPower + poweredState.requestedPower <= powerComponent.totalAvailablePower) {
 
 								poweredState.givenPower = poweredState.requestedPower
 
 							} else {
 
-								poweredState.givenPower = Math.max(0, powerComponent.totalAvailiablePower - powerComponent.totalRequestedPower)
+								poweredState.givenPower = Math.max(0, powerComponent.totalAvailablePower - powerComponent.totalRequestedPower)
 							}
 
 							givenPower += poweredState.givenPower

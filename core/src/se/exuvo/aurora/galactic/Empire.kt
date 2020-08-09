@@ -10,6 +10,7 @@ import com.artemis.utils.Bag
 import com.artemis.utils.IntBag
 import se.exuvo.aurora.starsystems.StarSystem
 import uk.co.omegaprime.btreemap.LongObjectBTreeMap
+import java.util.concurrent.ArrayBlockingQueue
 
 class Empire(var name: String) {
 companion object {
@@ -33,7 +34,8 @@ companion object {
 	val shipHulls = ArrayList<ShipHull>()
 	val hullClasses = ArrayList<ShipHullClass>()
 	val orders = Bag<EntityReference>()
-
+	var commandQueue = ArrayBlockingQueue<Command>(128)
+	
 	init {
 		hullClasses.add(ShipHullClass("Dreadnought", "BA"))
 		hullClasses.add(ShipHullClass("Battleship", "BB"))

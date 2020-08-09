@@ -22,10 +22,9 @@ import com.artemis.annotations.Wire
 
 class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
-		val FAMILY = Aspect.all(ShipComponent::class.java)
+		@JvmField val FAMILY = Aspect.all(ShipComponent::class.java)
+		@JvmField val log = LogManager.getLogger(ShipSystem::class.java)
 	}
-
-	val log = LogManager.getLogger(this.javaClass)
 
 	lateinit private var massMapper: ComponentMapper<MassComponent>
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>

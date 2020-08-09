@@ -8,8 +8,7 @@ import org.apache.commons.math3.util.FastMath
 import com.artemis.PooledComponent
 import kotlin.math.sign
 
-data class TimedValue<T>(val value: T, var time: Long) {
-}
+data class TimedValue<T>(val value: T, var time: Long)
 
 abstract class TimedComponent<T>() : PooledComponent() {
 	abstract fun get(time: Long): TimedValue<T>
@@ -111,7 +110,7 @@ data class MovementValues(val position: Vector2L, val velocity: Vector2L, val ac
 	}
 }
 
-class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValue(MovementValues(Vector2L(), Vector2L(), Vector2L()), 0L)) {
+class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValue(MovementValues(Vector2L(), Vector2L(), Vector2L()), 0L)), CloneableComponent<TimedMovementComponent> {
 	var approach: ApproachType? = null
 	var startAcceleration: Long? = null
 	var finalAcceleration: Long? = null
@@ -179,6 +178,52 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 		
 		next = null
 	}
+	
+	override fun copy(tc: TimedMovementComponent) {
+		tc.approach = approach
+		tc.startAcceleration = startAcceleration
+		tc.finalAcceleration = finalAcceleration
+		
+		val aimTarget = aimTarget
+		val tcAimTarget = tc.aimTarget
+		
+		if (aimTarget == null) {
+			tc.aimTarget = null
+		} else if (tcAimTarget == null) {
+			tc.aimTarget = aimTarget.cpy()
+		} else if (tcAimTarget.hashCode() != aimTarget.hashCode()) {
+			tcAimTarget.set(aimTarget)
+		}
+		
+		if (previous.hashCode() != tc.previous.hashCode()) {
+			tc.setValue(tc.previous, previous.value)
+			tc.previous.time = previous.time
+		}
+		
+//		val interpolated = interpolated
+//		val tcInterpolated = tc.interpolated
+//
+//		if (interpolated == null) {
+//			tc.interpolated = null
+//		} else if (tcInterpolated == null) {
+//			tc.interpolated = TimedValue(MovementValues(interpolated.value.position.cpy(), interpolated.value.velocity.cpy(), interpolated.value.acceleration.cpy()), interpolated.time)
+//		} else if (tcInterpolated.hashCode() != interpolated.hashCode()) {
+//			tc.setValue(tcInterpolated, interpolated.value)
+//			tcInterpolated.time = interpolated.time
+//		}
+		
+		val next = next
+		val tcNext = tc.next
+		
+		if (next == null) {
+			tc.next = null
+		} else if (tcNext == null) {
+			tc.next = TimedValue(MovementValues(next.value.position.cpy(), next.value.velocity.cpy(), next.value.acceleration.cpy()), next.time)
+		} else if (tcNext.hashCode() != next.hashCode()) {
+			tc.setValue(tcNext, next.value)
+			tcNext.time = next.time
+		}
+	}
 
 	override fun setPrediction(value: MovementValues, time: Long): Boolean {
 
@@ -190,7 +235,6 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 			
 			if (interpolated == null) {
 				interpolated = TimedValue(MovementValues(Vector2L(), Vector2L(value.velocity), Vector2L()), -1)
-				this.interpolated = interpolated
 			}
 			
 			return true
@@ -209,7 +253,6 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 			
 			if (interpolated == null) {
 				interpolated = TimedValue(MovementValues(Vector2L(), Vector2L(value.velocity), Vector2L()), -1)
-				this.interpolated = interpolated
 			}
 			
 			return true
@@ -228,7 +271,6 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 			
 			if (interpolated == null) {
 				interpolated = TimedValue(MovementValues(Vector2L(), Vector2L(), Vector2L()), -1)
-				this.interpolated = interpolated
 			}
 			
 			return true
@@ -247,7 +289,6 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 			
 			if (interpolated == null) {
 				interpolated = TimedValue(MovementValues(Vector2L(), Vector2L(), Vector2L()), -1)
-				this.interpolated = interpolated
 			}
 			
 			val averageAcceleration = (startAcceleration + finalAcceleration!!) / 2

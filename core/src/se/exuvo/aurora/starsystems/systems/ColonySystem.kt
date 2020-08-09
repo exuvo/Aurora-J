@@ -31,7 +31,7 @@ import com.artemis.annotations.Wire
 
 class ColonySystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 60 * 60) { // hourly? DailyIteratingSystem
 	companion object {
-		val FAMILY = Aspect.all(ColonyComponent::class.java)
+		@JvmField val FAMILY = Aspect.all(ColonyComponent::class.java)
 	}
 
 	val log = LogManager.getLogger(this.javaClass)

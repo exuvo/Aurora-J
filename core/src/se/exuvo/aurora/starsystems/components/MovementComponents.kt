@@ -7,7 +7,7 @@ import com.artemis.annotations.PooledWeaver
 import com.artemis.PooledComponent
 
 // In N and degrees
-class ThrustComponent() : PooledComponent() {
+class ThrustComponent() : PooledComponent(), CloneableComponent<ThrustComponent> {
 	var thrust: Long = 0
 	var maxThrust: Long = 0
 	var thrustAngle: Float = 0f
@@ -26,6 +26,9 @@ class ThrustComponent() : PooledComponent() {
 	}
 	
 	override fun reset(): Unit {}
+	override fun copy(targetComponent: ThrustComponent) {
+		targetComponent.set(thrust, maxThrust, thrustAngle, thrusting)
+	}
 }
 
 enum class ApproachType {
@@ -34,7 +37,7 @@ enum class ApproachType {
 	COAST
 }
 
-class MoveToEntityComponent() : PooledComponent() {
+class MoveToEntityComponent() : PooledComponent(), CloneableComponent<MoveToEntityComponent> {
 	var targetID: Int = -1
 	lateinit var approach: ApproachType
 
@@ -47,9 +50,12 @@ class MoveToEntityComponent() : PooledComponent() {
 	}
 	
 	override fun reset(): Unit {}
+	override fun copy(targetComponent: MoveToEntityComponent) {
+		targetComponent.set(targetID, approach)
+	}
 }
 
-class MoveToPositionComponent() : PooledComponent() {
+class MoveToPositionComponent() : PooledComponent(), CloneableComponent<MoveToPositionComponent> {
 	lateinit var target: Vector2L
 	lateinit var approach: ApproachType
 
@@ -62,8 +68,12 @@ class MoveToPositionComponent() : PooledComponent() {
 	}
 	
 	override fun reset(): Unit {}
+	override fun copy(targetComponent: MoveToPositionComponent) {
+		targetComponent.set(target, approach)
+	}
 }
 
-class OnPredictedMovementComponent() : PooledComponent() {
+class OnPredictedMovementComponent() : PooledComponent(), CloneableComponent<OnPredictedMovementComponent> {
 	override fun reset(): Unit {}
+	override fun copy(targetComponent: OnPredictedMovementComponent) {}
 }

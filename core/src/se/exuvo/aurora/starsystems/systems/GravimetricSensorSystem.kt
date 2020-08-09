@@ -45,9 +45,9 @@ import se.exuvo.aurora.AuroraGameMainWindow
 @Suppress("DEPRECATION")
 class GravimetricSensorSystem : GalaxyTimeIntervalSystem((H_SQUARE_SIZE_KM / Units.C).toLong()) { // 
 	companion object {
-		val SENSOR_ASPECT = Aspect.all(GravimetricSensorsComponent::class.java)
-		val EMISSION_ASPECT = Aspect.all(MassComponent::class.java, TimedMovementComponent::class.java)
-		val SHIP_ASPECT = Aspect.all(ShipComponent::class.java)
+		@JvmField val SENSOR_ASPECT = Aspect.all(GravimetricSensorsComponent::class.java)
+		@JvmField val EMISSION_ASPECT = Aspect.all(MassComponent::class.java, TimedMovementComponent::class.java)
+		@JvmField val SHIP_ASPECT = Aspect.all(ShipComponent::class.java)
 
 		const val MAX_AU = 10;
 		const val SQUARES_PER_AU = 20

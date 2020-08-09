@@ -6,7 +6,7 @@ import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.utils.GameUtils
 import com.artemis.PooledComponent
 
-class UUIDComponent() : PooledComponent() {
+class UUIDComponent() : PooledComponent(), CloneableComponent<UUIDComponent> {
 	lateinit var uuid: EntityUUID
 	
 	fun set(uuid: EntityUUID): UUIDComponent {
@@ -15,6 +15,10 @@ class UUIDComponent() : PooledComponent() {
 	}
 	
 	override fun reset(): Unit {}
+	
+	override fun copy(targetComponent: UUIDComponent) {
+		targetComponent.set(uuid)
+	}
 }
 
 data class EntityUUID(val starSystemID: Int, val empireID: Int, val entityUID: Long) {
@@ -51,7 +55,7 @@ class EntityReference() {
 	override fun hashCode(): Int = entityUUID.hashCode()
 }
 
-class NameComponent() : PooledComponent() {
+class NameComponent() : PooledComponent(), CloneableComponent<NameComponent> {
 	lateinit var name: String
 	
 	fun set(name: String): NameComponent {
@@ -60,4 +64,7 @@ class NameComponent() : PooledComponent() {
 	}
 	
 	override fun reset(): Unit {}
+	override fun copy(targetComponent: NameComponent) {
+		targetComponent.set(name)
+	}
 }

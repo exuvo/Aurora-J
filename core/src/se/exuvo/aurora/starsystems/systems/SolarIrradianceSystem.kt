@@ -17,11 +17,10 @@ import com.artemis.utils.Bag
 
 class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 	companion object {
-		val FAMILY = Aspect.all(SolarIrradianceComponent::class.java, TimedMovementComponent::class.java)
-		val SUNS_FAMILY = Aspect.all(SunComponent::class.java, TimedMovementComponent::class.java)
+		@JvmField val FAMILY = Aspect.all(SolarIrradianceComponent::class.java, TimedMovementComponent::class.java)
+		@JvmField val SUNS_FAMILY = Aspect.all(SunComponent::class.java, TimedMovementComponent::class.java)
+		@JvmField val log = LogManager.getLogger(SolarIrradianceSystem::class.java)
 	}
-
-	val log = LogManager.getLogger(this.javaClass)
 
 	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>
 	lateinit private var irradianceMapper: ComponentMapper<SolarIrradianceComponent>

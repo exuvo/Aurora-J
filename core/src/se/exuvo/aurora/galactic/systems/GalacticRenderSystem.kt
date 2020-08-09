@@ -27,9 +27,9 @@ import se.exuvo.aurora.AuroraGame
 class GalacticRenderSystem : BaseEntitySystem(FAMILY) {
 
 	companion object {
-		val FAMILY = Aspect.all(GalacticPositionComponent::class.java, RenderComponent::class.java, StrategicIconComponent::class.java)
-		val STRATEGIC_ICON_SIZE = 24f
-		val RENDER_SCALE = 10
+		@JvmField val FAMILY = Aspect.all(GalacticPositionComponent::class.java, RenderComponent::class.java, StrategicIconComponent::class.java)
+		const val STRATEGIC_ICON_SIZE = 24f
+		const val RENDER_SCALE = 10
 	}
 
 	lateinit private var tintMapper: ComponentMapper<TintComponent>

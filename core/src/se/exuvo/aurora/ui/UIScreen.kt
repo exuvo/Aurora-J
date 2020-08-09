@@ -33,11 +33,11 @@ import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.toLinearRGB
 import uno.glfw.GlfwWindow
 import uno.glfw.GlfwWindowHandle
+import kotlin.concurrent.withLock
 
 class UIScreen : GameScreenImpl(), InputProcessor {
 	companion object {
-		@JvmStatic
-		val log = LogManager.getLogger(UIScreen::class.java)
+		@JvmStatic val log = LogManager.getLogger(UIScreen::class.java)
 	}
 
 	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
@@ -168,66 +168,68 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 				ImGui.showDemoWindow(::demoVisible)
 			}
 			
-			if (mainDebugVisible) {
-
-				if (ImGui.begin("Debug window", ::mainDebugVisible, WindowFlag.MenuBar.i)) {
-
-					if (ImGui.beginMenuBar()) {
-						if (ImGui.beginMenu("Windows")) {
-							if (ImGui.menuItem("Ship debug", "", shipDebugger::visible)) {
-								shipDebugger.visible = !shipDebugger.visible
+			galaxy.uiLock.withLock {
+				if (mainDebugVisible) {
+	
+					if (ImGui.begin("Debug window", ::mainDebugVisible, WindowFlag.MenuBar.i)) {
+	
+						if (ImGui.beginMenuBar()) {
+							if (ImGui.beginMenu("Windows")) {
+								if (ImGui.menuItem("Ship debug", "", shipDebugger::visible)) {
+									shipDebugger.visible = !shipDebugger.visible
+								}
+								if (ImGui.menuItem("Ship designer", "", shipDesigner::visible)) {
+									shipDesigner.visible = !shipDesigner.visible
+								}
+								if (ImGui.menuItem("Colony manager", "", colonyManager::visible)) {
+									colonyManager.visible = !colonyManager.visible
+								}
+								if (ImGui.menuItem("ImGui Demo", "hotkey", demoVisible)) {
+									demoVisible = !demoVisible
+								}
+								ImGui.endMenu();
 							}
-							if (ImGui.menuItem("Ship designer", "", shipDesigner::visible)) {
-								shipDesigner.visible = !shipDesigner.visible
+							if (ImGui.beginMenu("Render")) {
+								if (ImGui.menuItem("Show PassiveSensor hits", "", RenderSystem.debugPassiveSensors)) {
+									RenderSystem.debugPassiveSensors = !RenderSystem.debugPassiveSensors
+								}
+								if (ImGui.menuItem("DisableStrategicView", "", RenderSystem.debugDisableStrategicView)) {
+									RenderSystem.debugDisableStrategicView = !RenderSystem.debugDisableStrategicView
+								}
+								if (ImGui.menuItem("DrawWeaponRangesWithoutShader", "", RenderSystem.debugDrawWeaponRangesWithoutShader)) {
+									RenderSystem.debugDrawWeaponRangesWithoutShader = !RenderSystem.debugDrawWeaponRangesWithoutShader
+								}
+								ImGui.endMenu();
 							}
-							if (ImGui.menuItem("Colony manager", "", colonyManager::visible)) {
-								colonyManager.visible = !colonyManager.visible
-							}
-							if (ImGui.menuItem("ImGui Demo", "hotkey", demoVisible)) {
-								demoVisible = !demoVisible
-							}
-							ImGui.endMenu();
+							ImGui.endMenuBar();
 						}
-						if (ImGui.beginMenu("Render")) {
-							if (ImGui.menuItem("Show PassiveSensor hits", "", RenderSystem.debugPassiveSensors)) {
-								RenderSystem.debugPassiveSensors = !RenderSystem.debugPassiveSensors
-							}
-							if (ImGui.menuItem("DisableStrategicView", "", RenderSystem.debugDisableStrategicView)) {
-								RenderSystem.debugDisableStrategicView = !RenderSystem.debugDisableStrategicView
-							}
-							if (ImGui.menuItem("DrawWeaponRangesWithoutShader", "", RenderSystem.debugDrawWeaponRangesWithoutShader)) {
-								RenderSystem.debugDrawWeaponRangesWithoutShader = !RenderSystem.debugDrawWeaponRangesWithoutShader
-							}
-							ImGui.endMenu();
+	
+						ImGui.text("Hello, world %d", 4)
+						ImGui.text("ctx.hoveredWindow ${ctx.hoveredWindow}")
+						ImGui.text("ctx.navWindow ${ctx.navWindow}")
+						ImGui.text("ctx.navWindow.dc ${ctx.navWindow?.dc}")
+						ImGui.text("ctx.io.wantCaptureMouse ${ctx.io.wantCaptureMouse}")
+						ImGui.text("ctx.io.wantCaptureKeyboard ${ctx.io.wantCaptureKeyboard}")
+						ImGui.plotLines("plot", graphValues)
+	
+						if (ImGui.button("OK")) {
+							println("click")
 						}
-						ImGui.endMenuBar();
+	
+						ImGui.inputText("string", stringbuf)
+						ImGui.sliderFloat("float", ::slider, 0f, 1f)
+						ImGui.image(img.getTexture().textureObjectHandle, Vec2(64, 64))
 					}
-
-					ImGui.text("Hello, world %d", 4)
-					ImGui.text("ctx.hoveredWindow ${ctx.hoveredWindow}")
-					ImGui.text("ctx.navWindow ${ctx.navWindow}")
-					ImGui.text("ctx.navWindow.dc ${ctx.navWindow?.dc}")
-					ImGui.text("ctx.io.wantCaptureMouse ${ctx.io.wantCaptureMouse}")
-					ImGui.text("ctx.io.wantCaptureKeyboard ${ctx.io.wantCaptureKeyboard}")
-					ImGui.plotLines("plot", graphValues)
-
-					if (ImGui.button("OK")) {
-						println("click")
-					}
-
-					ImGui.inputText("string", stringbuf)
-					ImGui.sliderFloat("float", ::slider, 0f, 1f)
-					ImGui.image(img.getTexture().textureObjectHandle, Vec2(64, 64))
+					ImGui.end()
 				}
-				ImGui.end()
+	
+				commandMenu()
+				shipDebugger.draw()
+				shipDesigner.draw()
+				colonyManager.draw()
+				profiler.draw()
+				empireOverview.draw()
 			}
-
-			commandMenu()
-			shipDebugger.draw()
-			shipDesigner.draw()
-			colonyManager.draw()
-			profiler.draw()
-			empireOverview.draw()
 
 			ImGui.render()
 			gl3.renderDrawData(ctx.drawData)

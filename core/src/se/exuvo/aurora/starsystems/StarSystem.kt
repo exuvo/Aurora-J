@@ -172,12 +172,9 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		worldBuilder.with(WeaponSystem())
 		worldBuilder.with(PowerSystem())
 		worldBuilder.with(TimedLifeSystem())
-		worldBuilder.with(RenderSystem())
 		worldBuilder.register(CustomSystemInvocationStrategy())
 		//TODO add system to send changes over network
 		
-		//TODO profiler, port UI from https://bitbucket.org/wolfpld/tracy/src/master/
-
 		val worldConfig = worldBuilder.build()
 		worldConfig.register(this)
 		world = World(worldConfig)
@@ -347,7 +344,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		tintMapper.create(entity2).set(Color.GREEN)
 		strategicIconMapper.create(entity2).set(Assets.textures.findRegion("strategic/world"))
 		emissionsMapper.create(entity2).set(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10))
-		colonyMapper.create(entity2).set(population = random.nextLong(1000000)).apply {
+		colonyMapper.create(entity2).set(random.nextLong(1000000), 1L, 1L, 1L).apply {
 			shipyards += Shipyard(ShipyardLocation.TERRESTIAL, ShipyardType.CIVILIAN).apply{
 				capacity = random.nextLong(2000)
 				slipways += ShipyardSlipway()
@@ -413,6 +410,8 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		nameMapper.create(entity5).set(name = "Asteroid")
 		tintMapper.create(entity5).set(Color.GRAY)
 		strategicIconMapper.create(entity5).set(Assets.textures.findRegion("strategic/moon"))
+		
+		shadow.update()
 	}
 	
 	fun createShip(hull: ShipHull, colonyEntity: Int?, empire: Empire): Int {
@@ -529,7 +528,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	
 	fun getEntityReference(entityID: Int): EntityReference {
 		
-		return pools.getPool(EntityReference::class.java).obtain().set(this, entityID, uuidMapper.get(entityID).uuid)
+		return EntityReference().set(this, entityID, uuidMapper.get(entityID).uuid)
 	}
 	
 	fun updateEntityReference(entityID: Int, entityReference: EntityReference): EntityReference {
@@ -566,32 +565,39 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 			solarSystemMapper.create(entityID).set(this)
 		}
 	}
-
+	
 	override fun removed(entityIDs: IntBag) {
 		entityIDs.forEachFast { entityID ->
 			solarSystemMapper.remove(entityID)
 		}
 	}
-
-//	var delay = (Math.random() * 30).toLong()
+	
+	//	var delay = (Math.random() * 30).toLong()
 	fun update(deltaGameTime: Int) {
-
+		
+		val profilerEvents = workingShadow.profilerEvents
+		profilerEvents.clear()
+		
+		profilerEvents.start("process")
 		if (inCombatSubscription.getEntityCount() > 0) {
 			
 			world.setDelta(1f)
 			
-			for (i in 0 .. deltaGameTime) {
+			for (i in 0..deltaGameTime) {
 				world.process()
 			}
 			
 		} else {
-		
+			
 			world.setDelta(deltaGameTime.toFloat())
 			world.process()
 		}
-	
-		workingShadow.update()
+		profilerEvents.end()
 		
+		profilerEvents.start("shadow update")
+		workingShadow.update()
+		profilerEvents.end()
+
 //		if (Math.random() > 0.97) {
 //			delay = (Math.random() * 30).toLong()
 //		}
@@ -606,6 +612,8 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	fun <T: Event> getEvent(eventClass: KClass<T>): T = pools.obtain(eventClass.java)
 	
 	fun getName() = galaxy.world.getMapper(NameComponent::class.java).get(galacticEntityID).name
+	
+	override fun toString(): String  = "$galacticEntityID.${getName()}"
 	
 	override fun dispose() {
 		world.dispose()

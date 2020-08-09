@@ -30,9 +30,9 @@ import com.artemis.annotations.Wire
 
 class PassiveSensorSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10) {
 	companion object {
-		val FAMILY = Aspect.all(PassiveSensorsComponent::class.java)
-		val SHIP_ASPECT = Aspect.all(ShipComponent::class.java)
-		val EMISSION_FAMILY = Aspect.all(EmissionsComponent::class.java)
+		@JvmField val FAMILY = Aspect.all(PassiveSensorsComponent::class.java)
+		@JvmField val SHIP_ASPECT = Aspect.all(ShipComponent::class.java)
+		@JvmField val EMISSION_FAMILY = Aspect.all(EmissionsComponent::class.java)
 	}
 
 	val log = LogManager.getLogger(this.javaClass)

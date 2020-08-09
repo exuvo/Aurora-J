@@ -50,7 +50,7 @@ import se.exuvo.aurora.empires.components.IdleTargetingComputersComponent
 
 class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
-		val FAMILY = Aspect.all(ActiveTargetingComputersComponent::class.java)
+		@JvmField val FAMILY = Aspect.all(ActiveTargetingComputersComponent::class.java)
 		
 		// Quadric formula https://en.wikipedia.org/wiki/Quadratic_equation#Quadratic_formula_and_its_derivation
 		@JvmStatic
@@ -67,8 +67,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			return (-b + FastMath.sqrt(tmp)) / (2 * a)
 		}
 		
-		@JvmStatic
-		val log = LogManager.getLogger(WeaponSystem::class.java)
+		@JvmField val log = LogManager.getLogger(WeaponSystem::class.java)
 		
 		const val POLYNOMIAL_MAX_ITERATIONS: Int = 10000
 	}
