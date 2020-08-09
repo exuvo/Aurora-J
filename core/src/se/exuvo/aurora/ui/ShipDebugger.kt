@@ -42,6 +42,7 @@ import se.exuvo.aurora.galactic.SimpleMunitionHull
 import imgui.DataType
 import imgui.internal.classes.Rect
 import glm_.vec4.Vec4
+import imgui.internal.ButtonFlag
 import imgui.u32
 import se.exuvo.aurora.galactic.DamagePattern
 import se.exuvo.aurora.galactic.PartRef
@@ -53,6 +54,7 @@ import se.exuvo.aurora.utils.toLinearRGB
 
 class ShipDebugger : UIWindow() {
 	
+	var useShadow = true
 	var lastDebugTime = 0L
 	var powerAvailiableValues = FloatArray(60)
 	var powerRequestedValues = FloatArray(60)
@@ -82,25 +84,43 @@ class ShipDebugger : UIWindow() {
 								selectionIndex = 0
 							}
 							
+							if (useShadow) {
+								if (button("Shadow")) {
+									useShadow = false
+								}
+							} else {
+								if (button(" Live ")) {
+									useShadow = true
+								}
+							}
+							sameLine()
 							sliderScalar("Selection", DataType.Int, ::selectionIndex, 0, selectedEntities.size() - 1, "${1 + selectionIndex} / ${selectedEntities.size()}", 2.0f)
-		
-							val entityRef = selectedEntities[selectionIndex].system.uiShadow.resolveEntityReference(selectedEntities[selectionIndex])
+							
+							val entityRef =
+									if (useShadow) {
+										selectedEntities[selectionIndex].system.shadow.resolveEntityReference(selectedEntities[selectionIndex])
+									} else {
+										galaxy.resolveEntityReference(selectedEntities[selectionIndex])
+									}
 							
 							if (entityRef != null) {
 								
 								val system = entityRef.system
+								val world = if (useShadow) system.shadow.world else system.world
 								
-								val shipMapper = system.uiShadow.shipMapper
-								val powerMapper = system.uiShadow.powerMapper
-								val irradianceMapper = system.uiShadow.solarIrradianceMapper
+								//TODO toggle to select shadow or paused real
+								
+								val shipMapper = world.getMapper(ShipComponent::class.java)
+								val powerMapper = world.getMapper(PowerComponent::class.java)
+								val irradianceMapper = world.getMapper(SolarIrradianceComponent::class.java)
 			
 								val shipComponent = shipMapper.get(entityRef.entityID)
 								
-								textUnformatted("Entity ${printEntity(entityRef.entityID, system.world)}")
+								textUnformatted("Entity ${printEntity(entityRef.entityID, world)}")
 								
 								if (collapsingHeader("Components", 0)) { // TreeNodeFlag.DefaultOpen.i
 		
-									val components = system.uiShadow.world.componentManager.getComponentsFor(entityRef.entityID, Bag<Component>())
+									val components = world.componentManager.getComponentsFor(entityRef.entityID, Bag<Component>())
 									
 									components.forEachFast{ component ->
 		
@@ -368,7 +388,7 @@ class ShipDebugger : UIWindow() {
 											}
 										}
 										
-										val shieldHP = shipComponent.shieldHP()
+										val shieldHP = shipComponent.shieldHP
 										val maxShieldHP = shipComponent.hull.maxShieldHP
 										
 										if (shieldBar(shieldHP.toDouble(), maxShieldHP.toDouble())) {
@@ -415,13 +435,14 @@ class ShipDebugger : UIWindow() {
 										
 										sliderScalar("Damage amount", DataType.Long, ::testDmgAmount, 0L, 1_000_000L, "$testDmgAmount", 2.5f)
 										
-										if (button("damage")) {
-											//TODO replace with command
-//											weaponSystem.applyArmorDamage(entityRef.entityID, testDmgAmount, DamagePattern.LASER)
+										val buttonFlags = if (useShadow) ButtonFlag.Disabled.i else 0
+										
+										if (buttonEx("damage", Vec2(), buttonFlags)) {
+											val weaponSystem = world.getSystem(WeaponSystem::class.java)
+											weaponSystem.applyShieldDamage(entityRef.entityID, shipComponent, testDmgAmount, DamagePattern.LASER)
 										}
 										
-										//TODO replace with command
-										if (button("kill armor")) {
+										if (buttonEx("kill armor", Vec2(), buttonFlags)) {
 											for (y in 0..shipComponent.hull.armorLayers - 1) {
 												for (x in 0..shipComponent.hull.getArmorWidth() - 1) {
 													shipComponent.armor[y][x] = -128
@@ -429,8 +450,7 @@ class ShipDebugger : UIWindow() {
 											}
 										}
 										
-										//TODO replace with command
-										if (button("repair")) {
+										if (buttonEx("repair", Vec2(), buttonFlags)) {
 											for (y in 0..shipComponent.hull.armorLayers - 1) {
 												for (x in 0..shipComponent.hull.getArmorWidth() - 1) {
 													shipComponent.armor[y][x] = shipComponent.hull.armorBlockHP[y]
@@ -575,8 +595,9 @@ class ShipDebugger : UIWindow() {
 		
 										inputScalar("kg", DataType.Int, ::addResourceAmount, 10, 100, "%d", 0)
 										
-										//TODO replace with command
-										if (button("Add")) {
+										val buttonFlags = if (useShadow) ButtonFlag.Disabled.i else 0
+										
+										if (buttonEx("Add", Vec2(), buttonFlags)) {
 											if (!shipComponent.addCargo(addResource, addResourceAmount.toLong())) {
 												println("Cargo does not fit")
 											}
@@ -584,8 +605,7 @@ class ShipDebugger : UIWindow() {
 		
 										sameLine(0f, style.itemInnerSpacing.x)
 										
-										//TODO replace with command
-										if (button("Remove")) {
+										if (buttonEx("Remove", Vec2(), buttonFlags)) {
 											if (shipComponent.retrieveCargo(addResource, addResourceAmount.toLong()) != addResourceAmount.toLong()) {
 												println("Does not have enough of specified cargo")
 											}

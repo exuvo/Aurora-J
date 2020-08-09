@@ -21,6 +21,9 @@ import kotlin.Suppress
 import se.exuvo.aurora.galactic.MunitionHull
 import se.exuvo.aurora.utils.forEachFast
 import com.artemis.utils.Bag
+import se.exuvo.aurora.galactic.BeamWeapon
+import se.exuvo.aurora.galactic.MissileLauncher
+import se.exuvo.aurora.galactic.Railgun
 import uk.co.omegaprime.btreemap.LongObjectBTreeMap
 import java.util.PriorityQueue
 
@@ -49,6 +52,11 @@ class ShipComponent() : Component(), CloneableComponent<ShipComponent> {
 			if (field == -1L) { field = calculateCargoMass() }
 			return field
 		}
+	var shieldHP = -1L
+		get(){
+			if (field == -1L) { field = calculateShieldHP() }
+			return field
+	}
 	
 	fun set(hull: ShipHull,
 					comissionTime: Long
@@ -214,6 +222,10 @@ class ShipComponent() : Component(), CloneableComponent<ShipComponent> {
 					tcStates.put(TargetingComputerState(this, states[TargetingComputerState::class]))
 				}
 				
+				if (partRef.part is BeamWeapon || partRef.part is Railgun || partRef.part is MissileLauncher) {
+					tcStates.put(WeaponPartState(states[WeaponPartState::class]))
+				}
+				
 				tcStates
 			})
 			
@@ -358,19 +370,16 @@ class ShipComponent() : Component(), CloneableComponent<ShipComponent> {
 		return mass
 	}
 	
-	fun shieldHP(): Long {
-		
+	fun calculateShieldHP(): Long {
 		var shieldHP = 0L
 		
 		hull.shields.forEachFast { partRef ->
-			if (isPartEnabled(partRef)) {
-				shieldHP += partStates[partRef.index][ChargedPartState::class].charge
-			}
+			shieldHP += partStates[partRef.index][ChargedPartState::class].charge
 		}
 		
 		return shieldHP
 	}
-
+	
 	fun getPartState(partRef: PartRef<out Part>): PartStates {
 		return partStates[partRef.index]
 	}
@@ -730,6 +739,7 @@ class ShipComponent() : Component(), CloneableComponent<ShipComponent> {
 	fun resetLazyCache() {
 		mass = -1
 		cargoMass = -1
+		shieldHP = -1
 	}
 }
 

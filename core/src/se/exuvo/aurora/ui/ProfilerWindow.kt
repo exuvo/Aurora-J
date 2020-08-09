@@ -11,12 +11,13 @@ import se.exuvo.aurora.AuroraGame
 import se.exuvo.aurora.starsystems.StarSystem
 import imgui.internal.classes.Rect
 import glm_.vec4.Vec4
+import imgui.DataType
 import imgui.u32
 import se.exuvo.aurora.ui.UIScreen.UIWindow
 import net.mostlyoriginal.api.utils.pooling.ObjectPool
 import se.exuvo.aurora.starsystems.systems.ProfilingSystemInvocationStrategy
 import se.exuvo.aurora.utils.callPrivateFunc
-import se.exuvo.aurora.starsystems.systems.CustomSystemInvocationStrategy
+import se.exuvo.aurora.starsystems.CustomSystemInvocationStrategy
 import se.exuvo.aurora.utils.toLinearRGB
 
 // Inspiration https://bitbucket.org/wolfpld/tracy/src/master/
@@ -26,11 +27,9 @@ class ProfilerWindow : UIWindow() {
 	}
 	
 	var system: StarSystem? = null
-	var zoom = 0.005f
+	var zoom = 0.01f
 	var xScroll = 0L
 	
-	val renderEvents = ProfilerBag()
-
 	override var visible: Boolean
 		get() = super.visible
 		set(value) {
@@ -42,7 +41,7 @@ class ProfilerWindow : UIWindow() {
 				val oldSystem = system
 				
 				if (oldSystem != null) {
-					oldSystem.world.callPrivateFunc("setInvocationStrategy", CustomSystemInvocationStrategy())
+					oldSystem.world.callPrivateFunc("setInvocationStrategy", CustomSystemInvocationStrategy(oldSystem))
 				}
 				
 				val system = systemScreen.system
@@ -52,7 +51,7 @@ class ProfilerWindow : UIWindow() {
 					world.callPrivateFunc("setInvocationStrategy", ProfilingSystemInvocationStrategy(system))
 					
 				} else {
-					world.callPrivateFunc("setInvocationStrategy", CustomSystemInvocationStrategy())
+					world.callPrivateFunc("setInvocationStrategy", CustomSystemInvocationStrategy(system))
 				}
 				
 				this.system = system
@@ -71,16 +70,18 @@ class ProfilerWindow : UIWindow() {
 					
 					window("Profiler", ::visible, WindowFlag.HorizontalScrollbar.i) {
 						
-						text("TODO time")
+						sliderScalar("Zoom", DataType.Float, ::zoom, 0.001f, 0.05f, zoom.toString(), 1.0f)
 						
-						var timeOffset = galaxy.uiShadow.profilerEvents.data[0].time
+						textUnformatted("TODO time")
 						
-						galaxy.systems.forEachFast { system ->
-							val time = system.uiShadow.profilerEvents.data[0].time
-							if (time < timeOffset) {
-								timeOffset = time
-							}
-						}
+						var timeOffset = galaxy.shadow.profilerEvents.data[0].time
+						
+//						galaxy.systems.forEachFast { system ->
+//							val time = system.shadow.profilerEvents.data[0].time
+//							if (time < timeOffset) {
+//								timeOffset = time
+//							}
+//						}
 						
 						val window = currentWindow
 						val backupPaddingY = style.framePadding.y
@@ -140,46 +141,55 @@ class ProfilerWindow : UIWindow() {
 						
 						fun drawEvents(events: ProfilerBag) {
 							var size = events.size()
+							
 							if (size > 0) {
-								
-								style.framePadding.y = 0f
-								x = window.dc.cursorPos.x
-								y = window.dc.cursorPos.y
-								maxY = y
-								
-								var i = 0;
-								
-								while(i < size - 1) {
-									i = drawEvents(i, events)
+								if (size % 2 == 0) {
+									style.framePadding.y = 0f
+									x = window.dc.cursorPos.x
+									y = window.dc.cursorPos.y
+									maxY = y
+									
+									var i = 0;
+									
+									while(i < size - 1) {
+										i = drawEvents(i, events)
+									}
+									
+									window.dc.cursorPos.y = maxY
+									window.dc.cursorMaxPos.y = maxY
+									
+									style.framePadding.y = backupPaddingY
+									
+								} else {
+									textColored(Vec4(1f, 0f, 0f, 1f), "Event size is not even!")
 								}
-								
-								window.dc.cursorPos.y = maxY
-								window.dc.cursorMaxPos.y = maxY
-								
-								style.framePadding.y = backupPaddingY
 							}
 						}
 						
 						run {
-							val events = galaxy.uiShadow.profilerEvents
+							val events = galaxy.shadow.profilerEvents
 							
-							text("Galaxy ${events.size()} events")
+							textUnformatted("Galaxy ${events.size()} events")
 							drawEvents(events)
 						}
 						
 						galaxy.systems.forEachFast { system ->
 							
-							val events = system.uiShadow.profilerEvents
+							val events = system.shadow.profilerEvents
 							
-							text("Star System ${system.sid} - ${events.size()} events")
+							textUnformatted("Star System ${system.sid} - ${events.size()} events")
 							drawEvents(events)
 						}
 						
 						run {
-							val events = renderEvents
+							val events = galaxy.renderProfilerEvents
 							
-							text("Renderer ${events.size()} events")
-							drawEvents(events)
+							if (events.size() > 0) {
+								timeOffset = events.data[0].time
+								
+								textUnformatted("Renderer ${events.size()} events")
+								drawEvents(events)
+							}
 						}
 					}
 				}

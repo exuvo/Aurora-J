@@ -1,6 +1,5 @@
 package se.exuvo.aurora.ui
 
-import com.artemis.ComponentMapper
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputProcessor
@@ -16,15 +15,12 @@ import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.starsystems.StarSystemGeneration
 import se.exuvo.aurora.starsystems.components.ApproachType
 import se.exuvo.aurora.starsystems.components.CircleComponent
-import se.exuvo.aurora.starsystems.components.StarSystemComponent
 import se.exuvo.aurora.starsystems.components.RenderComponent
-import se.exuvo.aurora.starsystems.components.ShipComponent
 import se.exuvo.aurora.starsystems.components.TargetingComputerState
 import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import se.exuvo.aurora.starsystems.systems.GroupSystem
 import se.exuvo.aurora.starsystems.systems.MovementSystem
 import se.exuvo.aurora.starsystems.systems.RenderSystem
-import se.exuvo.aurora.starsystems.systems.WeaponSystem
 import se.exuvo.aurora.utils.*
 import se.exuvo.aurora.ui.keys.KeyActions_StarSystemScreen
 import se.exuvo.aurora.ui.keys.KeyMappings
@@ -41,7 +37,6 @@ import se.exuvo.aurora.galactic.ClearTargetCommand
 import se.exuvo.aurora.galactic.MoteToPositionCommand
 import se.exuvo.aurora.galactic.MoveToEntityCommand
 import se.exuvo.aurora.galactic.SetTargetCommand
-import se.exuvo.aurora.starsystems.systems.TargetingSystem
 import kotlin.concurrent.withLock
 
 class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcessor {
@@ -116,8 +111,8 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 		val shapeRenderer = AuroraGame.currentWindow.shapeRenderer
 		val uiCamera = AuroraGame.currentWindow.screenService.uiCamera
 
-		galaxy.uiLock.withLock {
-			val renderSystem = system.uiShadow.world.getSystem(RenderSystem::class.java)
+		galaxy.shadowLock.withLock {
+			val renderSystem = system.shadow.world.getSystem(RenderSystem::class.java)
 			renderSystem.render(viewport, cameraOffset)
 			
 //			if (Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
@@ -265,13 +260,13 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 					
 					commandMenuPotentialStart = false
 
-					galaxy.uiLock.withLock {
+					galaxy.shadowLock.withLock {
 						
-						val directSelectionSubscription = system.uiShadow.world.getAspectSubscriptionManager().get(DIRECT_SELECTION_FAMILY)
-						val weaponFamilyAspect = system.uiShadow.world.getAspectSubscriptionManager().get(WEAPON_FAMILY).aspect
-						val renderSystem = system.uiShadow.world.getSystem(RenderSystem::class.java)
+						val directSelectionSubscription = system.shadow.world.getAspectSubscriptionManager().get(DIRECT_SELECTION_FAMILY)
+						val weaponFamilyAspect = system.shadow.world.getAspectSubscriptionManager().get(WEAPON_FAMILY).aspect
+						val renderSystem = system.shadow.world.getSystem(RenderSystem::class.java)
 						
-						val shadow = system.uiShadow
+						val shadow = system.shadow
 						val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
 						val entitiesUnderMouse = Bag<EntityReference>()
 						val entityIDs = directSelectionSubscription.entities
@@ -464,19 +459,18 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 	
 				val entitiesInSelection = Bag<EntityReference>()
 				
-				galaxy.uiLock.withLock {
-					val indirectSelectionSubscription = system.uiShadow.world.getAspectSubscriptionManager().get(INDIRECT_SELECTION_FAMILY)
+				galaxy.shadowLock.withLock {
+					val indirectSelectionSubscription = system.shadow.world.getAspectSubscriptionManager().get(INDIRECT_SELECTION_FAMILY)
 					
-					val shadow = system.uiShadow
 					val entityIDs = indirectSelectionSubscription.entities
 					val testRectangle = RectangleL(p1GameCoordinates.x, p1GameCoordinates.y, p2GameCoordinates.x - p1GameCoordinates.x, p2GameCoordinates.y - p1GameCoordinates.y)
 		//			println("testRectangle $testRectangle")
 		
 					entityIDs.forEachFast { entityID ->
-						val position = shadow.movementMapper.get(entityID).get(galaxy.time).value.position
+						val position = system.shadow.movementMapper.get(entityID).get(galaxy.time).value.position
 		
 						if (testRectangle.contains(position)) {
-							entitiesInSelection.add(system.getEntityReference(entityID))
+							entitiesInSelection.add(system.shadow.getEntityReference(entityID))
 						}
 					}
 				}
@@ -504,10 +498,10 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 			
 			if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
 
-				galaxy.uiLock.withLock {
-					val movementFamilyAspect = system.uiShadow.world.getAspectSubscriptionManager().get(MovementSystem.CAN_ACCELERATE_FAMILY).aspect
-					val directSelectionSubscription = system.uiShadow.world.getAspectSubscriptionManager().get(DIRECT_SELECTION_FAMILY)
-					val renderSystem = system.uiShadow.world.getSystem(RenderSystem::class.java)
+				galaxy.shadowLock.withLock {
+					val movementFamilyAspect = system.shadow.world.getAspectSubscriptionManager().get(MovementSystem.CAN_ACCELERATE_FAMILY).aspect
+					val directSelectionSubscription = system.shadow.world.getAspectSubscriptionManager().get(DIRECT_SELECTION_FAMILY)
+					val renderSystem = system.shadow.world.getSystem(RenderSystem::class.java)
 					
 					val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED).filter { entityRef ->
 	
@@ -516,7 +510,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 	
 					if (selectedEntities.isNotEmpty()) {
 						
-						val shadow = system.uiShadow
+						val shadow = system.shadow
 						val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
 						val entitiesUnderMouse = IntBag()
 						val entityIDs = directSelectionSubscription.entities
@@ -579,6 +573,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 							}
 
 							selectedEntities.forEachFast{ entityRef ->
+								println("Queuing move to entity command for $entityRef to $targetEntityID")
 								Player.current.empire!!.commandQueue.add(MoveToEntityCommand(entityRef, shadow.getEntityReference(targetEntityID), approachType))
 							}
 
@@ -594,6 +589,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 							}
 
 							selectedEntities.forEachFast{ entityRef ->
+								println("Queuing move to position command for $entityRef to $targetPosition")
 								Player.current.empire!!.commandQueue.add(MoteToPositionCommand(entityRef, targetPosition, approachType))
 							}
 						}

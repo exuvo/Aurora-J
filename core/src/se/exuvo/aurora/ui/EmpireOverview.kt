@@ -70,7 +70,7 @@ class EmpireOverview : UIWindow() {
 								flags = TreeNodeFlag.DefaultOpen or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen
 								if (treeNodeEx(system.galacticEntityID.toString(), flags, system.getName())) {
 									
-									val shadow = system.uiShadow
+									val shadow = system.shadow
 									
 									val nameMapper = shadow.nameMapper
 									val colonyMapper = shadow.colonyMapper
@@ -140,7 +140,7 @@ class EmpireOverview : UIWindow() {
 		val selection = galaxyGroupSystem.get(GroupSystem.SELECTED)
 		
 		for (i in 0 until selection.size()) {
-			val ref = system.uiShadow.resolveEntityReference(selection[i])
+			val ref = system.shadow.resolveEntityReference(selection[i])
 			
 			if (ref != null && ref.system == system && ref.entityID == entityID) {
 				return true

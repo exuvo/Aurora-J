@@ -3,6 +3,7 @@ package se.exuvo.aurora.starsystems.systems
 import com.artemis.Aspect
 import com.artemis.ComponentMapper
 import com.artemis.EntitySubscription.SubscriptionListener
+import com.artemis.annotations.Wire
 import com.artemis.systems.IteratingSystem
 import com.artemis.utils.IntBag
 import net.mostlyoriginal.api.event.common.Subscribe
@@ -35,19 +36,22 @@ import se.exuvo.aurora.starsystems.components.WeaponPartState
 import se.exuvo.aurora.galactic.AmmunitionPart
 import se.exuvo.aurora.starsystems.components.AmmunitionPartState
 import se.exuvo.aurora.galactic.Railgun
+import se.exuvo.aurora.starsystems.PreSystem
+import se.exuvo.aurora.starsystems.StarSystem
 
 class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
 		@JvmField val FAMILY = Aspect.all(ShipComponent::class.java, PowerComponent::class.java)
 		@JvmField val SHIP_FAMILY = Aspect.all(ShipComponent::class.java)
+		@JvmField val log = LogManager.getLogger(PowerSystem::class.java)
 	}
-
-	val log = LogManager.getLogger(this.javaClass)
 
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
 	lateinit private var powerMapper: ComponentMapper<PowerComponent>
 	lateinit private var irradianceMapper: ComponentMapper<SolarIrradianceComponent>
 
+	@Wire
+	lateinit private var system: StarSystem
 	private val galaxy = GameServices[Galaxy::class]
 
 	// All solar panels assumed to be 5cm thick
@@ -102,6 +106,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 		}
 		
 		ship.setPartEnabled(partRef, true)
+		system.changed(entityID)
 		
 		val part = partRef.part
 		
@@ -159,6 +164,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 		}
 		
 		ship.setPartEnabled(partRef, false)
+		system.changed(entityID)
 		
 		val part = partRef.part
 		
@@ -222,6 +228,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 	fun powerEvent(event: PowerEvent) {
 		val powerComponent = powerMapper.get(event.entityID)
 		powerComponent.stateChanged = true
+		system.changed(event.entityID)
 	}
 
 	override fun preProcessSystem() {
@@ -231,7 +238,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 
 			val powerWasStable = powerComponent.totalAvailablePower > powerComponent.totalUsedPower
 			val powerWasSolarStable = powerComponent.totalAvailableSolarPower > powerComponent.totalRequestedPower
-			val oldTotalAvailiablePower = powerComponent.totalAvailablePower
+			val oldTotalAvailablePower = powerComponent.totalAvailablePower
 
 			// Pre checks
 			powerComponent.poweringParts.forEachFast{ partRef ->
@@ -264,16 +271,16 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 
 					val remainingFuel = ship.getCargoAmount(part.fuel)
 					fueledState.totalFuelEnergyRemaining = fueledState.fuelEnergyRemaining + part.power * part.fuelTime * remainingFuel
-					val availiablePower = Math.min(part.power, fueledState.totalFuelEnergyRemaining)
+					val availablePower = Math.min(part.power, fueledState.totalFuelEnergyRemaining)
 
 //					println("remainingFuel ${remainingFuel} g, max power ${part.power} W, remaining power ${remainingFuel / part.fuelConsumption} Ws")
 
-					if (powerWasStable && availiablePower < poweringState.producedPower) {
+					if (powerWasStable && availablePower < poweringState.producedPower) {
 						powerComponent.stateChanged = true
 					}
 
-					powerComponent.totalAvailablePower += availiablePower - poweringState.availiablePower
-					poweringState.availiablePower = availiablePower
+					powerComponent.totalAvailablePower += availablePower - poweringState.availiablePower
+					poweringState.availiablePower = availablePower
 
 				} else if (part is Battery) { // Charge empty or full
 
@@ -290,10 +297,10 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 						powerComponent.stateChanged = true
 					}
 
-					val availiablePower = Math.min(part.power, chargedState.charge)
+					val availablePower = Math.min(part.power, chargedState.charge)
 
-					powerComponent.totalAvailablePower += availiablePower - poweringState.availiablePower
-					poweringState.availiablePower = availiablePower
+					powerComponent.totalAvailablePower += availablePower - poweringState.availiablePower
+					poweringState.availiablePower = availablePower
 				}
 			}
 
@@ -307,7 +314,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 					if (powerComponent.totalAvailablePower < powerComponent.totalUsedPower) {
 						powerComponent.stateChanged = true
 					}
-				} else if (powerComponent.totalAvailablePower != oldTotalAvailiablePower) {
+				} else if (powerComponent.totalAvailablePower != oldTotalAvailablePower) {
 					powerComponent.stateChanged = true
 				}
 			}
@@ -316,10 +323,10 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 			if (powerComponent.stateChanged) {
 				powerComponent.stateChanged = false
 
-				// Summarise availiable power
+				// Summarise available power
 				powerComponent.totalAvailablePower = 0
 				powerComponent.totalAvailableSolarPower = 0
-				var availiableChargingPower = 0L
+				var availableChargingPower = 0L
 
 				powerComponent.poweringParts.forEach({
 					val partRef = it
@@ -335,7 +342,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 						}
 
 						if (part is SolarPanel || (part is Reactor && powerComponent.powerScheme.chargeBatteryFromReactor)) {
-							availiableChargingPower += poweringState.availiablePower
+							availableChargingPower += poweringState.availiablePower
 						}
 					}
 				})
@@ -398,13 +405,13 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 
 							poweredState.requestedPower = Math.min((leftToCharge * 100) / part.efficiency, part.powerConsumption)
 
-							if (powerComponent.totalRequestedPower + poweredState.requestedPower <= availiableChargingPower) {
+							if (powerComponent.totalRequestedPower + poweredState.requestedPower <= availableChargingPower) {
 
 								poweredState.givenPower = poweredState.requestedPower
 
 							} else {
 
-								poweredState.givenPower = Math.max(0, availiableChargingPower - powerComponent.totalRequestedPower)
+								poweredState.givenPower = Math.max(0, availableChargingPower - powerComponent.totalRequestedPower)
 							}
 
 							givenPower += poweredState.givenPower
@@ -497,6 +504,8 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 					}
 				}
 			})
+			
+			system.changed(entityID) //TODO smarter change for when stateChanged is false
 		}
 	}
 

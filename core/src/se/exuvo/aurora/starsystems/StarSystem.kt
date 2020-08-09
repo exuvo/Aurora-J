@@ -3,7 +3,6 @@ package se.exuvo.aurora.starsystems
 import com.artemis.Aspect
 import com.artemis.ComponentMapper
 import com.artemis.EntitySubscription
-import com.artemis.EntitySubscription.SubscriptionListener
 import com.artemis.World
 import com.artemis.WorldConfigurationBuilder
 import com.artemis.utils.IntBag
@@ -53,12 +52,10 @@ import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import se.exuvo.aurora.starsystems.components.TintComponent
 import se.exuvo.aurora.starsystems.components.UUIDComponent
 import se.exuvo.aurora.starsystems.events.PooledFastEventDispatcher
-import se.exuvo.aurora.starsystems.systems.CustomSystemInvocationStrategy
 import se.exuvo.aurora.starsystems.systems.MovementSystem
 import se.exuvo.aurora.starsystems.systems.OrbitSystem
 import se.exuvo.aurora.starsystems.systems.PassiveSensorSystem
 import se.exuvo.aurora.starsystems.systems.PowerSystem
-import se.exuvo.aurora.starsystems.systems.RenderSystem
 import se.exuvo.aurora.starsystems.systems.ShipSystem
 import se.exuvo.aurora.starsystems.systems.SolarIrradianceSystem
 import se.exuvo.aurora.starsystems.systems.TimedLifeSystem
@@ -125,11 +122,8 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	val uuidSubscription: EntitySubscription
 	val inCombatSubscription: EntitySubscription
 	
-	// Will in practice have 3 shadowWorlds alive
 	var workingShadow: ShadowStarSystem
-	var shadow: ShadowStarSystem // Always safe to use from other StarSystems
-	var uiShadow: ShadowStarSystem // Requires UI lock
-	var retiredUIShadow: ShadowStarSystem? = null
+	var shadow: ShadowStarSystem // Always safe to use from other StarSystems, requires shadow lock to use from UI
 
 	lateinit private var solarSystemMapper: ComponentMapper<StarSystemComponent>
 	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
@@ -172,7 +166,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		worldBuilder.with(WeaponSystem())
 		worldBuilder.with(PowerSystem())
 		worldBuilder.with(TimedLifeSystem())
-		worldBuilder.register(CustomSystemInvocationStrategy())
+		worldBuilder.register(CustomSystemInvocationStrategy(this))
 		//TODO add system to send changes over network
 		
 		val worldConfig = worldBuilder.build()
@@ -189,7 +183,6 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		
 		workingShadow = ShadowStarSystem(this)
 		shadow  = ShadowStarSystem(this)
-		uiShadow = shadow
 	}
 
 	fun init() {
@@ -562,12 +555,18 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 
 	override fun inserted(entityIDs: IntBag) {
 		entityIDs.forEachFast { entityID ->
+			workingShadow.added.unsafeSet(entityID)
 			solarSystemMapper.create(entityID).set(this)
 		}
 	}
 	
+	fun changed(entityID: Int) {
+		workingShadow.changed.unsafeSet(entityID)
+	}
+	
 	override fun removed(entityIDs: IntBag) {
 		entityIDs.forEachFast { entityID ->
+			workingShadow.deleted.unsafeSet(entityID)
 			solarSystemMapper.remove(entityID)
 		}
 	}
@@ -577,6 +576,10 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		
 		val profilerEvents = workingShadow.profilerEvents
 		profilerEvents.clear()
+		
+		workingShadow.added.clear()
+		workingShadow.changed.clear()
+		workingShadow.deleted.clear()
 		
 		profilerEvents.start("process")
 		if (inCombatSubscription.getEntityCount() > 0) {
@@ -619,6 +622,5 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		world.dispose()
 		workingShadow.dispose()
 		shadow.dispose()
-		uiShadow?.dispose()
 	}
 }

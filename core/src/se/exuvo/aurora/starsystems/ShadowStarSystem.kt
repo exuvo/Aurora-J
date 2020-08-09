@@ -1,12 +1,12 @@
 package se.exuvo.aurora.starsystems
 
-import com.artemis.Aspect
 import com.artemis.ComponentMapper
 import com.artemis.ComponentType
 import com.artemis.EntitySubscription
 import com.artemis.World
 import com.artemis.WorldConfigurationBuilder
 import com.artemis.utils.Bag
+import com.artemis.utils.BitVector
 import com.artemis.utils.IntBag
 import com.badlogic.gdx.utils.Disposable
 import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
@@ -44,6 +44,9 @@ import kotlin.reflect.full.isSuperclassOf
 class ShadowStarSystem(val system: StarSystem) : Disposable {
 	
 	val world: World
+	val added = BitVector()
+	val changed = BitVector()
+	val deleted = BitVector()
 	
 	var time = 0L
 		set(newTime) {
@@ -76,11 +79,13 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 	lateinit var idleTargetingComputersComponentMapper: ComponentMapper<IdleTargetingComputersComponent>
 	lateinit var activeTargetingComputersComponentMapper: ComponentMapper<ActiveTargetingComputersComponent>
 	
-	val allSubscription: EntitySubscription
+//	val allSubscription: EntitySubscription
 	val uuidSubscription: EntitySubscription
 	
-	val mapperPairs = Bag<MapperPair>(system.world.componentManager.componentTypes.size())
-	data class MapperPair(val systemMapper: ComponentMapper<*>, val shadowMapper: ComponentMapper<*>)
+	private val mappersByTypeIndex = Bag<ComponentMapper<*>>(system.world.componentManager.componentTypes.size())
+	
+	private val tmpBV = BitVector()
+	private val tmpBag = IntBag()
 	
 	init {
 		val worldBuilder = WorldConfigurationBuilder()
@@ -94,20 +99,29 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 		world.inject(this)
 		
 		system.world.componentManager.componentTypes.forEachFast { type: ComponentType ->
-			val classType = type.type
-			if (CloneableComponent::class.isSuperclassOf(classType.kotlin)) {
-				mapperPairs.add(MapperPair(system.world.getMapper(classType), world.getMapper(classType)))
+			if (CloneableComponent::class.isSuperclassOf(type.type.kotlin)) {
+				mappersByTypeIndex[type.index] = world.getMapper(type.type)
 			}
 		}
 		
-		allSubscription = world.getAspectSubscriptionManager().get(Aspect.all())
+//		allSubscription = world.getAspectSubscriptionManager().get(Aspect.all())
 		uuidSubscription = world.getAspectSubscriptionManager().get(StarSystem.UUID_ASPECT)
+		
+		system.world.entityManager.registerEntityStore(added)
+		system.world.entityManager.registerEntityStore(changed)
+		system.world.entityManager.registerEntityStore(deleted)
 	}
 	
 	fun update() {
-		//TODO only delete deleted entities. use BitVector's for removed, added, changed
-		profilerEvents.start("clear entites")
-		allSubscription.entities.forEachFast { entityID ->
+		tmpBV.ensureCapacity(added.length())
+		
+		profilerEvents.start("deleted")
+		tmpBV.clear()
+		tmpBV.or(deleted)
+		tmpBV.or(system.shadow.deleted)
+		tmpBV.toIntBag(tmpBag)
+//		println("deleted $tmpBag")
+		tmpBag.forEachFast { entityID ->
 			world.delete(entityID)
 		}
 		profilerEvents.end()
@@ -115,25 +129,64 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 		profilerEvents.start("process")
 		world.process()
 		profilerEvents.end()
-		val em = world.entityManager
 		
-		profilerEvents.start("copy")
-		system.allSubscription.entities.forEachFast { entityID ->
+		val em = world.entityManager
+		val scm = system.world.componentManager
+		
+		changed.andNot(added) // BatchProcessor component changes includes added too. Also skip created and modified in same tick
+		
+		tmpBV.clear()
+		tmpBV.or(changed)
+		tmpBV.andNot(system.shadow.added) // Skip otherShadow added as they will be handled as added below
+		tmpBV.or(system.shadow.changed)
+		tmpBV.andNot(deleted) // Skip now deleted from otherShadow changed
+		tmpBV.andNot(system.shadow.deleted)
+		
+		profilerEvents.start("changed")
+		tmpBV.toIntBag(tmpBag)
+//		println("changed $tmpBag")
+		tmpBag.forEachFast { entityID ->
 			if (!em.isActive(entityID)) {
-				em.setNextID(entityID)
-				val newID = world.create()
-				if (newID != entityID) {
-					throw IllegalStateException("wrong entity id created $newID != $entityID")
-				}
+				throw IllegalStateException("entity id $entityID does not exist")
 			}
 			
-			//TODO use ComponentManager.componentMappers(int entityId) to know which mappers to use. replace mapperPairs with map
-			mapperPairs.forEachFast { pair ->
-				var existingComponent = pair.systemMapper.get(entityID) as CloneableComponent<*>?
+			val systemMappers = scm.componentMappers(entityID)
+			
+			systemMappers?.forEachFast { systemMapper ->
+				val shadowMapper = mappersByTypeIndex[systemMapper.type.index]
 				
-				if (existingComponent != null) {
-					val newComponent = pair.shadowMapper.create(entityID)
-					existingComponent.copy2(newComponent)
+				if (shadowMapper != null) {
+					var systemComponent = systemMapper.get(entityID) as CloneableComponent<*>
+					val shadowComponent = shadowMapper.create(entityID)
+					systemComponent.copy2(shadowComponent)
+				}
+			}
+		}
+		profilerEvents.end()
+		
+		tmpBV.clear()
+		tmpBV.or(added)
+		tmpBV.or(system.shadow.added)
+		
+		profilerEvents.start("added")
+		tmpBV.toIntBag(tmpBag)
+//		println("added $tmpBag")
+		tmpBag.forEachFast { entityID ->
+			em.setNextID(entityID)
+			val newID = world.create()
+			if (newID != entityID) {
+				throw IllegalStateException("wrong entity id created $newID != $entityID")
+			}
+			
+			val systemMappers = scm.componentMappers(entityID)
+			
+			systemMappers?.forEachFast { systemMapper ->
+				val shadowMapper = mappersByTypeIndex[systemMapper.type.index]
+				
+				if (shadowMapper != null) {
+					var systemComponent = systemMapper.get(entityID) as CloneableComponent<*>
+					val shadowComponent = shadowMapper.create(entityID)
+					systemComponent.copy2(shadowComponent)
 				}
 			}
 		}
@@ -204,7 +257,7 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 	
 	fun resolveEntityReference(entityReference: EntityReference): EntityReference? {
 		
-		if (entityReference.system.uiShadow.isEntityReferenceValid(entityReference)) {
+		if (entityReference.system.shadow.isEntityReferenceValid(entityReference)) {
 			return entityReference
 		}
 		
@@ -214,13 +267,13 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 	fun getEntityReferenceByUUID(entityUUID: EntityUUID, oldEntityReference: EntityReference? = null): EntityReference? {
 		
 		system.galaxy.systems.forEachFast{ system ->
-			val entityID = system.uiShadow.getEntityByUUID(entityUUID)
+			val entityID = system.shadow.getEntityByUUID(entityUUID)
 			
 			if (entityID != null) {
 				if (oldEntityReference != null) {
-					return system.uiShadow.updateEntityReference(entityID, oldEntityReference)
+					return system.shadow.updateEntityReference(entityID, oldEntityReference)
 				} else {
-					return system.uiShadow.getEntityReference(entityID)
+					return system.shadow.getEntityReference(entityID)
 				}
 			}
 		}

@@ -5,15 +5,12 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputProcessor
 import com.badlogic.gdx.graphics.OrthographicCamera
-import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.badlogic.gdx.utils.viewport.Viewport
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.galactic.systems.GalacticRenderSystem
-import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.starsystems.components.GalacticPositionComponent
 import se.exuvo.aurora.starsystems.systems.GroupSystem
 import se.exuvo.aurora.utils.CircleL
@@ -24,7 +21,6 @@ import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.ui.keys.KeyActions_GalaxyScreen
 import se.exuvo.aurora.ui.keys.KeyMappings
 import se.exuvo.settings.Settings
-import kotlin.concurrent.read
 import kotlin.properties.Delegates
 import se.exuvo.aurora.galactic.Player
 import se.exuvo.aurora.AuroraGameSecondaryWindow
@@ -92,7 +88,7 @@ class GalaxyScreen(var lastSystemScreen: StarSystemScreen) : GameScreenImpl(), I
 	}
 
 	override fun draw() {
-		galaxy.uiLock.withLock {
+		galaxy.shadowLock.withLock {
 			renderSystem.render(viewport, cameraOffset)
 		}
 
@@ -180,7 +176,7 @@ class GalaxyScreen(var lastSystemScreen: StarSystemScreen) : GameScreenImpl(), I
 			when (button) {
 				Input.Buttons.LEFT -> {
 					
-					galaxy.uiLock.withLock {
+					galaxy.shadowLock.withLock {
 
 						val mouseInGalacticCoordinates = toGalacticWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
 						val entityIDs = selectionFamily.entities

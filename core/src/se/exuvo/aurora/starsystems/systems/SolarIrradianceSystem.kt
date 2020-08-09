@@ -4,6 +4,7 @@ import com.artemis.Aspect
 import com.artemis.ComponentMapper
 import com.artemis.EntitySubscription
 import com.artemis.EntitySubscription.SubscriptionListener
+import com.artemis.annotations.Wire
 import com.artemis.utils.IntBag
 import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.starsystems.components.SolarIrradianceComponent
@@ -14,6 +15,7 @@ import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.isNotEmpty
 import com.artemis.utils.Bag
+import se.exuvo.aurora.starsystems.StarSystem
 
 class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) {
 	companion object {
@@ -27,6 +29,9 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) 
 	lateinit private var sunIrradianceMapper: ComponentMapper<SunComponent>
 
 	lateinit private var sunsSubscription: EntitySubscription
+	
+	@Wire
+	lateinit private var system: StarSystem
 
 	override fun initialize() {
 		super.initialize()
@@ -86,11 +91,17 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) 
 			val irradiance = sun.solarConstant * Math.pow(Units.AU, 2.0) / Math.pow(distance, 2.0)
 			totalIrradiance += irradiance
 //			println("distance ${distance / OrbitSystem.AU} AU, irradiance $irradiance ${(100 * irradiance / sun.solarConstant).toInt()}%")
-
+			
 			//TODO calculate correct irradiance if we are inside the sun 
 		}
-
-		irradianceMapper.get(entityID).irradiance = totalIrradiance.toInt()
+		
+		val irradianceComponent = irradianceMapper.get(entityID)
+		val irridance = totalIrradiance.toInt()
+		
+		if (irradianceComponent.irradiance != irridance) {
+			irradianceComponent.irradiance = irridance
+			system.changed(entityID)
+		}
 	}
 
 	data class Sun(val position: Vector2L, val solarConstant: Int)

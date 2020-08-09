@@ -200,17 +200,17 @@ class TimedMovementComponent() : InterpolatedComponent<MovementValues>(TimedValu
 			tc.previous.time = previous.time
 		}
 		
-//		val interpolated = interpolated
-//		val tcInterpolated = tc.interpolated
-//
-//		if (interpolated == null) {
-//			tc.interpolated = null
-//		} else if (tcInterpolated == null) {
-//			tc.interpolated = TimedValue(MovementValues(interpolated.value.position.cpy(), interpolated.value.velocity.cpy(), interpolated.value.acceleration.cpy()), interpolated.time)
+		val interpolated = interpolated
+		val tcInterpolated = tc.interpolated
+		
+		if (interpolated == null) {
+			tc.interpolated = null
+		} else if (tcInterpolated == null) {
+			tc.interpolated = TimedValue(MovementValues(interpolated.value.position.cpy(), interpolated.value.velocity.cpy(), interpolated.value.acceleration.cpy()), interpolated.time)
 //		} else if (tcInterpolated.hashCode() != interpolated.hashCode()) {
 //			tc.setValue(tcInterpolated, interpolated.value)
 //			tcInterpolated.time = interpolated.time
-//		}
+		}
 		
 		val next = next
 		val tcNext = tc.next

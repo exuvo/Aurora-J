@@ -47,6 +47,7 @@ import se.exuvo.aurora.galactic.PartRef
 import se.exuvo.aurora.galactic.Part
 import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
 import se.exuvo.aurora.empires.components.IdleTargetingComputersComponent
+import se.exuvo.aurora.starsystems.PreSystem
 
 class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -129,8 +130,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			
 			if (partRef != null) {
 				
-				val part = partRef.part
-				val ammoPart = part as AmmunitionPart
+				val part = partRef.part as AmmunitionPart
 				val ammoState = ship.getPartState(partRef)[AmmunitionPartState::class]
 				val ammoType = ammoState.type
 
@@ -139,6 +139,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 					if (ammoState.reloadedAt == 0L) { // new
 
 						tcState.reloadingWeapons.poll()
+						starSystem.changed(entityID)
 
 						if (ammoType.radius != part.ammunitionSize) {
 
@@ -154,7 +155,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 
 								ammoState.reloadedAt = galaxy.time + part.reloadTime
 								tcState.reloadingWeapons.add(partRef)
-
+								
 							} else if (ammoState.amount == 0) {
 
 								println("Unpowering $part due to no more ammo")
@@ -165,10 +166,11 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 					} else if (galaxy.time >= ammoState.reloadedAt) {
 
 						tcState.reloadingWeapons.poll()
+						starSystem.changed(entityID)
 
 						ammoState.amount += 1
 						ammoState.reloadedAt = 0
-
+						
 						if (ammoState.amount == 1) {
 							
 							if (part is Railgun) {
@@ -230,6 +232,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				if (chargedState.expectedFullAt == 0L) { // new
 					
 					tcState.chargingWeapons.poll()
+					starSystem.changed(entityID)
 					
 					//Will overfill slightly to fix shot to shot timing when powerConsumption is not a multiple of capacitor
 					val wantedPower = part.powerConsumption
@@ -245,6 +248,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				} else if (galaxy.time >= chargedState.expectedFullAt) {
 					
 					tcState.chargingWeapons.poll()
+					starSystem.changed(entityID)
 					
 					if (chargedState.charge < part.capacitor) {
 						
@@ -342,7 +346,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			
 				val targetMovement = movementMapper.get(target.entityID).get(galaxy.time)
 
-				//TODO cache intercepts per ship and weapon type/ordenance
+				//TODO cache intercepts per ship and weapon type/ordnance
 				var i = 0
 				var size = tcState.readyWeapons.size()
 				
@@ -353,7 +357,6 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 					when (part) {
 						is BeamWeapon -> {
 							val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
-							chargedState.charge -= part.capacitor
 
 							val projectileSpeed = Units.C * 1000
 							val result = getInterceptionPosition(shipMovement.value, targetMovement.value, projectileSpeed)
@@ -375,14 +378,14 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 								val distance = tmpPosition.set(targetMovement.value.position).sub(shipMovement.value.position).len().toLong()
 								val beamArea = part.getBeamArea(distance)
 								var damage: Long = part.getDeliveredEnergyTo1MSquareAtDistance(distance)
-									
+								
 								val (timeToIntercept, aimPosition, interceptPosition, interceptVelocity, relativeInterceptVelocity) = result
 								val galacticTime = timeToIntercept + galaxy.time
 								val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
 								val days = (timeToIntercept / (60 * 60 * 24)).toInt()
 								
-//								if ((beamArea <= 1 || damage > 1000) && days < 30) {
-//						
+								if (damage >= 100 && days < 10) {
+
 //									println("laser projectileSpeed $projectileSpeed m/s, interceptSpeed ${interceptVelocity.len() / 100} m/s, aimPosition $aimPosition, interceptPosition $interceptPosition, timeToIntercept $timeToIntercept s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
 									
 									val munitionEntityID = starSystem.createEntity(ownerEmpire)
@@ -400,24 +403,27 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 									timedLifeMapper.create(munitionEntityID).endTime = galacticTime
 									predictedMovementMapper.create(munitionEntityID)
 									
+									chargedState.charge -= part.capacitor
 									ship.heat += ((100 - part.efficiency) * chargedState.charge) / 100
 									
-//								} else {
-//									
-//									log.error("Unable to find effective intercept for laser $part and target ${target.entityID}")
-//								
-//									val poweredState = ship.getPartState(weapon)[PoweredPartState::class]
-//									
-//									if (poweredState.requestedPower != 0L) {
-//										poweredState.requestedPower = 0
-//										powerChanged = true
-//									}
-//								}
-								
-								i--
-								size--
-								tcState.readyWeapons.remove(weapon)
-								tcState.chargingWeapons.add(weapon)
+									i--
+									size--
+									tcState.readyWeapons.remove(weapon)
+									tcState.chargingWeapons.add(weapon)
+									
+									starSystem.changed(entityID)
+									
+								} else {
+
+//									log.warn("Unable to find effective intercept for laser $part and target ${target.entityID}")
+
+									val poweredState = ship.getPartState(weapon)[PoweredPartState::class]
+
+									if (poweredState.requestedPower != 0L) {
+										poweredState.requestedPower = 0
+										powerChanged = true
+									}
+								}
 							}
 						}
 						is Railgun -> {
@@ -427,7 +433,6 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 							if (chargedState.charge >= part.capacitor && ammoState.amount > 0) {
 
 								val munitionHull = ammoState.type!! as SimpleMunitionHull
-								
 								val projectileSpeed = (chargedState.charge * part.efficiency) / (100 * munitionHull.loadedMass)
 								
 								val result = getInterceptionPosition(shipMovement.value, targetMovement.value, projectileSpeed.toDouble())
@@ -451,7 +456,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 									val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
 									val days = (timeToIntercept / (60 * 60 * 24)).toInt()
 									
-									if (days < 30) {
+									if (days < 10) {
 										
 //												println("railgun projectileSpeed ${projectileSpeed / 100} m/s, interceptSpeed ${interceptVelocity.len() / 100} m/s, aimPosition $aimPosition, interceptPosition $interceptPosition, timeToIntercept $timeToIntercept s, interceptAt ${Units.daysToDate(galacticDays)} ${Units.secondsToString(galacticTime)}")
 									
@@ -493,7 +498,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										chargedState.charge -= part.capacitor
 										
 										if (ammoState.amount == 1 && ammoState.reloadedAt == 0L) {
-											println("Unpowering $part due to no more ammo")
+											println("Deactivating $part due to no more ammo")
 											powerSystem.deactivatePart(entityID, ship, weapon)
 											
 										} else if (ammoState.amount == part.ammunitionAmount) {
@@ -501,6 +506,8 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										}
 										
 										ammoState.amount -= 1
+										
+										starSystem.changed(entityID)
 										
 									} else {
 										
@@ -520,7 +527,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 							if (ammoState.amount > 0) {
 								
 								//TODO handle multi stage missiles
-								// Arrow 3 can be launched into an area of space before it is known where the target missile is going.
+								// "Arrow 3" can be launched into an area of space before it is known where the target missile is going.
 								// When the target and its course are identified, the Arrow interceptor is redirected using its thrust-vectoring nozzle to close the gap and conduct a "body-to-body" interception.
 								
 								val advMunitionHull = ammoState.type!! as AdvancedMunitionHull
@@ -588,6 +595,8 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										
 										ammoState.amount--
 										
+										starSystem.changed(entityID)
+										
 									} else {
 										
 //												log.warn("Unable to find intercept inside thrust time for missile $advMunitionHull and target ${target.entityID}")
@@ -629,8 +638,9 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			}
 			
 //			if (laser.beamArea < 1 column) {
-				
-				applyArmorDamage(entityID, laser.damage, DamagePattern.LASER)
+			
+			val ship = shipMapper.get(targetID)
+			applyShieldDamage(entityID, ship, laser.damage, DamagePattern.LASER)
 				
 //			} else {
 				
@@ -654,17 +664,64 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				return
 			}
 			
-			applyArmorDamage(entityID, railgun.damage, railgun.damagePattern)
+			val ship = shipMapper.get(targetID)
+			applyShieldDamage(entityID, ship, railgun.damage, railgun.damagePattern)
 
 		} else if (missile != null) {
 
 			val targetID = missile.targetEntityID
+			
+			//TODO implement
 		}
 	}
 	
+	fun applyShieldDamage(entityID: Int, ship: ShipComponent, damageEnergy: Long = 0, damagePattern: DamagePattern) {
+		
+		var damage = damageEnergy
+		val shieldHP = ship.shieldHP
+		
+		if (shieldHP > 0) {
+			var blockedDamage: Long
+			
+			// Blocks all laser and explosive, lets 50% kinetic through
+			if (damagePattern == DamagePattern.KINETIC) {
+				blockedDamage	= FastMath.min(shieldHP, damageEnergy / 2)
+			} else {
+				blockedDamage	= FastMath.min(shieldHP, damageEnergy)
+			}
+			
+			damage -= blockedDamage
+			
+			println("Damaging shield for $blockedDamage dmg, remaining $damage")
+			
+			ship.shieldHP = shieldHP - blockedDamage
+			
+			val shields = ship.hull.shields
+			for (i in 0 until shields.size) { //TODO spread damage evenly across all shield parts
+				val partRef = shields[i]
+				
+				val chargedState = ship.getPartState(partRef)[ChargedPartState::class]
+				
+				val partDamage = FastMath.min(chargedState.charge, blockedDamage)
+				blockedDamage -= partDamage
+				
+				chargedState.charge = chargedState.charge - partDamage
+				
+				if (blockedDamage == 0L) {
+					break
+				}
+			}
+			
+			if (damage == 0L) {
+				return
+			}
+		}
+		
+		applyArmorDamage(entityID, ship, damage, damagePattern)
+	}
+	
 	@Suppress("NAME_SHADOWING")
-	fun applyArmorDamage(entityID: Int, damageEnergy: Long = 0, damagePattern: DamagePattern, damageColumn: Int? = null ) {
-		val ship = shipMapper.get(entityID)
+	fun applyArmorDamage(entityID: Int, ship: ShipComponent, damageEnergy: Long = 0, damagePattern: DamagePattern, damageColumn: Int? = null) {
 		
 		var damage = damageEnergy
 		var damageColumn = damageColumn
@@ -755,7 +812,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				val partDamage: Int = FastMath.min(partHP, damage.toInt())
 				damage -= partDamage
 				
-				partHP = partHP - partDamage
+				partHP -= partDamage
 				ship.setPartHP(partRef, partHP, entry)
 				
 				if (partHP == 0) {

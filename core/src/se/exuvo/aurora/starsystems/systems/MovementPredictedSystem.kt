@@ -31,7 +31,7 @@ class MovementPredictedSystem : BaseEntitySystem(ASPECT) {
 	private val galaxy = GameServices[Galaxy::class]
 
 	@Wire
-	lateinit private var starSystem: StarSystem
+	lateinit private var system: StarSystem
 
 	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>
 	lateinit private var predictedMovementMapper: ComponentMapper<OnPredictedMovementComponent>
@@ -127,6 +127,8 @@ class MovementPredictedSystem : BaseEntitySystem(ASPECT) {
 					
 					// We don't want to get notified by our own removals
 					selfRemovedEntityIDs.unsafeSet(entityID)
+					
+					system.changed(entityID)
 					
 				} else {
 					break;

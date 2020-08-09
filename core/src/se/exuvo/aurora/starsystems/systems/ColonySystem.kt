@@ -64,6 +64,8 @@ class ColonySystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 60 * 60) { // hou
 					shipyard.modificationProgress = 0
 					shipyard.modificationActivity = null
 				}
+				
+				system.changed(entityID)
 			}
 			
 			shipyard.slipways.forEach { slipway ->
@@ -97,6 +99,10 @@ class ColonySystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 60 * 60) { // hou
 						slipway.hull = null
 						slipway.hullCost = emptyMap()
 						slipway.usedResources.clear()
+					}
+					
+					if (buildrate != shipyard.buildRate) {
+						system.changed(entityID)
 					}
 				}
 			}

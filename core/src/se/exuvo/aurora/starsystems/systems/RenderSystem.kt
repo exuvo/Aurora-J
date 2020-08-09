@@ -62,6 +62,7 @@ import se.exuvo.aurora.starsystems.components.TargetingComputerState
 import se.exuvo.aurora.starsystems.components.ThrustComponent
 import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import se.exuvo.aurora.starsystems.components.TintComponent
+import se.exuvo.aurora.ui.ProfilerWindow
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.Vector2D
@@ -89,6 +90,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		@JvmField var debugDisableStrategicView = Settings.getBol("Systems/Render/debugDisableStrategicView", false)
 		@JvmField var debugDrawWeaponRangesWithoutShader = Settings.getBol("Systems/Render/debugDrawWeaponRangesWithoutShader", false)
 		@JvmField val log = LogManager.getLogger(RenderSystem::class.java)
+		
+		@JvmField val dummyProfilerEvents = ProfilerWindow.ProfilerBag()
 	}
 	
 	lateinit private var orbitMapper: ComponentMapper<OrbitComponent>
@@ -127,6 +130,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	private val tempF = Vector2()
 	private val temp3F = Vector3()
 	private val tmpIntBuffer: IntBuffer = BufferUtils.createIntBuffer(4)
+	
+	var profilerEvents = dummyProfilerEvents
 	
 	private var scale: Float = 1f
 	lateinit private var viewport: Viewport
@@ -297,7 +302,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					
 					val x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
 					val y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
-					val timeToImpact = 10 // s
+					val timeToImpact = 60 // s
 					
 					tcs.forEachFast{ tc ->
 						val tcState = ship.getPartState(tc)[TargetingComputerState::class]
@@ -858,7 +863,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 				val strategic = strategicIconMapper.has(entityID) && inStrategicView(entityID)
 
-				if (movement.previous.time != galaxy.time && movement.next != null) {
+				if (movement.previous.time != galaxy.time && movement.next != null && !orbitSubscription.aspect.isInterested(entityID)) {
 
 					val movementValues = movement.previous.value
 					val x = (movementValues.getXinKM() - cameraOffset.x).toFloat()
@@ -1300,19 +1305,19 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 				val movement = movementMapper.get(entityID)
 
-				var radius = 0f
-
-				if (inStrategicView(entityID)) {
-
-					radius = scale * STRATEGIC_ICON_SIZE / 2
-
-				} else if (circleMapper.has(entityID)) {
-
-					val circleComponent = circleMapper.get(entityID)
-					radius = circleComponent.radius / 1000
-				}
-
-				if (movement.next != null && movement.previous.time != galaxy.time) {
+				if (movement.next != null && movement.previous.time != galaxy.time && !orbitSubscription.aspect.isInterested(entityID)) {
+					
+					var radius = 0f
+	
+					if (inStrategicView(entityID)) {
+	
+						radius = scale * STRATEGIC_ICON_SIZE / 2
+	
+					} else if (circleMapper.has(entityID)) {
+	
+						val circleComponent = circleMapper.get(entityID)
+						radius = circleComponent.radius / 1000
+					}
 
 					if (selectedEntityIDs.contains(entityID)) {
 						val text = "${Units.daysToDate((movement.previous.time / (24L * 60L * 60L)).toInt())} ${Units.secondsToString(movement.previous.time)}"
@@ -1352,7 +1357,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Point);
 		orbitSubscription.getEntities().forEachFast { entityID ->
 			val orbit = orbitMapper.get(entityID)
-			val orbitCache: OrbitSystem.OrbitCache = orbitsCache.get(entityID)!!
+			val orbitCache: OrbitSystem.OrbitCache = orbitsCache[entityID]!!
 			val parentEntity = orbit.parent
 			val parentMovement = movementMapper.get(parentEntity).get(galaxy.time).value
 			val x = (parentMovement.getXinKM() - cameraOffset.x).toDouble()
@@ -1364,9 +1369,14 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 		shapeRenderer.end();
 	}
-
+	
 	fun render(viewport: Viewport, cameraOffset: Vector2L) {
-
+		
+		profilerEvents = if (galaxy.speed > 0) galaxy.renderProfilerEvents else dummyProfilerEvents
+		profilerEvents.clear()
+		profilerEvents.start("render")
+		
+		profilerEvents.start("setup")
 		this.viewport = viewport
 		this.cameraOffset = cameraOffset
 		shapeRenderer = AuroraGame.currentWindow.shapeRenderer
@@ -1380,46 +1390,91 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		scale = (viewport.camera as OrthographicCamera).zoom
 		displaySize = FastMath.hypot(viewport.getScreenWidth().toDouble(), viewport.getScreenHeight().toDouble()).toInt()
 		shapeRenderer.projectionMatrix = viewport.camera.combined
+		profilerEvents.end()
 		
 //		gravSystem.render(viewport, cameraOffset)
 		
 		//TODO dont interpolate new positions if timeDiff * velocity is not noticable at current zoom level 
 		
+		profilerEvents.start("drawDetections")
 		drawDetections(entityIDs)
+		profilerEvents.end()
 
 		if (Gdx.input.isKeyPressed(Input.Keys.C)) {
+			profilerEvents.start("drawSelectionDetectionZones")
 			drawSelectionDetectionZones(selectedEntityIDs)
+			profilerEvents.end()
 		}
 		
 		if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+			profilerEvents.start("drawOrders")
 			drawOrders()
+			profilerEvents.end()
 		}
-
+		
+		profilerEvents.start("renderOrbits")
 		renderOrbits(cameraOffset)
-
+		profilerEvents.end()
+		
+		profilerEvents.start("drawWeaponRanges")
 		drawWeaponRanges(entityIDs, selectedEntityIDs)
+		profilerEvents.end()
+		
+		profilerEvents.start("drawEntities")
 		drawEntities(entityIDs)
+		profilerEvents.end()
+		
+		profilerEvents.start("drawEntityCenters")
 		drawEntityCenters(entityIDs)
+		profilerEvents.end()
+		
+		profilerEvents.start("drawProjectiles")
 		drawProjectiles()
+		profilerEvents.end()
+		
+		profilerEvents.start("drawTimedMovement")
 		drawTimedMovement(entityIDs, selectedEntityIDs)
-
+		profilerEvents.end()
+		
+		profilerEvents.start("drawSelections")
 		drawSelections(selectedEntityIDs)
+		profilerEvents.end()
+		
+		profilerEvents.start("drawSelectionMoveTargets")
 		drawSelectionMoveTargets(selectedEntityIDs)
+		profilerEvents.end()
+		
 		//TODO draw selection weapon ranges
+		profilerEvents.start("drawAttackTargets")
 		drawAttackTargets(selectedEntityIDs)
+		profilerEvents.end()
 
 		spriteBatch.projectionMatrix = viewport.camera.combined
-
+		
+		profilerEvents.start("drawStrategicEntities")
 		drawStrategicEntities(entityIDs)
-
+		profilerEvents.end()
+		
+		profilerEvents.start("spriteBatch")
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
-
+		
+		profilerEvents.start("drawSelectionDetectionStrength")
 		drawSelectionDetectionStrength(selectedEntityIDs)
+		profilerEvents.end()
+		
+		profilerEvents.start("drawNames")
 		drawNames(entityIDs)
+		profilerEvents.end()
+		
+		profilerEvents.start("drawMovementTimes")
 		drawMovementTimes(entityIDs, selectedEntityIDs)
+		profilerEvents.end()
 
 		spriteBatch.end()
+		profilerEvents.end()
+		
+		profilerEvents.end()
 	}
 
 //	var lastBump = 0L

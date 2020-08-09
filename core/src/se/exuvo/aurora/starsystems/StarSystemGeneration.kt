@@ -5,6 +5,7 @@ import com.artemis.ComponentMapper
 import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.Empire
+import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.starsystems.components.CircleComponent
 import se.exuvo.aurora.starsystems.components.MassComponent
 import se.exuvo.aurora.starsystems.components.NameComponent
@@ -17,8 +18,10 @@ import se.exuvo.aurora.starsystems.components.ThrustComponent
 import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import se.exuvo.aurora.starsystems.components.TintComponent
 import se.exuvo.aurora.starsystems.systems.OrbitSystem
+import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.forEachFast
 import java.util.Random
+import kotlin.concurrent.withLock
 import kotlin.concurrent.write
 
 class StarSystemGeneration(val system: StarSystem) {
@@ -28,6 +31,7 @@ class StarSystemGeneration(val system: StarSystem) {
 
 	val log = LogManager.getLogger(this.javaClass)
 	val world = system.world
+	private val galaxy = GameServices[Galaxy::class]
 	
 	lateinit private var timedMovementMapper: ComponentMapper<TimedMovementComponent>
 	lateinit private var renderMapper: ComponentMapper<RenderComponent>
@@ -46,45 +50,46 @@ class StarSystemGeneration(val system: StarSystem) {
 
 	fun generateRandomSystem() {
 
-		//TODO pause galaxy then do this
-		
-		world.getAspectSubscriptionManager().get(FAMILY).entities.forEachFast { entityID ->
-			system.destroyEntity(entityID)
-		}
-
-		// Mass range of stellar objects in kg
-		// Star: 		10^29 - 10^39
-		// Planet:		10^22 - 10^28
-		// Moon:		10^20 - 10^22
-		// Asteroid:	10^10 - 10^20
-
-		// mass = density * 4 * radius^3 * 10^9 density in kg/m^3
-		// density = 500 - 5000 				planets, higher at lower orbits
-		// density = 2000 - 3530 				moons random
-		// density = 10^-6 - 10^18				stars smaller = denser
-
-
-		val randomNumbersClass = Random()
-
-
-		val Star = addRandomStar(randomNumbersClass)
-		//addPlanet (Star,1e0,1f,"planet",6.666f,0.5f,0f,0f)
-		//addPlanet (Star,1e0,1f,"planet2",4f,0.5f,90f,0f)
-
-		var planet = addRandomPlanet(randomNumbersClass, Star)
-
-		addPlanet(Star, 1e24, 10000f, "biggest", 150f, 0f, 0f, 0f)
-
-		var i = 0
-		while (planet != null) {
-			if (i == 100) {
-				break
+		galaxy.shadowLock.withLock {
+			
+			world.getAspectSubscriptionManager().get(FAMILY).entities.forEachFast { entityID ->
+				system.destroyEntity(entityID)
 			}
-			planet = addRandomPlanet(randomNumbersClass, Star)
-			i++
+	
+			// Mass range of stellar objects in kg
+			// Star: 		10^29 - 10^39
+			// Planet:		10^22 - 10^28
+			// Moon:		10^20 - 10^22
+			// Asteroid:	10^10 - 10^20
+	
+			// mass = density * 4 * radius^3 * 10^9 density in kg/m^3
+			// density = 500 - 5000 				planets, higher at lower orbits
+			// density = 2000 - 3530 				moons random
+			// density = 10^-6 - 10^18				stars smaller = denser
+	
+	
+			val randomNumbersClass = Random()
+	
+	
+			val Star = addRandomStar(randomNumbersClass)
+			//addPlanet (Star,1e0,1f,"planet",6.666f,0.5f,0f,0f)
+			//addPlanet (Star,1e0,1f,"planet2",4f,0.5f,90f,0f)
+	
+			var planet = addRandomPlanet(randomNumbersClass, Star)
+	
+			addPlanet(Star, 1e24, 10000f, "biggest", 150f, 0f, 0f, 0f)
+	
+			var i = 0
+			while (planet != null) {
+				if (i == 100) {
+					break
+				}
+				planet = addRandomPlanet(randomNumbersClass, Star)
+				i++
+			}
+	
+			world.getSystem(OrbitSystem::class.java).process()
 		}
-
-		world.getSystem(OrbitSystem::class.java).process()
 	}
 
 	fun addRandomStar(randomNumbersClass: Random): Int {

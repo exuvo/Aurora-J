@@ -168,7 +168,7 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 				ImGui.showDemoWindow(::demoVisible)
 			}
 			
-			galaxy.uiLock.withLock {
+			galaxy.shadowLock.withLock {
 				if (mainDebugVisible) {
 	
 					if (ImGui.begin("Debug window", ::mainDebugVisible, WindowFlag.MenuBar.i)) {

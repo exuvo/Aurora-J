@@ -262,6 +262,7 @@ class GameScreenService : Disposable, InputProcessor {
 		fbo = createFBO()
 		
 		uiCamera.setToOrtho(false, width.toFloat(), height.toFloat())
+		
 		screens.forEach { it.resize(width, height) }
 	}
 

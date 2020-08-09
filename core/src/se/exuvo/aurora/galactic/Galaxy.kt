@@ -6,19 +6,19 @@ import com.artemis.EntitySubscription
 import com.artemis.World
 import com.artemis.WorldConfigurationBuilder
 import com.artemis.utils.Bag
+import com.artemis.utils.IntBag
 import com.badlogic.gdx.utils.Disposable
 import net.mostlyoriginal.api.event.common.EventSystem
 import org.apache.commons.math3.util.FastMath
 import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.galactic.systems.GalacticRenderSystem
-import se.exuvo.aurora.starsystems.ShadowStarSystem
 import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.starsystems.components.ChangingWorldComponent
 import se.exuvo.aurora.starsystems.components.EntityReference
 import se.exuvo.aurora.starsystems.components.EntityUUID
 import se.exuvo.aurora.starsystems.components.MovementValues
-import se.exuvo.aurora.starsystems.systems.CustomSystemInvocationStrategy
 import se.exuvo.aurora.starsystems.systems.GroupSystem
+import se.exuvo.aurora.ui.ProfilerWindow
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.exponentialAverage
@@ -27,8 +27,9 @@ import se.exuvo.settings.Settings
 import se.unlogic.standardutils.threads.ThreadUtils
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
-class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, Disposable {
+class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, EntitySubscription.SubscriptionListener, Disposable {
 	companion object {
 		@JvmField val log = LogManager.getLogger(Galaxy::class.java)
 	}
@@ -55,11 +56,10 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 	val allSubscription: EntitySubscription
 	
 	var workingShadow: ShadowGalaxy
-	var shadow: ShadowGalaxy // Always safe to use from other StarSystems
-	var uiShadow: ShadowGalaxy // Requires UI lock
-	var retiredUIShadow: ShadowGalaxy? = null
+	var shadow: ShadowGalaxy // Always safe to use from other StarSystems, requires shadow lock to use from UI
+	val shadowLock = ReentrantLock()
 	
-	val uiLock = ReentrantLock()
+	val renderProfilerEvents = ProfilerWindow.ProfilerBag()
 	
 	init {
 		GameServices.put(this)
@@ -71,16 +71,15 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 //		worldBuilder.dependsOn(ProfilerPlugin::class.java)
 		worldBuilder.with(EventSystem())
 		worldBuilder.with(GalacticRenderSystem())
-		worldBuilder.register(CustomSystemInvocationStrategy())
 		
 		world = World(worldBuilder.build())
 		world.inject(this)
 		
 		allSubscription = world.getAspectSubscriptionManager().get(Aspect.all())
+		allSubscription.addSubscriptionListener(this)
 		
 		workingShadow = ShadowGalaxy(this)
 		shadow  = ShadowGalaxy(this)
-		uiShadow = shadow
 	}
 	
 	fun init(systems: Bag<StarSystem>) {
@@ -99,6 +98,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		for(i in 0..threads.getCapacity() - 1) {
 			val thread = Thread(GalaxyWorker, "Galaxy worker ${1 + i}")
 			thread.setDaemon(true);
+			thread.priority = Thread.NORM_PRIORITY + 1
 			threads.add(thread)
 			thread.start();
 		}
@@ -160,20 +160,31 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 							while(true) {
 								val command = empire.commandQueue.poll() ?: break
 								
-								if (command.isValid()) {
-									command.apply()
+								try {
+									if (command.isValid()) {
+										command.apply()
+									}
+								} catch (e: Exception) {
+									log.error("Exception running command $command", e)
 								}
 							}
 						}
 						profilerEvents.end()
 						
-						takenWorkCounter.set(0)
 						completedWorkCounter.set(0)
+						takenWorkCounter.set(0)
 						
 						profilerEvents.start("run threads")
 						synchronized(threadsCondition) {
 							threadsCondition.notifyAll()
 						}
+//						threads.forEachFast { thread ->
+//							thread.interrupt()
+//						}
+						
+						workingShadow.added.clear()
+						workingShadow.changed.clear()
+						workingShadow.deleted.clear()
 						
 						profilerEvents.start("process")
 						world.setDelta(tickSize.toFloat())
@@ -184,95 +195,35 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 						workingShadow.update()
 						profilerEvents.end()
 						
+						this.thread!!.priority = Thread.NORM_PRIORITY - 1
 						while (completedWorkCounter.getOpaque() < systems.size() && !shutdown) {
-							try {
-								Thread.sleep(100)
-							} catch (e: InterruptedException) {
-								if (completedWorkCounter.get() == systems.size() || shutdown) {
-									break
-								}
-							}
+							Thread.yield()
+//							try {
+//								Thread.sleep(10)
+//							} catch (e: InterruptedException) {
+//								if (completedWorkCounter.get() == systems.size() || shutdown) {
+//									break
+//								}
+//							}
 						}
 						profilerEvents.end()
+						this.thread!!.priority = Thread.NORM_PRIORITY
 						
-						profilerEvents.start("promote shadows")
-						if (uiLock.tryLock()) { // promote shadowWorlds
-							
-							try {
-								systems.forEachFast { system ->
-									val oldShadowWorld = system.shadow
-									val oldUIShadowWorld = system.uiShadow
-									
-									system.shadow = system.workingShadow
-									system.uiShadow = system.workingShadow
-									system.workingShadow = oldShadowWorld
-									
-									if (oldShadowWorld != oldUIShadowWorld) {
-										assert(system.retiredUIShadow == null)
-										system.retiredUIShadow = oldUIShadowWorld
-									}
-								}
-								
-								val oldShadowWorld = shadow
-								val oldUIShadowWorld = uiShadow
-								
-								shadow = workingShadow
-								uiShadow = workingShadow
-								workingShadow = oldShadowWorld
-								
-								if (oldShadowWorld != oldUIShadowWorld) {
-									assert(retiredUIShadow == null)
-									retiredUIShadow = oldUIShadowWorld
-								}
-								
-							} finally {
-								uiLock.unlock()
-							}
-							
-						} else { // skip promoting shadowWorlds to UI
-							
+						profilerEvents.start("shadows lock")
+						shadowLock.withLock {
+							profilerEvents.start("promote shadows")
 							systems.forEachFast { system ->
-								val oldShadow = system.shadow
-								val oldUIShadow = system.uiShadow
+								val oldShadowWorld = system.shadow
 								
 								system.shadow = system.workingShadow
-								system.workingShadow = oldUIShadow
-								
-								//TODO optimize is same for all systems, if once on galaxy and then do same for all
-								if (oldShadow != system.uiShadow) {
-									system.workingShadow = oldShadow
-									
-								} else {
-									val retiredUIShadow = system.retiredUIShadow
-									
-									if (retiredUIShadow != null) {
-										system.workingShadow = retiredUIShadow
-										
-									} else {
-										system.workingShadow = ShadowStarSystem(system)
-									}
-								}
+								system.workingShadow = oldShadowWorld
 							}
 							
-							val oldShadow = shadow
-							val oldUIShadow = uiShadow
+							val oldShadowWorld = shadow
 							
 							shadow = workingShadow
-							workingShadow = oldUIShadow
-							
-							if (oldShadow != uiShadow) {
-								workingShadow = oldShadow
-								
-							} else {
-								val retiredUIShadow = retiredUIShadow
-								
-								if (retiredUIShadow != null) {
-									workingShadow = retiredUIShadow
-									
-								} else {
-									workingShadow = ShadowGalaxy(this)
-								}
-							}
+							workingShadow = oldShadowWorld
+							profilerEvents.end()
 						}
 						profilerEvents.end()
 						
@@ -289,7 +240,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 //						}
 //						println()
 						
-						// If one system took a noticable larger time to process than others, schedule it earlier
+						// If one system took a noticeable larger time to process than others, schedule it earlier
 						profilerEvents.start("system sort")
 						systems.sort(object : Comparator<StarSystem> {
 							val s = tickSpeed / 10
@@ -354,6 +305,9 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 						if (galaxy.takenWorkCounter.get() >= galaxy.systems.size()) {
 //							println("sleep ${Thread.currentThread().name}")
 							galaxy.threadsCondition.wait()
+//							try {
+//								Thread.sleep(Long.MAX_VALUE)
+//							} catch(e: InterruptedException) {}
 //							println("wake ${Thread.currentThread().name}")
 						}
 					}
@@ -378,12 +332,12 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 							system.updateTimeAverage = exponentialAverage(system.updateTime.toDouble(), system.updateTimeAverage, FastMath.min(100.0, (Units.NANO_SECOND / FastMath.abs(galaxy.speed)).toDouble()))
 							
 						} catch (t: Throwable) {
-							log.error("Exception in system update for $system", t)
+							log.error("Exception in system update for $system tick ${galaxy.time}", t)
 							galaxy.speed = 0
 							
 						} finally {
 							if (galaxy.completedWorkCounter.incrementAndGet() == galaxy.systems.size()) {
-								galaxy.thread!!.interrupt()
+//								galaxy.thread!!.interrupt()
 								break
 							}
 						}
@@ -394,6 +348,18 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 			} catch(t: Throwable) {
 				log.error("", t);
 			}
+		}
+	}
+	
+	override fun inserted(entityIDs: IntBag) {
+		entityIDs.forEachFast { entityID ->
+			workingShadow.added.unsafeSet(entityID)
+		}
+	}
+	
+	override fun removed(entityIDs: IntBag) {
+		entityIDs.forEachFast { entityID ->
+			workingShadow.deleted.unsafeSet(entityID)
 		}
 	}
  
@@ -491,5 +457,9 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, D
 		systems.forEachFast { system ->
 			system.dispose()
 		}
+		
+		world.dispose()
+		shadow.dispose()
+		workingShadow.dispose()
 	}
 }

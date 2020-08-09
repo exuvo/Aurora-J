@@ -1,4 +1,4 @@
-package se.exuvo.aurora.starsystems.systems
+package se.exuvo.aurora.starsystems
 
 import com.artemis.SystemInvocationStrategy
 import com.artemis.utils.Bag
@@ -6,7 +6,7 @@ import com.artemis.WorldConfigurationBuilder.Priority
 import com.artemis.utils.Sort
 import se.exuvo.aurora.utils.forEachFast
 
-open class CustomSystemInvocationStrategy : SystemInvocationStrategy() {
+open class CustomSystemInvocationStrategy(val starSystem: StarSystem) : SystemInvocationStrategy() {
 	lateinit var preSystems: Bag<PreSystem>
 	lateinit var postSystems: Bag<PostSystem>
 
@@ -25,20 +25,18 @@ open class CustomSystemInvocationStrategy : SystemInvocationStrategy() {
 			}
 		}
 
-		Sort.instance().sort(preSystems, object : Comparator<PreSystem> {
-			override fun compare(o1: PreSystem, o2: PreSystem): Int {
-				return -o1.getPreProcessPriority().compareTo(o2.getPreProcessPriority())
-			}
-		})
+		Sort.instance().sort(preSystems, { o1, o2 -> -o1.getPreProcessPriority().compareTo(o2.getPreProcessPriority()) })
 		
-		Sort.instance().sort(postSystems, object : Comparator<PostSystem> {
-			override fun compare(o1: PostSystem, o2: PostSystem): Int {
-				return -o1.getPostProcessPriority().compareTo(o2.getPostProcessPriority())
-			}
-		})
+		Sort.instance().sort(postSystems, { o1, o2 -> -o1.getPostProcessPriority().compareTo(o2.getPostProcessPriority()) })
 	}
 
 	override fun process() {
+		
+		val batchChanged = world.batchProcessor.changed
+		
+		if (!batchChanged.isEmpty()) {
+			starSystem.workingShadow.changed.or(batchChanged)
+		}
 		
 		updateEntityStates()
 
@@ -51,6 +49,11 @@ open class CustomSystemInvocationStrategy : SystemInvocationStrategy() {
 		systems.forEachFast { i, system ->
 			if (!disabled.unsafeGet(i)) {
 				system.process()
+				
+				if (!batchChanged.isEmpty()) {
+					starSystem.workingShadow.changed.or(batchChanged)
+				}
+				
 				updateEntityStates()
 			}
 		}

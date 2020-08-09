@@ -1,9 +1,10 @@
 package se.exuvo.aurora.starsystems.systems
 
+import se.exuvo.aurora.starsystems.CustomSystemInvocationStrategy
 import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.utils.forEachFast
 
-class ProfilingSystemInvocationStrategy(val starSystem: StarSystem) : CustomSystemInvocationStrategy() {
+class ProfilingSystemInvocationStrategy(starSystem: StarSystem) : CustomSystemInvocationStrategy(starSystem) {
 
 	override fun initialize() {
 		super.initialize()

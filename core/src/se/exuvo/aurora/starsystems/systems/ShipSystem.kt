@@ -19,6 +19,7 @@ import se.exuvo.aurora.utils.consumeFuel
 import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.starsystems.StarSystem
 import com.artemis.annotations.Wire
+import se.exuvo.aurora.starsystems.PreSystem
 
 class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -97,7 +98,7 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 						val fueledState = ship.getPartState(thruster)[FueledPartState::class]
 
 						val remainingFuel = ship.getCargoAmount(part.fuel)
-						fueledState.totalFuelEnergyRemaining = fueledState.fuelEnergyRemaining + part.thrust.toLong() * part.fuelTime * remainingFuel
+						fueledState.totalFuelEnergyRemaining = fueledState.fuelEnergyRemaining + part.thrust * part.fuelTime * remainingFuel
 
 						if (fueledState.totalFuelEnergyRemaining > 0) {
 							maxThrust += part.thrust
@@ -105,7 +106,8 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 						}
 
 						if (thrustComponent != null && thrustComponent.thrusting) {
-							consumeFuel(deltaGameTime, entityID, world, ship, thruster, part.thrust.toLong(), part.thrust.toLong())
+							consumeFuel(deltaGameTime, entityID, world, ship, thruster, part.thrust, part.thrust)
+							starSystem.changed(entityID)
 						}
 					}
 				}
@@ -129,8 +131,12 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 				thrustComponent = thrustMapper.get(entityID)
 			}
 
-			thrustComponent.thrust = thrust
-			thrustComponent.maxThrust = maxThrust
+			if (thrustComponent.thrust != thrust || thrustComponent.maxThrust != maxThrust) {
+				thrustComponent.thrust = thrust
+				thrustComponent.maxThrust = maxThrust
+				
+				starSystem.changed(entityID)
+			}
 		}
 	}
 }

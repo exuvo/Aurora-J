@@ -153,6 +153,10 @@ task explodeForWeave(type: Sync) {
 		exclude "linux/arm32/**"
 		exclude "linux/arm64/**"
 		//TODO remove these and make overwrite work instead
+		exclude "com/badlogic/gdx/Lwjgl3Graphics.class"
+		exclude "com/badlogic/gdx/Lwjgl3Graphics\$1.class"
+		exclude "com/badlogic/gdx/Lwjgl3Graphics\$Lwjgl3DisplayMode.class"
+		exclude "com/badlogic/gdx/Lwjgl3Graphics\$Lwjgl3Monitor.class"
 		//TODO Gdx2DPixmap
 	}
 	//from {configurations.compile.collect {zipTree(it)}}

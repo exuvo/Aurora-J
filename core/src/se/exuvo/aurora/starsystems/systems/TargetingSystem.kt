@@ -15,6 +15,7 @@ import se.exuvo.aurora.galactic.ChargedPart
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.galactic.PartRef
 import se.exuvo.aurora.galactic.TargetingComputer
+import se.exuvo.aurora.starsystems.PreSystem
 import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.starsystems.components.ChargedPartState
 import se.exuvo.aurora.starsystems.components.EntityReference
@@ -36,6 +37,7 @@ import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.printEntity
+import java.lang.IllegalStateException
 
 class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -129,7 +131,9 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 		val idleTCs = idleTargetingComputersComponentMapper.get(entityID)
 		var activeTCs = activeTargetingComputersComponentMapper.get(entityID)
 		
-		idleTCs.targetingComputers.remove(tc)
+		if (!idleTCs.targetingComputers.remove(tc)) {
+			throw IllegalStateException("targeting computer $tc is not idle on $entityID")
+		}
 		
 		if (idleTCs.targetingComputers.isEmpty()) {
 			idleTargetingComputersComponentMapper.remove(entityID)
@@ -140,6 +144,7 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 		}
 		
 		activeTCs.targetingComputers.add(tc)
+		starSystem.changed(entityID)
 	}
 	
 	fun clearTarget(entityID: Int, ship: ShipComponent, tc: PartRef<TargetingComputer>) {
@@ -149,6 +154,8 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 		val tcState = ship.getPartState(tc)[TargetingComputerState::class]
 		tcState.lockCompletionAt = 0
 		tcState.target = null
+		
+		starSystem.changed(entityID)
 		
 		var idleTCs = idleTargetingComputersComponentMapper.get(entityID)
 		val activeTCs = activeTargetingComputersComponentMapper.get(entityID)
@@ -206,7 +213,7 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 
 				weaponSystem.reloadAmmoWeapons(entityID, ship, tcState)
 				
-				//TODO reload charged weapons a few seconds after target is cleared, then stop
+				//TODO keep reloading charged weapons while InCombat
 //				powerChanged = weaponSystem.reloadChargedWeapons(powerChanged, entityID, ship, tcState)
 			}
 			
@@ -258,7 +265,9 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 		tcs.forEachFast{ tc ->
 			val tcState = ship.getPartState(tc)[TargetingComputerState::class]
 
+			//TODO automatically target hostiles in range
 			
+			// below is copy from WeaponSystem as starting point
 //			if (!starSystem.isEntityReferenceValid(target)) {
 //				
 //				tcState.target = null
