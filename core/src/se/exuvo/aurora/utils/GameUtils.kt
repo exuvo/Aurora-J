@@ -69,6 +69,18 @@ inline fun <T> List<T>.forEachFast(block: (index: Int, T) -> Unit) {
 	}
 }
 
+inline fun <T> Array<T>.forEachFast(block: (T) -> Unit) {
+	for (i in 0 .. size - 1) {
+		block(this[i])
+	}
+}
+
+inline fun <T> Array<T>.forEachFast(block: (index: Int, T) -> Unit) {
+	for (i in 0 .. size - 1) {
+		block(i, this[i])
+	}
+}
+
 @Suppress("NOTHING_TO_INLINE")
 inline fun <T> Bag<T>.isNotEmpty(): Boolean = !isEmpty()
 

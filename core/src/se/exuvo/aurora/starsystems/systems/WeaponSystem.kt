@@ -139,7 +139,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 					if (ammoState.reloadedAt == 0L) { // new
 
 						tcState.reloadingWeapons.poll()
-						starSystem.changed(entityID)
+						starSystem.changed(entityID, shipMapper)
 
 						if (ammoType.radius != part.ammunitionSize) {
 
@@ -166,7 +166,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 					} else if (galaxy.time >= ammoState.reloadedAt) {
 
 						tcState.reloadingWeapons.poll()
-						starSystem.changed(entityID)
+						starSystem.changed(entityID, shipMapper)
 
 						ammoState.amount += 1
 						ammoState.reloadedAt = 0
@@ -232,7 +232,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				if (chargedState.expectedFullAt == 0L) { // new
 					
 					tcState.chargingWeapons.poll()
-					starSystem.changed(entityID)
+					starSystem.changed(entityID, shipMapper)
 					
 					//Will overfill slightly to fix shot to shot timing when powerConsumption is not a multiple of capacitor
 					val wantedPower = part.powerConsumption
@@ -248,7 +248,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				} else if (galaxy.time >= chargedState.expectedFullAt) {
 					
 					tcState.chargingWeapons.poll()
-					starSystem.changed(entityID)
+					starSystem.changed(entityID, shipMapper)
 					
 					if (chargedState.charge < part.capacitor) {
 						
@@ -411,7 +411,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 									tcState.readyWeapons.remove(weapon)
 									tcState.chargingWeapons.add(weapon)
 									
-									starSystem.changed(entityID)
+									starSystem.changed(entityID, shipMapper)
 									
 								} else {
 
@@ -507,7 +507,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										
 										ammoState.amount -= 1
 										
-										starSystem.changed(entityID)
+										starSystem.changed(entityID, shipMapper)
 										
 									} else {
 										
@@ -595,7 +595,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										
 										ammoState.amount--
 										
-										starSystem.changed(entityID)
+										starSystem.changed(entityID, shipMapper)
 										
 									} else {
 										

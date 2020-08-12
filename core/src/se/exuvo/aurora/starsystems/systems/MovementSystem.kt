@@ -85,7 +85,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 
 		moveToPositionComponent.set(target, approach)
 		
-		system.changed(entityID)
+		system.changed(entityID, moveToPositionMapper)
 	}
 
 	fun moveToEntity(entityID: Int, targetID: Int, approach: ApproachType = ApproachType.BRACHISTOCHRONE) {
@@ -104,7 +104,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 
 		moveToEntityComponent.set(targetID, approach)
 		
-		system.changed(entityID)
+		system.changed(entityID, moveToEntityMapper)
 	}
 
 	fun cancelMovement(entityID: Int) {
@@ -165,10 +165,14 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 
 		if (!CAN_ACCELERATE_ASPECT.isInterested(entityID)) {
 
+			if (velocity.isZero()) {
+				return
+			}
+			
 			tempVelocity.set(velocity).scl(deltaGameTime)
 			position.addDiv(tempVelocity, 100)
 			movement.previous.time = galaxy.time
-			system.changed(entityID)
+			system.changed(entityID, movementMapper)
 			return
 		}
 
@@ -213,7 +217,8 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 				}
 
 				nameMapper.get(entityID).name = "s " + velocity.len().toLong()
-				system.changed(entityID)
+				
+				system.changed(entityID, movementMapper, thrustMapper, nameMapper)
 			}
 
 			return
@@ -255,7 +260,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 			moveToEntityMapper.remove(entityID)
 			moveToPositionMapper.remove(entityID)
 			println("Movement: target reached distance")
-			system.changed(entityID)
+			system.changed(entityID, movementMapper)
 			return
 		}
 
@@ -298,7 +303,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 						println("Movement: Brachistochrone target reached time")
 						nameMapper.get(entityID).name = "b " + velocity.len().toLong()
 						
-						system.changed(entityID)
+						system.changed(entityID, movementMapper, nameMapper)
 						return
 					}
 
@@ -354,7 +359,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 				position.addDiv(tempVelocity, 100)
 
 //				println("tickAcceleration $tickAcceleration cm/s, acceleration $acceleration cm/s, velocity $velocity, distance $distance")
-				system.changed(entityID)
+				system.changed(entityID, movementMapper, thrustMapper, nameMapper)
 			}
 			ApproachType.BALLISTIC -> {
 
@@ -378,7 +383,8 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 					thrustComponent.thrustAngle = angleToTarget.toFloat()
 					
 					predictedMovementMapper.create(entityID)
-
+					
+					system.changed(entityID, movementMapper, thrustMapper)
 					return
 				}
 				
@@ -416,6 +422,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 						
 						predictedMovementMapper.create(entityID)
 						
+						system.changed(entityID, movementMapper, thrustMapper)
 						return
 					}
 				}
@@ -427,7 +434,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 					moveToPositionMapper.remove(entityID)
 					println("Movement: Ballistic target reached time")
 					
-					system.changed(entityID)
+					system.changed(entityID, movementMapper)
 					return
 				}
 
@@ -448,10 +455,10 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 				tempVelocity.set(velocity).scl(deltaGameTime)
 				position.addDiv(tempVelocity, 100)
 				
-				system.changed(entityID)
+				system.changed(entityID, movementMapper, thrustMapper)
 			}
 			else -> {
-				throw RuntimeException("Unknown approach type: " + approach)
+				throw RuntimeException("Unknown approach type: $approach")
 			}
 		}
 

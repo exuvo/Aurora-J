@@ -95,7 +95,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, E
 		takenWorkCounter.set(systems.size())
 		completedWorkCounter.set(systems.size())
 		
-		for(i in 0..threads.getCapacity() - 1) {
+		for(i in 0 until threads.getCapacity()) {
 			val thread = Thread(GalaxyWorker, "Galaxy worker ${1 + i}")
 			thread.setDaemon(true);
 			thread.priority = Thread.NORM_PRIORITY + 1
@@ -162,10 +162,12 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, E
 								
 								try {
 									if (command.isValid()) {
-										command.apply()
+										command.getSystem().commandQueue.add(command)
+									} else {
+										log.warn("Invalid command $command")
 									}
 								} catch (e: Exception) {
-									log.error("Exception running command $command", e)
+									log.error("Exception validating command $command", e)
 								}
 							}
 						}
@@ -305,6 +307,7 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, E
 						if (galaxy.takenWorkCounter.get() >= galaxy.systems.size()) {
 //							println("sleep ${Thread.currentThread().name}")
 							galaxy.threadsCondition.wait()
+//							Thread.yield()
 //							try {
 //								Thread.sleep(Long.MAX_VALUE)
 //							} catch(e: InterruptedException) {}

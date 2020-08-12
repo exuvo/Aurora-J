@@ -196,7 +196,7 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 24 * 60 * 60) {
 		
 		movement.setPrediction(MovementValues(tmpPosition.cpy(), newVelocity.cpy(), Vector2L()), tomorrow)
 		
-		system.changed(entityID)
+		system.changed(entityID, movementMapper)
 	}
 
 	data class OrbitCache(val orbitalPeriod: Double, val apoapsis: Double, val periapsis: Double, val orbitPoints: Array<Vector2D>)

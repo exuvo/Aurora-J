@@ -121,6 +121,9 @@ class ShipDebugger : UIWindow() {
 								if (collapsingHeader("Components", 0)) { // TreeNodeFlag.DefaultOpen.i
 		
 									val components = world.componentManager.getComponentsFor(entityRef.entityID, Bag<Component>())
+									components.sort({ o1, o2 ->
+										o1::class.simpleName!!.compareTo(o2::class.simpleName!!)
+									})
 									
 									components.forEachFast{ component ->
 		

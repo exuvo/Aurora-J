@@ -370,19 +370,13 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 									}
 									
 									selectedEntities.forEachFast{ entityRef ->
-										val ship = shadow.shipMapper.get(entityRef.entityID)
 										val activeTCs = shadow.activeTargetingComputersComponentMapper.get(entityRef.entityID)
 										
-										if (activeTCs != null) {
-											activeTCs.targetingComputers.forEachFast{ tc ->
-												val tcState = ship.getPartState(tc)[TargetingComputerState::class]
-	
-												if (targetRef != null) {
-													tcState.target = targetRef
-													
-												} else {
-													Player.current.empire!!.commandQueue.add(ClearTargetCommand(entityRef, tc))
-												}
+										activeTCs?.targetingComputers?.forEachFast{ tc ->
+											Player.current.empire!!.commandQueue.add(ClearTargetCommand(entityRef, tc))
+											
+											if (targetRef != null) {
+												Player.current.empire!!.commandQueue.add(SetTargetCommand(entityRef, tc, targetRef))
 											}
 										}
 										

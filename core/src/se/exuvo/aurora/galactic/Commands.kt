@@ -11,6 +11,7 @@ import se.exuvo.aurora.utils.Vector2L
 abstract class Command {
 	abstract fun isValid(): Boolean
 	abstract fun apply()
+	abstract fun getSystem(): StarSystem
 }
 
 abstract class EntityCommand(var entityRef: EntityReference): Command() {
@@ -24,6 +25,8 @@ abstract class EntityCommand(var entityRef: EntityReference): Command() {
 		
 		return false
 	}
+	
+	override fun getSystem() = entityRef.system
 }
 
 abstract class TargetEntityCommand(entityRef: EntityReference, var targetRef: EntityReference): EntityCommand(entityRef) {

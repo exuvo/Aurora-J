@@ -106,7 +106,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 		}
 		
 		ship.setPartEnabled(partRef, true)
-		system.changed(entityID)
+		system.changed(entityID, shipMapper)
 		
 		val part = partRef.part
 		
@@ -164,7 +164,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 		}
 		
 		ship.setPartEnabled(partRef, false)
-		system.changed(entityID)
+		system.changed(entityID, shipMapper)
 		
 		val part = partRef.part
 		
@@ -228,7 +228,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 	fun powerEvent(event: PowerEvent) {
 		val powerComponent = powerMapper.get(event.entityID)
 		powerComponent.stateChanged = true
-		system.changed(event.entityID)
+		system.changed(event.entityID, powerMapper)
 	}
 
 	override fun preProcessSystem() {
@@ -505,7 +505,7 @@ class PowerSystem : IteratingSystem(FAMILY), PreSystem {
 				}
 			})
 			
-			system.changed(entityID) //TODO smarter change for when stateChanged is false
+			system.changed(entityID, shipMapper, powerMapper) //TODO smarter change for when stateChanged is false
 		}
 	}
 

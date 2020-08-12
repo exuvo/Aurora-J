@@ -83,6 +83,7 @@ class PassiveSensorSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10) {
 								if (ship.isPartEnabled(sensor)) {
 									val poweredState = ship.getPartState(sensor)[PoweredPartState::class]
 									poweredState.requestedPower = sensor.part.powerConsumption
+									starSystem.changed(entityID, shipMapper)
 								}
 							}
 						}
@@ -260,6 +261,7 @@ class PassiveSensorSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10) {
 			}
 
 			detectionComponent.detections = detections
+			starSystem.changed(entityID, detectionMapper)
 		}
 	}
 

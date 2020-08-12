@@ -107,7 +107,7 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 
 						if (thrustComponent != null && thrustComponent.thrusting) {
 							consumeFuel(deltaGameTime, entityID, world, ship, thruster, part.thrust, part.thrust)
-							starSystem.changed(entityID)
+							starSystem.changed(entityID, shipMapper)
 						}
 					}
 				}
@@ -135,7 +135,7 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 				thrustComponent.thrust = thrust
 				thrustComponent.maxThrust = maxThrust
 				
-				starSystem.changed(entityID)
+				starSystem.changed(entityID, thrustMapper)
 			}
 		}
 	}

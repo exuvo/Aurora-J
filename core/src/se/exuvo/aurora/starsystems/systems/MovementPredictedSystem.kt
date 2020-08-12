@@ -128,7 +128,7 @@ class MovementPredictedSystem : BaseEntitySystem(ASPECT) {
 					// We don't want to get notified by our own removals
 					selfRemovedEntityIDs.unsafeSet(entityID)
 					
-					system.changed(entityID)
+					system.changed(entityID, movementMapper)
 					
 				} else {
 					break;

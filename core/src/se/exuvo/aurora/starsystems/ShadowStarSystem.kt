@@ -46,6 +46,7 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 	val world: World
 	val added = BitVector()
 	val changed = BitVector()
+	val changedComponents = Array<BitVector>(system.world.componentManager.componentTypes.size(), { BitVector() })
 	val deleted = BitVector()
 	
 	var time = 0L
@@ -85,6 +86,7 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 	private val mappersByTypeIndex = Bag<ComponentMapper<*>>(system.world.componentManager.componentTypes.size())
 	
 	private val tmpBV = BitVector()
+	private val tmpBVs = Array<BitVector>(changedComponents.size, { BitVector() })
 	private val tmpBag = IntBag()
 	
 	init {
@@ -110,14 +112,21 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 		system.world.entityManager.registerEntityStore(added)
 		system.world.entityManager.registerEntityStore(changed)
 		system.world.entityManager.registerEntityStore(deleted)
+		system.world.entityManager.registerEntityStore(tmpBV)
+		
+		changedComponents.forEachFast { bitVector ->
+			system.world.entityManager.registerEntityStore(bitVector)
+		}
+		tmpBVs.forEachFast { bitVector ->
+			system.world.entityManager.registerEntityStore(bitVector)
+		}
 	}
 	
 	fun update() {
-		tmpBV.ensureCapacity(added.length())
+		//TODO add calls to send changes over network
 		
 		profilerEvents.start("deleted")
-		tmpBV.clear()
-		tmpBV.or(deleted)
+		tmpBV.set(deleted)
 		tmpBV.or(system.shadow.deleted)
 		tmpBV.toIntBag(tmpBag)
 //		println("deleted $tmpBag")
@@ -133,45 +142,67 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 		val em = world.entityManager
 		val scm = system.world.componentManager
 		
-		changed.andNot(added) // BatchProcessor component changes includes added too. Also skip created and modified in same tick
+		changed.andNot(added) // Skip created and modified in same tick
 		
-		tmpBV.clear()
-		tmpBV.or(changed)
-		tmpBV.andNot(system.shadow.added) // Skip otherShadow added as they will be handled as added below
+		tmpBV.set(changed)
 		tmpBV.or(system.shadow.changed)
-		tmpBV.andNot(deleted) // Skip now deleted from otherShadow changed
-		tmpBV.andNot(system.shadow.deleted)
+		tmpBV.andNot(system.shadow.added) // Skip other added as they will be handled as added below
+		tmpBV.andNot(deleted) // Skip now deleted from other changed
 		
-		profilerEvents.start("changed")
 		tmpBV.toIntBag(tmpBag)
+		
+		tmpBVs.forEachFast { index, bitVector ->
+			bitVector.set(changedComponents[index])
+			bitVector.or(system.shadow.changedComponents[index])
+		}
+		
 //		println("changed $tmpBag")
+		profilerEvents.start("changed")
 		tmpBag.forEachFast { entityID ->
+			profilerEvents.start("$entityID")
 			if (!em.isActive(entityID)) {
 				throw IllegalStateException("entity id $entityID does not exist")
 			}
 			
-			val systemMappers = scm.componentMappers(entityID)
+			val systemMappers = scm.componentMappers(entityID) // Only includes current components
 			
 			systemMappers?.forEachFast { systemMapper ->
-				val shadowMapper = mappersByTypeIndex[systemMapper.type.index]
+				val typeIndex = systemMapper.type.index
 				
-				if (shadowMapper != null) {
-					var systemComponent = systemMapper.get(entityID) as CloneableComponent<*>
-					val shadowComponent = shadowMapper.create(entityID)
-					systemComponent.copy2(shadowComponent)
+				if (tmpBVs[typeIndex].unsafeGet(entityID)) {
+					tmpBVs[typeIndex].unsafeClear(entityID)
+					
+					val shadowMapper = mappersByTypeIndex[typeIndex]
+					
+					if (shadowMapper != null) {
+						profilerEvents.start("copy ${systemMapper.type.type.simpleName}")
+						var systemComponent = systemMapper.get(entityID) as CloneableComponent<*>
+						val shadowComponent = shadowMapper.create(entityID)
+						systemComponent.copy2(shadowComponent)
+						profilerEvents.end()
+					}
 				}
 			}
+			
+			// Removed components
+			tmpBVs.forEachFast { index, bitVector ->
+				if (bitVector.unsafeGet(entityID)) {
+					mappersByTypeIndex[index]?.remove(entityID)
+				}
+			}
+			profilerEvents.end()
 		}
 		profilerEvents.end()
 		
-		tmpBV.clear()
-		tmpBV.or(added)
+		tmpBV.set(added)
 		tmpBV.or(system.shadow.added)
+		tmpBV.andNot(deleted) // Skip other added that are now deleted
 		
 		profilerEvents.start("added")
 		tmpBV.toIntBag(tmpBag)
 //		println("added $tmpBag")
 		tmpBag.forEachFast { entityID ->
+			profilerEvents.start("$entityID")
 			em.setNextID(entityID)
 			val newID = world.create()
 			if (newID != entityID) {
@@ -184,11 +215,14 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 				val shadowMapper = mappersByTypeIndex[systemMapper.type.index]
 				
 				if (shadowMapper != null) {
+					profilerEvents.start("copy ${systemMapper.type.type.simpleName}")
 					var systemComponent = systemMapper.get(entityID) as CloneableComponent<*>
 					val shadowComponent = shadowMapper.create(entityID)
 					systemComponent.copy2(shadowComponent)
+					profilerEvents.end()
 				}
 			}
+			profilerEvents.end()
 		}
 		profilerEvents.end()
 		

@@ -2,6 +2,7 @@ package se.exuvo.aurora.starsystems
 
 import com.artemis.Aspect
 import com.artemis.ComponentMapper
+import com.artemis.CustomComponentManager
 import com.artemis.EntitySubscription
 import com.artemis.World
 import com.artemis.WorldConfigurationBuilder
@@ -85,8 +86,10 @@ import se.exuvo.aurora.galactic.DamagePattern
 import se.exuvo.aurora.galactic.Shield
 import se.exuvo.aurora.starsystems.systems.MovementPredictedSystem
 import se.exuvo.aurora.empires.components.InCombatComponent
+import se.exuvo.aurora.galactic.Command
 import se.exuvo.aurora.starsystems.systems.TargetingSystem
 import uk.co.omegaprime.btreemap.LongObjectBTreeMap
+import java.util.concurrent.ArrayBlockingQueue
 
 class StarSystem(val initialName: String, val initialPosition: Vector2L) : EntitySubscription.SubscriptionListener, Disposable {
 	companion object {
@@ -122,6 +125,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	val uuidSubscription: EntitySubscription
 	val inCombatSubscription: EntitySubscription
 	
+	var commandQueue = ArrayBlockingQueue<Command>(128)
 	var workingShadow: ShadowStarSystem
 	var shadow: ShadowStarSystem // Always safe to use from other StarSystems, requires shadow lock to use from UI
 
@@ -167,12 +171,12 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		worldBuilder.with(PowerSystem())
 		worldBuilder.with(TimedLifeSystem())
 		worldBuilder.register(CustomSystemInvocationStrategy(this))
-		//TODO add system to send changes over network
 		
 		val worldConfig = worldBuilder.build()
+		worldConfig.setComponentManager(CustomComponentManager(worldConfig.expectedEntityCount() , this))
 		worldConfig.register(this)
+		
 		world = World(worldConfig)
-
 		world.inject(this)
 		
 		allSubscription = world.getAspectSubscriptionManager().get(Aspect.all())
@@ -560,8 +564,28 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		}
 	}
 	
-	fun changed(entityID: Int) {
+	/**
+	 * Mark that component contents have changed
+	 */
+	fun changed(entityID: Int, componentIndex: Int) {
 		workingShadow.changed.unsafeSet(entityID)
+		workingShadow.changedComponents[componentIndex].unsafeSet(entityID)
+	}
+	
+	fun changed(entityID: Int, vararg componentIndexes: Int) {
+		workingShadow.changed.unsafeSet(entityID)
+		
+		for (index in componentIndexes) {
+			workingShadow.changedComponents[index].unsafeSet(entityID)
+		}
+	}
+	
+	inline fun changed(entityID: Int, componentMapper: ComponentMapper<*>) {
+		changed(entityID, componentMapper.type.index)
+	}
+	
+	fun changed(entityID: Int, vararg componentMappers: ComponentMapper<*>) {
+		changed(entityID, *IntArray(componentMappers.size, { index -> componentMappers[index].type.index } ))
 	}
 	
 	override fun removed(entityIDs: IntBag) {
@@ -571,15 +595,32 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		}
 	}
 	
-	//	var delay = (Math.random() * 30).toLong()
 	fun update(deltaGameTime: Int) {
 		
 		val profilerEvents = workingShadow.profilerEvents
 		profilerEvents.clear()
 		
+		profilerEvents.start("shadow clear")
 		workingShadow.added.clear()
 		workingShadow.changed.clear()
 		workingShadow.deleted.clear()
+		
+		workingShadow.changedComponents.forEachFast { bitVector ->
+			bitVector.clear()
+		}
+		profilerEvents.end()
+		
+		profilerEvents.start("commands")
+		while(true) {
+			val command = commandQueue.poll() ?: break
+			
+			try {
+				command.apply()
+			} catch (e: Exception) {
+				log.error("Exception running command $command", e)
+			}
+		}
+		profilerEvents.end()
 		
 		profilerEvents.start("process")
 		if (inCombatSubscription.getEntityCount() > 0) {
@@ -600,12 +641,6 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		profilerEvents.start("shadow update")
 		workingShadow.update()
 		profilerEvents.end()
-
-//		if (Math.random() > 0.97) {
-//			delay = (Math.random() * 30).toLong()
-//		}
-//		
-//		Thread.sleep(delay)
 	}
 
 	private fun getNewEntityID(): Long {

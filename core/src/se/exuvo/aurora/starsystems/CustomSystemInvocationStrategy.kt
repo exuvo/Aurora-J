@@ -32,12 +32,6 @@ open class CustomSystemInvocationStrategy(val starSystem: StarSystem) : SystemIn
 
 	override fun process() {
 		
-		val batchChanged = world.batchProcessor.changed
-		
-		if (!batchChanged.isEmpty()) {
-			starSystem.workingShadow.changed.or(batchChanged)
-		}
-		
 		updateEntityStates()
 
 		preSystems.forEachFast { i, system ->
@@ -49,11 +43,6 @@ open class CustomSystemInvocationStrategy(val starSystem: StarSystem) : SystemIn
 		systems.forEachFast { i, system ->
 			if (!disabled.unsafeGet(i)) {
 				system.process()
-				
-				if (!batchChanged.isEmpty()) {
-					starSystem.workingShadow.changed.or(batchChanged)
-				}
-				
 				updateEntityStates()
 			}
 		}

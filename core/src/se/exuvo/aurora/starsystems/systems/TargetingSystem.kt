@@ -144,7 +144,7 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 		}
 		
 		activeTCs.targetingComputers.add(tc)
-		starSystem.changed(entityID)
+		starSystem.changed(entityID, idleTargetingComputersComponentMapper, activeTargetingComputersComponentMapper)
 	}
 	
 	fun clearTarget(entityID: Int, ship: ShipComponent, tc: PartRef<TargetingComputer>) {
@@ -155,7 +155,7 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 		tcState.lockCompletionAt = 0
 		tcState.target = null
 		
-		starSystem.changed(entityID)
+		starSystem.changed(entityID, idleTargetingComputersComponentMapper, activeTargetingComputersComponentMapper)
 		
 		var idleTCs = idleTargetingComputersComponentMapper.get(entityID)
 		val activeTCs = activeTargetingComputersComponentMapper.get(entityID)

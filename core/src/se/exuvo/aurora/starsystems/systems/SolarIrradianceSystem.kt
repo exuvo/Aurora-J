@@ -100,7 +100,7 @@ class SolarIrradianceSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 1 * 60) 
 		
 		if (irradianceComponent.irradiance != irridance) {
 			irradianceComponent.irradiance = irridance
-			system.changed(entityID)
+			system.changed(entityID, irradianceMapper)
 		}
 	}
 

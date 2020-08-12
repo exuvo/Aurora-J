@@ -49,8 +49,7 @@ class ColonySystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 60 * 60) { // hou
 	override fun process(entityID: Int) {
 
 		val colony = colonyMapper.get(entityID)
-		val owner = ownerMapper.get(entityID)
-		val emissions = emissionsMapper.get(entityID)
+//		val emissions = emissionsMapper.get(entityID)
 
 		colony.shipyards.forEach { shipyard ->
 			val modification = shipyard.modificationActivity
@@ -65,7 +64,7 @@ class ColonySystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 60 * 60) { // hou
 					shipyard.modificationActivity = null
 				}
 				
-				system.changed(entityID)
+				system.changed(entityID, colonyMapper)
 			}
 			
 			shipyard.slipways.forEach { slipway ->
@@ -94,6 +93,7 @@ class ColonySystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 60 * 60) { // hou
 					
 					if (buildrate < shipyard.buildRate && slipway.usedResources() >= slipway.totalCost()) {
 						
+						val owner = ownerMapper.get(entityID)
 						val shipEntity: Int = system.createShip(hull, entityID, owner.empire)
 						
 						slipway.hull = null
@@ -102,7 +102,7 @@ class ColonySystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 60 * 60) { // hou
 					}
 					
 					if (buildrate != shipyard.buildRate) {
-						system.changed(entityID)
+						system.changed(entityID, colonyMapper)
 					}
 				}
 			}
