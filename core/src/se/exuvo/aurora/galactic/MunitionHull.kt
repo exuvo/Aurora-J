@@ -1,9 +1,7 @@
 package se.exuvo.aurora.galactic
 
-import se.exuvo.aurora.starsystems.components.PowerScheme
 import se.exuvo.aurora.utils.sumByLong
 import se.exuvo.aurora.utils.forEachFast
-import se.exuvo.aurora.galactic.FueledThruster
 import java.lang.IllegalArgumentException
 import kotlin.reflect.KClass
 import org.apache.commons.math3.util.FastMath
@@ -34,7 +32,7 @@ abstract class MunitionHull(val storageType: Resource) {
 	override fun toString() = name
 	
 	open fun calculateHashCode(): Int {
-		var hash = 1;
+		var hash = 3;
 		hash = 37 * hash + name.hashCode()
 		hash = 37 * hash + designDay
 		return hash

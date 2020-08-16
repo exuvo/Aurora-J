@@ -2,28 +2,12 @@ package se.exuvo.aurora.starsystems.systems
 
 import com.artemis.Aspect
 import com.artemis.ComponentMapper
-import com.artemis.EntitySubscription
-import com.artemis.EntitySubscription.SubscriptionListener
-import com.artemis.systems.IteratingSystem
-import com.artemis.utils.IntBag
 import net.mostlyoriginal.api.event.common.EventSystem
 import org.apache.logging.log4j.LogManager
-import se.exuvo.aurora.galactic.Galaxy
-import se.exuvo.aurora.galactic.PartRef
-import se.exuvo.aurora.galactic.PassiveSensor
-import se.exuvo.aurora.starsystems.components.DetectionComponent
-import se.exuvo.aurora.starsystems.components.DetectionHit
 import se.exuvo.aurora.starsystems.components.EmissionsComponent
-import se.exuvo.aurora.starsystems.components.OwnerComponent
-import se.exuvo.aurora.starsystems.components.PassiveSensorState
-import se.exuvo.aurora.starsystems.components.PassiveSensorsComponent
-import se.exuvo.aurora.starsystems.components.PoweredPartState
+import se.exuvo.aurora.starsystems.components.EmpireComponent
 import se.exuvo.aurora.starsystems.components.ShipComponent
-import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import se.exuvo.aurora.starsystems.components.UUIDComponent
-import se.exuvo.aurora.utils.GameServices
-import se.exuvo.aurora.utils.Vector2L
-import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.empires.components.ColonyComponent
 import se.exuvo.aurora.galactic.Resource
 import se.exuvo.aurora.starsystems.StarSystem
@@ -38,7 +22,7 @@ class ColonySystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 60 * 60) { // hou
 	
 	lateinit private var colonyMapper: ComponentMapper<ColonyComponent>
 	lateinit private var emissionsMapper: ComponentMapper<EmissionsComponent>
-	lateinit private var ownerMapper: ComponentMapper<OwnerComponent>
+	lateinit private var ownerMapper: ComponentMapper<EmpireComponent>
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
 	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
 	

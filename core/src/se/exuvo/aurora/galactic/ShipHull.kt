@@ -7,8 +7,6 @@ import se.exuvo.aurora.utils.sumByLong
 import se.exuvo.aurora.empires.components.ShipyardType
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.forEachFast
-import org.apache.commons.math3.util.FastMath
-import se.exuvo.aurora.starsystems.components.ChargedPartState
 import java.util.Collections
 
 class ShipHull() {
@@ -33,6 +31,7 @@ class ShipHull() {
 	var powerScheme: PowerScheme = PowerScheme.SOLAR_BATTERY_REACTOR
 	val defaultWeaponAssignments: MutableMap<PartRef<TargetingComputer>, List<PartRef<Part>>> = LinkedHashMap()
 	val shields: MutableList<PartRef<Part>> = ArrayList()
+	val thrusters: MutableList<PartRef<Part>> = ArrayList()
 	
 	var parentHull: ShipHull? = null
 	val derivatives: MutableList<ShipHull> = ArrayList()
@@ -126,6 +125,9 @@ class ShipHull() {
 		partRefs.forEachFast { partRef ->
 			if (partRef.part is Shield) {
 				shields += partRef
+			}
+			if (partRef.part is ThrustingPart) {
+				thrusters += partRef
 			}
 		}
 	}

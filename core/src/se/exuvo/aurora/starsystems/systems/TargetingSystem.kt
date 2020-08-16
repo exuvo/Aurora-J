@@ -23,7 +23,8 @@ import se.exuvo.aurora.starsystems.components.LaserShotComponent
 import se.exuvo.aurora.starsystems.components.MissileComponent
 import se.exuvo.aurora.starsystems.components.NameComponent
 import se.exuvo.aurora.starsystems.components.OnPredictedMovementComponent
-import se.exuvo.aurora.starsystems.components.OwnerComponent
+import se.exuvo.aurora.starsystems.components.EmpireComponent
+import se.exuvo.aurora.starsystems.components.PartStatesComponent
 import se.exuvo.aurora.starsystems.components.PoweredPartState
 import se.exuvo.aurora.starsystems.components.RailgunShotComponent
 import se.exuvo.aurora.starsystems.components.RenderComponent
@@ -54,13 +55,14 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
 	lateinit private var nameMapper: ComponentMapper<NameComponent>
 	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>
-	lateinit private var ownerMapper: ComponentMapper<OwnerComponent>
+	lateinit private var ownerMapper: ComponentMapper<EmpireComponent>
 	lateinit private var renderMapper: ComponentMapper<RenderComponent>
 	lateinit private var laserShotMapper: ComponentMapper<LaserShotComponent>
 	lateinit private var railgunShotMapper: ComponentMapper<RailgunShotComponent>
 	lateinit private var missileMapper: ComponentMapper<MissileComponent>
 	lateinit private var timedLifeMapper: ComponentMapper<TimedLifeComponent>
 	lateinit private var predictedMovementMapper: ComponentMapper<OnPredictedMovementComponent>
+	lateinit private var partStatesMapper: ComponentMapper<PartStatesComponent>
 
 	@Wire
 	lateinit private var starSystem: StarSystem
@@ -86,6 +88,7 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 					if (idleTCs == null && activeTCs == null) {
 
 						val ship = shipMapper.get(entityID)
+						val partStates: PartStatesComponent = partStatesMapper.get(entityID)
 						val targetingComputers = ship.hull[TargetingComputer::class]
 
 						if (targetingComputers.isNotEmpty()) {
@@ -93,7 +96,7 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 							idleTCs.targetingComputers = ArrayList<PartRef<TargetingComputer>>(targetingComputers)
 
 							targetingComputers.forEachFast { tc ->
-								val poweredState = ship.getPartState(tc)[PoweredPartState::class]
+								val poweredState = partStates[tc][PoweredPartState::class]
 								poweredState.requestedPower = 0
 							}
 						}
@@ -108,23 +111,23 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 	//TODO do when tc is activated
 	override fun inserted(entities: IntBag) {
 		entities.forEachFast { entityID ->
-			val ship = shipMapper.get(entityID)
+			val partStates: PartStatesComponent = partStatesMapper.get(entityID)
 			val idleTCs = idleTargetingComputersComponentMapper.get(entityID)!!
 
 			idleTCs.targetingComputers.forEachFast { tc ->
-				if (ship.isPartEnabled(tc)) {
-					val poweredState = ship.getPartState(tc)[PoweredPartState::class]
+				if (partStates.isPartEnabled(tc)) {
+					val poweredState = partStates[tc][PoweredPartState::class]
 					poweredState.requestedPower = 0
 				}
 			}
 		}
 	}
 	
-	fun setTarget(entityID: Int, ship: ShipComponent, tc: PartRef<TargetingComputer>, targetRef: EntityReference) {
+	fun setTarget(entityID: Int, tc: PartRef<TargetingComputer>, targetRef: EntityReference, partStates: PartStatesComponent = partStatesMapper.get(entityID)) {
 		
 		println("Setting target for ${printEntity(entityID, world)}.$tc to ${printEntity(targetRef.entityID, world)}")
 		
-		val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+		val tcState = partStates[tc][TargetingComputerState::class]
 		tcState.lockCompletionAt = galaxy.time + tc.part.lockingTime
 		tcState.target = targetRef
 		
@@ -144,18 +147,18 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 		}
 		
 		activeTCs.targetingComputers.add(tc)
-		starSystem.changed(entityID, idleTargetingComputersComponentMapper, activeTargetingComputersComponentMapper)
+		starSystem.changed(entityID, partStatesMapper, idleTargetingComputersComponentMapper, activeTargetingComputersComponentMapper)
 	}
 	
-	fun clearTarget(entityID: Int, ship: ShipComponent, tc: PartRef<TargetingComputer>) {
+	fun clearTarget(entityID: Int, tc: PartRef<TargetingComputer>, partStates: PartStatesComponent = partStatesMapper.get(entityID)) {
 		
 		println("Clearing target for ${printEntity(entityID, world)}.$tc")
 		
-		val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+		val tcState = partStates[tc][TargetingComputerState::class]
 		tcState.lockCompletionAt = 0
 		tcState.target = null
 		
-		starSystem.changed(entityID, idleTargetingComputersComponentMapper, activeTargetingComputersComponentMapper)
+		starSystem.changed(entityID, partStatesMapper, idleTargetingComputersComponentMapper, activeTargetingComputersComponentMapper)
 		
 		var idleTCs = idleTargetingComputersComponentMapper.get(entityID)
 		val activeTCs = activeTargetingComputersComponentMapper.get(entityID)
@@ -178,8 +181,8 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 			val part = weapon.part
 			
 			if (part is ChargedPart) {
-				val poweredState = ship.getPartState(weapon)[PoweredPartState::class]
-				val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
+				val poweredState = partStates[weapon][PoweredPartState::class]
+				val chargedState = partStates[weapon][ChargedPartState::class]
 				
 				if (poweredState.requestedPower != 0L) {
 					poweredState.requestedPower = 0
@@ -202,16 +205,17 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 		val tickSize = world.getDelta().toInt()
 		
 		reloadFamily.getEntities().forEachFast { entityID ->
-			val ship = shipMapper.get(entityID)
+//			val ship = shipMapper.get(entityID)
+			val partStates: PartStatesComponent = partStatesMapper.get(entityID)
 			val idleTCsComponent = idleTargetingComputersComponentMapper.get(entityID)
 			val tcs = idleTCsComponent.targetingComputers
 
 			var powerChanged = false
 			
 			tcs.forEachFast{ tc ->
-				val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+				val tcState = partStates[tc][TargetingComputerState::class]
 
-				weaponSystem.reloadAmmoWeapons(entityID, ship, tcState)
+				weaponSystem.reloadAmmoWeapons(entityID, partStates, tcState)
 				
 				//TODO keep reloading charged weapons while InCombat
 //				powerChanged = weaponSystem.reloadChargedWeapons(powerChanged, entityID, ship, tcState)
@@ -227,8 +231,8 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 //					val poweredPart = part as PoweredPart
 //					val chargedPart = part as ChargedPart
 //					
-//					val poweredState = ship.getPartState(weapon)[PoweredPartState::class]
-//					val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
+//					val poweredState = partStates[weapon)[PoweredPartState::class]
+//					val chargedState = partStates[weapon)[ChargedPartState::class]
 //
 //					if (chargedState.charge < part.capacitor) {
 //						val wantedPower = FastMath.min(part.powerConsumption, part.capacitor - chargedState.charge)
@@ -255,7 +259,8 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 	private var tmpPosition = Vector2L()
 	override fun process(entityID: Int) {
 
-		val ship = shipMapper.get(entityID)
+//		val ship = shipMapper.get(entityID)
+		val partStates: PartStatesComponent = partStatesMapper.get(entityID)
 		val weaponsComponent = idleTargetingComputersComponentMapper.get(entityID)
 		val shipMovement = movementMapper.get(entityID).get(galaxy.time)
 		val ownerEmpire = ownerMapper.get(entityID).empire
@@ -263,7 +268,7 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 		val tcs = weaponsComponent.targetingComputers
 
 		tcs.forEachFast{ tc ->
-			val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+			val tcState = partStates[tc][TargetingComputerState::class]
 
 			//TODO automatically target hostiles in range
 			
@@ -284,7 +289,7 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 //
 //						when (part) {
 //							is BeamWeapon -> {
-//								val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
+//								val chargedState = partStates[weapon)[ChargedPartState::class]
 //
 //								if (chargedState.charge >= part.capacitor) {
 //									chargedState.charge = 0
@@ -337,8 +342,8 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 //								}
 //							}
 //							is Railgun -> {
-//								val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
-//								val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
+//								val ammoState = partStates[weapon)[AmmunitionPartState::class]
+//								val chargedState = partStates[weapon)[ChargedPartState::class]
 //
 //								if (chargedState.charge >= part.capacitor && ammoState.amount > 0) {
 //
@@ -401,7 +406,7 @@ class TargetingSystem : IteratingSystem(FAMILY), PreSystem {
 //								}
 //							}
 //							is MissileLauncher -> {
-//								val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
+//								val ammoState = partStates[weapon)[AmmunitionPartState::class]
 //
 //								if (ammoState.amount > 0) {
 //									

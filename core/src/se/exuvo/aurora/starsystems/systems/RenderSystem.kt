@@ -44,17 +44,23 @@ import se.exuvo.aurora.galactic.TargetingComputer
 import se.exuvo.aurora.starsystems.ShadowStarSystem
 import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.starsystems.components.AmmunitionPartState
+import se.exuvo.aurora.starsystems.components.ArmorComponent
+import se.exuvo.aurora.starsystems.components.CargoComponent
 import se.exuvo.aurora.starsystems.components.CircleComponent
 import se.exuvo.aurora.starsystems.components.DetectionComponent
+import se.exuvo.aurora.starsystems.components.HPComponent
 import se.exuvo.aurora.starsystems.components.LaserShotComponent
 import se.exuvo.aurora.starsystems.components.MissileComponent
 import se.exuvo.aurora.starsystems.components.MoveToEntityComponent
 import se.exuvo.aurora.starsystems.components.MoveToPositionComponent
 import se.exuvo.aurora.starsystems.components.NameComponent
 import se.exuvo.aurora.starsystems.components.OrbitComponent
+import se.exuvo.aurora.starsystems.components.PartStatesComponent
+import se.exuvo.aurora.starsystems.components.PartsHPComponent
 import se.exuvo.aurora.starsystems.components.PassiveSensorsComponent
 import se.exuvo.aurora.starsystems.components.RailgunShotComponent
 import se.exuvo.aurora.starsystems.components.RenderComponent
+import se.exuvo.aurora.starsystems.components.ShieldComponent
 import se.exuvo.aurora.starsystems.components.ShipComponent
 import se.exuvo.aurora.starsystems.components.Spectrum
 import se.exuvo.aurora.starsystems.components.StrategicIconComponent
@@ -109,6 +115,12 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
 	lateinit private var idleTargetingComputersComponentMapper: ComponentMapper<IdleTargetingComputersComponent>
 	lateinit private var activeTargetingComputersComponentMapper: ComponentMapper<ActiveTargetingComputersComponent>
+	lateinit private var partStatesMapper: ComponentMapper<PartStatesComponent>
+	lateinit private var shieldMapper: ComponentMapper<ShieldComponent>
+	lateinit private var armorMapper: ComponentMapper<ArmorComponent>
+	lateinit private var partsHPMapper: ComponentMapper<PartsHPComponent>
+	lateinit private var hpMapper: ComponentMapper<HPComponent>
+	lateinit private var cargoMapper: ComponentMapper<CargoComponent>
 
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	private val galaxy = GameServices[Galaxy::class]
@@ -298,17 +310,17 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					val tcs: List<PartRef<TargetingComputer>> = idleTargetingComputersComponentMapper.get(entityID)?.targetingComputers ?: activeTargetingComputersComponentMapper.get(entityID).targetingComputers
 					
 					val movement = movementMapper.get(entityID).get(galaxy.time).value
-					val ship = shipMapper.get(entityID)
+					val partStates = partStatesMapper.get(entityID)
 					
 					val x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
 					val y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
 					val timeToImpact = 60 // s
 					
 					tcs.forEachFast{ tc ->
-						val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+						val tcState = partStates[tc][TargetingComputerState::class]
 						
 						tcState.linkedWeapons.forEachFast weaponLoop@{ weapon ->
-							if (ship.isPartEnabled(weapon)) {
+							if (partStates.isPartEnabled(weapon)) {
 								val part = weapon.part
 								
 								val range: Long
@@ -325,7 +337,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 										shapeRenderer.color = sRGBtoLinearRGB(Color.PURPLE)
 									}
 									is Railgun -> {
-										val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
+										val ammoState = partStates[weapon][AmmunitionPartState::class]
 										val munitionHull = ammoState.type as? SimpleMunitionHull
 										
 										if (munitionHull == null) {
@@ -338,7 +350,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 										shapeRenderer.color = sRGBtoLinearRGB(Color.ORANGE)
 									}
 									is MissileLauncher -> {
-										val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
+										val ammoState = partStates[weapon][AmmunitionPartState::class]
 										val advMunitionHull = ammoState.type!! as? AdvancedMunitionHull
 										
 										if (advMunitionHull == null) {
@@ -408,7 +420,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					if (idleTCs != null || activeTCs != null) {
 
 						val movement = movementMapper.get(entityID).get(galaxy.time).value
-						val ship = shipMapper.get(entityID)
+						val partStates = partStatesMapper.get(entityID)
 
 						val x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
 						val y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
@@ -416,10 +428,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 						fun getRanges(tcs: List<PartRef<TargetingComputer>>) {
 							tcs.forEachFast { tc ->
-								val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+								val tcState = partStates[tc][TargetingComputerState::class]
 
 								tcState.linkedWeapons.forEachFast weaponLoop@{ weapon ->
-									if (ship.isPartEnabled(weapon)) {
+									if (partStates.isPartEnabled(weapon)) {
 										val part = weapon.part
 
 										val range: Long
@@ -435,7 +447,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 												range = FastMath.min(timeRange, dmg1Range.toLong())
 											}
 											is Railgun -> {
-												val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
+												val ammoState = partStates[weapon][AmmunitionPartState::class]
 												val munitionHull = ammoState.type as? SimpleMunitionHull
 
 												if (munitionHull == null) {
@@ -446,7 +458,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 												range = projectileSpeed * timeToImpact
 											}
 											is MissileLauncher -> {
-												val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
+												val ammoState = partStates[weapon][AmmunitionPartState::class]
 												val advMunitionHull = ammoState.type!! as? AdvancedMunitionHull
 
 												if (advMunitionHull == null) {
@@ -980,12 +992,12 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				val x = (movement.getXinKM() - cameraOffset.x).toFloat()
 				val y = (movement.getYinKM() - cameraOffset.y).toFloat()
 
-				val ship = shipMapper.get(entityID)
+				val partStates = partStatesMapper.get(entityID)
 
 				usedTargets.clear()
 
 				tcc.targetingComputers.forEachFast { tc ->
-					val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+					val tcState = partStates[tc][TargetingComputerState::class]
 					val target = tcState.target
 
 					if (target != null && starSystem.isEntityReferenceValid(target) && usedTargets.add(target.entityID)) {

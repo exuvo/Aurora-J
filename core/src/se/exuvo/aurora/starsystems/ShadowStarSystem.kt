@@ -22,7 +22,7 @@ import se.exuvo.aurora.starsystems.components.MassComponent
 import se.exuvo.aurora.starsystems.components.MoveToEntityComponent
 import se.exuvo.aurora.starsystems.components.NameComponent
 import se.exuvo.aurora.starsystems.components.OrbitComponent
-import se.exuvo.aurora.starsystems.components.OwnerComponent
+import se.exuvo.aurora.starsystems.components.EmpireComponent
 import se.exuvo.aurora.starsystems.components.PowerComponent
 import se.exuvo.aurora.starsystems.components.RenderComponent
 import se.exuvo.aurora.starsystems.components.ShipComponent
@@ -76,7 +76,7 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 	lateinit var shipMapper: ComponentMapper<ShipComponent>
 	lateinit var powerMapper: ComponentMapper<PowerComponent>
 	lateinit var colonyMapper: ComponentMapper<ColonyComponent>
-	lateinit var ownerMapper: ComponentMapper<OwnerComponent>
+	lateinit var ownerMapper: ComponentMapper<EmpireComponent>
 	lateinit var idleTargetingComputersComponentMapper: ComponentMapper<IdleTargetingComputersComponent>
 	lateinit var activeTargetingComputersComponentMapper: ComponentMapper<ActiveTargetingComputersComponent>
 	

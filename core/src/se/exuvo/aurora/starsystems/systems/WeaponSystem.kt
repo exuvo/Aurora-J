@@ -33,7 +33,7 @@ import se.exuvo.aurora.utils.Units
 import org.apache.commons.math3.analysis.solvers.LaguerreSolver
 import org.apache.commons.math3.exception.TooManyEvaluationsException
 import org.apache.commons.math3.util.FastMath
-import se.exuvo.aurora.starsystems.components.OwnerComponent
+import se.exuvo.aurora.starsystems.components.EmpireComponent
 import se.exuvo.aurora.starsystems.components.RenderComponent
 import se.exuvo.aurora.galactic.AdvancedMunitionHull
 import se.exuvo.aurora.galactic.DamagePattern
@@ -48,6 +48,12 @@ import se.exuvo.aurora.galactic.Part
 import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
 import se.exuvo.aurora.empires.components.IdleTargetingComputersComponent
 import se.exuvo.aurora.starsystems.PreSystem
+import se.exuvo.aurora.starsystems.components.ArmorComponent
+import se.exuvo.aurora.starsystems.components.CargoComponent
+import se.exuvo.aurora.starsystems.components.HPComponent
+import se.exuvo.aurora.starsystems.components.PartsHPComponent
+import se.exuvo.aurora.starsystems.components.PartStatesComponent
+import se.exuvo.aurora.starsystems.components.ShieldComponent
 
 class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -76,15 +82,21 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	lateinit private var idleTargetingComputersComponentMapper: ComponentMapper<IdleTargetingComputersComponent>
 	lateinit private var activeTargetingComputersComponentMapper: ComponentMapper<ActiveTargetingComputersComponent>
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
+	lateinit private var cargoMapper: ComponentMapper<CargoComponent>
 	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
 	lateinit private var nameMapper: ComponentMapper<NameComponent>
 	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>
-	lateinit private var ownerMapper: ComponentMapper<OwnerComponent>
+	lateinit private var ownerMapper: ComponentMapper<EmpireComponent>
 	lateinit private var renderMapper: ComponentMapper<RenderComponent>
 	lateinit private var laserShotMapper: ComponentMapper<LaserShotComponent>
 	lateinit private var railgunShotMapper: ComponentMapper<RailgunShotComponent>
 	lateinit private var missileMapper: ComponentMapper<MissileComponent>
 	lateinit private var timedLifeMapper: ComponentMapper<TimedLifeComponent>
+	lateinit private var partStatesMapper: ComponentMapper<PartStatesComponent>
+	lateinit private var shieldMapper: ComponentMapper<ShieldComponent>
+	lateinit private var armorMapper: ComponentMapper<ArmorComponent>
+	lateinit private var partHPMapper: ComponentMapper<PartsHPComponent>
+	lateinit private var hpMapper: ComponentMapper<HPComponent>
 	lateinit private var predictedMovementMapper: ComponentMapper<OnPredictedMovementComponent>
 
 	@Wire
@@ -96,14 +108,13 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	private val galaxy = GameServices[Galaxy::class]
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	
-	val polynomialSolver: LaguerreSolver
-
+	val polynomialSolver = LaguerreSolver()
+	
 	init {
 //		val relativeAccuracy = 1.0e-12
 //		val absoluteAccuracy = 1.0e-8
 //		val functionValueAccuracy = ?
 //		polynomialSolver = LaguerreSolver(relativeAccuracy, absoluteAccuracy)
-		polynomialSolver = LaguerreSolver()
 	}
 
 	//TODO do when tc is deactivated
@@ -114,7 +125,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 //
 //			activeTCs.targetingComputers.forEachFast { tc ->
 //				if (ship.isPartEnabled(tc)) {
-//					val poweredState = ship.getPartState(tc)[PoweredPartState::class]
+//					val poweredState = partStates[tc)[PoweredPartState::class]
 //					poweredState.requestedPower = tc.part.powerConsumption
 //				}
 //			}
@@ -123,7 +134,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	
 	//TODO shutdown all weapons when InCombatComponent was removed
 
-	fun reloadAmmoWeapons(entityID: Int, ship: ShipComponent, tcState: TargetingComputerState) {
+	fun reloadAmmoWeapons(entityID: Int, partStates: PartStatesComponent, tcState: TargetingComputerState) {
 		
 		while(true) {
 			val partRef: PartRef<Part>? = tcState.reloadingWeapons.peek()
@@ -131,7 +142,8 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			if (partRef != null) {
 				
 				val part = partRef.part as AmmunitionPart
-				val ammoState = ship.getPartState(partRef)[AmmunitionPartState::class]
+				val cargo = cargoMapper.get(entityID)
+				val ammoState = partStates[partRef][AmmunitionPartState::class]
 				val ammoType = ammoState.type
 
 				if (ammoType != null) {
@@ -139,34 +151,36 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 					if (ammoState.reloadedAt == 0L) { // new
 
 						tcState.reloadingWeapons.poll()
-						starSystem.changed(entityID, shipMapper)
+						starSystem.changed(entityID, partStatesMapper)
 
 						if (ammoType.radius != part.ammunitionSize) {
 
 							log.error("Wrong ammo size for $part: ${ammoState.type!!.radius} != ${part.ammunitionSize}")
-							powerSystem.deactivatePart(entityID, ship, partRef)
+							powerSystem.deactivatePart(entityID, partRef, partStates)
 
 						} else {
 
 							// Take ammo from storage now to avoid multiple launchers trying to reload with the same last ordenance
-							val removedAmmo = ship.retrieveCargo(ammoType, 1)
+							val removedAmmo = cargo.retrieveCargo(ammoType, 1)
 
 							if (removedAmmo > 0) {
 
 								ammoState.reloadedAt = galaxy.time + part.reloadTime
 								tcState.reloadingWeapons.add(partRef)
 								
+								starSystem.changed(entityID, cargoMapper)
+								
 							} else if (ammoState.amount == 0) {
 
 								println("Unpowering $part due to no more ammo")
-								powerSystem.deactivatePart(entityID, ship, partRef)
+								powerSystem.deactivatePart(entityID, partRef, partStates)
 							}
 						}
 
 					} else if (galaxy.time >= ammoState.reloadedAt) {
 
 						tcState.reloadingWeapons.poll()
-						starSystem.changed(entityID, shipMapper)
+						starSystem.changed(entityID, partStatesMapper)
 
 						ammoState.amount += 1
 						ammoState.reloadedAt = 0
@@ -174,7 +188,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 						if (ammoState.amount == 1) {
 							
 							if (part is Railgun) {
-								val chargedState = ship.getPartState(partRef)[ChargedPartState::class]
+								val chargedState = partStates[partRef][ChargedPartState::class]
 								
 								if (chargedState.charge >= part.capacitor && !tcState.readyWeapons.contains(partRef)) { // have to do the contains check if the the capacitor was overflowed too much
 									tcState.readyWeapons.add(partRef)
@@ -185,16 +199,18 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 							}
 						}
 
-						var freeSpace = part.ammunitionAmount - ammoState.amount
+						val freeSpace = part.ammunitionAmount - ammoState.amount
 
 						if (freeSpace > 0) {
 
 							// Take ammo from storage now to avoid multiple launchers trying to reload with the same last ordenance
-							val removedAmmo = ship.retrieveCargo(ammoType, 1)
+							val removedAmmo = cargo.retrieveCargo(ammoType, 1)
 
 							if (removedAmmo > 0) {
 								ammoState.reloadedAt = galaxy.time + part.reloadTime
 								tcState.reloadingWeapons.add(partRef)
+								
+								starSystem.changed(entityID, cargoMapper)
 							}
 						}
 
@@ -205,7 +221,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				} else {
 
 					println("Unpowering $part due to no ammo selected")
-					powerSystem.deactivatePart(entityID, ship, partRef)
+					powerSystem.deactivatePart(entityID, partRef, partStates)
 				}
 				
 			} else {
@@ -214,7 +230,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		}
 	}
 	
-	fun reloadChargedWeapons(powerChanged: Boolean, entityID: Int, ship: ShipComponent, tcState: TargetingComputerState): Boolean {
+	fun reloadChargedWeapons(powerChanged: Boolean, entityID: Int, partStates: PartStatesComponent, tcState: TargetingComputerState): Boolean {
 		
 		var powerChanged = powerChanged
 		
@@ -226,13 +242,13 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				val part = partRef.part
 				val poweredPart = part as PoweredPart
 				val chargedPart = part as ChargedPart
-				val poweredState = ship.getPartState(partRef)[PoweredPartState::class]
-				val chargedState = ship.getPartState(partRef)[ChargedPartState::class]
+				val poweredState = partStates[partRef][PoweredPartState::class]
+				val chargedState = partStates[partRef][ChargedPartState::class]
 				
 				if (chargedState.expectedFullAt == 0L) { // new
 					
 					tcState.chargingWeapons.poll()
-					starSystem.changed(entityID, shipMapper)
+					starSystem.changed(entityID, partStatesMapper)
 					
 					//Will overfill slightly to fix shot to shot timing when powerConsumption is not a multiple of capacitor
 					val wantedPower = part.powerConsumption
@@ -248,7 +264,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				} else if (galaxy.time >= chargedState.expectedFullAt) {
 					
 					tcState.chargingWeapons.poll()
-					starSystem.changed(entityID, shipMapper)
+					starSystem.changed(entityID, partStatesMapper)
 					
 					if (chargedState.charge < part.capacitor) {
 						
@@ -268,7 +284,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 						chargedState.expectedFullAt = 0
 						
 						if (part is Railgun) {
-							val ammoState = ship.getPartState(partRef)[AmmunitionPartState::class]
+							val ammoState = partStates[partRef][AmmunitionPartState::class]
 							
 							if (ammoState.amount > 0 && !tcState.readyWeapons.contains(partRef)) { // have to do the contains check if the the ammunition reloaded at the same tick
 								tcState.readyWeapons.add(partRef)
@@ -296,21 +312,21 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	}
 	
 	override fun preProcessSystem() {
-		val tickSize = world.getDelta().toInt()
+//		val tickSize = world.getDelta().toInt()
 		
 		subscription.getEntities().forEachFast { entityID ->
-			val ship = shipMapper.get(entityID)
+			val partStates = partStatesMapper.get(entityID)
 			val weaponsComponent = activeTargetingComputersComponentMapper.get(entityID)
 			val tcs = weaponsComponent.targetingComputers
 
 			var powerChanged = false
 			
 			tcs.forEachFast { tc ->
-				val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+				val tcState = partStates[tc][TargetingComputerState::class]
 
-				reloadAmmoWeapons(entityID, ship, tcState)
+				reloadAmmoWeapons(entityID, partStates, tcState)
 				
-				powerChanged = reloadChargedWeapons(powerChanged, entityID, ship, tcState)
+				powerChanged = reloadChargedWeapons(powerChanged, entityID, partStates, tcState)
 			}
 			
 			if (powerChanged) {
@@ -323,6 +339,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	override fun process(entityID: Int) {
 
 		val ship = shipMapper.get(entityID)
+		val partStates = partStatesMapper.get(entityID)
 		val activeTCsComponent = activeTargetingComputersComponentMapper.get(entityID)
 		val shipMovement = movementMapper.get(entityID).get(galaxy.time)
 		val ownerEmpire = ownerMapper.get(entityID).empire
@@ -331,7 +348,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		var powerChanged = false
 
 		tcs.forEachFast{ tc ->
-			val tcState = ship.getPartState(tc)[TargetingComputerState::class]
+			val tcState = partStates[tc][TargetingComputerState::class]
 
 			val target = tcState.target!!
 			
@@ -339,7 +356,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			
 			if (!starSystem.isEntityReferenceValid(target)) { // or dead and !forced
 				
-				targetingSystem.clearTarget(entityID, ship, tc)
+				targetingSystem.clearTarget(entityID, tc, partStates)
 				log.warn("Target ${target} is no longer valid for ${tc}")
 				
 			} else if (galaxy.time > tcState.lockCompletionAt) {
@@ -352,11 +369,10 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				
 				while (i < size) {
 					val weapon = tcState.readyWeapons[i++]
-					val part = weapon.part
-
-					when (part) {
+					
+					when (val part = weapon.part) {
 						is BeamWeapon -> {
-							val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
+							val chargedState = partStates[weapon][ChargedPartState::class]
 
 							val projectileSpeed = Units.C * 1000
 							val result = getInterceptionPosition(shipMovement.value, targetMovement.value, projectileSpeed)
@@ -366,7 +382,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 								
 								log.warn("Unable to find intercept for laser and target ${target.entityID}, projectileSpeed $projectileSpeed")
 
-								val poweredState = ship.getPartState(weapon)[PoweredPartState::class]
+								val poweredState = partStates[weapon][PoweredPartState::class]
 								
 								if (poweredState.requestedPower != 0L) {
 									poweredState.requestedPower = 0
@@ -377,7 +393,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 								
 								val distance = tmpPosition.set(targetMovement.value.position).sub(shipMovement.value.position).len().toLong()
 								val beamArea = part.getBeamArea(distance)
-								var damage: Long = part.getDeliveredEnergyTo1MSquareAtDistance(distance)
+								val damage: Long = part.getDeliveredEnergyTo1MSquareAtDistance(distance)
 								
 								val (timeToIntercept, aimPosition, interceptPosition, interceptVelocity, relativeInterceptVelocity) = result
 								val galacticTime = timeToIntercept + galaxy.time
@@ -411,13 +427,13 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 									tcState.readyWeapons.remove(weapon)
 									tcState.chargingWeapons.add(weapon)
 									
-									starSystem.changed(entityID, shipMapper)
+									starSystem.changed(entityID, shipMapper, partStatesMapper)
 									
 								} else {
 
 //									log.warn("Unable to find effective intercept for laser $part and target ${target.entityID}")
 
-									val poweredState = ship.getPartState(weapon)[PoweredPartState::class]
+									val poweredState = partStates[weapon][PoweredPartState::class]
 
 									if (poweredState.requestedPower != 0L) {
 										poweredState.requestedPower = 0
@@ -427,8 +443,8 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 							}
 						}
 						is Railgun -> {
-							val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
-							val chargedState = ship.getPartState(weapon)[ChargedPartState::class]
+							val ammoState = partStates[weapon][AmmunitionPartState::class]
+							val chargedState = partStates[weapon][ChargedPartState::class]
 
 							if (chargedState.charge >= part.capacitor && ammoState.amount > 0) {
 
@@ -442,7 +458,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 									
 //											log.warn("Unable to find intercept for railgun $part and target ${target.entityID}, projectileSpeed ${projectileSpeed / 100}")
 									
-									val poweredState = ship.getPartState(weapon)[PoweredPartState::class]
+									val poweredState = partStates[weapon][PoweredPartState::class]
 									
 									if (poweredState.requestedPower != 0L) {
 										poweredState.requestedPower = 0
@@ -475,7 +491,8 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 											damage = ((munitionHull.loadedMass * projectileSpeed * projectileSpeed) / 2).toLong()
 										}
 										
-										railgunShotMapper.create(munitionEntityID).set(target.entityID, damage, munitionHull.damagePattern, munitionHull.health)
+										railgunShotMapper.create(munitionEntityID).set(target.entityID, damage, munitionHull.damagePattern)
+										hpMapper.create(munitionEntityID).set(1)
 										
 										val munitionMovement = movementMapper.create(munitionEntityID)
 										munitionMovement.set(shipMovement.value, galaxy.time)
@@ -499,7 +516,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										
 										if (ammoState.amount == 1 && ammoState.reloadedAt == 0L) {
 											println("Deactivating $part due to no more ammo")
-											powerSystem.deactivatePart(entityID, ship, weapon)
+											powerSystem.deactivatePart(entityID, weapon, partStates)
 											
 										} else if (ammoState.amount == part.ammunitionAmount) {
 											tcState.reloadingWeapons.add(weapon)
@@ -507,11 +524,11 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										
 										ammoState.amount -= 1
 										
-										starSystem.changed(entityID, shipMapper)
+										starSystem.changed(entityID, shipMapper, partStatesMapper)
 										
 									} else {
 										
-										val poweredState = ship.getPartState(weapon)[PoweredPartState::class]
+										val poweredState = partStates[weapon][PoweredPartState::class]
 										
 										if (poweredState.requestedPower != 0L) {
 											poweredState.requestedPower = 0
@@ -522,7 +539,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 							}
 						}
 						is MissileLauncher -> {
-							val ammoState = ship.getPartState(weapon)[AmmunitionPartState::class]
+							val ammoState = partStates[weapon][AmmunitionPartState::class]
 
 							if (ammoState.amount > 0) {
 								
@@ -565,6 +582,9 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										nameMapper.create(munitionEntityID).set(name = advMunitionHull.name)
 									
 										missileMapper.create(munitionEntityID).set(advMunitionHull, target.entityID)
+										partStatesMapper.create(munitionEntityID).set(advMunitionHull)
+										armorMapper.create(munitionEntityID).set(advMunitionHull)
+										hpMapper.create(munitionEntityID).set(advMunitionHull)
 										
 										val munitionMovement = movementMapper.create(munitionEntityID)
 										munitionMovement.set(shipMovement.value, galaxy.time)
@@ -586,7 +606,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 											
 											if (ammoState.reloadedAt == 0L) {
 												println("Unpowering $part due to no more ammo")
-												powerSystem.deactivatePart(entityID, ship, weapon)
+												powerSystem.deactivatePart(entityID, weapon, partStates)
 											}
 											
 										} else if (ammoState.amount == part.ammunitionAmount) {
@@ -595,7 +615,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 										
 										ammoState.amount--
 										
-										starSystem.changed(entityID, shipMapper)
+										starSystem.changed(entityID, partStatesMapper)
 										
 									} else {
 										
@@ -639,13 +659,12 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			
 //			if (laser.beamArea < 1 column) {
 			
-			val ship = shipMapper.get(targetID)
-			applyShieldDamage(entityID, ship, laser.damage, DamagePattern.LASER)
+			applyDamage(entityID, laser.damage, DamagePattern.LASER)
 				
 //			} else {
 				
 				// spread damage
-//				applyArmorDamage(entityID, laser.damage, railgun.damagePattern)
+//				applyDamage(entityID, laser.damage, railgun.damagePattern)
 				
 //			}
 
@@ -664,8 +683,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				return
 			}
 			
-			val ship = shipMapper.get(targetID)
-			applyShieldDamage(entityID, ship, railgun.damage, railgun.damagePattern)
+			applyDamage(entityID, railgun.damage, railgun.damagePattern)
 
 		} else if (missile != null) {
 
@@ -675,10 +693,68 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		}
 	}
 	
-	fun applyShieldDamage(entityID: Int, ship: ShipComponent, damageEnergy: Long = 0, damagePattern: DamagePattern) {
-		
+	fun applyDamage(entityID: Int, damageEnergy: Long = 0, damagePattern: DamagePattern) {
 		var damage = damageEnergy
-		val shieldHP = ship.shieldHP
+		
+		val ship = shipMapper.get(entityID)
+		val shield = shieldMapper.get(entityID)
+		
+		if (shield != null) {
+			val partStates = partStatesMapper.get(entityID)
+			damage = applyShieldDamage(entityID, damage, damagePattern, ship, shield, partStates)
+			
+			if (damage == 0L) {
+				return
+			}
+		}
+		
+		val armor = armorMapper.get(entityID)
+		
+		if (armor != null) {
+			damage = applyArmorDamage(entityID, damage, damagePattern, ship, armor)
+			
+			if (damage == 0L) {
+				return
+			}
+		}
+		
+		val partsHP = partHPMapper.get(entityID)
+		
+		if (partsHP != null) {
+			damage = applyPartHPDamage(entityID, damageEnergy, partsHP)
+			
+			if (damage == 0L) {
+				return
+			}
+		}
+		
+		val hp = hpMapper.get(entityID)
+		
+		if (hp != null) {
+			damage = applyHPDamage(entityID, damageEnergy, hp)
+			
+			if (damage == 0L) {
+				return
+			}
+		}
+		
+		if (ship != null) {
+			println("Ship destroyed")
+			starSystem.unregisterShip(entityID, ship)
+			//TODO create derelict
+			
+		} else {
+			println("Entity destroyed")
+		}
+	}
+	
+	fun applyShieldDamage(entityID: Int, damageEnergy: Long = 0, damagePattern: DamagePattern,
+												ship: ShipComponent,
+												shield: ShieldComponent,
+												partStates: PartStatesComponent): Long
+	{
+		var damage = damageEnergy
+		val shieldHP = shield.shieldHP
 		
 		if (shieldHP > 0) {
 			var blockedDamage: Long
@@ -694,13 +770,15 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			
 			println("Damaging shield for $blockedDamage dmg, remaining $damage")
 			
-			ship.shieldHP = shieldHP - blockedDamage
+			shield.shieldHP = shieldHP - blockedDamage
 			
 			val shields = ship.hull.shields
+			val maxShieldHPComponent = ship.hull.maxShieldHP
+			
 			for (i in 0 until shields.size) { //TODO spread damage evenly across all shield parts
 				val partRef = shields[i]
 				
-				val chargedState = ship.getPartState(partRef)[ChargedPartState::class]
+				val chargedState = partStates[partRef][ChargedPartState::class]
 				
 				val partDamage = FastMath.min(chargedState.charge, blockedDamage)
 				blockedDamage -= partDamage
@@ -712,92 +790,122 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				}
 			}
 			
-			if (damage == 0L) {
-				return
-			}
+			starSystem.changed(entityID, shieldMapper)
 		}
 		
-		applyArmorDamage(entityID, ship, damage, damagePattern)
+		return damage
 	}
 	
 	@Suppress("NAME_SHADOWING")
-	fun applyArmorDamage(entityID: Int, ship: ShipComponent, damageEnergy: Long = 0, damagePattern: DamagePattern, damageColumn: Int? = null) {
-		
+	fun applyArmorDamage(entityID: Int, damageEnergy: Long = 0, damagePattern: DamagePattern,
+											 ship: ShipComponent?,
+											 armorC: ArmorComponent = armorMapper.get(entityID),
+											 damageColumn: Int? = null
+	): Long {
 		var damage = damageEnergy
 		var damageColumn = damageColumn
 		
+		val armor = armorC.armor!!
+		val armorLayers = armor.size
+		val armorWidth = armor[0].size
+		
 		if (damageColumn == null) {
-			damageColumn = starSystem.random.nextInt(ship.hull.getArmorWidth())
+			damageColumn = starSystem.random.nextInt(armorWidth)
 		}
 		
-		var layer = ship.hull.armorLayers
+		fun getArmorResistance(layer: Int): Int {
+			if (ship != null) {
+				return ship.hull.armorEnergyPerDamage[layer].toInt()
+			} else {
+				return 1000 // Missiles
+			}
+		}
+		
+		var layer = armorLayers
 		
 		when (damagePattern) {
-			DamagePattern.LASER -> {
+			DamagePattern.LASER -> { //TODO spread laser on area
 				while(layer > 0) {
-					var armorHP: Int = 128 + ship.armor[--layer][damageColumn]
+					var armorHP: Int = 128 + armorC[--layer][damageColumn]
 					
 					if (armorHP > 0) {
-						val armorResistance = ship.hull.armorEnergyPerDamage[layer].toInt()
+						val armorResistance = getArmorResistance(layer)
 						val blockDamage: Int = FastMath.min(armorHP, (damage / armorResistance).toInt())
 						damage -= blockDamage * armorResistance
 						
 						println("Damaging armor $damageColumn-$layer for $blockDamage dmg, remaining $damage")
 						
 						armorHP -= blockDamage
-						ship.armor[layer][damageColumn] = (armorHP - 128).toByte()
+						armorC[layer][damageColumn] = (armorHP - 128).toByte()
 						
 						if (armorHP > 0 && damage < armorResistance) {
-							return
+							damage = 0
+							break
 						}
 					}
 				}
 			}
 			DamagePattern.KINETIC -> {
 				while(layer > 0) {
-					val armorHP: Int = ship.armor[--layer][damageColumn].toInt()
+					var armorHP: Int = 128 + armorC[--layer][damageColumn]
 					
 					if (armorHP > 0) {
-						break
-					}
-				}
-			}
-			DamagePattern.EXPLOSIVE -> { // full damage hit block, quarter damage sides
-				while(layer > 0) {
-					var armorHP: Int = 128 + ship.armor[--layer][damageColumn]
-					
-					if (armorHP > 0) {
-						val armorResistance = ship.hull.armorEnergyPerDamage[layer].toInt()
+						val armorResistance = getArmorResistance(layer)
 						val blockDamage: Int = FastMath.min(armorHP, (damage / armorResistance).toInt())
 						damage -= blockDamage * armorResistance
 						
 						println("Damaging armor $damageColumn-$layer for $blockDamage dmg, remaining $damage")
 						
 						armorHP -= blockDamage
-						ship.armor[layer][damageColumn] = (armorHP - 128).toByte()
+						armorC[layer][damageColumn] = (armorHP - 128).toByte()
 						
 						if (armorHP > 0 && damage < armorResistance) {
-							return
+							damage = 0
+							break
 						}
-						
-						break
 					}
 				}
-				
-				//TODO spread damage
+			}
+			DamagePattern.EXPLOSIVE -> { // full damage hit block, quarter damage sides
+				while(layer > 0) {
+					var armorHP: Int = 128 + armorC[--layer][damageColumn]
+					
+					if (armorHP > 0) {
+						val armorResistance = getArmorResistance(layer)
+						val blockDamage: Int = FastMath.min(armorHP, (damage / armorResistance).toInt())
+						damage -= blockDamage * armorResistance
+						
+						println("Damaging armor $damageColumn-$layer for $blockDamage dmg, remaining $damage")
+						
+						armorHP -= blockDamage
+						armorC[layer][damageColumn] = (armorHP - 128).toByte()
+						
+						if (armorHP > 0 && damage < armorResistance) {
+							damage = 0
+							break
+						}
+					}
+					
+					//TODO spread damage
+				}
 			}
 		}
 		
-		applyHullDamage(entityID, ship, damage)
+		if (damage < damageEnergy) {
+			starSystem.changed(entityID, armorMapper)
+		}
+		
+		return damage
 	}
 	
-	fun applyHullDamage(entityID: Int, ship: ShipComponent, damageEnergy: Long) {
+	fun applyPartHPDamage(entityID: Int, damageEnergy: Long, partsHP: PartsHPComponent = partHPMapper.get(entityID)): Long {
 		var damage = damageEnergy / 1000
 		
-		if (damage > 0 && ship.totalPartHP > 0) {
+		if (damage > 0 && partsHP.totalPartHP > 0) {
 			println("Damaging parts for $damage dmg")
-			while (ship.damageableParts.size > 0) {
-				val entry = ship.damageableParts.higherEntry(starSystem.random.nextLong(ship.damageablePartsMaxVolume))
+			
+			while (partsHP.damageableParts.size > 0) {
+				val entry = partsHP.damageableParts.higherEntry(starSystem.random.nextLong(partsHP.damageablePartsMaxVolume))
 				val partRef: PartRef<Part>
 				
 				if (entry.value.size() == 1) {
@@ -807,29 +915,47 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 					partRef = entry.value[starSystem.random.nextInt(entry.value.size())]
 				}
 				
-				var partHP = ship.getPartHP(partRef).toInt()
+				var partHP = partsHP.getPartHP(partRef)
 				
 				val partDamage: Int = FastMath.min(partHP, damage.toInt())
 				damage -= partDamage
 				
 				partHP -= partDamage
-				ship.setPartHP(partRef, partHP, entry)
+				partsHP.setPartHP(partRef, partHP, entry)
 				
 				if (partHP == 0) {
 					println("Part destroyed ${partRef.part}")
 				}
 				
 				if (damage == 0L) {
-					return
+					break
 				}
 			}
 			
-			if (damage > 0) {
-				println("Ship destroyed")
-				//TODO create derelict
-				starSystem.unregisterShip(entityID, ship)
-			}
+			starSystem.changed(entityID, partHPMapper)
 		}
+		
+		return damage * 1000
+	}
+	
+	fun applyHPDamage(entityID: Int, damageEnergy: Long, hp: HPComponent = hpMapper.get(entityID)): Long {
+		var damage = damageEnergy / 1000
+		
+		if (damage > 0 && hp.health > 0) {
+			println("Damaging hp for $damage dmg")
+			
+			var hullHP = hp.health.toInt()
+			
+			val partDamage: Int = FastMath.min(hullHP, damage.toInt())
+			damage -= partDamage
+			
+			hullHP -= partDamage
+			hp.health = hullHP.toShort()
+			
+			starSystem.changed(entityID, hpMapper)
+		}
+		
+		return damage * 1000
 	}
 	
 	data class InterceptResult(val timeToIntercept: Long,

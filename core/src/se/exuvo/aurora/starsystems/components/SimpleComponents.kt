@@ -5,7 +5,6 @@ import com.badlogic.gdx.graphics.Color
 import se.exuvo.aurora.galactic.Empire
 import se.exuvo.aurora.starsystems.StarSystem
 import com.badlogic.gdx.graphics.g2d.TextureRegion
-import java.util.ArrayDeque
 import com.artemis.PooledComponent
 
 class ChangingWorldComponent() : Component()
@@ -91,16 +90,16 @@ class StarSystemComponent() : PooledComponent(), CloneableComponent<StarSystemCo
 	}
 }
 
-class OwnerComponent() : PooledComponent(), CloneableComponent<OwnerComponent> {
+class EmpireComponent() : PooledComponent(), CloneableComponent<EmpireComponent> {
 	lateinit var empire: Empire
 
-	fun set(empire: Empire): OwnerComponent {
+	fun set(empire: Empire): EmpireComponent {
 		this.empire = empire
 		return this
 	}
 	
 	override fun reset(): Unit {}
-	override fun copy(tc: OwnerComponent) {
+	override fun copy(tc: EmpireComponent) {
 		tc.set(empire)
 	}
 }

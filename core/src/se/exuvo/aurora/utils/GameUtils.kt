@@ -6,13 +6,7 @@ import com.artemis.utils.ImmutableBag
 import com.artemis.utils.IntBag
 import org.apache.logging.log4j.LogManager
 import org.jasypt.digest.StandardStringDigester
-import se.exuvo.aurora.galactic.FuelWastePart
-import se.exuvo.aurora.galactic.FueledPart
-import se.exuvo.aurora.galactic.Part
-import se.exuvo.aurora.galactic.PartRef
-import se.exuvo.aurora.starsystems.components.FueledPartState
 import se.exuvo.aurora.starsystems.components.NameComponent
-import se.exuvo.aurora.starsystems.components.ShipComponent
 import se.exuvo.aurora.starsystems.components.UUIDComponent
 import kotlin.reflect.KProperty0
 import kotlin.reflect.full.declaredMemberFunctions
@@ -231,70 +225,6 @@ inline fun <reified R> KProperty0<*>.delegateAs(): R {
 //}
 
 fun exponentialAverage(newValue: Double, expAverage: Double, delay: Double) : Double = newValue + Math.pow(Math.E, -1/delay) * (expAverage - newValue)
-
-fun consumeFuel(deltaGameTime: Int, entityID: Int, world: World, ship: ShipComponent, partRef: PartRef<Part>, energyConsumed: Long, fuelEnergy: Long) {
-	val part = partRef.part
-	if (part is FueledPart) {
-		val fueledState = ship.getPartState(partRef)[FueledPartState::class]
-
-		var fuelEnergyConsumed = deltaGameTime * energyConsumed
-//					println("fuelEnergyConsumed $fuelEnergyConsumed, fuelTime ${TimeUnits.secondsToString(part.fuelTime.toLong())}, power ${poweringState.producedPower.toDouble() / part.power}%")
-
-		if (fuelEnergyConsumed > fueledState.fuelEnergyRemaining) {
-
-			fuelEnergyConsumed -= fueledState.fuelEnergyRemaining
-
-			var fuelRequired = part.fuelConsumption.toLong()
-
-			if (fuelEnergyConsumed > fuelEnergy * part.fuelTime) {
-
-				fuelRequired *= (1 + fuelEnergyConsumed / (fuelEnergy * part.fuelTime)).toInt()
-			}
-
-			val remainingFuel = ship.getCargoAmount(part.fuel)
-			fuelRequired = Math.min(fuelRequired, remainingFuel)
-
-			if (part is FuelWastePart) {
-
-				var fuelConsumed = Math.ceil((part.fuelConsumption * fueledState.fuelEnergyRemaining).toDouble() / (fuelEnergy * part.fuelTime)).toLong()
-
-				if (fuelEnergyConsumed > fuelEnergy * part.fuelTime) {
-
-					fuelConsumed += fuelRequired / part.fuelConsumption - 1
-				}
-
-//							println("fuelConsumed $fuelConsumed")
-
-				ship.addCargo(part.waste, fuelConsumed)
-			}
-
-			fueledState.fuelEnergyRemaining = Math.max(fuelEnergy * part.fuelTime * fuelRequired - fuelEnergyConsumed, 0)
-
-			val removedFuel = ship.retrieveCargo(part.fuel, fuelRequired)
-
-			if (removedFuel != fuelRequired) {
-				utilLog.warn("Entity ${printEntity(entityID, world)} was expected to consume $fuelRequired but only had $removedFuel left")
-			}
-
-		} else {
-
-			if (part is FuelWastePart) {
-
-				val fuelRemainingPre = Math.ceil((part.fuelConsumption * fueledState.fuelEnergyRemaining).toDouble() / (fuelEnergy * part.fuelTime)).toLong()
-				val fuelRemainingPost = Math.ceil((part.fuelConsumption * (fueledState.fuelEnergyRemaining - fuelEnergyConsumed)).toDouble() / (fuelEnergy * part.fuelTime)).toLong()
-				val fuelConsumed = fuelRemainingPre - fuelRemainingPost;
-
-//							println("fuelRemainingPre $fuelRemainingPre, fuelRemainingPost $fuelRemainingPost, fuelConsumed $fuelConsumed")
-
-				if (fuelConsumed > 0) {
-					ship.addCargo(part.waste, fuelConsumed)
-				}
-			}
-
-			fueledState.fuelEnergyRemaining -= fuelEnergyConsumed
-		}
-	}
-}
 
 object GameUtils {
 

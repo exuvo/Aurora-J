@@ -1,37 +1,22 @@
 package se.exuvo.aurora.galactic
 
-import com.artemis.Aspect
 import com.artemis.ComponentMapper
 import com.artemis.ComponentType
-import com.artemis.EntitySubscription
 import com.artemis.World
 import com.artemis.WorldConfigurationBuilder
 import com.artemis.utils.Bag
 import com.artemis.utils.BitVector
 import com.artemis.utils.IntBag
 import com.badlogic.gdx.utils.Disposable
-import se.exuvo.aurora.empires.components.ColonyComponent
-import se.exuvo.aurora.starsystems.StarSystem
-import se.exuvo.aurora.starsystems.components.CircleComponent
 import se.exuvo.aurora.starsystems.components.CloneableComponent
-import se.exuvo.aurora.starsystems.components.EmissionsComponent
 import se.exuvo.aurora.starsystems.components.EntityReference
 import se.exuvo.aurora.starsystems.components.EntityUUID
 import se.exuvo.aurora.starsystems.components.GalacticPositionComponent
-import se.exuvo.aurora.starsystems.components.MassComponent
-import se.exuvo.aurora.starsystems.components.MoveToEntityComponent
 import se.exuvo.aurora.starsystems.components.NameComponent
-import se.exuvo.aurora.starsystems.components.OrbitComponent
-import se.exuvo.aurora.starsystems.components.OwnerComponent
-import se.exuvo.aurora.starsystems.components.StarSystemComponent
+import se.exuvo.aurora.starsystems.components.EmpireComponent
 import se.exuvo.aurora.starsystems.components.RenderComponent
 import se.exuvo.aurora.starsystems.components.ShipComponent
-import se.exuvo.aurora.starsystems.components.SolarIrradianceComponent
-import se.exuvo.aurora.starsystems.components.Spectrum
 import se.exuvo.aurora.starsystems.components.StrategicIconComponent
-import se.exuvo.aurora.starsystems.components.SunComponent
-import se.exuvo.aurora.starsystems.components.TimedMovementComponent
-import se.exuvo.aurora.starsystems.components.TintComponent
 import se.exuvo.aurora.starsystems.components.UUIDComponent
 import se.exuvo.aurora.ui.ProfilerWindow
 import se.exuvo.aurora.utils.forEachFast
@@ -59,7 +44,7 @@ class ShadowGalaxy(val galaxy: Galaxy) : Disposable {
 	lateinit var nameMapper: ComponentMapper<NameComponent>
 	lateinit var strategicIconMapper: ComponentMapper<StrategicIconComponent>
 	lateinit var shipMapper: ComponentMapper<ShipComponent>
-	lateinit var ownerMapper: ComponentMapper<OwnerComponent>
+	lateinit var ownerMapper: ComponentMapper<EmpireComponent>
 	
 //	val allSubscription: EntitySubscription
 	

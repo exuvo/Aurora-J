@@ -16,7 +16,6 @@ import se.exuvo.aurora.starsystems.StarSystemGeneration
 import se.exuvo.aurora.starsystems.components.ApproachType
 import se.exuvo.aurora.starsystems.components.CircleComponent
 import se.exuvo.aurora.starsystems.components.RenderComponent
-import se.exuvo.aurora.starsystems.components.TargetingComputerState
 import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import se.exuvo.aurora.starsystems.systems.GroupSystem
 import se.exuvo.aurora.starsystems.systems.MovementSystem

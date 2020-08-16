@@ -76,7 +76,7 @@ import se.exuvo.aurora.empires.components.ShipyardSlipway
 import se.exuvo.aurora.starsystems.components.EntityReference
 import se.exuvo.aurora.empires.components.ShipyardModificationExpandCapacity
 import se.exuvo.aurora.starsystems.systems.ColonySystem
-import se.exuvo.aurora.starsystems.components.OwnerComponent
+import se.exuvo.aurora.starsystems.components.EmpireComponent
 import net.mostlyoriginal.api.utils.pooling.PoolsCollection
 import kotlin.reflect.KClass
 import net.mostlyoriginal.api.event.common.Event
@@ -87,6 +87,13 @@ import se.exuvo.aurora.galactic.Shield
 import se.exuvo.aurora.starsystems.systems.MovementPredictedSystem
 import se.exuvo.aurora.empires.components.InCombatComponent
 import se.exuvo.aurora.galactic.Command
+import se.exuvo.aurora.galactic.ContainerPart
+import se.exuvo.aurora.starsystems.components.ArmorComponent
+import se.exuvo.aurora.starsystems.components.CargoComponent
+import se.exuvo.aurora.starsystems.components.HPComponent
+import se.exuvo.aurora.starsystems.components.PartStatesComponent
+import se.exuvo.aurora.starsystems.components.PartsHPComponent
+import se.exuvo.aurora.starsystems.components.ShieldComponent
 import se.exuvo.aurora.starsystems.systems.TargetingSystem
 import uk.co.omegaprime.btreemap.LongObjectBTreeMap
 import java.util.concurrent.ArrayBlockingQueue
@@ -145,7 +152,13 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	lateinit private var moveToEntityMapper: ComponentMapper<MoveToEntityComponent>
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
 	lateinit private var colonyMapper: ComponentMapper<ColonyComponent>
-	lateinit private var ownerMapper: ComponentMapper<OwnerComponent>
+	lateinit private var ownerMapper: ComponentMapper<EmpireComponent>
+	lateinit private var partStatesMapper: ComponentMapper<PartStatesComponent>
+	lateinit private var shieldMapper: ComponentMapper<ShieldComponent>
+	lateinit private var armorMapper: ComponentMapper<ArmorComponent>
+	lateinit private var partsHPMapper: ComponentMapper<PartsHPComponent>
+	lateinit private var hpMapper: ComponentMapper<HPComponent>
+	lateinit private var cargoMapper: ComponentMapper<CargoComponent>
 
 	init {
 		galaxy.world.getMapper(GalacticPositionComponent::class.java).create(galacticEntityID).set(initialPosition)
@@ -294,11 +307,11 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		val chemicalThruster = FueledThruster(10000 * 982, 1)
 		shipHull.addPart(chemicalThruster)
 		
-		val shield = Shield(1 * Units.MEGA, 200 * Units.KILO, 50)
+		val shield = Shield(1 * Units.MEGA, 20 * Units.KILO, 50)
 		shield.name = "X-Booster"
 		shipHull.addPart(shield)
 		
-		val shield2 = Shield(1 * Units.KILO, 10 * Units.KILO, 80)
+		val shield2 = Shield(10 * Units.KILO, 1 * Units.KILO, 80)
 		shield2.name = "S-Booster"
 		shipHull.addPart(shield2)
 		
@@ -387,14 +400,21 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		emissionsMapper.create(entity4).set(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10))
 		
 		val shipComponent = shipMapper.create(entity4).set(shipHull, galaxy.time)
-		shipComponent.addCargo(Resource.NUCLEAR_FISSION, nuclearStorage.capacity / Resource.NUCLEAR_FISSION.specificVolume)
-		shipComponent.addCargo(Resource.ROCKET_FUEL, fuelStorage.capacity / Resource.ROCKET_FUEL.specificVolume)
+		val partStates = partStatesMapper.create(entity4).set(shipHull)
+		partsHPMapper.create(entity4).set(shipHull)
+		armorMapper.create(entity4).set(shipHull)
+		shieldMapper.create(entity4).set(shipHull, partStates)
+		
+		val cargo = cargoMapper.create(entity4).set(shipHull)
+		
+		cargo.addCargo(Resource.NUCLEAR_FISSION, nuclearStorage.capacity / Resource.NUCLEAR_FISSION.specificVolume)
+		cargo.addCargo(Resource.ROCKET_FUEL, fuelStorage.capacity / Resource.ROCKET_FUEL.specificVolume)
 
-		if (!shipComponent.addCargo(sabot, 50)) {
+		if (!cargo.addCargo(sabot, 50)) {
 			println("Failed to add sabots")
 		}
 
-		if (!shipComponent.addCargo(missile, 20)) {
+		if (!cargo.addCargo(missile, 20)) {
 			println("Failed to add missiles")
 		}
 		
@@ -431,6 +451,15 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		}
 
 		val shipComponent = shipMapper.create(shipEntity).set(hull, galaxy.time)
+		val partStates = partStatesMapper.create(shipEntity).set(hull)
+		partsHPMapper.create(shipEntity).set(hull)
+		armorMapper.create(shipEntity).set(hull)
+		
+		if (hull.shields.isNotEmpty()) {
+			shieldMapper.create(shipEntity).set(hull, partStates)
+		}
+		
+		val cargo = if (hull[ContainerPart::class].isNotEmpty()) cargoMapper.create(shipEntity).set(hull) else null
 		
 		if (colonyEntity != null) {
 			
@@ -440,22 +469,26 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 			
 			shipMovement.set(colonyPos.value.position, shipMovement.previous.value.velocity, Vector2L.Zero, galaxy.time)
 			
-			hull.preferredCargo.forEach{ (resource, amount) ->
-				shipComponent.addCargo(resource, colony.retrieveCargo(resource, amount))
-			}
-			
-			hull.preferredMunitions.forEach{ (munitionHull, amount) ->
-				shipComponent.addCargo(munitionHull, colony.retrieveCargo(munitionHull, amount))
+			if (cargo != null) {
+				hull.preferredCargo.forEach{ (resource, amount) ->
+					cargo.addCargo(resource, colony.retrieveCargo(resource, amount))
+				}
+				
+				hull.preferredMunitions.forEach{ (munitionHull, amount) ->
+					cargo.addCargo(munitionHull, colony.retrieveCargo(munitionHull, amount))
+				}
 			}
 			
 		} else {
 			
-			hull.preferredCargo.forEach{ (resource, amount) ->
-				shipComponent.addCargo(resource, amount)
-			}
-			
-			hull.preferredMunitions.forEach{ (munitionHull, amount) ->
-				shipComponent.addCargo(munitionHull, amount)
+			if (cargo != null) {
+				hull.preferredCargo.forEach{ (resource, amount) ->
+					cargo.addCargo(resource, amount)
+				}
+				
+				hull.preferredMunitions.forEach{ (munitionHull, amount) ->
+					cargo.addCargo(munitionHull, amount)
+				}
 			}
 		}
 		

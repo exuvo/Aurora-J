@@ -58,15 +58,13 @@ abstract class ShipyardCommand(planetRef: EntityReference): EntityCommand(planet
 
 class ClearTargetCommand(shipRef: EntityReference, val tc: PartRef<TargetingComputer>): EntityCommand(shipRef) {
 	override fun apply() {
-		val ship = entityRef.system.world.getMapper(ShipComponent::class.java).get(entityRef.entityID)
-		entityRef.system.world.getSystem(TargetingSystem::class.java).clearTarget(entityRef.entityID, ship, tc)
+		entityRef.system.world.getSystem(TargetingSystem::class.java).clearTarget(entityRef.entityID, tc)
 	}
 }
 
 class SetTargetCommand(shipRef: EntityReference, val tc: PartRef<TargetingComputer>, targetRef: EntityReference): TargetEntityCommand(shipRef, targetRef) {
 	override fun apply() {
-		val ship = entityRef.system.world.getMapper(ShipComponent::class.java).get(entityRef.entityID)
-		entityRef.system.world.getSystem(TargetingSystem::class.java).setTarget(entityRef.entityID, ship, tc, targetRef)
+		entityRef.system.world.getSystem(TargetingSystem::class.java).setTarget(entityRef.entityID, tc, targetRef)
 	}
 }
 

@@ -4,29 +4,27 @@ import com.artemis.Aspect
 import com.artemis.ComponentMapper
 import com.artemis.EntitySubscription
 import com.artemis.EntitySubscription.SubscriptionListener
-import com.artemis.systems.IteratingSystem
 import com.artemis.utils.IntBag
 import net.mostlyoriginal.api.event.common.EventSystem
 import org.apache.logging.log4j.LogManager
-import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.galactic.PartRef
 import se.exuvo.aurora.galactic.PassiveSensor
 import se.exuvo.aurora.starsystems.components.DetectionComponent
 import se.exuvo.aurora.starsystems.components.DetectionHit
 import se.exuvo.aurora.starsystems.components.EmissionsComponent
-import se.exuvo.aurora.starsystems.components.OwnerComponent
+import se.exuvo.aurora.starsystems.components.EmpireComponent
 import se.exuvo.aurora.starsystems.components.PassiveSensorState
 import se.exuvo.aurora.starsystems.components.PassiveSensorsComponent
 import se.exuvo.aurora.starsystems.components.PoweredPartState
 import se.exuvo.aurora.starsystems.components.ShipComponent
 import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import se.exuvo.aurora.starsystems.components.UUIDComponent
-import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEachFast
 import org.apache.commons.math3.util.FastMath
 import se.exuvo.aurora.starsystems.StarSystem
 import com.artemis.annotations.Wire
+import se.exuvo.aurora.starsystems.components.PartStatesComponent
 
 class PassiveSensorSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10) {
 	companion object {
@@ -41,9 +39,11 @@ class PassiveSensorSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10) {
 	lateinit private var sensorsMapper: ComponentMapper<PassiveSensorsComponent>
 	lateinit private var emissionsMapper: ComponentMapper<EmissionsComponent>
 	lateinit private var detectionMapper: ComponentMapper<DetectionComponent>
-	lateinit private var ownerMapper: ComponentMapper<OwnerComponent>
+	lateinit private var ownerMapper: ComponentMapper<EmpireComponent>
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
 	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
+	lateinit private var partStatesMapper: ComponentMapper<PartStatesComponent>
+	
 	lateinit private var emissionsSubscription: EntitySubscription
 	lateinit private var events: EventSystem
 
@@ -76,12 +76,13 @@ class PassiveSensorSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10) {
 
 						if (sensors.isNotEmpty()) {
 
+							val partStates = partStatesMapper.get(entityID)
 							sensorComponent = sensorsMapper.create(entityID)
 							sensorComponent.sensors = sensors
 
 							sensors.forEachFast { sensor ->
-								if (ship.isPartEnabled(sensor)) {
-									val poweredState = ship.getPartState(sensor)[PoweredPartState::class]
+								if (partStates.isPartEnabled(sensor)) {
+									val poweredState = partStates[sensor][PoweredPartState::class]
 									poweredState.requestedPower = sensor.part.powerConsumption
 									starSystem.changed(entityID, shipMapper)
 								}
@@ -124,8 +125,8 @@ class PassiveSensorSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10) {
 	}
 
 	override fun process(entityID: Int) {
-
-		val ship = shipMapper.get(entityID)
+		
+		val partStates = partStatesMapper.get(entityID)
 		val movement = movementMapper.get(entityID)
 		val sensorPosition = movement.get(galaxy.time).value.position
 		val owner = ownerMapper.get(entityID)
@@ -137,11 +138,11 @@ class PassiveSensorSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10) {
 
 		for (sensor in sensors) {
 
-			if (!ship.isPartEnabled(sensor)) {
+			if (!partStates.isPartEnabled(sensor)) {
 				continue
 			}
 
-			val poweredState = ship.getPartState(sensor)[PoweredPartState::class]
+			val poweredState = partStates[sensor][PoweredPartState::class]
 
 			if (poweredState.givenPower == 0L) {
 				continue
@@ -149,10 +150,11 @@ class PassiveSensorSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 10) {
 
 			val powerRatio = poweredState.givenPower / poweredState.requestedPower.toDouble()
 
-			val sensorState = ship.getPartState(sensor)[PassiveSensorState::class]
+			val sensorState = partStates[sensor][PassiveSensorState::class]
 
 			if (galaxy.time >= sensorState.lastScan + sensor.part.refreshDelay) {
 				sensorState.lastScan = galaxy.time
+				starSystem.changed(entityID, partStatesMapper)
 
 				val arcWidth = 360.0 / sensor.part.arcSegments
 

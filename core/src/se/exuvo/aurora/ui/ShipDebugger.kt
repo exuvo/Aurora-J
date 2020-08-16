@@ -48,6 +48,12 @@ import se.exuvo.aurora.galactic.DamagePattern
 import se.exuvo.aurora.galactic.PartRef
 import se.exuvo.aurora.galactic.Part
 import se.exuvo.aurora.galactic.Shield
+import se.exuvo.aurora.starsystems.components.ArmorComponent
+import se.exuvo.aurora.starsystems.components.CargoComponent
+import se.exuvo.aurora.starsystems.components.HPComponent
+import se.exuvo.aurora.starsystems.components.PartStatesComponent
+import se.exuvo.aurora.starsystems.components.PartsHPComponent
+import se.exuvo.aurora.starsystems.components.ShieldComponent
 import se.exuvo.aurora.ui.UIScreen.UIWindow
 import se.exuvo.aurora.utils.printEntity
 import se.exuvo.aurora.utils.toLinearRGB
@@ -113,8 +119,22 @@ class ShipDebugger : UIWindow() {
 								val shipMapper = world.getMapper(ShipComponent::class.java)
 								val powerMapper = world.getMapper(PowerComponent::class.java)
 								val irradianceMapper = world.getMapper(SolarIrradianceComponent::class.java)
+								var partStatesMapper = world.getMapper(PartStatesComponent::class.java)
+								var shieldMapper = world.getMapper(ShieldComponent::class.java)
+								var armorMapper = world.getMapper(ArmorComponent::class.java)
+								var partsHPMapper = world.getMapper(PartsHPComponent::class.java)
+								var hpMapper = world.getMapper(HPComponent::class.java)
+								var cargoMapper = world.getMapper(CargoComponent::class.java)
 			
-								val shipComponent = shipMapper.get(entityRef.entityID)
+								val entityID = entityRef.entityID
+								
+								val shipComponent = shipMapper.get(entityID)
+								val partStates = partStatesMapper.get(entityID)
+								val shield = shieldMapper.get(entityID)
+								val armor = armorMapper.get(entityID)
+								val partsHP = partsHPMapper.get(entityID)
+								val hullHP = hpMapper.get(entityID)
+								val cargoC = cargoMapper.get(entityID)
 								
 								textUnformatted("Entity ${printEntity(entityRef.entityID, world)}")
 								
@@ -155,7 +175,7 @@ class ShipDebugger : UIWindow() {
 		
 								if (shipComponent != null) {
 		
-									if (collapsingHeader("Parts", TreeNodeFlag.DefaultOpen.i)) { //
+									if (collapsingHeader("Parts", TreeNodeFlag.DefaultOpen.i)) {
 										
 										sliderScalar("Weapon test range", DataType.Double, ::weaponTestDistance, 100.0, Units.AU * 1000, Units.distanceToString(weaponTestDistance.toLong()), 8.0f)
 		
@@ -163,44 +183,44 @@ class ShipDebugger : UIWindow() {
 											if (treeNode("${partRef.part::class.simpleName} ${partRef.part.name}")) {
 		
 												if (partRef.part is PoweringPart) {
-													val state = shipComponent.getPartState(partRef)[PoweringPartState::class]
+													val state = partStates[partRef][PoweringPartState::class]
 													textUnformatted("availiablePower ${Units.powerToString(state.availiablePower)}")
 													textUnformatted("producedPower ${Units.powerToString(state.producedPower)}")
 												}
 		
 												if (partRef.part is PoweredPart) {
-													val state = shipComponent.getPartState(partRef)[PoweredPartState::class]
+													val state = partStates[partRef][PoweredPartState::class]
 													textUnformatted("requestedPower ${Units.powerToString(state.requestedPower)}")
 													textUnformatted("givenPower ${Units.powerToString(state.givenPower)}")
 												}
 		
 												if (partRef.part is ChargedPart) {
-													val state = shipComponent.getPartState(partRef)[ChargedPartState::class]
+													val state = partStates[partRef][ChargedPartState::class]
 													textUnformatted("charge ${Units.powerToString(state.charge)}")
 													textUnformatted("expectedFullAt ${Units.secondsToString(state.expectedFullAt)}")
 												}
 		
 												if (partRef.part is PassiveSensor) {
-													val state = shipComponent.getPartState(partRef)[PassiveSensorState::class]
+													val state = partStates[partRef][PassiveSensorState::class]
 													textUnformatted("lastScan ${state.lastScan}")
 												}
 		
 												if (partRef.part is AmmunitionPart) {
-													val state = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
+													val state = partStates[partRef][AmmunitionPartState::class]
 													textUnformatted("type ${state.type?.name}")
 													textUnformatted("amount ${state.amount}/${partRef.part.ammunitionAmount}")
 													textUnformatted("reloadedAt ${Units.secondsToString(state.reloadedAt)}")
 												}
 		
 												if (partRef.part is FueledPart) {
-													val state = shipComponent.getPartState(partRef)[FueledPartState::class]
+													val state = partStates[partRef][FueledPartState::class]
 													textUnformatted("fuelEnergyRemaining ${state.fuelEnergyRemaining}")
 													textUnformatted("totalFuelEnergyRemaining ${state.totalFuelEnergyRemaining}")
 												}
 		
 												if (partRef.part is TargetingComputer) {
 													
-													val state = shipComponent.getPartState(partRef)[TargetingComputerState::class]
+													val state = partStates[partRef][TargetingComputerState::class]
 													textUnformatted("target ${state.target?.entityID}")
 													textUnformatted("lockCompletionAt ${state.lockCompletionAt}")
 													
@@ -258,7 +278,7 @@ class ShipDebugger : UIWindow() {
 													
 												} else if (partRef.part is Railgun) {
 													
-													val ammoState = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
+													val ammoState = partStates[partRef][AmmunitionPartState::class]
 													
 													val munitionClass = ammoState.type as? SimpleMunitionHull
 													
@@ -276,7 +296,7 @@ class ShipDebugger : UIWindow() {
 													
 												} else if (partRef.part is MissileLauncher) {
 													
-													val ammoState = shipComponent.getPartState(partRef)[AmmunitionPartState::class]
+													val ammoState = partStates[partRef][AmmunitionPartState::class]
 													
 													val munitionClass = ammoState.type as? AdvancedMunitionHull
 													
@@ -308,7 +328,7 @@ class ShipDebugger : UIWindow() {
 										}
 									}
 									
-									if (collapsingHeader("Armor", 0)) { // TreeNodeFlag.DefaultOpen.i
+									if (collapsingHeader("Health", 0)) { // TreeNodeFlag.DefaultOpen.i
 										
 										val window = currentWindow
 										val backupPaddingY = style.framePadding.y
@@ -380,7 +400,7 @@ class ShipDebugger : UIWindow() {
 												
 												pushID(y * 31 + x)
 												
-												val armorHP = 128 + shipComponent.armor[y][x]
+												val armorHP = 128 + armor[y][x]
 												val maxArmorHP = 128 + shipComponent.hull.armorBlockHP[y]
 												
 												if (armorBlock(armorHP.toFloat(), maxArmorHP.toFloat())) {
@@ -391,18 +411,18 @@ class ShipDebugger : UIWindow() {
 											}
 										}
 										
-										val shieldHP = shipComponent.shieldHP
+										val shieldHP = shield.shieldHP
 										val maxShieldHP = shipComponent.hull.maxShieldHP
 										
 										if (shieldBar(shieldHP.toDouble(), maxShieldHP.toDouble())) {
 											tooltip {
 												shipComponent.hull.shields.forEachFast { partRef ->
-													val charge = shipComponent.getPartState(partRef)[ChargedPartState::class].charge
+													val charge = partStates[partRef][ChargedPartState::class].charge
 													val capacity = (partRef.part as Shield).capacitor
 													
 													val text = "${partRef.part.name} ${Units.capacityToString(charge)} / ${Units.capacityToString(capacity)}"
 													
-													if (!shipComponent.isPartEnabled(partRef)) {
+													if (!partStates.isPartEnabled(partRef)) {
 														
 														withStyleColor(Col.Text, emptyArmorColor) {
 															textUnformatted(text)
@@ -418,7 +438,7 @@ class ShipDebugger : UIWindow() {
 										
 										style.framePadding.y = backupPaddingY
 										
-										textUnformatted("totalPartHP ${shipComponent.totalPartHP}")
+										textUnformatted("totalPartHP ${partsHP.totalPartHP}")
 										
 										val sortedParts = Bag<PartRef<Part>>(shipComponent.hull.getPartRefs().size)
 										for(partRef in shipComponent.hull.getPartRefs()) {
@@ -433,7 +453,7 @@ class ShipDebugger : UIWindow() {
 										
 										sortedParts.forEachFast{ partRef ->
 											val hitChance = (100 * partRef.part.volume) / shipComponent.hull.volume
-											textUnformatted("${shipComponent.getPartHP(partRef)} / ${128 + partRef.part.maxHealth} ${String.format("%3d", hitChance)}% ${partRef.part}")
+											textUnformatted("${partsHP.getPartHP(partRef)} / ${128 + partRef.part.maxHealth} ${String.format("%3d", hitChance)}% ${partRef.part}")
 										}
 										
 										sliderScalar("Damage amount", DataType.Long, ::testDmgAmount, 0L, 1_000_000L, "$testDmgAmount", 2.5f)
@@ -442,13 +462,13 @@ class ShipDebugger : UIWindow() {
 										
 										if (buttonEx("damage", Vec2(), buttonFlags)) {
 											val weaponSystem = world.getSystem(WeaponSystem::class.java)
-											weaponSystem.applyShieldDamage(entityRef.entityID, shipComponent, testDmgAmount, DamagePattern.LASER)
+											weaponSystem.applyDamage(entityRef.entityID, testDmgAmount, DamagePattern.LASER)
 										}
 										
 										if (buttonEx("kill armor", Vec2(), buttonFlags)) {
 											for (y in 0..shipComponent.hull.armorLayers - 1) {
 												for (x in 0..shipComponent.hull.getArmorWidth() - 1) {
-													shipComponent.armor[y][x] = -128
+													armor[y][x] = -128
 												}
 											}
 										}
@@ -456,12 +476,12 @@ class ShipDebugger : UIWindow() {
 										if (buttonEx("repair", Vec2(), buttonFlags)) {
 											for (y in 0..shipComponent.hull.armorLayers - 1) {
 												for (x in 0..shipComponent.hull.getArmorWidth() - 1) {
-													shipComponent.armor[y][x] = shipComponent.hull.armorBlockHP[y]
+													armor[y][x] = shipComponent.hull.armorBlockHP[y]
 												}
 											}
 											
 											for(partRef in shipComponent.hull.getPartRefs()) {
-												shipComponent.setPartHP(partRef, 128 + partRef.part.maxHealth)
+												partsHP.setPartHP(partRef, 128 + partRef.part.maxHealth)
 											}
 										}
 									}
@@ -503,7 +523,7 @@ class ShipDebugger : UIWindow() {
 											if (treeNode("Producers")) {
 												powerComponent.poweringParts.forEach({
 													val partRef = it
-													val poweringState = shipComponent.getPartState(partRef)[PoweringPartState::class]
+													val poweringState = partStates[partRef][PoweringPartState::class]
 		
 													val power = if (poweringState.availiablePower == 0L) 0f else poweringState.producedPower / poweringState.availiablePower.toFloat()
 		
@@ -514,7 +534,7 @@ class ShipDebugger : UIWindow() {
 		
 													if (partRef is FueledPart && partRef is PoweringPart) {
 		
-														val fueledState = shipComponent.getPartState(partRef)[FueledPartState::class]
+														val fueledState = partStates[partRef][FueledPartState::class]
 														val fuelRemaining = Units.secondsToString(fueledState.fuelEnergyRemaining / partRef.power)
 														val totalFuelRemaining = Units.secondsToString(fueledState.totalFuelEnergyRemaining / partRef.power)
 		
@@ -523,7 +543,7 @@ class ShipDebugger : UIWindow() {
 		
 													if (partRef.part is Battery) {
 		
-														val chargedState = shipComponent.getPartState(partRef)[ChargedPartState::class]
+														val chargedState = partStates[partRef][ChargedPartState::class]
 														val charge = chargedState.charge
 														val maxCharge = partRef.part.capacitor
 														val charged = if (maxCharge == 0L) 0f else charge / maxCharge.toFloat()
@@ -544,7 +564,7 @@ class ShipDebugger : UIWindow() {
 											if (treeNode("Consumers")) {
 												powerComponent.poweredParts.forEach({
 													val part = it
-													val poweredState = shipComponent.getPartState(part)[PoweredPartState::class]
+													val poweredState = partStates[part][PoweredPartState::class]
 		
 													val power = if (poweredState.requestedPower == 0L) 0f else poweredState.givenPower / poweredState.requestedPower.toFloat()
 													progressBar(power, Vec2(), "${Units.powerToString(poweredState.givenPower)}/${Units.powerToString(poweredState.requestedPower)}")
@@ -563,9 +583,9 @@ class ShipDebugger : UIWindow() {
 										CargoType.values().forEach {
 											val cargo = it
 		
-											val usedVolume = shipComponent.getUsedCargoVolume(cargo)
-											val maxVolume = shipComponent.getMaxCargoVolume(cargo)
-											val usedMass = shipComponent.getUsedCargoMass(cargo)
+											val usedVolume = cargoC.getUsedCargoVolume(cargo)
+											val maxVolume = cargoC.getMaxCargoVolume(cargo)
+											val usedMass = cargoC.getUsedCargoMass(cargo)
 											val usage = if (maxVolume == 0L) 0f else usedVolume / maxVolume.toFloat()
 											progressBar(usage, Vec2(), "$usedMass kg, ${usedVolume / 1000}/${maxVolume / 1000} m³")
 		
@@ -573,8 +593,11 @@ class ShipDebugger : UIWindow() {
 											textUnformatted("${cargo.name}")
 		
 											if (cargo == CargoType.AMMUNITION) {
-												for (entry in shipComponent.munitionCargo.entries) {
-													textUnformatted("${entry.value} ${entry.key}")
+												val munitions = cargoC.munitionCargo
+												if (munitions != null) {
+													for (entry in munitions.entries) {
+														textUnformatted("${entry.value} ${entry.key}")
+													}
 												}
 											}
 										}
@@ -601,7 +624,7 @@ class ShipDebugger : UIWindow() {
 										val buttonFlags = if (useShadow) ButtonFlag.Disabled.i else 0
 										
 										if (buttonEx("Add", Vec2(), buttonFlags)) {
-											if (!shipComponent.addCargo(addResource, addResourceAmount.toLong())) {
+											if (!cargoC.addCargo(addResource, addResourceAmount.toLong())) {
 												println("Cargo does not fit")
 											}
 										}
@@ -609,7 +632,7 @@ class ShipDebugger : UIWindow() {
 										sameLine(0f, style.itemInnerSpacing.x)
 										
 										if (buttonEx("Remove", Vec2(), buttonFlags)) {
-											if (shipComponent.retrieveCargo(addResource, addResourceAmount.toLong()) != addResourceAmount.toLong()) {
+											if (cargoC.retrieveCargo(addResource, addResourceAmount.toLong()) != addResourceAmount.toLong()) {
 												println("Does not have enough of specified cargo")
 											}
 										}
@@ -618,9 +641,9 @@ class ShipDebugger : UIWindow() {
 											Resource.values().forEach {
 												val resource = it
 		
-												val usedVolume = shipComponent.getUsedCargoVolume(resource)
-												val maxVolume = shipComponent.getMaxCargoVolume(resource)
-												val usedMass = shipComponent.getUsedCargoMass(resource)
+												val usedVolume = cargoC.getUsedCargoVolume(resource)
+												val maxVolume = cargoC.getMaxCargoVolume(resource)
+												val usedMass = cargoC.getUsedCargoMass(resource)
 												val usage = if (maxVolume == 0L) 0f else usedVolume / maxVolume.toFloat()
 												progressBar(usage, Vec2(), "$usedMass kg, ${usedVolume / 1000}/${maxVolume / 1000} m³")
 		

@@ -49,6 +49,24 @@ class PowerComponent() : Component(), CloneableComponent<PowerComponent> {
 			tc.chargedParts.addAll(chargedParts)
 		}
 	}
+	
+	fun simpleCopy(tc: PowerComponent) {
+		tc.powerScheme = powerScheme
+		tc.stateChanged = stateChanged
+		tc.totalAvailablePower = totalAvailablePower
+		tc.totalAvailableSolarPower = totalAvailableSolarPower
+		tc.totalRequestedPower = totalRequestedPower
+		tc.totalUsedPower = totalUsedPower
+	}
+	
+	fun simpleEquals(tc: PowerComponent): Boolean {
+		return tc.powerScheme == powerScheme &&
+		tc.stateChanged == stateChanged &&
+		tc.totalAvailablePower == totalAvailablePower &&
+		tc.totalAvailableSolarPower == totalAvailableSolarPower &&
+		tc.totalRequestedPower == totalRequestedPower &&
+		tc.totalUsedPower == totalUsedPower
+	}
 }
 
 enum class PowerScheme(val chargeBatteryFromReactor: Boolean, private val powerTypeCompareMap: Map<KClass<out Part>, Int>) {
