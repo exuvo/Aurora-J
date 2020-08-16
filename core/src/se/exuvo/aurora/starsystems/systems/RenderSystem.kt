@@ -38,6 +38,7 @@ import se.exuvo.aurora.galactic.BeamWeapon
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.galactic.MissileLauncher
 import se.exuvo.aurora.galactic.PartRef
+import se.exuvo.aurora.galactic.Player
 import se.exuvo.aurora.galactic.Railgun
 import se.exuvo.aurora.galactic.SimpleMunitionHull
 import se.exuvo.aurora.galactic.TargetingComputer
@@ -95,6 +96,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		@JvmField var debugPassiveSensors = Settings.getBol("Systems/Render/debugPassiveSensors", false)
 		@JvmField var debugDisableStrategicView = Settings.getBol("Systems/Render/debugDisableStrategicView", false)
 		@JvmField var debugDrawWeaponRangesWithoutShader = Settings.getBol("Systems/Render/debugDrawWeaponRangesWithoutShader", false)
+		@JvmField var debugSpatialPartitioning = Settings.getBol("Systems/Render/debugSpatialPartitioning", false)
 		@JvmField val log = LogManager.getLogger(RenderSystem::class.java)
 		
 		@JvmField val dummyProfilerEvents = ProfilerWindow.ProfilerBag()
@@ -314,16 +316,17 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					
 					val x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
 					val y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
-					val timeToImpact = 60 // s
 					
 					tcs.forEachFast{ tc ->
 						val tcState = partStates[tc][TargetingComputerState::class]
+						val tcRange = tc.part.maxRange * 1000
 						
 						tcState.linkedWeapons.forEachFast weaponLoop@{ weapon ->
 							if (partStates.isPartEnabled(weapon)) {
 								val part = weapon.part
 								
-								val range: Long
+								val timeToImpact = 60 // s
+								var range: Long
 								
 								when (part) {
 									is BeamWeapon -> {
@@ -369,6 +372,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 										return@weaponLoop
 									}
 								}
+								
+								range = minOf(range, tcRange)
 								
 								// everything in km
 								val radius = (range / 1000).toFloat()
@@ -424,17 +429,18 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 						val x = (((movement.position.x.sign * 500 + movement.position.x) / 1000L) - cameraOffset.x).toFloat()
 						val y = (((movement.position.y.sign * 500 + movement.position.y) / 1000L) - cameraOffset.y).toFloat()
-						val timeToImpact = 10 // s
 
 						fun getRanges(tcs: List<PartRef<TargetingComputer>>) {
 							tcs.forEachFast { tc ->
 								val tcState = partStates[tc][TargetingComputerState::class]
+								val tcRange = tc.part.maxRange * 1000
 
 								tcState.linkedWeapons.forEachFast weaponLoop@{ weapon ->
 									if (partStates.isPartEnabled(weapon)) {
 										val part = weapon.part
 
-										val range: Long
+										val timeToImpact = 60 // s
+										var range: Long
 
 										when (part) {
 											is BeamWeapon -> {
@@ -476,6 +482,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 											}
 										}
 
+										range = minOf(range, tcRange)
+										
 										// everything in km
 										val radius = (range / 1000).toFloat()
 										val cameraDistance = (tempL.set(movement.position).div(1000).dst(cameraOffset)).toFloat()
@@ -1382,6 +1390,36 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		shapeRenderer.end();
 	}
 	
+	private fun drawSpatialPartitioning() {
+		
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+		shapeRenderer.color = sRGBtoLinearRGB(Color.YELLOW)
+		
+		//TODO implement
+//		selectedEntityIDs.forEachFast { entityID ->
+//
+//			val movement = movementMapper.get(entityID).get(galaxy.time).value
+//			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
+//			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
+//
+//			if (strategicIconMapper.has(entityID) && inStrategicView(entityID)) {
+//
+//				val radius = scale * STRATEGIC_ICON_SIZE / 2 + 3 * scale
+//				val segments = getCircleSegments(radius, scale)
+//				shapeRenderer.circle(x, y, radius, segments)
+//
+//			} else {
+//
+//				val circle = circleMapper.get(entityID)
+//				val radius = circle.radius / 1000 + 3 * scale
+//				val segments = getCircleSegments(radius, scale)
+//				shapeRenderer.circle(x, y, radius, segments)
+//			}
+//		}
+		
+		shapeRenderer.end()
+	}
+	
 	fun render(viewport: Viewport, cameraOffset: Vector2L) {
 		
 		profilerEvents = if (galaxy.speed > 0) galaxy.renderProfilerEvents else dummyProfilerEvents
@@ -1396,7 +1434,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		uiCamera = AuroraGame.currentWindow.screenService.uiCamera
 		
 		val entityIDs = subscription.getEntities()
-		val selectedEntityIDs = galaxyGroupSystem.get(GroupSystem.SELECTED).filter { it.system == starSystem && world.entityManager.isActive(it.entityID) && familyAspect.isInterested(it.entityID) }.map { it.entityID }
+		val selectedEntityIDs = Player.current.selection.filter { it.system == starSystem && world.entityManager.isActive(it.entityID) && familyAspect.isInterested(it.entityID) }.map { it.entityID }
 
 		viewport.apply()
 		scale = (viewport.camera as OrthographicCamera).zoom
@@ -1466,6 +1504,12 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		profilerEvents.start("drawStrategicEntities")
 		drawStrategicEntities(entityIDs)
 		profilerEvents.end()
+		
+		if (debugSpatialPartitioning) {
+			profilerEvents.start("drawSpatialPartitioning")
+			drawSpatialPartitioning()
+			profilerEvents.end()
+		}
 		
 		profilerEvents.start("spriteBatch")
 		spriteBatch.projectionMatrix = uiCamera.combined

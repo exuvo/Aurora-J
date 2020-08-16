@@ -278,8 +278,9 @@ class MissileLauncher(ammunitionSize: Int,
 }
 
 class TargetingComputer(val maxWeapons: Int,
-												val lockingTime: Int,
+												val lockingTime: Int, // s
 												val prediction: Float,
+												val maxRange: Long, // km
 												powerConsumption: Long
 ) : Part(),
 		PoweredPart by PoweredPartImpl(powerConsumption)

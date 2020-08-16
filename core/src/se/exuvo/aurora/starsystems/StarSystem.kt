@@ -90,6 +90,7 @@ import se.exuvo.aurora.galactic.Command
 import se.exuvo.aurora.galactic.ContainerPart
 import se.exuvo.aurora.starsystems.components.ArmorComponent
 import se.exuvo.aurora.starsystems.components.CargoComponent
+import se.exuvo.aurora.starsystems.components.ChangingWorldComponent
 import se.exuvo.aurora.starsystems.components.HPComponent
 import se.exuvo.aurora.starsystems.components.PartStatesComponent
 import se.exuvo.aurora.starsystems.components.PartsHPComponent
@@ -136,29 +137,30 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	var workingShadow: ShadowStarSystem
 	var shadow: ShadowStarSystem // Always safe to use from other StarSystems, requires shadow lock to use from UI
 
-	lateinit private var solarSystemMapper: ComponentMapper<StarSystemComponent>
-	lateinit private var uuidMapper: ComponentMapper<UUIDComponent>
-	lateinit private var timedMovementMapper: ComponentMapper<TimedMovementComponent>
-	lateinit private var renderMapper: ComponentMapper<RenderComponent>
-	lateinit private var circleMapper: ComponentMapper<CircleComponent>
-	lateinit private var massMapper: ComponentMapper<MassComponent>
-	lateinit private var nameMapper: ComponentMapper<NameComponent>
-	lateinit private var orbitMapper: ComponentMapper<OrbitComponent>
-	lateinit private var sunMapper: ComponentMapper<SunComponent>
-	lateinit private var solarIrradianceMapper: ComponentMapper<SolarIrradianceComponent>
-	lateinit private var tintMapper: ComponentMapper<TintComponent>
-	lateinit private var strategicIconMapper: ComponentMapper<StrategicIconComponent>
-	lateinit private var emissionsMapper: ComponentMapper<EmissionsComponent>
-	lateinit private var moveToEntityMapper: ComponentMapper<MoveToEntityComponent>
-	lateinit private var shipMapper: ComponentMapper<ShipComponent>
-	lateinit private var colonyMapper: ComponentMapper<ColonyComponent>
-	lateinit private var ownerMapper: ComponentMapper<EmpireComponent>
-	lateinit private var partStatesMapper: ComponentMapper<PartStatesComponent>
-	lateinit private var shieldMapper: ComponentMapper<ShieldComponent>
-	lateinit private var armorMapper: ComponentMapper<ArmorComponent>
-	lateinit private var partsHPMapper: ComponentMapper<PartsHPComponent>
-	lateinit private var hpMapper: ComponentMapper<HPComponent>
-	lateinit private var cargoMapper: ComponentMapper<CargoComponent>
+	lateinit var solarSystemMapper: ComponentMapper<StarSystemComponent>
+	lateinit var uuidMapper: ComponentMapper<UUIDComponent>
+	lateinit var timedMovementMapper: ComponentMapper<TimedMovementComponent>
+	lateinit var renderMapper: ComponentMapper<RenderComponent>
+	lateinit var circleMapper: ComponentMapper<CircleComponent>
+	lateinit var massMapper: ComponentMapper<MassComponent>
+	lateinit var nameMapper: ComponentMapper<NameComponent>
+	lateinit var orbitMapper: ComponentMapper<OrbitComponent>
+	lateinit var sunMapper: ComponentMapper<SunComponent>
+	lateinit var solarIrradianceMapper: ComponentMapper<SolarIrradianceComponent>
+	lateinit var tintMapper: ComponentMapper<TintComponent>
+	lateinit var strategicIconMapper: ComponentMapper<StrategicIconComponent>
+	lateinit var emissionsMapper: ComponentMapper<EmissionsComponent>
+	lateinit var moveToEntityMapper: ComponentMapper<MoveToEntityComponent>
+	lateinit var shipMapper: ComponentMapper<ShipComponent>
+	lateinit var colonyMapper: ComponentMapper<ColonyComponent>
+	lateinit var ownerMapper: ComponentMapper<EmpireComponent>
+	lateinit var partStatesMapper: ComponentMapper<PartStatesComponent>
+	lateinit var shieldMapper: ComponentMapper<ShieldComponent>
+	lateinit var armorMapper: ComponentMapper<ArmorComponent>
+	lateinit var partsHPMapper: ComponentMapper<PartsHPComponent>
+	lateinit var hpMapper: ComponentMapper<HPComponent>
+	lateinit var cargoMapper: ComponentMapper<CargoComponent>
+	lateinit var changingWorldMapper: ComponentMapper<ChangingWorldComponent>
 
 	init {
 		galaxy.world.getMapper(GalacticPositionComponent::class.java).create(galacticEntityID).set(initialPosition)
@@ -217,11 +219,11 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		shipHull.name = "Elodin"
 		shipHull.designDay = galaxy.day
 		shipHull.armorLayers = 5
-		shipHull.armorBlockHP = ByteArray(5, { 100 - 128 })
+		shipHull.armorBlockHP = UByteArray(5, { 100u })
 		shipHull.armorEnergyPerDamage = ShortArray(5, { 1000 })
-		shipHull.armorBlockHP[2] = (255 - 128).toByte()
+		shipHull.armorBlockHP[2] = 255u
 		shipHull.armorEnergyPerDamage[2] = 800.toShort()
-		shipHull.armorBlockHP[3] = (50 - 128).toByte()
+		shipHull.armorBlockHP[3] = 50u
 		shipHull.armorEnergyPerDamage[3] = 3000.toShort()
 //		shipClass.powerScheme = PowerScheme.SOLAR_REACTOR_BATTERY
 
@@ -294,12 +296,19 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		val beam = BeamWeapon(1 * Units.MEGA, 1.0, BeamWavelength.Infrared, 10 * Units.MEGA)
 		shipHull.addPart(beam)
 
-		val targetingComputer = TargetingComputer(2, 1, 0f, 10 * Units.KILO)
-		targetingComputer.name = "TC 2-10"
-		shipHull.addPart(targetingComputer)
+		val targetingComputer1 = TargetingComputer(2, 1, 0f, (0.5 * Units.AU).toLong(),10 * Units.KILO)
+		targetingComputer1.name = "TC 05-1-2"
+		shipHull.addPart(targetingComputer1)
 		
-		val tcRef: PartRef<TargetingComputer> = shipHull[TargetingComputer::class][0]
-		shipHull.defaultWeaponAssignments[tcRef] = shipHull.getPartRefs().filter({ it.part is WeaponPart })
+		val tcRef1: PartRef<TargetingComputer> = shipHull[TargetingComputer::class][0]
+		shipHull.defaultWeaponAssignments[tcRef1] = shipHull.getPartRefs().filter({ it.part is Railgun })
+		
+		val targetingComputer2 = TargetingComputer(2, 5, 0f, (2 * Units.AU).toLong(),10 * Units.KILO)
+		targetingComputer2.name = "TC 20-5-2"
+		shipHull.addPart(targetingComputer2)
+		
+		val tcRef2: PartRef<TargetingComputer> = shipHull[TargetingComputer::class][0]
+		shipHull.defaultWeaponAssignments[tcRef2] = shipHull.getPartRefs().filter({ it.part is BeamWeapon || it.part is MissileLauncher })
 
 		val ionThruster = ElectricalThruster(2000 * 982, 1 * Units.MEGA)
 		shipHull.addPart(ionThruster)
@@ -624,7 +633,6 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	override fun removed(entityIDs: IntBag) {
 		entityIDs.forEachFast { entityID ->
 			workingShadow.deleted.unsafeSet(entityID)
-			solarSystemMapper.remove(entityID)
 		}
 	}
 	

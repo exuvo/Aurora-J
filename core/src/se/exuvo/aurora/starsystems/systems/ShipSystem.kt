@@ -87,7 +87,13 @@ class ShipSystem : IteratingSystem(FAMILY), PreSystem {
 				
 				if (requestedPower != poweredState.requestedPower) {
 					poweredState.requestedPower = requestedPower
-					chargedState.expectedFullAt = galaxy.time + (leftToCharge + requestedPower - 1) / requestedPower
+					
+					if (requestedPower > 0) {
+						chargedState.expectedFullAt = galaxy.time + (leftToCharge + requestedPower - 1) / requestedPower
+					} else {
+						chargedState.expectedFullAt = 0
+					}
+					
 					powerChanged = true
 				}
 			}

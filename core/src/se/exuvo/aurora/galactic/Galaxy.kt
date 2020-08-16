@@ -438,7 +438,8 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, E
 	fun moveEntity(entityID: Int, sourceSystem: StarSystem, targetSystem: StarSystem,  targetPosition: MovementValues) {
 		val sourceWorld = sourceSystem.world
 		
-		ComponentMapper.getFor(ChangingWorldComponent::class.java, sourceWorld).create(entityID)
+		sourceSystem.solarSystemMapper.remove(entityID)
+		sourceSystem.changingWorldMapper.create(entityID)
 		
 		//TODO could we just move it? or does that cause problems
 		//TODO serialize entity, add to target system, remove from old system

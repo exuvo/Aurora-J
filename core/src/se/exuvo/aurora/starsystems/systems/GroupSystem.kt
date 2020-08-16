@@ -12,7 +12,7 @@ import com.artemis.utils.Bag
 
 class GroupSystem(val lock: ReentrantReadWriteLock = DummyReentrantReadWriteLock.INSTANCE) {
 	companion object {
-		const val SELECTED = "selected"
+//		const val SELECTED = "selected"
 		
 		@JvmField val EmptyBag = Bag<Any>(0)
 		

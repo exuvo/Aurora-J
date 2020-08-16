@@ -28,6 +28,7 @@ import se.exuvo.aurora.utils.Vector2D
 import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import se.exuvo.aurora.starsystems.StarSystem
 import com.artemis.annotations.Wire
+import imgui.api.columns
 import se.exuvo.aurora.starsystems.components.MovementValues
 import se.exuvo.aurora.utils.Units
 import org.apache.commons.math3.analysis.solvers.LaguerreSolver
@@ -54,6 +55,9 @@ import se.exuvo.aurora.starsystems.components.HPComponent
 import se.exuvo.aurora.starsystems.components.PartsHPComponent
 import se.exuvo.aurora.starsystems.components.PartStatesComponent
 import se.exuvo.aurora.starsystems.components.ShieldComponent
+import java.lang.UnsupportedOperationException
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	companion object {
@@ -638,59 +642,53 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 	fun munitionExpired(entityID: Int) {
 
 		val movement = movementMapper.get(entityID).get(galaxy.time).value
-		val laser: LaserShotComponent? = laserShotMapper.get(entityID)
-		val railgun: RailgunShotComponent? = railgunShotMapper.get(entityID)
+		val laser: LaserShotComponent?
+		val railgun: RailgunShotComponent?
 		val missile: MissileComponent? = missileMapper.get(entityID)
-
-		if (laser != null) {
-
-			val targetID = laser.targetEntityID
-
-			if (!world.getEntityManager().isActive(targetID) || !shipMapper.has(targetID)) {
-				return
-			}
-
-			val targetMovement = movementMapper.get(targetID).get(galaxy.time).value
-			val distanceFromTarget = tmpPosition.set(movement.position).sub(targetMovement.position).len()
+		
+		var targetID: Int
+		val damage: Long
+		val damagePattern: DamagePattern
+		
+		if (missile != null) {
 			
-			if (distanceFromTarget < 1000L) { //TODO < target length
-				return
-			}
+			targetID = missile.targetEntityID
+			damage = missile.damage
+			damagePattern = missile.damagePattern
 			
-//			if (laser.beamArea < 1 column) {
+		} else if (run { laser = laserShotMapper.get(entityID); true } && laser != null) {
 			
-			applyDamage(entityID, laser.damage, DamagePattern.LASER)
-				
-//			} else {
-				
-				// spread damage
-//				applyDamage(entityID, laser.damage, railgun.damagePattern)
-				
-//			}
-
-		} else if (railgun != null) {
-
-			val targetID = railgun.targetEntityID
-
-			if (!world.getEntityManager().isActive(targetID) || !shipMapper.has(targetID)) {
-				return
-			}
-
-			val targetMovement = movementMapper.get(targetID).get(galaxy.time).value
-			val distanceFromTarget = tmpPosition.set(movement.position).sub(targetMovement.position).len()
+			targetID = laser.targetEntityID
+			damage = laser.damage
+			damagePattern = DamagePattern.LASER
 			
-			if (distanceFromTarget < 1000L) {
-				return
-			}
+		} else if (run { railgun = railgunShotMapper.get(entityID); true } && railgun != null) {
 			
-			applyDamage(entityID, railgun.damage, railgun.damagePattern)
-
-		} else if (missile != null) {
-
-			val targetID = missile.targetEntityID
+			targetID = railgun.targetEntityID
+			damage = railgun.damage
+			damagePattern = railgun.damagePattern
 			
-			//TODO implement
+		} else {
+			throw UnsupportedOperationException("not laser, railgun or missile")
 		}
+		
+		if (!world.getEntityManager().isActive(targetID)) {
+			
+			if (missile != null) {
+				//TODO retarget
+			}
+			
+			return
+		}
+		
+		val targetMovement = movementMapper.get(targetID).get(galaxy.time).value
+		val distanceFromTarget = tmpPosition.set(movement.position).sub(targetMovement.position).len()
+		
+		if (distanceFromTarget < 1000L) { //TODO < 1000 + target length
+			return
+		}
+		
+		applyDamage(entityID, damage, damagePattern)
 	}
 	
 	fun applyDamage(entityID: Int, damageEnergy: Long = 0, damagePattern: DamagePattern) {
@@ -707,6 +705,14 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				return
 			}
 		}
+		
+//		if (laser.beamArea < 1 column) {
+//			single column damage
+//		} else if (laser.beamArea < half ship surface area) {
+//			spread damage across multiple columns
+//		} else {
+//			spread damage across all columns
+//		}
 		
 		val armor = armorMapper.get(entityID)
 		
@@ -826,7 +832,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		when (damagePattern) {
 			DamagePattern.LASER -> { //TODO spread laser on area
 				while(layer > 0) {
-					var armorHP: Int = 128 + armorC[--layer][damageColumn]
+					var armorHP: Int = armorC[--layer][damageColumn].toInt()
 					
 					if (armorHP > 0) {
 						val armorResistance = getArmorResistance(layer)
@@ -836,7 +842,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 						println("Damaging armor $damageColumn-$layer for $blockDamage dmg, remaining $damage")
 						
 						armorHP -= blockDamage
-						armorC[layer][damageColumn] = (armorHP - 128).toByte()
+						armorC[layer][damageColumn] = armorHP.toUByte()
 						
 						if (armorHP > 0 && damage < armorResistance) {
 							damage = 0
@@ -847,7 +853,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			}
 			DamagePattern.KINETIC -> {
 				while(layer > 0) {
-					var armorHP: Int = 128 + armorC[--layer][damageColumn]
+					var armorHP: Int = armorC[--layer][damageColumn].toInt()
 					
 					if (armorHP > 0) {
 						val armorResistance = getArmorResistance(layer)
@@ -857,7 +863,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 						println("Damaging armor $damageColumn-$layer for $blockDamage dmg, remaining $damage")
 						
 						armorHP -= blockDamage
-						armorC[layer][damageColumn] = (armorHP - 128).toByte()
+						armorC[layer][damageColumn] = armorHP.toUByte()
 						
 						if (armorHP > 0 && damage < armorResistance) {
 							damage = 0
@@ -868,7 +874,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			}
 			DamagePattern.EXPLOSIVE -> { // full damage hit block, quarter damage sides
 				while(layer > 0) {
-					var armorHP: Int = 128 + armorC[--layer][damageColumn]
+					var armorHP: Int = armorC[--layer][damageColumn].toInt()
 					
 					if (armorHP > 0) {
 						val armorResistance = getArmorResistance(layer)
@@ -878,7 +884,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 						println("Damaging armor $damageColumn-$layer for $blockDamage dmg, remaining $damage")
 						
 						armorHP -= blockDamage
-						armorC[layer][damageColumn] = (armorHP - 128).toByte()
+						armorC[layer][damageColumn] = armorHP.toUByte()
 						
 						if (armorHP > 0 && damage < armorResistance) {
 							damage = 0

@@ -44,7 +44,7 @@ tasks.withType(JavaCompile).all {
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 	kotlinOptions {
 		jvmTarget = "11"
-		freeCompilerArgs = ["-Xno-param-assertions", "-Xno-call-assertions", "-Xno-receiver-assertions"]
+		freeCompilerArgs = ["-Xno-param-assertions", "-Xno-call-assertions", "-Xno-receiver-assertions", "-Xinline-classes", "-Xopt-in=kotlin.ExperimentalUnsignedTypes"]
 	}
 }
 

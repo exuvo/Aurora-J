@@ -94,11 +94,11 @@ class EmpireOverview : UIWindow() {
 										treeNodeEx("c${system.sid}-$idx", nodeFlags, "$name - ${colony.population}")
 										
 										if (isItemClicked()) {
-											if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-												galaxyGroupSystem.clear(GroupSystem.SELECTED)
+											if (Player.current.selection.isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+												Player.current.selection.clear()
 											}
 											
-											galaxyGroupSystem.add(shadow.getEntityReference(entityID), GroupSystem.SELECTED)
+											Player.current.selection.add(shadow.getEntityReference(entityID))
 										}
 									}
 									
@@ -117,11 +117,11 @@ class EmpireOverview : UIWindow() {
 											treeNodeEx("s$entityID", nodeFlags, "$name - ${ship.hull.toString()}")
 
 											if (isItemClicked()) {
-												if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-													galaxyGroupSystem.clear(GroupSystem.SELECTED)
+												if (Player.current.selection.isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+													Player.current.selection.clear()
 												}
 
-												galaxyGroupSystem.add(shadow.getEntityReference(entityID), GroupSystem.SELECTED)
+												Player.current.selection.add(shadow.getEntityReference(entityID))
 											}
 										}
 									}
@@ -137,7 +137,7 @@ class EmpireOverview : UIWindow() {
 	}
 	
 	private fun isSelected(entityID: Int, system: StarSystem): Boolean {
-		val selection = galaxyGroupSystem.get(GroupSystem.SELECTED)
+		val selection = Player.current.selection
 		
 		for (i in 0 until selection.size()) {
 			val ref = system.shadow.resolveEntityReference(selection[i])

@@ -8,6 +8,8 @@ import se.exuvo.aurora.empires.components.ShipyardType
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.forEachFast
 import java.util.Collections
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 class ShipHull() {
 	companion object {
@@ -23,13 +25,14 @@ class ShipHull() {
 	private val parts: MutableList<Part> = ArrayList()
 	private val partRefs: MutableList<PartRef<Part>> = ArrayList()
 	var armorLayers = 1 // Centimeters of armor
-	var armorBlockHP = ByteArray(1, { 100 - 128 })
+	var armorBlockHP = UByteArray(1, { 100u })
 	var armorEnergyPerDamage = ShortArray(1, { 1000 }) // In joules
 	val preferredCargo: MutableMap<Resource, Long> = LinkedHashMap()
 	val preferredMunitions: MutableMap<MunitionHull, Int> = LinkedHashMap()
 	val preferredPartMunitions: MutableMap<PartRef<out Part>, MunitionHull> = LinkedHashMap()
 	var powerScheme: PowerScheme = PowerScheme.SOLAR_BATTERY_REACTOR
 	val defaultWeaponAssignments: MutableMap<PartRef<TargetingComputer>, List<PartRef<Part>>> = LinkedHashMap()
+	
 	val shields: MutableList<PartRef<Part>> = ArrayList()
 	val thrusters: MutableList<PartRef<Part>> = ArrayList()
 	
@@ -99,19 +102,19 @@ class ShipHull() {
 			addPart(part)
 		}
 		
-		parentHull.preferredCargo.forEach{ resource, amount ->
+		parentHull.preferredCargo.forEach{ (resource, amount) ->
 			preferredCargo[resource] = amount
 		}
 		
-		parentHull.preferredMunitions.forEach{ munitionHull, amount ->
+		parentHull.preferredMunitions.forEach{ (munitionHull, amount) ->
 			preferredMunitions[munitionHull] = amount
 		}
 		
-		parentHull.preferredPartMunitions.forEach{ partRef, munitionHull ->
+		parentHull.preferredPartMunitions.forEach{ (partRef, munitionHull) ->
 			preferredPartMunitions[partRef] = munitionHull
 		}
 		
-		parentHull.defaultWeaponAssignments.forEach{ partRef, partRefs ->
+		parentHull.defaultWeaponAssignments.forEach{ (partRef, partRefs) ->
 			defaultWeaponAssignments[partRef] = ArrayList(partRefs)
 		}
 		
@@ -213,8 +216,8 @@ class ShipHull() {
 	// cm²
 	fun calculateSurfaceArea(): Long {
 		// V = πr^2h, http://mathhelpforum.com/geometry/170076-how-find-cylinder-dimensions-volume-aspect-ratio.html
-		val length = Math.pow(Math.pow(2.0, 2 * lengthToDiameterRatio) * volume / Math.PI, 1.0 / 3)
-		val radius = Math.sqrt(volume / Math.PI / length)
+		val length = (2.0.pow(2 * lengthToDiameterRatio) * volume / Math.PI).pow(1.0 / 3)
+		val radius = sqrt(volume / Math.PI / length)
 
 		val surface = 2 * Math.PI * radius * length + 2 * Math.PI * radius * radius
 
@@ -231,7 +234,7 @@ class ShipHull() {
 		val cost = HashMap<Resource, Long>()
 		
 		parts.forEachFast { part ->
-			part.cost.forEach{ resource, amount ->
+			part.cost.forEach{ (resource, amount) ->
 				var prevCost = cost[resource]
 				
 				if (prevCost == null) {

@@ -1,6 +1,8 @@
 package se.exuvo.aurora.galactic
 
+import com.artemis.utils.Bag
 import org.apache.logging.log4j.LogManager
+import se.exuvo.aurora.starsystems.components.EntityReference
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
 
@@ -17,10 +19,7 @@ class Player(var name: String) {
 	var speedSteps = listOf(1, 4, 10, 50, 200, 1000, 5000, 25000, 60000)
 	var speedIndex = 0
 	var requestedSpeed = Units.NANO_SECOND / speedSteps[speedIndex]
-
-	init {
-		//TODO read speedSteps from config
-	}
+	val selection = Bag<EntityReference>()
 	
 	fun increaseSpeed() {
 		if (speedIndex < speedSteps.size - 1) {

@@ -57,7 +57,7 @@ class RailgunShotComponent() : PooledComponent(), CloneableComponent<RailgunShot
 class MissileComponent() : PooledComponent(), CloneableComponent<MissileComponent> {
 	lateinit var hull: AdvancedMunitionHull
 	var targetEntityID: Int = -1
-	var damage: Int = 0
+	var damage: Long = 0
 	lateinit var damagePattern: DamagePattern
 
 	fun set(munitionHull: AdvancedMunitionHull,

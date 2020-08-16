@@ -253,61 +253,95 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 	}
 	
 	private fun commandMenu() {
-		
-		if (commandMenuOpen) {
-			ImGui.openPopup("CommandMenu");
-			commandMenuOpen = false
-		}
-		
-		if (beginPiePopup("CommandMenu", imgui.MouseButton.Right)) {
-			
-			if (commandMenuClose) {
-				ImGui.closeCurrentPopup();
-				commandMenuClose = false
-			}
-			
-			if (pieMenuItem("Test1")) {
-//					commandMenuVisible = false
-				println("1")
-			}
-			
-			if (pieMenuItem("Test2")) {println("2")}
-
-			if (pieMenuItem("Test3", false)) {println("3")}
-
-			if (beginPieMenu("Sub")) {
+		with (ImGui) {
+			with (imgui.dsl) {
+				if (commandMenuOpen) {
+					openPopup("CommandMenu");
+					commandMenuOpen = false
+				}
 				
-				if (beginPieMenu("Sub sub\nmenu")) {
-					if (pieMenuItem("SubSub")) {println("subsub1")}
-					if (pieMenuItem("SubSub2")) {println("subsub2")}
+				//TODO get selection intersection of supported actions from Player.current.selection
+				//TODO add click support to beginPieMenu
+				//TODO add hover support to pieMenuItem
+				
+				if (beginPiePopup("CommandMenu", imgui.MouseButton.Right)) {
 					
-					if (beginPieMenu("Sub sub\nmenu")) {
-						if (pieMenuItem("SubSub")) {println("subsub1")}
-						if (pieMenuItem("SubSub2")) {println("subsub2")}
+					if (commandMenuClose) {
+						closeCurrentPopup();
+						commandMenuClose = false
+					}
+					
+					if (beginPieMenu("Move")) {
+						if (isItemClicked()) {
+							println("move click")
+						}
+						if (pieMenuItem("Toggle Chemical Thrusters")) {
+						
+						}
+						if (pieMenuItem("Hyper drive")) {
+						}
+						if (isItemHovered()) {
+							println("hyper drive hovered")
+							setTooltip("Open hyper drive window")
+						}
+						if (pieMenuItem("Jump drive")) {
+						
+						}
+						if (pieMenuItem("Alcubierre drive")) {
+						
+						}
+						
+						endPieMenu();
+					}
+					
+					if (beginPieMenu("Attack")) {
+						if (pieMenuItem("Kinetic bombardment")) {
+						
+						}
+						
+						endPieMenu();
+					}
+					
+					if (pieMenuItem("Test2")) {println("2")}
+		
+					if (pieMenuItem("Test3", false)) {println("3")}
+					
+		
+					if (beginPieMenu("Sub")) {
+						
+						if (beginPieMenu("Sub sub\nmenu")) {
+							if (pieMenuItem("SubSub")) {println("subsub1")}
+							if (pieMenuItem("SubSub2")) {println("subsub2")}
+							
 							if (beginPieMenu("Sub sub\nmenu")) {
 								if (pieMenuItem("SubSub")) {println("subsub1")}
 								if (pieMenuItem("SubSub2")) {println("subsub2")}
-								if (beginPieMenu("Sub sub\nmenu")) {
-									if (pieMenuItem("SubSub")) {println("subsub1")}
-									if (pieMenuItem("SubSub2")) {println("subsub2")}
-										
+									if (beginPieMenu("Sub sub\nmenu")) {
+										if (pieMenuItem("SubSub")) {println("subsub1")}
+										if (pieMenuItem("SubSub2")) {println("subsub2")}
+										if (beginPieMenu("Sub sub\nmenu")) {
+											if (pieMenuItem("SubSub")) {println("subsub1")}
+											if (pieMenuItem("SubSub2")) {println("subsub2")}
+												
+												endPieMenu();
+											}
 										endPieMenu();
 									}
 								endPieMenu();
 							}
+							
+							endPieMenu();
+						}
+						
+						if (pieMenuItem("TestSub")) {println("sub1")}
+						if (pieMenuItem("TestSub2")) {println("sub2")}
+						
 						endPieMenu();
 					}
-					
-					endPieMenu();
+		
+					endPiePopup();
 				}
-				
-				if (pieMenuItem("TestSub")) {println("sub1")}
-				if (pieMenuItem("TestSub2")) {println("sub2")}
-				
-				endPieMenu();
 			}
-
-			endPiePopup();
 		}
 	}
 	

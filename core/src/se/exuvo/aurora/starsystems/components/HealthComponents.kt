@@ -33,15 +33,15 @@ class ShieldComponent() : Component(), CloneableComponent<ShieldComponent> {
 }
 
 class ArmorComponent() : Component(), CloneableComponent<ArmorComponent> {
-	var armor: Array<ByteArray>? = null // [layer][armor column] = hp
+	var armor: Array<UByteArray>? = null // [layer][armor column] = hp
 	
 	fun set(hull: ShipHull) {
-		armor = Array<ByteArray>(hull.armorLayers, { layer -> ByteArray(hull.getArmorWidth(), { hull.armorBlockHP[layer] }) }) // 1 armor block per m2
+		armor = Array<UByteArray>(hull.armorLayers, { layer -> UByteArray(hull.getArmorWidth(), { hull.armorBlockHP[layer] }) }) // 1 armor block per m2
 	}
 	
 	fun set(hull: AdvancedMunitionHull) {
-		val armorWidth = hull.getSurfaceArea() / 1000000
-		armor = Array<ByteArray>(hull.armorLayers, { _ -> ByteArray(armorWidth, { hull.armorBlockHP }) }) // 1 armor block per m2
+		val armorWidth = maxOf(1, hull.getSurfaceArea() / 1000000)
+		armor = Array<UByteArray>(hull.armorLayers, { _ -> UByteArray(armorWidth, { hull.armorBlockHP }) }) // 1 armor block per m2
 	}
 	
 	override fun copy(tc: ArmorComponent) {
@@ -49,7 +49,7 @@ class ArmorComponent() : Component(), CloneableComponent<ArmorComponent> {
 		val tcArmor = tc.armor
 		
 		if (tcArmor == null || tcArmor.size != armor.size || tcArmor[0].size != armor[0].size) {
-			tc.armor = Array<ByteArray>(armor.size, {layer -> ByteArray(armor[0].size, { column -> armor[layer][column] }) })
+			tc.armor = Array<UByteArray>(armor.size, {layer -> UByteArray(armor[0].size, { column -> armor[layer][column] }) })
 			
 		} else {
 			armor.forEachIndexed { layerIndex, layer ->
@@ -60,7 +60,7 @@ class ArmorComponent() : Component(), CloneableComponent<ArmorComponent> {
 		}
 	}
 	
-	operator fun get(index: Int): ByteArray = armor!![index]
+	operator fun get(index: Int): UByteArray = armor!![index]
 }
 
 class PartsHPComponent() : Component(), CloneableComponent<PartsHPComponent> {

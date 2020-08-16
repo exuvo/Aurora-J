@@ -196,7 +196,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 
 		} else if (action == KeyActions_StarSystemScreen.ATTACK) {
 
-			if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
+			if (Player.current.selection.isNotEmpty()) {
 				selectedAction = KeyActions_StarSystemScreen.ATTACK
 				println("Selected action " + action)
 			} else {
@@ -329,12 +329,12 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 
 								dragSelectPotentialStart = false;
 
-								if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-									galaxyGroupSystem.clear(GroupSystem.SELECTED)
+								if (Player.current.selection.isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+									Player.current.selection.clear()
 //								println("cleared selection")
 								}
 
-								galaxyGroupSystem.add(entitiesUnderMouse, GroupSystem.SELECTED)
+								Player.current.selection.addAll(entitiesUnderMouse)
 
 							} else {
 
@@ -348,8 +348,8 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 						} else if (selectedAction == KeyActions_StarSystemScreen.ATTACK) {
 							selectedAction = null
 
-							if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
-								val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED).filter { entityRef ->
+							if (Player.current.selection.isNotEmpty()) {
+								val selectedEntities = Player.current.selection.filter { entityRef ->
 									system == entityRef.system && weaponFamilyAspect.isInterested(entityRef.entityID)
 								}
 								
@@ -438,8 +438,8 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 		if (button == Input.Buttons.LEFT) {
 			
 			if (dragSelect) {
-				if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-					galaxyGroupSystem.clear(GroupSystem.SELECTED)
+				if (Player.current.selection.isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+					Player.current.selection.clear()
 	//				println("cleared selection")
 				}
 	
@@ -469,7 +469,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 				}
 	
 				if (entitiesInSelection.isNotEmpty()) {
-					galaxyGroupSystem.add(entitiesInSelection, GroupSystem.SELECTED)
+					Player.current.selection.addAll(entitiesInSelection)
 	//				println("drag selected ${entitiesInSelection.size} entities")
 				}
 	
@@ -478,8 +478,8 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 			}
 	
 			if (dragSelectPotentialStart) {
-				if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-					galaxyGroupSystem.clear(GroupSystem.SELECTED)
+				if (Player.current.selection.isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+					Player.current.selection.clear()
 	//				println("cleared selection")
 				}
 			}
@@ -489,15 +489,14 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 			
 			commandMenuPotentialStart = false
 			
-			if (galaxyGroupSystem.get(GroupSystem.SELECTED).isNotEmpty()) {
+			if (Player.current.selection.isNotEmpty()) {
 
 				galaxy.shadowLock.withLock {
 					val movementFamilyAspect = system.shadow.world.getAspectSubscriptionManager().get(MovementSystem.CAN_ACCELERATE_FAMILY).aspect
 					val directSelectionSubscription = system.shadow.world.getAspectSubscriptionManager().get(DIRECT_SELECTION_FAMILY)
 					val renderSystem = system.shadow.world.getSystem(RenderSystem::class.java)
 					
-					val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED).filter { entityRef ->
-	
+					val selectedEntities = Player.current.selection.filter { entityRef ->
 						system == entityRef.system && movementFamilyAspect.isInterested(entityRef.entityID)
 					}
 	

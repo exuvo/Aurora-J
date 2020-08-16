@@ -34,7 +34,7 @@ companion object {
 	val shipHulls = ArrayList<ShipHull>()
 	val hullClasses = ArrayList<ShipHullClass>()
 	val orders = Bag<EntityReference>()
-	var commandQueue = ArrayBlockingQueue<Command>(128)
+	var commandQueue = ArrayBlockingQueue<Command>(128) // For local player and ai
 	
 	init {
 		hullClasses.add(ShipHullClass("Dreadnought", "BA"))

@@ -47,6 +47,7 @@ import imgui.u32
 import se.exuvo.aurora.galactic.DamagePattern
 import se.exuvo.aurora.galactic.PartRef
 import se.exuvo.aurora.galactic.Part
+import se.exuvo.aurora.galactic.Player
 import se.exuvo.aurora.galactic.Shield
 import se.exuvo.aurora.starsystems.components.ArmorComponent
 import se.exuvo.aurora.starsystems.components.CargoComponent
@@ -79,7 +80,7 @@ class ShipDebugger : UIWindow() {
 		
 					if (begin("Ship debug", ::visible, WindowFlag.AlwaysAutoResize.i)) {
 		
-						val selectedEntities = galaxyGroupSystem.get(GroupSystem.SELECTED)
+						val selectedEntities = Player.current.selection
 		
 						if (selectedEntities.isEmpty()) {
 							textUnformatted("Nothing selected")
@@ -400,8 +401,8 @@ class ShipDebugger : UIWindow() {
 												
 												pushID(y * 31 + x)
 												
-												val armorHP = 128 + armor[y][x]
-												val maxArmorHP = 128 + shipComponent.hull.armorBlockHP[y]
+												val armorHP = armor[y][x].toInt()
+												val maxArmorHP = shipComponent.hull.armorBlockHP[y].toInt()
 												
 												if (armorBlock(armorHP.toFloat(), maxArmorHP.toFloat())) {
 													setTooltip("$armorHP / $maxArmorHP, resistance ${shipComponent.hull.armorEnergyPerDamage[y]}")
@@ -468,7 +469,7 @@ class ShipDebugger : UIWindow() {
 										if (buttonEx("kill armor", Vec2(), buttonFlags)) {
 											for (y in 0..shipComponent.hull.armorLayers - 1) {
 												for (x in 0..shipComponent.hull.getArmorWidth() - 1) {
-													armor[y][x] = -128
+													armor[y][x] = 0u
 												}
 											}
 										}
