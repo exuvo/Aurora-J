@@ -255,6 +255,34 @@ public class Vector2L implements Serializable {
 		final long y_d = y - this.y;
 		return FastMath.hypot(x_d, y_d);
 	}
+	
+	/**
+	 * Errors between -1.5% (on axes) and +7.5% (on lobes) and an average error of +0.043%.
+	 * From https://gamedev.stackexchange.com/a/69255/142645 and https://www.flipcode.com/archives/Fast_Approximate_Distance_Functions.shtml
+	 */
+	public double dstAprox(Vector2L v) {
+		long dx = FastMath.abs(v.x - x);
+		long dy = FastMath.abs(v.y - y);
+		
+		long min, max;
+		
+		if (dx < dy) {
+			min = dx;
+			max = dy;
+		} else {
+			min = dy;
+			max = dx;
+		}
+		
+		long approx = 1007 * max + 441 * min;
+		
+		if (max < 16 * min) {
+			approx -= 40 * max;
+		}
+		
+		// add 512 for proper rounding
+		return (approx + 512) >> 10; // div 1024
+	}
 
 	public Vector2L limit(long limit) {
 		double len = len();

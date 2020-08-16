@@ -238,6 +238,16 @@ public class Vector2D implements Serializable {
 		final double y_d = y - this.y;
 		return x_d * x_d + y_d * y_d;
 	}
+	
+	/**
+	 * Errors between -5% (on axes) and +3% (on lobes) and an average error of +0.043%.
+	 * From https://gamedev.stackexchange.com/a/69255/142645
+	 */
+	public double dstAprox(Vector2D v) {
+		double dx = FastMath.abs(v.x - x);
+		double dy = FastMath.abs(v.y - y);
+		return 0.394 * (dx + dy) + 0.554 * FastMath.max(dx, dy);
+	}
 
 	public Vector2D limit(double limit) {
 		return limit2(limit * limit);
