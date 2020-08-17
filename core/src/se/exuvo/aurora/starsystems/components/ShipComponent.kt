@@ -1,6 +1,7 @@
 package se.exuvo.aurora.starsystems.components
 
 import com.artemis.Component
+import com.artemis.PooledComponent
 import se.exuvo.aurora.galactic.CargoType
 import se.exuvo.aurora.galactic.Resource
 import se.exuvo.aurora.galactic.ShipHull
@@ -16,7 +17,7 @@ import se.exuvo.aurora.galactic.BeamWeapon
 import se.exuvo.aurora.galactic.MissileLauncher
 import se.exuvo.aurora.galactic.Railgun
 
-class ShipComponent() : Component(), CloneableComponent<ShipComponent> {
+class ShipComponent() : PooledComponent(), CloneableComponent<ShipComponent> {
 	lateinit var hull: ShipHull
 	var commissionTime: Long = -1
 	var heat: Long = 0
@@ -47,6 +48,8 @@ class ShipComponent() : Component(), CloneableComponent<ShipComponent> {
 		
 		}
 	}
+	
+	override fun reset() {}
 }
 
 

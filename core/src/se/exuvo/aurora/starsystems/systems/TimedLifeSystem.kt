@@ -33,13 +33,11 @@ class TimedLifeSystem : BaseEntitySystem(ASPECT) {
 	
 	private var selfRemovedEntityIDs = BitVector()
 	
-	private var queue = PriorityQueue<Int>(object : Comparator<Int> {
-		override fun compare(a: Int, b: Int): Int {
-			val timedLifeA = timedLifeMapper.get(a).endTime
-			val timedLifeB = timedLifeMapper.get(b).endTime
-			
-			return timedLifeA.compareTo(timedLifeB)
-		}
+	private var queue = PriorityQueue<Int>(Comparator<Int> { a, b ->
+		val timedLifeA = timedLifeMapper.get(a).endTime
+		val timedLifeB = timedLifeMapper.get(b).endTime
+		
+		timedLifeA.compareTo(timedLifeB)
 	})
 	
 	override fun inserted(entityID: Int): Unit {

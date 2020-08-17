@@ -11,3 +11,10 @@ class PowerEvent(var entityID: Int = -1): Event {
 		return this
 	}
 }
+
+class NonLinearMovementEvent(var entityID: Int = -1): Event {
+	fun set(entityID: Int): NonLinearMovementEvent {
+		this.entityID = entityID
+		return this
+	}
+}

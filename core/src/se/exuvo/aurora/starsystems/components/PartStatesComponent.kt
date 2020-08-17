@@ -1,6 +1,7 @@
 package se.exuvo.aurora.starsystems.components
 
 import com.artemis.Component
+import com.artemis.PooledComponent
 import com.artemis.utils.Bag
 import se.exuvo.aurora.galactic.AdvancedMunitionHull
 import se.exuvo.aurora.galactic.AmmunitionPart
@@ -18,7 +19,7 @@ import java.util.*
 import kotlin.collections.HashMap
 import kotlin.reflect.KClass
 
-class PartStatesComponent() : Component(), CloneableComponent<PartStatesComponent> {
+class PartStatesComponent() : PooledComponent(), CloneableComponent<PartStatesComponent> {
 	var hullHashcode = 0
 	lateinit var partEnabled: BooleanArray
 	lateinit var partStates: Array<PartStates>
@@ -128,6 +129,8 @@ class PartStatesComponent() : Component(), CloneableComponent<PartStatesComponen
 		
 		return this
 	}
+	
+	override fun reset() {}
 	
 	override fun copy(tc: PartStatesComponent) {
 		if (tc.hullHashcode != hullHashcode) {

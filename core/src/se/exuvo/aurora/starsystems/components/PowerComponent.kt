@@ -1,6 +1,7 @@
 package se.exuvo.aurora.starsystems.components
 
 import com.artemis.Component
+import com.artemis.PooledComponent
 import se.exuvo.aurora.galactic.Battery
 import se.exuvo.aurora.galactic.Part
 import se.exuvo.aurora.galactic.Reactor
@@ -9,7 +10,7 @@ import kotlin.reflect.KClass
 import java.security.InvalidParameterException
 import se.exuvo.aurora.galactic.PartRef
 
-class PowerComponent() : Component(), CloneableComponent<PowerComponent> {
+class PowerComponent() : PooledComponent(), CloneableComponent<PowerComponent> {
 	lateinit var powerScheme: PowerScheme
 	var stateChanged = true
 	var totalAvailablePower = 0L
@@ -26,6 +27,15 @@ class PowerComponent() : Component(), CloneableComponent<PowerComponent> {
 		return this
 	}
 	
+	override fun reset() {
+		totalAvailablePower = 0L
+		totalAvailableSolarPower = 0L
+		totalRequestedPower = 0L
+		totalUsedPower = 0L
+		poweringParts.clear()
+		poweredParts.clear()
+		chargedParts.clear()
+	}
 	override fun copy(tc: PowerComponent) {
 		tc.powerScheme = powerScheme
 		tc.stateChanged = stateChanged
@@ -67,6 +77,7 @@ class PowerComponent() : Component(), CloneableComponent<PowerComponent> {
 		tc.totalRequestedPower == totalRequestedPower &&
 		tc.totalUsedPower == totalUsedPower
 	}
+	
 }
 
 enum class PowerScheme(val chargeBatteryFromReactor: Boolean, private val powerTypeCompareMap: Map<KClass<out Part>, Int>) {

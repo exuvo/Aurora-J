@@ -95,6 +95,7 @@ import se.exuvo.aurora.starsystems.components.HPComponent
 import se.exuvo.aurora.starsystems.components.PartStatesComponent
 import se.exuvo.aurora.starsystems.components.PartsHPComponent
 import se.exuvo.aurora.starsystems.components.ShieldComponent
+import se.exuvo.aurora.starsystems.systems.SpatialPartitioningSystem
 import se.exuvo.aurora.starsystems.systems.TargetingSystem
 import uk.co.omegaprime.btreemap.LongObjectBTreeMap
 import java.util.concurrent.ArrayBlockingQueue
@@ -185,6 +186,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		worldBuilder.with(WeaponSystem())
 		worldBuilder.with(PowerSystem())
 		worldBuilder.with(TimedLifeSystem())
+		worldBuilder.with(SpatialPartitioningSystem())
 		worldBuilder.register(CustomSystemInvocationStrategy(this))
 		
 		val worldConfig = worldBuilder.build()
@@ -429,6 +431,16 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		
 		registerShip(entity4, empire1, shipHull.emptyMass)
 		
+//		createShip(shipHull, entity2, empire1)
+//		createShip(shipHull, entity2, empire1)
+//		createShip(shipHull, entity2, empire1)
+//		createShip(shipHull, entity2, empire1)
+//		createShip(shipHull, entity2, empire1)
+//		createShip(shipHull, entity2, empire1)
+//		createShip(shipHull, entity2, empire1)
+//		createShip(shipHull, entity2, empire1)
+//		createShip(shipHull, entity2, empire1)
+		
 		val entity5 = createEntity(Empire.GAIA)
 		timedMovementMapper.create(entity5).apply {previous.value.velocity.set(0L, 1000 * 100L); previous.value.position.set(- (Units.AU * 1000 * 0.5).toLong(), 0) }
 		renderMapper.create(entity5)
@@ -472,7 +484,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		
 		if (colonyEntity != null) {
 			
-			val colony = colonyMapper.get(colonyEntity)
+			val colony = colonyMapper.get(colonyEntity)!!
 			val colonyMovement = timedMovementMapper.get(colonyEntity)
 			val colonyPos = colonyMovement.get(galaxy.time)
 			

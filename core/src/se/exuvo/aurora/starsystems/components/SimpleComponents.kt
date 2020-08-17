@@ -62,6 +62,7 @@ class StrategicIconComponent() : PooledComponent(), CloneableComponent<Strategic
 	}
 }
 
+// in m
 class CircleComponent() : PooledComponent(), CloneableComponent<CircleComponent> {
 	var radius: Float = 1f
 	

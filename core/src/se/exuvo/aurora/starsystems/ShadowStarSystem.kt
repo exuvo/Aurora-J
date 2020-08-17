@@ -266,6 +266,8 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 			}
 		}
 		profilerEvents.end()
+		
+		//TODO copy SpatialPartitioning
 	}
 	
 	fun getEntityReference(entityID: Int): EntityReference {

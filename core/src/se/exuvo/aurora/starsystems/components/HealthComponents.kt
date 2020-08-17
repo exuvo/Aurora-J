@@ -1,6 +1,7 @@
 package se.exuvo.aurora.starsystems.components
 
 import com.artemis.Component
+import com.artemis.PooledComponent
 import com.artemis.utils.Bag
 import se.exuvo.aurora.galactic.AdvancedMunitionHull
 import se.exuvo.aurora.galactic.Part
@@ -10,7 +11,7 @@ import se.exuvo.aurora.utils.forEachFast
 import uk.co.omegaprime.btreemap.LongObjectBTreeMap
 import java.security.InvalidParameterException
 
-class ShieldComponent() : Component(), CloneableComponent<ShieldComponent> {
+class ShieldComponent() : PooledComponent(), CloneableComponent<ShieldComponent> {
 	var shieldHP = 0L
 	
 	fun set(hull: ShipHull, partStates: PartStatesComponent): Long {
@@ -30,9 +31,11 @@ class ShieldComponent() : Component(), CloneableComponent<ShieldComponent> {
 	override fun copy(tc: ShieldComponent) {
 		tc.shieldHP = shieldHP
 	}
+	
+	override fun reset() {}
 }
 
-class ArmorComponent() : Component(), CloneableComponent<ArmorComponent> {
+class ArmorComponent() : PooledComponent(), CloneableComponent<ArmorComponent> {
 	var armor: Array<UByteArray>? = null // [layer][armor column] = hp
 	
 	fun set(hull: ShipHull) {
@@ -61,9 +64,10 @@ class ArmorComponent() : Component(), CloneableComponent<ArmorComponent> {
 	}
 	
 	operator fun get(index: Int): UByteArray = armor!![index]
+	override fun reset() {}
 }
 
-class PartsHPComponent() : Component(), CloneableComponent<PartsHPComponent> {
+class PartsHPComponent() : PooledComponent(), CloneableComponent<PartsHPComponent> {
 	var totalPartHP: Int = -1
 	lateinit var partHP: ByteArray
 	var damageablePartsMaxVolume = 0L
@@ -207,9 +211,11 @@ class PartsHPComponent() : Component(), CloneableComponent<PartsHPComponent> {
 		
 		list.add(partRef)
 	}
+	
+	override fun reset() {}
 }
 
-class HPComponent() : Component(), CloneableComponent<HPComponent> {
+class HPComponent() : PooledComponent(), CloneableComponent<HPComponent> {
 	var health: Short = -1
 	
 	fun set(health: Short) {
@@ -227,5 +233,7 @@ class HPComponent() : Component(), CloneableComponent<HPComponent> {
 	override fun copy(tc: HPComponent) {
 		tc.health = health
 	}
+	
+	override fun reset() {}
 }
 

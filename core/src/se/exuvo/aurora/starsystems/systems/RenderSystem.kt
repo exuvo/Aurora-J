@@ -75,6 +75,8 @@ import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.Vector2D
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEachFast
+import se.exuvo.aurora.utils.quadtree.IQtVisitor
+import se.exuvo.aurora.utils.quadtree.QuadtreeAABB
 import se.exuvo.aurora.utils.sRGBtoLinearRGB
 import se.exuvo.aurora.utils.scanCircleSector
 import se.exuvo.aurora.utils.toLinearRGB
@@ -1393,29 +1395,30 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	private fun drawSpatialPartitioning() {
 		
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-		shapeRenderer.color = sRGBtoLinearRGB(Color.YELLOW)
 		
-		//TODO implement
-//		selectedEntityIDs.forEachFast { entityID ->
-//
-//			val movement = movementMapper.get(entityID).get(galaxy.time).value
-//			val x = (movement.getXinKM() - cameraOffset.x).toFloat()
-//			val y = (movement.getYinKM() - cameraOffset.y).toFloat()
-//
-//			if (strategicIconMapper.has(entityID) && inStrategicView(entityID)) {
-//
-//				val radius = scale * STRATEGIC_ICON_SIZE / 2 + 3 * scale
-//				val segments = getCircleSegments(radius, scale)
-//				shapeRenderer.circle(x, y, radius, segments)
-//
-//			} else {
-//
-//				val circle = circleMapper.get(entityID)
-//				val radius = circle.radius / 1000 + 3 * scale
-//				val segments = getCircleSegments(radius, scale)
-//				shapeRenderer.circle(x, y, radius, segments)
-//			}
-//		}
+		val spSys = shadowSystem.system.world.getSystem(SpatialPartitioningSystem::class.java)
+		val max2 = SpatialPartitioningSystem.MAX / 2
+		
+		println()
+		spSys.tree.traverse(object: IQtVisitor{
+			override fun leaf(qt: QuadtreeAABB?, node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
+				println("leaf node $node, depth $depth, $mx $my $sx $sy")
+				shapeRenderer.color = sRGBtoLinearRGB(Color.YELLOW)
+				shapeRenderer.rect((1000 * (mx - sx - max2) - cameraOffset.x).toFloat(),
+				                   (1000 * (my - sy - max2) - cameraOffset.y).toFloat(),
+				                   (2000 * sx).toFloat(),
+				                   (2000 * sy).toFloat())
+			}
+			
+			override fun branch(qt: QuadtreeAABB?, node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
+				println("branch node $node, depth $depth, $mx $my $sx $sy")
+				shapeRenderer.color = sRGBtoLinearRGB(Color.TEAL)
+				shapeRenderer.rect((1000 * (mx - sx - max2) - cameraOffset.x).toFloat(),
+				                   (1000 * (my - sy - max2) - cameraOffset.y).toFloat(),
+				                   (2000 * sx).toFloat(),
+				                   (2000 * sy).toFloat())
+			}
+		})
 		
 		shapeRenderer.end()
 	}

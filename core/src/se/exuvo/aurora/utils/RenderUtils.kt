@@ -99,21 +99,36 @@ fun ShapeRenderer.scanCircleSector(x: Double, y: Double, radiusOuter: Double, ra
 	if (segments <= 0) {
 		throw IllegalArgumentException("segments must be > 0.")
 	}
+	
+	val newVertices: Int
+	
+	if (getCurrentType() == ShapeType.Line) {
+		newVertices = segments * 8 * 2 + 16
+	} else {
+		newVertices = segments * 12 * 2
+	}
+	
+	if (renderer.maxVertices - renderer.numVertices < newVertices) {
+		// Not enough space.
+		val type = getCurrentType()
+		end()
+		begin(type)
+	}
 
 	val colorBits = color.toFloatBits();
 	val theta: Double = (2 * Math.PI * (degrees / 360.0)) / segments;
-	val cos: Double = Math.cos(theta);
-	val sin: Double = Math.sin(theta);
-	var cx: Double = radiusOuter * Math.cos(Math.toRadians(start));
-	var cy: Double = radiusOuter * Math.sin(Math.toRadians(start));
-	var cx2: Double = radiusInner * Math.cos(Math.toRadians(start));
-	var cy2: Double = radiusInner * Math.sin(Math.toRadians(start));
+	val cos: Double = FastMath.cos(theta);
+	val sin: Double = FastMath.sin(theta);
+	var cx: Double = radiusOuter * FastMath.cos(Math.toRadians(start));
+	var cy: Double = radiusOuter * FastMath.sin(Math.toRadians(start));
+	var cx2: Double = radiusInner * FastMath.cos(Math.toRadians(start));
+	var cy2: Double = radiusInner * FastMath.sin(Math.toRadians(start));
 
 	this.scanCircleSectorInner(x, y, cos, sin, cx, cy, cx2, cy2, segments)
 
 	val theta2: Double = 2 * MathUtils.PI * (degrees / 360.0f)
-	val cos2: Double = Math.cos(theta2)
-	val sin2: Double = Math.sin(theta2)
+	val cos2: Double = FastMath.cos(theta2)
+	val sin2: Double = FastMath.sin(theta2)
 
 	val x1End = cos2 * cx - sin2 * cy
 	val y1End = sin2 * cx + cos2 * cy

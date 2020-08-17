@@ -199,6 +199,9 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 								if (ImGui.menuItem("DrawWeaponRangesWithoutShader", "", RenderSystem.debugDrawWeaponRangesWithoutShader)) {
 									RenderSystem.debugDrawWeaponRangesWithoutShader = !RenderSystem.debugDrawWeaponRangesWithoutShader
 								}
+								if (ImGui.menuItem("debugSpatialPartitioning", "", RenderSystem.debugSpatialPartitioning)) {
+									RenderSystem.debugSpatialPartitioning = !RenderSystem.debugSpatialPartitioning
+								}
 								ImGui.endMenu();
 							}
 							ImGui.endMenuBar();
