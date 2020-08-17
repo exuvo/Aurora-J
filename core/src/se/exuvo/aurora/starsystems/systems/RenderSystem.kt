@@ -1398,25 +1398,26 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		
 		val spSys = shadowSystem.system.world.getSystem(SpatialPartitioningSystem::class.java)
 		val max2 = SpatialPartitioningSystem.MAX / 2
+		val scale = SpatialPartitioningSystem.SCALE / 1000L
 		
-		println()
+//		println()
 		spSys.tree.traverse(object: IQtVisitor{
 			override fun leaf(qt: QuadtreeAABB?, node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
-				println("leaf node $node, depth $depth, $mx $my $sx $sy")
+//				println("leaf node $node, depth $depth, $mx $my $sx $sy")
 				shapeRenderer.color = sRGBtoLinearRGB(Color.YELLOW)
-				shapeRenderer.rect((1000 * (mx - sx - max2) - cameraOffset.x).toFloat(),
-				                   (1000 * (my - sy - max2) - cameraOffset.y).toFloat(),
-				                   (2000 * sx).toFloat(),
-				                   (2000 * sy).toFloat())
+				shapeRenderer.rect((scale * (mx - sx - max2) - cameraOffset.x).toFloat(),
+				                   (scale * (my - sy - max2) - cameraOffset.y).toFloat(),
+				                   (2 * scale * sx).toFloat(),
+				                   (2 * scale * sy).toFloat())
 			}
 			
 			override fun branch(qt: QuadtreeAABB?, node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
-				println("branch node $node, depth $depth, $mx $my $sx $sy")
+//				println("branch node $node, depth $depth, $mx $my $sx $sy")
 				shapeRenderer.color = sRGBtoLinearRGB(Color.TEAL)
-				shapeRenderer.rect((1000 * (mx - sx - max2) - cameraOffset.x).toFloat(),
-				                   (1000 * (my - sy - max2) - cameraOffset.y).toFloat(),
-				                   (2000 * sx).toFloat(),
-				                   (2000 * sy).toFloat())
+				shapeRenderer.rect((scale * (mx - sx - max2) - cameraOffset.x).toFloat(),
+				                   (scale * (my - sy - max2) - cameraOffset.y).toFloat(),
+				                   (2 * scale * sx).toFloat(),
+				                   (2 * scale * sy).toFloat())
 			}
 		})
 		

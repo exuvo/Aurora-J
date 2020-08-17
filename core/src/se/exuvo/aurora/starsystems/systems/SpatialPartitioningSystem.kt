@@ -28,8 +28,11 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 		
 		@JvmField val log = LogManager.getLogger(SpatialPartitioningSystem::class.java)
 		
-		const val MAX: Int = (14 * Units.AU / 1000).toInt()
-//		const val MAX: Int = Int.MAX_VALUE
+//		const val SCALE: Int = 1000_0000 // in m , min 1000
+		const val SCALE: Int = 2_000 // in m , min 1000
+//		const val MAX: Int = (15 * Units.AU / (SCALE / 1000)).toInt()
+		const val MAX: Int = Int.MAX_VALUE
+		//TODO calculate depth from scale and max to keep min subdivision size constant
 	}
 
 	lateinit var canAccelerateAspect: Aspect
@@ -43,7 +46,7 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 	lateinit private var circleMapper: ComponentMapper<CircleComponent>
 	lateinit private var spatialPartitioningMapper: ComponentMapper<SpatialPartitioningComponent>
 
-	val tree = QuadtreeAABB(MAX, MAX, 2, 8)
+	val tree = QuadtreeAABB(MAX, MAX, 8, 8)
 	
 	private var updateQueue = PriorityQueue<Int>(Comparator<Int> { a, b ->
 		val partitioningA = spatialPartitioningMapper.get(a)
@@ -101,14 +104,14 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 		val circleC = circleMapper.get(entityID)
 		
 		if (circleC != null) {
-			radius = (circleC.radius / 1000000).toInt()
+			radius = (circleC.radius / SCALE).toInt()
 		} else {
 			radius = 1
 		}
 		
 		// in Mm
-		val x = movement.position.x / 1000000 + MAX/2
-		val y = movement.position.y / 1000000 + MAX/2
+		val x = movement.position.x / SCALE + MAX/2
+		val y = movement.position.y / SCALE + MAX/2
 		
 //		println("insert at $x $y ${movement.getXinKM()} ${movement.getYinKM()}")
 		
