@@ -395,11 +395,11 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 								
 							} else {
 								
-								val distance = tmpPosition.set(targetMovement.value.position).sub(shipMovement.value.position).len().toLong()
+								val (timeToIntercept, aimPosition, interceptPosition, interceptVelocity, relativeInterceptVelocity) = result
+								val distance = tmpPosition.set(interceptPosition).sub(shipMovement.value.position).len().toLong()
 								val beamArea = part.getBeamArea(distance)
 								val damage: Long = part.getDeliveredEnergyTo1MSquareAtDistance(distance)
 								
-								val (timeToIntercept, aimPosition, interceptPosition, interceptVelocity, relativeInterceptVelocity) = result
 								val galacticTime = timeToIntercept + galaxy.time
 								val galacticDays = (galacticTime / (60 * 60 * 24)).toInt()
 								val days = (timeToIntercept / (60 * 60 * 24)).toInt()

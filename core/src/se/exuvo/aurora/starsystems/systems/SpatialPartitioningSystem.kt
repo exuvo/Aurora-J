@@ -13,6 +13,7 @@ import com.artemis.EntitySubscription
 import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import com.artemis.World
 import com.artemis.utils.IntBag
+import glm_.pow
 import net.mostlyoriginal.api.event.common.Subscribe
 import se.exuvo.aurora.starsystems.components.CircleComponent
 import se.exuvo.aurora.starsystems.components.MovementValues
@@ -21,6 +22,7 @@ import se.exuvo.aurora.starsystems.events.NonLinearMovementEvent
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.quadtree.QuadtreeAABB
+import kotlin.math.roundToInt
 
 class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 	companion object {
@@ -28,11 +30,21 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 		
 		@JvmField val log = LogManager.getLogger(SpatialPartitioningSystem::class.java)
 		
-//		const val SCALE: Int = 1000_0000 // in m , min 1000
 		const val SCALE: Int = 2_000 // in m , min 1000
-//		const val MAX: Int = (15 * Units.AU / (SCALE / 1000)).toInt()
 		const val MAX: Int = Int.MAX_VALUE
-		//TODO calculate depth from scale and max to keep min subdivision size constant
+		const val DESIRED_MIN_SQUARE_SIZE: Long = 100_000_000 // in m
+		@JvmField val RAW_DEPTH: Double = Math.log(SCALE * MAX.toDouble() / DESIRED_MIN_SQUARE_SIZE) / Math.log(2.0)
+		@JvmField val DEPTH: Int = RAW_DEPTH.roundToInt()
+		@JvmField val MIN_SQUARE_SIZE = (SCALE * MAX.toLong()) / 2.pow(DEPTH)
+		/*
+			square_size = SCALE * MAX / 2.pow(DEPTH)
+			2.pow(DEPTH) = SCALE * MAX / sq
+			log 2.pow(DEPTH) = log (SCALE * MAX / sq)
+			DEPTH * log 2 = log (SCALE * MAX / sq)
+			DEPTH * log 2 = log scale + log MAX - log sq
+			DEPTH = log (SCALE * MAX / sq) / log 2
+			DEPTH = log2 (SCALE * MAX / sq)
+		 */
 	}
 
 	lateinit var canAccelerateAspect: Aspect
@@ -46,7 +58,7 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 	lateinit private var circleMapper: ComponentMapper<CircleComponent>
 	lateinit private var spatialPartitioningMapper: ComponentMapper<SpatialPartitioningComponent>
 
-	val tree = QuadtreeAABB(MAX, MAX, 8, 8)
+	val tree = QuadtreeAABB(MAX, MAX, 8, DEPTH)
 	
 	private var updateQueue = PriorityQueue<Int>(Comparator<Int> { a, b ->
 		val partitioningA = spatialPartitioningMapper.get(a)
@@ -60,6 +72,8 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 	
 	override fun setWorld(world: World) {
 		super.setWorld(world)
+		
+//		println("RAW_DEPTH $RAW_DEPTH, DEPTH $DEPTH, MIN_SQUARE_SIZE $MIN_SQUARE_SIZE, total size ${SCALE * MAX.toLong()}m ${(SCALE * MAX.toLong()) / (Units.AU * 1000)} AU")
 
 		val canAccelerateSubscription = world.getAspectSubscriptionManager().get(MovementSystem.CAN_ACCELERATE_FAMILY)
 		canAccelerateAspect = canAccelerateSubscription.aspect
@@ -133,6 +147,8 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 		
 		if (!movement.velocity.isZero) {
 		
+			//TODO val distance = distance from edge of smallest quadtree square
+			
 //			// at^2 + vt = distance
 			val a: Double = movement.acceleration.len()
 			val b: Double = movement.velocity.len()
@@ -146,7 +162,7 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 				t = WeaponSystem.getPositiveRootOfQuadraticEquation(a, b, c)
 			}
 
-//			println("entityID $entityID: t $t a $a b $b c $c")
+			println("entityID $entityID: t $t a $a b $b c $c")
 
 			nextExpectedUpdate += maxOf(1, t.toLong())
 //			nextExpectedUpdate += 10
@@ -186,10 +202,13 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 				if (galaxy.time >= partitioning.nextExpectedUpdate) {
 					
 //					println("process $entityID ${partitioning.nextExpectedUpdate}")
+					val profilerEvents = system.workingShadow.profilerEvents
 					
 					updateQueue.poll()
 					
+					profilerEvents.start("update $entityID")
 					update(entityID)
+					profilerEvents.end()
 					
 				} else {
 					break;

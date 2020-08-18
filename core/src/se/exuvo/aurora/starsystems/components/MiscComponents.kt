@@ -12,19 +12,20 @@ interface CloneableComponent<T> where T: CloneableComponent<T>, T: Component {
 	}
 }
 
-class SpatialPartitioningComponent(): PooledComponent(), CloneableComponent<SpatialPartitioningComponent> {
+class SpatialPartitioningComponent(): PooledComponent() { // , CloneableComponent<SpatialPartitioningComponent>
 	var nextExpectedUpdate: Long = 0
 	var elementID: Int = -1
 	
-	fun set(nextExpectedUpdate: Long): SpatialPartitioningComponent {
+	fun set(nextExpectedUpdate: Long, elementID: Int): SpatialPartitioningComponent {
 		this.nextExpectedUpdate = nextExpectedUpdate
+		this.elementID = elementID
 		return this
 	}
 	
 	override fun reset(): Unit {
 		elementID = -1
 	}
-	override fun copy(tc: SpatialPartitioningComponent) {
-		tc.set(nextExpectedUpdate)
-	}
+//	override fun copy(tc: SpatialPartitioningComponent) {
+//		tc.set(nextExpectedUpdate, elementID)
+//	}
 }
