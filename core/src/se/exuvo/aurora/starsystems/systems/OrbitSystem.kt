@@ -88,6 +88,8 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 24 * 60 * 60) {
 		}
 
 		moonsSet.add(entityID)
+		
+		process(entityID)
 	}
 
 	override fun removed(entityID: Int) {

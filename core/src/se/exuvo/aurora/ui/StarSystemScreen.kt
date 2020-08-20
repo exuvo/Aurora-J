@@ -36,6 +36,7 @@ import se.exuvo.aurora.galactic.ClearTargetCommand
 import se.exuvo.aurora.galactic.MoteToPositionCommand
 import se.exuvo.aurora.galactic.MoveToEntityCommand
 import se.exuvo.aurora.galactic.SetTargetCommand
+import se.exuvo.aurora.starsystems.systems.SpatialPartitioningPlanetoidsSystem
 import kotlin.concurrent.withLock
 
 class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcessor {
@@ -163,6 +164,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 			x += Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / galaxy.speed}", x, 32f).width
 		}
 		
+		x += Assets.fontUI.draw(spriteBatch, " ${galaxy.tickSize}", x, 32f).width
 		x += Assets.fontUI.draw(spriteBatch, " ${system.updateTimeAverage.toInt() / 1000}us", x, 32f).width
 		x += Assets.fontUI.draw(spriteBatch, ", ${allSubscription.getEntityCount()}st", x, 32f).width
 		
@@ -335,7 +337,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 								}
 
 								Player.current.selection.addAll(entitiesUnderMouse)
-
+								
 							} else {
 
 								dragSelectPotentialStart = true;

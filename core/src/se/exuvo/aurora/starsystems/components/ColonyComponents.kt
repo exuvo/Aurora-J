@@ -214,7 +214,7 @@ class ShipyardSlipway() {
 
 enum class ShipyardLocation(val short: String, val baseBuildrate: Long, val modificationMultiplier: Long) {
 	ORBITAL(   "ORB", 100, 120),
-	TERRESTIAL("GND", 100, 100) // Cheaper to modify shipyard, quicker to build ships, needs fuel to launch ships into space
+	TERRESTIAL("GND", 150, 100) // Cheaper to modify shipyard, quicker to build ships, needs fuel to launch ships into space
 }
 
 enum class ShipyardType(val short: String, val modificationMultiplier: Long) {

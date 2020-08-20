@@ -148,6 +148,7 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 		tmpBV.or(system.shadow.changed)
 		tmpBV.andNot(system.shadow.added) // Skip other added as they will be handled as added below
 		tmpBV.andNot(deleted) // Skip now deleted from other changed
+		tmpBV.andNot(system.shadow.deleted) // Skip other deleted from other changed
 		
 		tmpBV.toIntBag(tmpBag)
 		

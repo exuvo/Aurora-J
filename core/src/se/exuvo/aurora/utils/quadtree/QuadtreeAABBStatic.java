@@ -5,18 +5,18 @@ package se.exuvo.aurora.utils.quadtree;
  * @author Dragon Energy
  * @author exuvo
  */
-public class QuadtreeAABB {
+public class QuadtreeAABBStatic {
 	// ----------------------------------------------------------------------------------------
 	// Element fields:
 	// ----------------------------------------------------------------------------------------
 	// Stores the rectangle encompassing the element.
-	static final int elt_idx_lft = 0, elt_idx_top = 1, elt_idx_rgt = 2, elt_idx_btm = 3;
+	static final int elt_idx_mx = 0, elt_idx_my = 1;
 	
 	// Stores the ID of the element.
-	static final int elt_idx_id = 4;
+	static final int elt_idx_id = 2;
 	
 	// Stores all the elements in the quadtree.
-	private final IntList elts = new IntList(5, 128);
+	private final IntList elts = new IntList(3, 128);
 	
 	// ----------------------------------------------------------------------------------------
 	// Element node fields:
@@ -68,7 +68,10 @@ public class QuadtreeAABB {
 	private int temp_size = 0;
 	
 	// Stores the quadtree extents.
-	private int root_mx, root_my, root_sx, root_sy;
+	private final int root_mx, root_my, root_sx, root_sy;
+	
+	// Stores the element half-size extents.
+	private final int element_sx, element_sy;
 	
 	// Maximum allowed elements in a leaf before the leaf is subdivided/split unless
 	// the leaf is at the maximum allowed tree depth.
@@ -79,8 +82,8 @@ public class QuadtreeAABB {
 	
 	/**
 	 * Creates a quadtree with the requested extents, maximum elements per leaf, and maximum tree depth.
-	 */
-	public QuadtreeAABB(int width, int height, int start_max_elements, int start_max_depth) {
+ 	 */
+	public QuadtreeAABBStatic(int width, int height, int element_width, int element_height, int start_max_elements, int start_max_depth) {
 		max_elements = start_max_elements;
 		max_depth = start_max_depth;
 		
@@ -94,21 +97,22 @@ public class QuadtreeAABB {
 		root_my = height / 2;
 		root_sx = root_mx;
 		root_sy = root_my;
+		
+		element_sx = element_width / 2;
+		element_sy = element_height / 2;
 	}
 	
 	/**
 	 * Inserts an element with the specified id and size
 	 * @return element index
  	 */
-	public int insert(int id, int x1, int y1, int x2, int y2) {
+	public int insert(int id, int x, int y) {
 		// Insert a new element.
 		final int new_element = elts.insert();
 		
 		// Set the fields of the new element.
-		elts.set(new_element, elt_idx_lft, x1);
-		elts.set(new_element, elt_idx_top, y1);
-		elts.set(new_element, elt_idx_rgt, x2);
-		elts.set(new_element, elt_idx_btm, y2);
+		elts.set(new_element, elt_idx_mx, x);
+		elts.set(new_element, elt_idx_my, y);
 		elts.set(new_element, elt_idx_id, id);
 		
 		// Insert the element to the appropriate leaf node(s).
@@ -120,10 +124,12 @@ public class QuadtreeAABB {
 	 * Removes the specified element from the tree.
 	 */
 	public void remove(int elementIdx) {
-		final int lft = elts.get(elementIdx, elt_idx_lft);
-		final int top = elts.get(elementIdx, elt_idx_top);
-		final int rgt = elts.get(elementIdx, elt_idx_rgt);
-		final int btm = elts.get(elementIdx, elt_idx_btm);
+		final int mx = elts.get(elementIdx, elt_idx_mx);
+		final int my = elts.get(elementIdx, elt_idx_my);
+		final int lft = mx - element_sx;
+		final int top = my - element_sy;
+		final int rgt = mx + element_sx;
+		final int btm = my + element_sy;
 		IntList leaves = find_leaves(0, 0, root_mx, root_my, root_sx, root_sy, lft, top, rgt, btm);
 		
 		// For each leaf node, remove the element node.
@@ -241,14 +247,16 @@ public class QuadtreeAABB {
 			// Walk the list and add elements that intersect.
 			int elt_node_index = nodes.get(nd_index, node_idx_fc);
 			while (elt_node_index != -1) {
-				final int element = enodes.get(elt_node_index, enode_idx_elementIdx);
-				final int lft = elts.get(element, elt_idx_lft);
-				final int top = elts.get(element, elt_idx_top);
-				final int rgt = elts.get(element, elt_idx_rgt);
-				final int btm = elts.get(element, elt_idx_btm);
-				if (!temp[element] && element != omit_element && intersect(qlft, qtop, qrgt, qbtm, lft, top, rgt, btm)) {
-					out.set(out.pushBack(), 0, element);
-					temp[element] = true;
+				final int elementIdx = enodes.get(elt_node_index, enode_idx_elementIdx);
+				final int mx = elts.get(elementIdx, elt_idx_mx);
+				final int my = elts.get(elementIdx, elt_idx_my);
+				final int lft = mx - element_sx;
+				final int top = my - element_sy;
+				final int rgt = mx + element_sx;
+				final int btm = my + element_sy;
+				if (!temp[elementIdx] && elementIdx != omit_element && intersect(qlft, qtop, qrgt, qbtm, lft, top, rgt, btm)) {
+					out.set(out.pushBack(), 0, elementIdx);
+					temp[elementIdx] = true;
 				}
 				elt_node_index = enodes.get(elt_node_index, enode_idx_next);
 			}
@@ -350,12 +358,14 @@ public class QuadtreeAABB {
 		return leaves;
 	}
 	
-	private void node_insert(int index, int depth, int mx, int my, int sx, int sy, int element) {
+	private void node_insert(int index, int depth, int mx, int my, int sx, int sy, int elementIdx) {
 		// Find the leaves and insert the element to all the leaves found.
-		final int lft = elts.get(element, elt_idx_lft);
-		final int top = elts.get(element, elt_idx_top);
-		final int rgt = elts.get(element, elt_idx_rgt);
-		final int btm = elts.get(element, elt_idx_btm);
+		final int emx = elts.get(elementIdx, elt_idx_mx);
+		final int emy = elts.get(elementIdx, elt_idx_my);
+		final int lft = emx - element_sx;
+		final int top = emy - element_sy;
+		final int rgt = emx + element_sx;
+		final int btm = emy + element_sy;
 		IntList leaves = find_leaves(index, depth, mx, my, sx, sy, lft, top, rgt, btm);
 		
 		for (int j = 0; j < leaves.size(); ++j) {
@@ -365,17 +375,17 @@ public class QuadtreeAABB {
 			final int nd_sy = leaves.get(j, nd_idx_sy);
 			final int nd_index = leaves.get(j, nd_idx_index);
 			final int nd_depth = leaves.get(j, nd_idx_depth);
-			leaf_insert(nd_index, nd_depth, nd_mx, nd_my, nd_sx, nd_sy, element);
+			leaf_insert(nd_index, nd_depth, nd_mx, nd_my, nd_sx, nd_sy, elementIdx);
 		}
 	}
 	
-	private void leaf_insert(int node, int depth, int mx, int my, int sx, int sy, int element) {
+	private void leaf_insert(int node, int depth, int mx, int my, int sx, int sy, int elementIdx) {
 		// Insert the element node to the leaf.
 		final int nodeOldFirstChild = nodes.get(node, node_idx_fc);
 		final int newElementNodeIdx = enodes.insert();
 		nodes.set(node, node_idx_fc, newElementNodeIdx);
 		enodes.set(newElementNodeIdx, enode_idx_next, nodeOldFirstChild);
-		enodes.set(newElementNodeIdx, enode_idx_elementIdx, element);
+		enodes.set(newElementNodeIdx, enode_idx_elementIdx, elementIdx);
 		
 		final int nodeSize = nodes.get(node, node_idx_size);
 		

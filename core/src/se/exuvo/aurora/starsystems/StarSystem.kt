@@ -32,7 +32,6 @@ import se.exuvo.aurora.galactic.Railgun
 import se.exuvo.aurora.galactic.Resource
 import se.exuvo.aurora.galactic.SolarPanel
 import se.exuvo.aurora.galactic.TargetingComputer
-import se.exuvo.aurora.galactic.WeaponPart
 import se.exuvo.aurora.history.History
 import se.exuvo.aurora.starsystems.components.CircleComponent
 import se.exuvo.aurora.starsystems.components.EmissionsComponent
@@ -88,7 +87,9 @@ import se.exuvo.aurora.starsystems.systems.MovementPredictedSystem
 import se.exuvo.aurora.empires.components.InCombatComponent
 import se.exuvo.aurora.galactic.Command
 import se.exuvo.aurora.galactic.ContainerPart
+import se.exuvo.aurora.galactic.Warhead
 import se.exuvo.aurora.starsystems.components.ArmorComponent
+import se.exuvo.aurora.starsystems.components.AsteroidComponent
 import se.exuvo.aurora.starsystems.components.CargoComponent
 import se.exuvo.aurora.starsystems.components.ChangingWorldComponent
 import se.exuvo.aurora.starsystems.components.HPComponent
@@ -96,6 +97,7 @@ import se.exuvo.aurora.starsystems.components.PartStatesComponent
 import se.exuvo.aurora.starsystems.components.PartsHPComponent
 import se.exuvo.aurora.starsystems.components.ShieldComponent
 import se.exuvo.aurora.starsystems.systems.SpatialPartitioningSystem
+import se.exuvo.aurora.starsystems.systems.SpatialPartitioningPlanetoidsSystem
 import se.exuvo.aurora.starsystems.systems.TargetingSystem
 import uk.co.omegaprime.btreemap.LongObjectBTreeMap
 import java.util.concurrent.ArrayBlockingQueue
@@ -162,6 +164,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	lateinit var hpMapper: ComponentMapper<HPComponent>
 	lateinit var cargoMapper: ComponentMapper<CargoComponent>
 	lateinit var changingWorldMapper: ComponentMapper<ChangingWorldComponent>
+	lateinit var asteroidMapper: ComponentMapper<AsteroidComponent>
 
 	init {
 		galaxy.world.getMapper(GalacticPositionComponent::class.java).create(galacticEntityID).set(initialPosition)
@@ -187,6 +190,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		worldBuilder.with(PowerSystem())
 		worldBuilder.with(TimedLifeSystem())
 		worldBuilder.with(SpatialPartitioningSystem())
+		worldBuilder.with(SpatialPartitioningPlanetoidsSystem())
 		worldBuilder.register(CustomSystemInvocationStrategy(this))
 		
 		val worldConfig = worldBuilder.build()
@@ -272,24 +276,28 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		sabot.damagePattern = DamagePattern.KINETIC
 
 		val missileBattery = Battery(10 * Units.KILO, 50 * Units.KILO, 80, 1 * Units.GIGA)
-		missileBattery.cost[Resource.GENERIC] = 500
+		missileBattery.cost[Resource.GENERIC] = 50
 		
-//		val missileIonThruster = ElectricalThruster(290 * 1000, 1 * Units.KILO)
-		val missileChemicalThruster = FueledThruster(29000 * 1000, 0)
+		val missileIonThruster = ElectricalThruster(290 * 1000, 0) // 1 * Units.KILO
+//		val missileChemicalThruster = FueledThruster(29000 * 1000, 0)
+		
 		val missileFuelPart = FuelContainerPart(5000L * Resource.ROCKET_FUEL.specificVolume)
+		val missileWarhead = Warhead(100_000)
 		
 		val missile = AdvancedMunitionHull(Resource.MISSILES)
 		missile.name = "Sprint missile"
 		missile.addPart(missileBattery)
-		missile.addPart(missileChemicalThruster)
+		missile.addPart(missileIonThruster)
 		missile.addPart(missileFuelPart)
+		missile.addPart(missileWarhead)
+		missile.finalize()
 
 		val railgun = Railgun(2 * Units.MEGA, 5, 5 * Units.MEGA, 5, 3, 20)
 		shipHull.addPart(railgun)
 		val railgunRef = shipHull[Railgun::class][0]
 		shipHull.preferredPartMunitions[railgunRef] = sabot
 
-		val missileLauncher = MissileLauncher(14, 3, 10, 1000 * 5500)
+		val missileLauncher = MissileLauncher(7, 3, 10, 1000 * 5500)
 		missileLauncher.maxHealth = 3 - 128
 		shipHull.addPart(missileLauncher)
 		val missileLauncherRef = shipHull[MissileLauncher::class][0]
@@ -298,18 +306,18 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		val beam = BeamWeapon(1 * Units.MEGA, 1.0, BeamWavelength.Infrared, 10 * Units.MEGA)
 		shipHull.addPart(beam)
 
-		val targetingComputer1 = TargetingComputer(2, 1, 0f, (0.5 * Units.AU).toLong(),10 * Units.KILO)
+		val targetingComputer1 = TargetingComputer(2, 1, 1f, (0.5 * Units.AU).toLong(),10 * Units.KILO)
 		targetingComputer1.name = "TC 05-1-2"
 		shipHull.addPart(targetingComputer1)
 		
 		val tcRef1: PartRef<TargetingComputer> = shipHull[TargetingComputer::class][0]
 		shipHull.defaultWeaponAssignments[tcRef1] = shipHull.getPartRefs().filter({ it.part is Railgun })
 		
-		val targetingComputer2 = TargetingComputer(2, 5, 0f, (2 * Units.AU).toLong(),10 * Units.KILO)
+		val targetingComputer2 = TargetingComputer(2, 5, 1f, (2 * Units.AU).toLong(),10 * Units.KILO)
 		targetingComputer2.name = "TC 20-5-2"
 		shipHull.addPart(targetingComputer2)
 		
-		val tcRef2: PartRef<TargetingComputer> = shipHull[TargetingComputer::class][0]
+		val tcRef2: PartRef<TargetingComputer> = shipHull[TargetingComputer::class][1]
 		shipHull.defaultWeaponAssignments[tcRef2] = shipHull.getPartRefs().filter({ it.part is BeamWeapon || it.part is MissileLauncher })
 
 		val ionThruster = ElectricalThruster(2000 * 982, 1 * Units.MEGA)
@@ -318,7 +326,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		val chemicalThruster = FueledThruster(10000 * 982, 1)
 		shipHull.addPart(chemicalThruster)
 		
-		val shield = Shield(1 * Units.MEGA, 20 * Units.KILO, 50)
+		val shield = Shield(1 * Units.MEGA, 10 * Units.KILO, 50)
 		shield.name = "X-Booster"
 		shipHull.addPart(shield)
 		
@@ -371,6 +379,9 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 				slipways += ShipyardSlipway()
 				slipways += ShipyardSlipway().apply{
 					build(shipHull2)
+					hullCost.forEach({ (resource, amount) ->
+						usedResources[resource] = maxOf(0, amount - 1)
+					})
 				}
 			}
 			shipyards += Shipyard(ShipyardLocation.ORBITAL, ShipyardType.MILITARY).apply{
@@ -442,12 +453,31 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 //		createShip(shipHull, entity2, empire1)
 		
 		val entity5 = createEntity(Empire.GAIA)
-		timedMovementMapper.create(entity5).apply {previous.value.velocity.set(0L, 1000 * 100L); previous.value.position.set(- (Units.AU * 1000 * 0.5).toLong(), 0) }
+		timedMovementMapper.create(entity5).apply {previous.value.velocity.set(0L, 1000_00L).rotate(45f); previous.value.position.set(- (Units.AU * 1000 * 0.5).toLong(), (Units.AU * 1000 * 0.1).toLong()) }
 		renderMapper.create(entity5)
 		circleMapper.create(entity5).set(radius = 100f)
 		nameMapper.create(entity5).set(name = "Asteroid")
 		tintMapper.create(entity5).set(Color.GRAY)
+		asteroidMapper.create(entity5)
 		strategicIconMapper.create(entity5).set(Assets.textures.findRegion("strategic/moon"))
+		
+		val entity6 = createEntity(Empire.GAIA)
+		timedMovementMapper.create(entity6).apply {previous.value.velocity.set(1_000_000L, 0).rotate(45f); previous.value.position.set((Units.AU * 1000 * 2).toLong(), 0).rotate(135f) }
+		renderMapper.create(entity6)
+		circleMapper.create(entity6).set(radius = 100f)
+		nameMapper.create(entity6).set(name = "Asteroid 2")
+		tintMapper.create(entity6).set(Color.GRAY)
+		asteroidMapper.create(entity6)
+		strategicIconMapper.create(entity6).set(Assets.textures.findRegion("strategic/moon"))
+		
+		val entity7 = createEntity(Empire.GAIA)
+		timedMovementMapper.create(entity7).apply {previous.value.velocity.set(1_000_000L, 0).rotate(45f); previous.value.position.set((Units.AU * 1000 * 2).toLong(), 0).rotate(120f) }
+		renderMapper.create(entity7)
+		circleMapper.create(entity7).set(radius = 100f)
+		nameMapper.create(entity7).set(name = "Asteroid 3")
+		tintMapper.create(entity7).set(Color.GRAY)
+		asteroidMapper.create(entity7)
+		strategicIconMapper.create(entity7).set(Assets.textures.findRegion("strategic/moon"))
 		
 		shadow.update()
 	}

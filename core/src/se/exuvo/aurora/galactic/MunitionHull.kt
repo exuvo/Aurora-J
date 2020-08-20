@@ -19,15 +19,22 @@ abstract class MunitionHull(val storageType: Resource) {
 	
 	var name: String = ""
 	var designDay: Int = 0
+	var locked = false
+	var obsolete = false
+	var damage: Long = 0 // joules
 	
 	abstract var radius: Int // cm
-	abstract var loadedMass: Long // kg
+	abstract var loadedMass: Int // kg
 	abstract var volume: Long // cm³
 	var hashcode = -1
 		get() {
 			if (field == -1) { field = calculateHashCode() }
 			return field
 		}
+	
+	open fun finalize() {
+		locked = true
+	}
 	
 	override fun toString() = name
 	
@@ -48,9 +55,8 @@ abstract class MunitionHull(val storageType: Resource) {
 class SimpleMunitionHull(storageType: Resource): MunitionHull(storageType) {
 	var health: Short = -1
 	var damagePattern: DamagePattern = DamagePattern.KINETIC
-	var damage: Long = 0 // joules
 	override var radius = 1
-	override var loadedMass: Long = 1
+	override var loadedMass: Int = 1
 	override var volume = -1L
 		get() {
 			if (field == -1L) { field = calculateVolume() }
@@ -79,14 +85,16 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 	var armorLayers = 1 // Centimeters of armor
 	var armorBlockHP: UByte = 100u
 	
+	val thrusters: MutableList<PartRef<Part>> = ArrayList()
+	
 	override var radius = -1
 		get() {
 			if (field == -1) { field = calculateRadius() }
 			return field
 		}
-	override var loadedMass = -1L
+	override var loadedMass = -1
 		get() {
-			if (field == -1L) { field = calculateLoadedMass() }
+			if (field == -1) { field = calculateLoadedMass() }
 			return field
 		}
 	override var volume = -1L
@@ -104,16 +112,30 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 			if (field == -1) { field = calculateThrustTime() }
 			return field
 		}
-	var emptyMass = -1L
+	var emptyMass = -1
 		get() {
-			if (field == -1L) { field = calculateEmptyMass() }
+			if (field == -1) { field = calculateEmptyMass() }
 			return field
 		}
-	var fuelMass = -1L
+	var fuelMass = -1
 		get() {
-			if (field == -1L) { field = calculateFuelMass() }
+			if (field == -1) { field = calculateFuelMass() }
 			return field
 		}
+	
+	override fun finalize() {
+		super.finalize()
+		
+		partRefs.forEachFast { partRef ->
+			if (partRef.part is Warhead) {
+				damage += partRef.part.damage
+			}
+			
+			if (partRef.part is ThrustingPart) {
+				thrusters += partRef
+			}
+		}
+	}
 
 	@Suppress("UNCHECKED_CAST")
 	operator fun <T: Part> get(partClass: KClass<T>) : List<PartRef<T>> = partRefs.filter { partClass.isInstance(it.part) } as List<PartRef<T>>
@@ -169,29 +191,22 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 	}
 	
 	// Kg
-	fun calculateEmptyMass(): Long {
+	fun calculateEmptyMass(): Int {
 		//TODO add armor
-		return parts.sumByLong { it.mass }
+		return parts.sumByLong { it.mass }.toInt()
 	}
 	
-	fun calculateFuelMass(): Long {
+	fun calculateFuelMass(): Int {
 		return parts.sumByLong {
-			if (it is FuelContainerPart) {
-				it.capacity / Resource.ROCKET_FUEL.specificVolume
-				
-			} else if (it is LifeSupportContainerPart) {
-				it.capacity / Resource.LIFE_SUPPORT.specificVolume
-				
-			} else if (it is NuclearContainerPart) {
-				it.capacity / Resource.NUCLEAR_FISSION.specificVolume
-				
-			} else {
-				0
+			when (it) {
+				is FuelContainerPart -> it.capacity / Resource.ROCKET_FUEL.specificVolume
+				is NuclearContainerPart -> it.capacity / Resource.NUCLEAR_FISSION.specificVolume
+				else -> 0
 			}
-		}
+		}.toInt()
 	}
 	
-	fun calculateLoadedMass(): Long {
+	fun calculateLoadedMass(): Int {
 		return emptyMass + fuelMass
 	}
 
@@ -227,11 +242,11 @@ class AdvancedMunitionHull(storageType: Resource): MunitionHull(storageType) {
 	override fun resetLazyCache() {
 		super.resetLazyCache()
 		radius = -1
-		loadedMass = -1L
+		loadedMass = -1
 		volume = -1L
 		thrust = -1L
 		thrustTime = -1
-		emptyMass = -1L
-		fuelMass = -1L
+		emptyMass = -1
+		fuelMass = -1
 	}
 }

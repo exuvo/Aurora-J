@@ -8,6 +8,7 @@ import se.exuvo.aurora.starsystems.components.EntityUUID
 import se.exuvo.aurora.starsystems.components.EntityReference
 import com.artemis.utils.Bag
 import com.artemis.utils.IntBag
+import com.badlogic.gdx.graphics.Color
 import se.exuvo.aurora.starsystems.StarSystem
 import uk.co.omegaprime.btreemap.LongObjectBTreeMap
 import java.util.concurrent.ArrayBlockingQueue
@@ -33,8 +34,8 @@ companion object {
 	val practicalTheory = HashMap<PracticalTheory, Int>()
 	val shipHulls = ArrayList<ShipHull>()
 	val hullClasses = ArrayList<ShipHullClass>()
-	val orders = Bag<EntityReference>()
 	var commandQueue = ArrayBlockingQueue<Command>(128) // For local player and ai
+	val color = Color.RED //TODO allow picks from https://gamedev.stackexchange.com/questions/46463/how-can-i-find-an-optimum-set-of-colors-for-10-players
 	
 	init {
 		hullClasses.add(ShipHullClass("Dreadnought", "BA"))

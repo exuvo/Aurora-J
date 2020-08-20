@@ -29,3 +29,21 @@ class SpatialPartitioningComponent(): PooledComponent() { // , CloneableComponen
 //		tc.set(nextExpectedUpdate, elementID)
 //	}
 }
+
+class SpatialPartitioningPlanetoidsComponent(): PooledComponent() { // , CloneableComponent<SpatialPartitioningComponent>
+	var nextExpectedUpdate: Long = 0
+	var elementID: Int = -1
+	
+	fun set(nextExpectedUpdate: Long, elementID: Int): SpatialPartitioningPlanetoidsComponent {
+		this.nextExpectedUpdate = nextExpectedUpdate
+		this.elementID = elementID
+		return this
+	}
+	
+	override fun reset(): Unit {
+		elementID = -1
+	}
+//	override fun copy(tc: SpatialPartitioningComponent) {
+//		tc.set(nextExpectedUpdate, elementID)
+//	}
+}

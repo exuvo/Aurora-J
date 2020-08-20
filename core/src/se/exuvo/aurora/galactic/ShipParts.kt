@@ -284,3 +284,5 @@ class TargetingComputer(val maxWeapons: Int,
 												powerConsumption: Long
 ) : Part(),
 		PoweredPart by PoweredPartImpl(powerConsumption)
+
+class Warhead(val damage: Long): Part()

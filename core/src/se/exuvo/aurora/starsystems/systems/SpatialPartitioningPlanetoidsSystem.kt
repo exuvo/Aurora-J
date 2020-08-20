@@ -9,39 +9,32 @@ import se.exuvo.aurora.starsystems.StarSystem
 import com.artemis.annotations.Wire
 import com.artemis.BaseEntitySystem
 import java.util.PriorityQueue
-import com.artemis.EntitySubscription
 import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import com.artemis.World
-import com.artemis.utils.IntBag
 import glm_.pow
 import net.mostlyoriginal.api.event.common.Subscribe
-import se.exuvo.aurora.galactic.SimpleMunitionHull
+import se.exuvo.aurora.starsystems.components.AsteroidComponent
 import se.exuvo.aurora.starsystems.components.CircleComponent
-import se.exuvo.aurora.starsystems.components.LaserShotComponent
-import se.exuvo.aurora.starsystems.components.MissileComponent
 import se.exuvo.aurora.starsystems.components.MovementValues
-import se.exuvo.aurora.starsystems.components.RailgunShotComponent
-import se.exuvo.aurora.starsystems.components.ShipComponent
-import se.exuvo.aurora.starsystems.components.SpatialPartitioningComponent
+import se.exuvo.aurora.starsystems.components.OrbitComponent
+import se.exuvo.aurora.starsystems.components.SpatialPartitioningPlanetoidsComponent
+import se.exuvo.aurora.starsystems.components.SunComponent
 import se.exuvo.aurora.starsystems.events.NonLinearMovementEvent
 import se.exuvo.aurora.utils.Units
-import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.quadtree.QuadtreeAABB
-import se.exuvo.aurora.utils.quadtree.QuadtreeAABBStatic
-import se.exuvo.aurora.utils.quadtree.QuadtreePoint
 import kotlin.math.roundToInt
 
-class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
+class SpatialPartitioningPlanetoidsSystem : BaseEntitySystem(ASPECT) {
 	companion object {
-		@JvmField val ASPECT = Aspect.all(TimedMovementComponent::class.java).one(ShipComponent::class.java, RailgunShotComponent::class.java, LaserShotComponent::class.java, MissileComponent::class.java)
+		@JvmField val ASPECT = Aspect.all(TimedMovementComponent::class.java, CircleComponent::class.java).one(OrbitComponent::class.java, SunComponent::class.java, AsteroidComponent::class.java)
 		
-		@JvmField val log = LogManager.getLogger(SpatialPartitioningSystem::class.java)
+		@JvmField val log = LogManager.getLogger(SpatialPartitioningPlanetoidsSystem::class.java)
 		
 		const val SCALE: Int = 2_000 // in m , min 1000
 		const val MAX: Int = Int.MAX_VALUE
-		const val DESIRED_MIN_SQUARE_SIZE: Long = 100_000_000 // in m
+		const val DESIRED_MIN_SQUARE_SIZE: Long = 149597870700L // AU in m
 		@JvmField val RAW_DEPTH: Double = Math.log(SCALE * MAX.toDouble() / DESIRED_MIN_SQUARE_SIZE) / Math.log(2.0)
-		@JvmField val DEPTH: Int = RAW_DEPTH.roundToInt()
+		@JvmField val DEPTH: Int = RAW_DEPTH.roundToInt() // 5
 		@JvmField val MIN_SQUARE_SIZE = (SCALE * MAX.toLong()) / 2.pow(DEPTH)
 		/*
 			square_size = SCALE * MAX / 2.pow(DEPTH)
@@ -54,8 +47,6 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 		 */
 	}
 
-	lateinit var canAccelerateAspect: Aspect
-	
 	private val galaxy = GameServices[Galaxy::class]
 
 	@Wire
@@ -63,10 +54,9 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 
 	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>
 	lateinit private var circleMapper: ComponentMapper<CircleComponent>
-	lateinit private var spatialPartitioningMapper: ComponentMapper<SpatialPartitioningComponent>
+	lateinit private var spatialPartitioningMapper: ComponentMapper<SpatialPartitioningPlanetoidsComponent>
 
-//	val tree = QuadtreeAABBStatic(MAX, MAX, 2, 2, 8, DEPTH)
-	val tree = QuadtreePoint(MAX, MAX, 8, DEPTH)
+	val tree = QuadtreeAABB(MAX, MAX, 2, DEPTH)
 	
 	private var updateQueue = PriorityQueue<Int>(Comparator<Int> { a, b ->
 		val partitioningA = spatialPartitioningMapper.get(a)
@@ -82,26 +72,6 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 		super.setWorld(world)
 		
 //		println("RAW_DEPTH $RAW_DEPTH, DEPTH $DEPTH, MIN_SQUARE_SIZE $MIN_SQUARE_SIZE, total size ${SCALE * MAX.toLong()}m ${(SCALE * MAX.toLong()) / (Units.AU * 1000)} AU")
-
-		val canAccelerateSubscription = world.getAspectSubscriptionManager().get(MovementSystem.CAN_ACCELERATE_FAMILY)
-		canAccelerateAspect = canAccelerateSubscription.aspect
-		
-		canAccelerateSubscription.addSubscriptionListener(object : EntitySubscription.SubscriptionListener{
-			override fun inserted(entities: IntBag) {
-				entities.forEachFast { entityID ->
-					val partitioning = spatialPartitioningMapper.get(entityID)
-					
-					if (partitioning != null && partitioning.nextExpectedUpdate == -1L) {
-						println("accelerate inserted entityID $entityID")
-						update(entityID)
-					}
-				}
-			}
-			
-			override fun removed(entities: IntBag) {
-			
-			}
-		})
 	}
 	
 	override fun inserted(entityID: Int): Unit {
@@ -145,8 +115,7 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 			profilerEvents.end()
 		}
 		profilerEvents.start("insert")
-//		partitioning.elementID = tree.insert(entityID, (x - radius).toInt(), (y - radius).toInt(), (x + radius).toInt(), (y + radius).toInt())
-		partitioning.elementID = tree.insert(entityID, x.toInt(), y.toInt())
+		partitioning.elementID = tree.insert(entityID, (x - radius).toInt(), (y - radius).toInt(), (x + radius).toInt(), (y + radius).toInt())
 		profilerEvents.end()
 	}
 	
@@ -180,10 +149,7 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 //			println("entityID $entityID: t $t a $a b $b c $c")
 //
 //			nextExpectedUpdate += maxOf(1, t.toLong())
-			nextExpectedUpdate += 10
-
-		} else if(canAccelerateAspect.isInterested(entityID)) {
-			nextExpectedUpdate += 60
+			nextExpectedUpdate += 60 * 60
 
 		} else {
 			nextExpectedUpdate = -1

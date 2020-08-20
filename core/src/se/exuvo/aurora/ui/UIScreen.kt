@@ -202,6 +202,9 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 								if (ImGui.menuItem("debugSpatialPartitioning", "", RenderSystem.debugSpatialPartitioning)) {
 									RenderSystem.debugSpatialPartitioning = !RenderSystem.debugSpatialPartitioning
 								}
+								if (ImGui.menuItem("debugSpatialPartitioningPlanetoids", "", RenderSystem.debugSpatialPartitioningPlanetoids)) {
+									RenderSystem.debugSpatialPartitioningPlanetoids = !RenderSystem.debugSpatialPartitioningPlanetoids
+								}
 								ImGui.endMenu();
 							}
 							ImGui.endMenuBar();

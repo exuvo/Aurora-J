@@ -399,7 +399,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 						targetMovementValue = MovementValues(targetPosition, targetVelocity, Vector2L.Zero)
 					}
 					
-					val result = weaponSystem.getInterceptionPosition(shipMovementValue, targetMovementValue, 0.0, maxAcceleration.toDouble() / 100)
+					val result = weaponSystem.getInterceptionPosition2(shipMovementValue, targetMovementValue, 0.0, maxAcceleration.toDouble() / 100)
 										
 					if (result == null) {
 						

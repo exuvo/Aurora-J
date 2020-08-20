@@ -75,8 +75,10 @@ import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.Vector2D
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEachFast
-import se.exuvo.aurora.utils.quadtree.IQtVisitor
 import se.exuvo.aurora.utils.quadtree.QuadtreeAABB
+import se.exuvo.aurora.utils.quadtree.QuadtreeAABBStatic
+import se.exuvo.aurora.utils.quadtree.QuadtreePoint
+import se.exuvo.aurora.utils.quadtree.QuadtreeVisitor
 import se.exuvo.aurora.utils.sRGBtoLinearRGB
 import se.exuvo.aurora.utils.scanCircleSector
 import se.exuvo.aurora.utils.toLinearRGB
@@ -99,6 +101,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		@JvmField var debugDisableStrategicView = Settings.getBol("Systems/Render/debugDisableStrategicView", false)
 		@JvmField var debugDrawWeaponRangesWithoutShader = Settings.getBol("Systems/Render/debugDrawWeaponRangesWithoutShader", false)
 		@JvmField var debugSpatialPartitioning = Settings.getBol("Systems/Render/debugSpatialPartitioning", false)
+		@JvmField var debugSpatialPartitioningPlanetoids = Settings.getBol("Systems/Render/debugSpatialPartitioningPlanetoids", false)
 		@JvmField val log = LogManager.getLogger(RenderSystem::class.java)
 		
 		@JvmField val dummyProfilerEvents = ProfilerWindow.ProfilerBag()
@@ -1401,8 +1404,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		val scale = SpatialPartitioningSystem.SCALE / 1000L
 		
 //		println()
-		spSys.tree.traverse(object: IQtVisitor{
-			override fun leaf(qt: QuadtreeAABB?, node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
+		spSys.tree.traverse(object: QuadtreeVisitor {
+			override fun leaf(node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
 //				println("leaf node $node, depth $depth, $mx $my $sx $sy")
 				shapeRenderer.color = sRGBtoLinearRGB(Color.YELLOW)
 				shapeRenderer.rect((scale * (mx - sx - max2) - cameraOffset.x).toFloat(),
@@ -1411,13 +1414,45 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				                   (2 * scale * sy).toFloat())
 			}
 			
-			override fun branch(qt: QuadtreeAABB?, node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
+			override fun branch(node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
 //				println("branch node $node, depth $depth, $mx $my $sx $sy")
 				shapeRenderer.color = sRGBtoLinearRGB(Color.TEAL)
 				shapeRenderer.rect((scale * (mx - sx - max2) - cameraOffset.x).toFloat(),
 				                   (scale * (my - sy - max2) - cameraOffset.y).toFloat(),
 				                   (2 * scale * sx).toFloat(),
 				                   (2 * scale * sy).toFloat())
+			}
+		})
+		
+		shapeRenderer.end()
+	}
+	
+	private fun drawSpatialPartitioningPlanetoids() {
+		
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+		
+		val spSys = shadowSystem.system.world.getSystem(SpatialPartitioningPlanetoidsSystem::class.java)
+		val max2 = SpatialPartitioningPlanetoidsSystem.MAX / 2
+		val scale = SpatialPartitioningPlanetoidsSystem.SCALE / 1000L
+
+//		println()
+		spSys.tree.traverse(object: QuadtreeVisitor {
+			override fun leaf(node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
+//				println("leaf node $node, depth $depth, $mx $my $sx $sy")
+				shapeRenderer.color = sRGBtoLinearRGB(Color.YELLOW)
+				shapeRenderer.rect((scale * (mx - sx - max2) - cameraOffset.x).toFloat(),
+						(scale * (my - sy - max2) - cameraOffset.y).toFloat(),
+						(2 * scale * sx).toFloat(),
+						(2 * scale * sy).toFloat())
+			}
+			
+			override fun branch(node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
+//				println("branch node $node, depth $depth, $mx $my $sx $sy")
+				shapeRenderer.color = sRGBtoLinearRGB(Color.TEAL)
+				shapeRenderer.rect((scale * (mx - sx - max2) - cameraOffset.x).toFloat(),
+						(scale * (my - sy - max2) - cameraOffset.y).toFloat(),
+						(2 * scale * sx).toFloat(),
+						(2 * scale * sy).toFloat())
 			}
 		})
 		
@@ -1512,6 +1547,12 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		if (debugSpatialPartitioning) {
 			profilerEvents.start("drawSpatialPartitioning")
 			drawSpatialPartitioning()
+			profilerEvents.end()
+		}
+		
+		if (debugSpatialPartitioningPlanetoids) {
+			profilerEvents.start("drawSpatialPartitioningPlanetoids")
+			drawSpatialPartitioningPlanetoids()
 			profilerEvents.end()
 		}
 		

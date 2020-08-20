@@ -8,7 +8,6 @@ import imgui.WindowFlag
 import se.exuvo.aurora.galactic.Resource
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.isNotEmpty
-import kotlin.concurrent.read
 import imgui.TabBarFlag
 import imgui.or
 import se.exuvo.aurora.empires.components.ColonyComponent
@@ -26,6 +25,7 @@ import se.exuvo.aurora.empires.components.ShipyardModificationRetool
 import se.exuvo.aurora.empires.components.ShipyardModifications
 import se.exuvo.aurora.empires.components.ShipyardModificationAddSlipway
 import se.exuvo.aurora.empires.components.ShipyardModificationExpandCapacity
+import se.exuvo.aurora.starsystems.systems.ColonySystem
 import se.exuvo.aurora.ui.UIScreen.UIWindow
 
 class ColonyManager : UIWindow() {
@@ -117,6 +117,7 @@ class ColonyManager : UIWindow() {
 								val system = colonyRef.system
 								val entityID = colonyRef.entityID
 								
+								val colonySystem = system.world.getSystem(ColonySystem::class.java)
 								val colonyMapper = ComponentMapper.getFor(ColonyComponent::class.java, system.world)
 								val colony = colonyMapper.get(entityID)
 								
@@ -224,8 +225,16 @@ class ColonyManager : UIWindow() {
 														nextColumn()
 														textUnformatted("${slipway.progress()}%")
 														nextColumn()
-														val daysToCompletion = (slipway.totalCost() - slipway.usedResources()) / (24 * shipyard.buildRate)
-														rightAlignedColumnText(Units.daysToRemaining(daysToCompletion.toInt()))
+														val toBuild = slipway.totalCost() - slipway.usedResources()
+														val daysToCompletion = toBuild / (24 * shipyard.buildRate)
+														if (daysToCompletion > 0) {
+															rightAlignedColumnText(Units.daysToRemaining(daysToCompletion.toInt()))
+															
+														} else {
+															var secondsToCompletion = colonySystem.interval * ((toBuild + (shipyard.buildRate - 1)) / shipyard.buildRate)
+															secondsToCompletion -= galaxy.time % colonySystem.interval
+															rightAlignedColumnText(Units.secondsToString(secondsToCompletion))
+														}
 														nextColumn()
 														textUnformatted(Units.daysToDate(galaxy.day + daysToCompletion.toInt()))
 													} else {

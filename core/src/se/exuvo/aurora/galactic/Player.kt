@@ -16,7 +16,7 @@ class Player(var name: String) {
 	private val galaxy by lazy (LazyThreadSafetyMode.NONE) { GameServices[Galaxy::class] }
 
 	var empire: Empire? = null
-	var speedSteps = listOf(1, 4, 10, 50, 200, 1000, 5000, 25000, 60000)
+	var speedSteps = listOf(1, 4, 10, 50, 200, 1000, 5000, 25000, 60000, 180000, 500000)
 	var speedIndex = 0
 	var requestedSpeed = Units.NANO_SECOND / speedSteps[speedIndex]
 	val selection = Bag<EntityReference>()

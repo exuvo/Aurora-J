@@ -11,11 +11,12 @@ import se.exuvo.aurora.galactic.FueledPart
 import com.artemis.PooledComponent
 import se.exuvo.aurora.galactic.DamagePattern
 import se.exuvo.aurora.galactic.AdvancedMunitionHull
+import se.exuvo.aurora.galactic.SimpleMunitionHull
 
 class LaserShotComponent() : PooledComponent(), CloneableComponent<LaserShotComponent> {
 	var targetEntityID: Int = -1
-	var damage: Long = 0 // J
-	var beamArea: Long = 0 // cm²
+	var damage: Long = 0 // J per 1m² at hit distance
+	var beamArea: Long = 0 // cm² total beam area at hit distance
 	
 	fun set(targetEntityID: Int,
 					damage: Long,
@@ -35,40 +36,38 @@ class LaserShotComponent() : PooledComponent(), CloneableComponent<LaserShotComp
 }
 
 class RailgunShotComponent() : PooledComponent(), CloneableComponent<RailgunShotComponent> {
+	lateinit var hull: SimpleMunitionHull
 	var targetEntityID: Int = -1
-	var damage: Long = 0 // J
-	lateinit var damagePattern: DamagePattern
 	
 	fun set(targetEntityID: Int,
-					damage: Long,
-					damagePattern: DamagePattern
+					hull: SimpleMunitionHull
 	) {
 		this.targetEntityID = targetEntityID
-		this.damage = damage
-		this.damagePattern = damagePattern
+		this.hull = hull
 	}
 	
 	override fun reset(): Unit {}
 	override fun copy(tc: RailgunShotComponent) {
-		tc.set(targetEntityID, damage, damagePattern)
+		val newComponent = tc.targetEntityID == -1
+		val sameHull = !newComponent && tc.hull == hull
+		
+		if (!sameHull) {
+			tc.hull = hull
+		}
+		
+		tc.targetEntityID = targetEntityID
 	}
 }
 
 class MissileComponent() : PooledComponent(), CloneableComponent<MissileComponent> {
 	lateinit var hull: AdvancedMunitionHull
 	var targetEntityID: Int = -1
-	var damage: Long = 0
-	lateinit var damagePattern: DamagePattern
 
 	fun set(munitionHull: AdvancedMunitionHull,
 					targetEntityID: Int
 	) {
 		this.hull = munitionHull
 		this.targetEntityID = targetEntityID
-		
-		//TODO get from parts
-		damagePattern = DamagePattern.EXPLOSIVE
-		damage = 1
 	}
 	
 	override fun reset(): Unit {}
@@ -78,10 +77,8 @@ class MissileComponent() : PooledComponent(), CloneableComponent<MissileComponen
 		
 		if (!sameHull) {
 			tc.hull = hull
-			tc.damagePattern = damagePattern
 		}
 		
 		tc.targetEntityID = targetEntityID
-		tc.damage = damage
 	}
 }

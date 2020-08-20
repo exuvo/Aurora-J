@@ -134,6 +134,12 @@ class SunComponent() : Component(), CloneableComponent<SunComponent> {
 	}
 }
 
+class AsteroidComponent() : Component(), CloneableComponent<AsteroidComponent> {
+	
+	override fun copy(tc: AsteroidComponent) {
+	}
+}
+
 // W/m2
 class SolarIrradianceComponent() : PooledComponent(), CloneableComponent<SolarIrradianceComponent> {
 	var irradiance: Int = 0
