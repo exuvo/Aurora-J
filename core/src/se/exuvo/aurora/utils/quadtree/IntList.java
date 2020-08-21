@@ -102,6 +102,10 @@ public class IntList {
 			final int index = nextFreeElement;
 			final int pos = index * fieldsPerElement;
 			
+			if (pos < 0) {
+				throw new RuntimeException();
+			}
+			
 			// Set the free index to the next free index.
 			nextFreeElement = data[pos];
 			

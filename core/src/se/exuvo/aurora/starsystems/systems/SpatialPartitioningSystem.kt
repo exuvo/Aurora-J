@@ -141,7 +141,8 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 //		println("removed $entityID")
 		updateQueue.remove(entityID)
 		
-		tree.remove(entityID)
+		val partitioning = spatialPartitioningMapper.get(entityID)
+		tree.remove(partitioning.elementID)
 	}
 	
 	private fun updateNextExpectedUpdate(entityID: Int, movement: MovementValues): Long {

@@ -274,6 +274,8 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 						val testCircle = CircleL()
 						val zoom = camera.zoom
 
+						//TODO use spatial partitioning
+						
 						// Exact check first
 						entityIDs.forEachFast { entityID ->
 							val position = shadow.movementMapper.get(entityID).get(galaxy.time).value.position
