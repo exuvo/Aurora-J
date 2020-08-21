@@ -16,7 +16,7 @@ public class QuadtreeAABBStatic {
 	static final int elt_idx_id = 2;
 	
 	// Stores all the elements in the quadtree.
-	private final IntList elts = new IntList(3, 128);
+	public final IntList elts = new IntList(3, 128);
 	
 	// ----------------------------------------------------------------------------------------
 	// Element node fields:
@@ -28,7 +28,7 @@ public class QuadtreeAABBStatic {
 	static final int enode_idx_elementIdx = 1;
 	
 	// Stores all the element nodes in the quadtree.
-	private final IntList enodes = new IntList(2, 128);
+	public final IntList enodes = new IntList(2, 128);
 	
 	// ----------------------------------------------------------------------------------------
 	// Node fields:
@@ -42,7 +42,7 @@ public class QuadtreeAABBStatic {
 	static final int node_idx_size = 1;
 	
 	// Stores all the nodes in the quadtree. The first node in this sequence is always the root.
-	private final IntList nodes = new IntList(2, 128);
+	public final IntList nodes = new IntList(2, 128);
 	
 	// ----------------------------------------------------------------------------------------
 	// Node traversal data fields:
@@ -71,7 +71,7 @@ public class QuadtreeAABBStatic {
 	private final int root_mx, root_my, root_sx, root_sy;
 	
 	// Stores the element half-size extents.
-	private final int element_sx, element_sy;
+	public final int element_sx, element_sy;
 	
 	// Maximum allowed elements in a leaf before the leaf is subdivided/split unless
 	// the leaf is at the maximum allowed tree depth.
@@ -187,9 +187,10 @@ public class QuadtreeAABBStatic {
 					// Increment empty leaf count if the child is an empty
 					// leaf. Otherwise if the child is a branch, add it to
 					// the stack to be processed in the next iteration.
-					if (nodes.get(child, node_idx_size) == 0) {
+					final int size = nodes.get(child, node_idx_size);
+					if (size == 0) {
 						++num_empty_leaves;
-					} else if (nodes.get(child, node_idx_size) == -1) {
+					} else if (size == -1) {
 						// Push the child index to the stack.
 						to_process.set(to_process.pushBack(), 0, child);
 					}
@@ -209,6 +210,104 @@ public class QuadtreeAABBStatic {
 					// Make this node the new empty leaf.
 					nodes.set(node, node_idx_fc, -1);
 					nodes.set(node, node_idx_size, 0);
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Cleans up the tree, removing empty leaves and consolidating mostly empty child nodes.
+	 */
+	public void cleanupFull() {
+		// Only process the root if it's not a leaf.
+		if (nodes.get(0, node_idx_size) == -1) {
+			// Push the root index to the stack.
+			IntList elements = new IntList(1, max_elements);;
+			IntList to_process = new IntList(1, 4 * max_depth);
+			to_process.set(to_process.pushBack(), 0, 0);
+			
+			while (to_process.size() > 0) {
+				// Pop a node from the stack.
+				final int node = to_process.get(to_process.size() - 1, 0);
+				final int fc = nodes.get(node, node_idx_fc);
+				int num_empty_leaves = 0;
+				int num_elements = 0;
+				to_process.popBack();
+				
+				// Loop through the children.
+				for (int j = 0; j < 4; ++j) {
+					final int child = fc + j;
+					
+					// Increment empty leaf count if the child is an empty
+					// leaf. Otherwise if the child is a branch, add it to
+					// the stack to be processed in the next iteration.
+					final int size = nodes.get(child, node_idx_size);
+					if (size == 0) {
+						++num_empty_leaves;
+					} else if (size == -1) {
+						// Push the child index to the stack.
+						to_process.set(to_process.pushBack(), 0, child);
+						num_elements = -1;
+					} else if (num_elements != -1) {
+						num_elements += size;
+					}
+				}
+				
+				// If all the children were empty leaves, remove them and
+				// make this node the new empty leaf.
+				if (num_empty_leaves == 4) {
+					// Remove all 4 children in reverse order so that they
+					// can be reclaimed on subsequent insertions in proper order.
+					nodes.erase(fc + 3);
+					nodes.erase(fc + 2);
+					nodes.erase(fc + 1);
+					nodes.erase(fc + 0);
+					
+					// Make this node the new empty leaf.
+					nodes.set(node, node_idx_fc, -1);
+					nodes.set(node, node_idx_size, 0);
+					
+				} else if (num_elements != -1 && num_elements <= max_elements / 2) {
+					// Consolidate children
+					for (int j = 0; j < 4; ++j) {
+						final int child = fc + j;
+						
+						while (nodes.get(child, node_idx_fc) != -1) {
+							final int index = nodes.get(child, node_idx_fc);
+							final int next_index = enodes.get(index, enode_idx_next);
+							final int elt = enodes.get(index, enode_idx_elementIdx);
+							
+							// Pop off the element node from the leaf and remove it from the qt.
+							nodes.set(child, node_idx_fc, next_index);
+							enodes.erase(index);
+							
+							// Insert element to the list.
+							elements.set(elements.pushBack(), 0, elt);
+						}
+					}
+
+					assert(num_elements == elements.size());
+					
+					// Remove all 4 children in reverse order so that they
+					// can be reclaimed on subsequent insertions in proper order.
+					nodes.erase(fc + 3);
+					nodes.erase(fc + 2);
+					nodes.erase(fc + 1);
+					nodes.erase(fc + 0);
+					
+					nodes.set(node, node_idx_fc, -1);
+					nodes.set(node, node_idx_size, num_elements);
+					
+					// Transfer the elements
+					for (int i = 0; i < num_elements; ++i) {
+						final int nodeOldFirstChild = nodes.get(node, node_idx_fc);
+						final int newElementNodeIdx = enodes.insert();
+						nodes.set(node, node_idx_fc, newElementNodeIdx);
+						enodes.set(newElementNodeIdx, enode_idx_next, nodeOldFirstChild);
+						enodes.set(newElementNodeIdx, enode_idx_elementIdx, elements.get(i, 0));
+					}
+					
+					elements.clear();
 				}
 			}
 		}

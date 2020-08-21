@@ -174,13 +174,9 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 24 * 60 * 60) {
 		val movement = movementMapper.get(entityID)
 		val position = movement.previous.value.position
 		
-		newVelocity.set(position)
 		position.set(parentPosition.x + relativePosition.x.toLong(), parentPosition.y + relativePosition.y.toLong())
+		newVelocity.set(position)
 		
-		newVelocity.sub(position)
-		newVelocity.scl(1.0 / interval)
-		
-		movement.previous.value.velocity.set(newVelocity)
 		movement.previous.time = today
 		
 		// Tomorrow
@@ -190,11 +186,11 @@ class OrbitSystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 24 * 60 * 60) {
 		parentMovement = movementMapper.get(parentEntity).get(tomorrow)
 		parentPosition = parentMovement.value.position
 		
-		newVelocity.set(position)
 		tmpPosition.set(parentPosition.x + relativePosition.x.toLong(), parentPosition.y + relativePosition.y.toLong())
 		
-		newVelocity.sub(position)
-		newVelocity.scl(1.0 / interval)
+		newVelocity.sub(tmpPosition)
+		newVelocity.scl(100.0 / interval)
+		movement.previous.value.velocity.set(newVelocity)
 		
 		movement.setPrediction(MovementValues(tmpPosition.cpy(), newVelocity.cpy(), Vector2L()), tomorrow)
 		

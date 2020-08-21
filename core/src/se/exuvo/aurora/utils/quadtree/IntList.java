@@ -4,18 +4,18 @@ package se.exuvo.aurora.utils.quadtree;
  * @author Dragon Energy
  * @author exuvo
  */
-class IntList {
+public class IntList {
 	private int[] data;
 	private int fieldsPerElement = 0;
 	private int size = 0;
-	private int capacity = 32;
+	private int capacity;
 	private int nextFreeElement = -1;
 	
 	/**
 	 * Creates a new list of elements which each consist of integer fields.
 	 * @param fieldsPerElement specifies the number of integer fields each element has.
 	 */
-	public IntList(int fieldsPerElement) {
+	IntList(int fieldsPerElement) {
 		this(fieldsPerElement, 16);
 	}
 	
@@ -24,22 +24,23 @@ class IntList {
 	 * @param fieldsPerElement specifies the number of integer fields each element has.
 	 * @param initialElementCapacity initial capacity will be fieldsPerElement * initialElementCapacity
 	 */
-	public IntList(int fieldsPerElement, int initialElementCapacity) {
+	IntList(int fieldsPerElement, int initialElementCapacity) {
 		this.fieldsPerElement = fieldsPerElement;
-		data = new int[fieldsPerElement * initialElementCapacity];
+		capacity = fieldsPerElement * initialElementCapacity;
+		data = new int[capacity];
 	}
 	
 	/**
 	 * Returns the number of elements in the list.
 	 */
-	int size() {
+	public int size() {
 		return size;
 	}
 	
 	/**
 	 * Returns the value of the specified field for the nth element.
 	 */
-	int get(int n, int field) {
+	public int get(int n, int field) {
 		assert n >= 0 && n < size && field >= 0 && field < fieldsPerElement;
 		return data[n * fieldsPerElement + field];
 	}

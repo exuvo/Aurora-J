@@ -204,10 +204,15 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 //		println("added $tmpBag")
 		tmpBag.forEachFast { entityID ->
 			profilerEvents.start("$entityID")
+			val oldMaxUsed = em.maxUsedID
 			em.setNextID(entityID)
 			val newID = world.create()
 			if (newID != entityID) {
 				throw IllegalStateException("wrong entity id created $newID != $entityID")
+			}
+			
+			if (em.maxUsedID < oldMaxUsed) {
+				em.maxUsedID = oldMaxUsed
 			}
 			
 			val systemMappers = scm.componentMappers(entityID)

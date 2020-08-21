@@ -281,14 +281,14 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 
 							if (renderSystem.inStrategicView(entityID, zoom)) {
 
-								radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
+								radius = 1000 * zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
 
 							} else {
 
 								radius = shadow.circleMapper.get(entityID).radius
 							}
 
-							testCircle.set(position, radius * 1000)
+							testCircle.set(position, radius)
 
 							if (testCircle.contains(mouseInGameCoordinates)) {
 								entitiesUnderMouse.add(system.getEntityReference(entityID))
@@ -299,18 +299,17 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 						if (entitiesUnderMouse.isEmpty()) {
 							entityIDs.forEachFast { entityID ->
 								val position = shadow.movementMapper.get(entityID).get(galaxy.time).value.position
-								val radius: Float
+								var radius: Float = 1000 * 2 * camera.zoom
 
 								if (renderSystem.inStrategicView(entityID, zoom)) {
 
-									radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
+									radius += 1000 * zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
 
 								} else {
 
-									radius = shadow.circleMapper.get(entityID).radius * 1.1f + 2 * camera.zoom
+									radius += shadow.circleMapper.get(entityID).radius
 								}
-
-								testCircle.set(position, radius * 1000)
+								testCircle.set(position, radius)
 
 								if (testCircle.contains(mouseInGameCoordinates)) {
 									entitiesUnderMouse.add(system.getEntityReference(entityID))
@@ -318,11 +317,11 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 							}
 
 							if (entitiesUnderMouse.isNotEmpty()) {
-//								println("lenient selected ${entitiesUnderMouse.size} entities")
+//								println("lenient selected ${entitiesUnderMouse.size()} entities")
 							}
 
 						} else {
-//							println("strict selected ${entitiesUnderMouse.size} entities")
+//							println("strict selected ${entitiesUnderMouse.size()} entities")
 						}
 
 						if (selectedAction == null) {
@@ -511,47 +510,23 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 						val testCircle = CircleL()
 						val zoom = camera.zoom
 
-						// Exact check first
 						entityIDs.forEachFast { entityID ->
 							val position = shadow.movementMapper.get(entityID).get(galaxy.time).value.position
 							val radius: Float
 
 							if (renderSystem.inStrategicView(entityID, zoom)) {
 
-								radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
+								radius = 1000 * zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
 
 							} else {
 
 								radius = shadow.circleMapper.get(entityID).radius
 							}
 
-							testCircle.set(position, radius * 1000)
+							testCircle.set(position, radius)
 
 							if (testCircle.contains(mouseInGameCoordinates)) {
 								entitiesUnderMouse.add(entityID)
-							}
-						}
-
-						// Lenient check if empty
-						if (entitiesUnderMouse.isEmpty()) {
-							entityIDs.forEachFast { entityID ->
-								val position = shadow.movementMapper.get(entityID).get(galaxy.time).value.position
-								val radius: Float
-
-								if (renderSystem.inStrategicView(entityID, zoom)) {
-
-									radius = zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
-
-								} else {
-
-									radius = shadow.circleMapper.get(entityID).radius * 1.1f + 2 * camera.zoom
-								}
-
-								testCircle.set(position, radius * 1000)
-
-								if (testCircle.contains(mouseInGameCoordinates)) {
-									entitiesUnderMouse.add(entityID)
-								}
 							}
 						}
 
@@ -567,7 +542,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 							}
 
 							selectedEntities.forEachFast{ entityRef ->
-								println("Queuing move to entity command for $entityRef to $targetEntityID")
+//								println("Queuing move to entity command for $entityRef to $targetEntityID")
 								Player.current.empire!!.commandQueue.add(MoveToEntityCommand(entityRef, shadow.getEntityReference(targetEntityID), approachType))
 							}
 
@@ -583,7 +558,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 							}
 
 							selectedEntities.forEachFast{ entityRef ->
-								println("Queuing move to position command for $entityRef to $targetPosition")
+//								println("Queuing move to position command for $entityRef to $targetPosition")
 								Player.current.empire!!.commandQueue.add(MoteToPositionCommand(entityRef, targetPosition, approachType))
 							}
 						}

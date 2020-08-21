@@ -62,10 +62,8 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 	lateinit private var system: StarSystem
 
 	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>
-	lateinit private var circleMapper: ComponentMapper<CircleComponent>
 	lateinit private var spatialPartitioningMapper: ComponentMapper<SpatialPartitioningComponent>
 
-//	val tree = QuadtreeAABBStatic(MAX, MAX, 2, 2, 8, DEPTH)
 	val tree = QuadtreePoint(MAX, MAX, 8, DEPTH)
 	
 	private var updateQueue = PriorityQueue<Int>(Comparator<Int> { a, b ->
@@ -92,7 +90,7 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 					val partitioning = spatialPartitioningMapper.get(entityID)
 					
 					if (partitioning != null && partitioning.nextExpectedUpdate == -1L) {
-						println("accelerate inserted entityID $entityID")
+//						println("accelerate inserted entityID $entityID")
 						update(entityID)
 					}
 				}
@@ -121,16 +119,6 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 			updateQueue.add(entityID)
 		}
 		
-		val radius: Int
-		
-		val circleC = circleMapper.get(entityID)
-		
-		if (circleC != null) {
-			radius = (circleC.radius / SCALE).toInt()
-		} else {
-			radius = 1
-		}
-		
 		// in Mm
 		val x = movement.position.x / SCALE + MAX/2
 		val y = movement.position.y / SCALE + MAX/2
@@ -145,7 +133,6 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 			profilerEvents.end()
 		}
 		profilerEvents.start("insert")
-//		partitioning.elementID = tree.insert(entityID, (x - radius).toInt(), (y - radius).toInt(), (x + radius).toInt(), (y + radius).toInt())
 		partitioning.elementID = tree.insert(entityID, x.toInt(), y.toInt())
 		profilerEvents.end()
 	}
@@ -200,7 +187,9 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 	
 	@Subscribe
 	fun nonLinearMovementEvent(event: NonLinearMovementEvent) {
-		update(event.entityID)
+		if (subscription.aspect.isInterested(event.entityID)) {
+			update(event.entityID)
+		}
 	}
 	
 	override fun processSystem() {
@@ -236,7 +225,7 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 		}
 		
 		profilerEvents.start("cleanup")
-		tree.cleanup()
+		tree.cleanupFull()
 		profilerEvents.end()
 	}
 }

@@ -56,7 +56,7 @@ class SpatialPartitioningPlanetoidsSystem : BaseEntitySystem(ASPECT) {
 	lateinit private var circleMapper: ComponentMapper<CircleComponent>
 	lateinit private var spatialPartitioningMapper: ComponentMapper<SpatialPartitioningPlanetoidsComponent>
 
-	val tree = QuadtreeAABB(MAX, MAX, 2, DEPTH)
+	val tree = QuadtreeAABB(MAX, MAX, 4, DEPTH)
 	
 	private var updateQueue = PriorityQueue<Int>(Comparator<Int> { a, b ->
 		val partitioningA = spatialPartitioningMapper.get(a)
@@ -71,7 +71,7 @@ class SpatialPartitioningPlanetoidsSystem : BaseEntitySystem(ASPECT) {
 	override fun setWorld(world: World) {
 		super.setWorld(world)
 		
-//		println("RAW_DEPTH $RAW_DEPTH, DEPTH $DEPTH, MIN_SQUARE_SIZE $MIN_SQUARE_SIZE, total size ${SCALE * MAX.toLong()}m ${(SCALE * MAX.toLong()) / (Units.AU * 1000)} AU")
+		println("RAW_DEPTH $RAW_DEPTH, DEPTH $DEPTH, MIN_SQUARE_SIZE $MIN_SQUARE_SIZE, total size ${SCALE * MAX.toLong()}m ${(SCALE * MAX.toLong()) / (Units.AU * 1000)} AU")
 	}
 	
 	override fun inserted(entityID: Int): Unit {
@@ -91,12 +91,12 @@ class SpatialPartitioningPlanetoidsSystem : BaseEntitySystem(ASPECT) {
 			updateQueue.add(entityID)
 		}
 		
-		val radius: Int
+		val radius: Long
 		
 		val circleC = circleMapper.get(entityID)
 		
 		if (circleC != null) {
-			radius = (circleC.radius / SCALE).toInt()
+			radius = (circleC.radius / SCALE).toLong()
 		} else {
 			radius = 1
 		}
@@ -149,7 +149,7 @@ class SpatialPartitioningPlanetoidsSystem : BaseEntitySystem(ASPECT) {
 //			println("entityID $entityID: t $t a $a b $b c $c")
 //
 //			nextExpectedUpdate += maxOf(1, t.toLong())
-			nextExpectedUpdate += 60 * 60
+			nextExpectedUpdate += 10 * 60
 
 		} else {
 			nextExpectedUpdate = -1
@@ -166,7 +166,9 @@ class SpatialPartitioningPlanetoidsSystem : BaseEntitySystem(ASPECT) {
 	
 	@Subscribe
 	fun nonLinearMovementEvent(event: NonLinearMovementEvent) {
-		update(event.entityID)
+		if (subscription.aspect.isInterested(event.entityID)) {
+			update(event.entityID)
+		}
 	}
 	
 	override fun processSystem() {
@@ -202,7 +204,7 @@ class SpatialPartitioningPlanetoidsSystem : BaseEntitySystem(ASPECT) {
 		}
 		
 		profilerEvents.start("cleanup")
-		tree.cleanup()
+		tree.cleanupFull()
 		profilerEvents.end()
 	}
 }

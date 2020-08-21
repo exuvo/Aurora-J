@@ -76,8 +76,6 @@ import se.exuvo.aurora.utils.Vector2D
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.quadtree.QuadtreeAABB
-import se.exuvo.aurora.utils.quadtree.QuadtreeAABBStatic
-import se.exuvo.aurora.utils.quadtree.QuadtreePoint
 import se.exuvo.aurora.utils.quadtree.QuadtreeVisitor
 import se.exuvo.aurora.utils.sRGBtoLinearRGB
 import se.exuvo.aurora.utils.scanCircleSector
@@ -129,7 +127,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	lateinit private var hpMapper: ComponentMapper<HPComponent>
 	lateinit private var cargoMapper: ComponentMapper<CargoComponent>
 
-	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
+	private val galaxyGroupSystem by lazy(LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	private val galaxy = GameServices[Galaxy::class]
 	
 	@Wire
@@ -223,13 +221,13 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		var fbo: FrameBuffer
 
 		init {
-			fbo = FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(),Gdx.graphics.getHeight(), false)
+			fbo = FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), false)
 			
 		}
 		
 		override fun resize(width: Int, height: Int) {
 			fbo.dispose()
-			fbo = FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(),Gdx.graphics.getHeight(), false)
+			fbo = FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), false)
 		}
 
 		override fun dispose() {
@@ -266,7 +264,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				shapeRenderer.color = sRGBtoLinearRGB(Color(tintComponent?.color ?: Color.WHITE))
 
 				val circle = circleMapper.get(entityID)
-				shapeRenderer.circle(x, y, circle.radius / 1000, getCircleSegments(circle.radius, scale))
+				shapeRenderer.circle(x, y, maxOf(1f, circle.radius / 1000), getCircleSegments(circle.radius, scale))
 			}
 		}
 
@@ -453,33 +451,33 @@ class RenderSystem : IteratingSystem(FAMILY) {
 												val damage: Long = (part.efficiency * part.capacitor) / 100
 												val dmg1Range = FastMath.sqrt(damage / FastMath.PI) / FastMath.tan(part.getRadialDivergence())
 												val timeRange = projectileSpeed * timeToImpact
-
+												
 												//									println("damage $damage, dmg1Range $dmg1Range, timeRange $timeRange")
 												range = FastMath.min(timeRange, dmg1Range.toLong())
 											}
 											is Railgun -> {
 												val ammoState = partStates[weapon][AmmunitionPartState::class]
 												val munitionHull = ammoState.type as? SimpleMunitionHull
-
+												
 												if (munitionHull == null) {
 													return@weaponLoop
 												}
-
+												
 												val projectileSpeed = (part.capacitor * part.efficiency) / (100 * munitionHull.loadedMass)
 												range = projectileSpeed * timeToImpact
 											}
 											is MissileLauncher -> {
 												val ammoState = partStates[weapon][AmmunitionPartState::class]
 												val advMunitionHull = ammoState.type!! as? AdvancedMunitionHull
-
+												
 												if (advMunitionHull == null) {
 													return@weaponLoop
 												}
-
+												
 												val missileAcceleration = advMunitionHull.getAverageAcceleration()
 												val missileLaunchSpeed = (100 * part.launchForce) / advMunitionHull.loadedMass
 												val flightTime = advMunitionHull.fuelMass
-
+												
 												range = (missileLaunchSpeed * flightTime + (missileAcceleration * flightTime * flightTime) / 2) / 100
 											}
 											else -> {
@@ -584,10 +582,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					val y = wep.y
 					val radius = wep.radius
 					
-					val minX = FastMath.max(x - radius - padding, -viewport.getScreenWidth()/2 * scale)
-					val maxX = FastMath.min(x + radius + padding, viewport.getScreenWidth()/2 * scale)
-					val minY = FastMath.max(y - radius - padding, -viewport.getScreenHeight()/2 * scale)
-					val maxY = FastMath.min(y + radius + padding, viewport.getScreenHeight()/2 * scale)
+					val minX = FastMath.max(x - radius - padding, -viewport.getScreenWidth() / 2 * scale)
+					val maxX = FastMath.min(x + radius + padding, viewport.getScreenWidth() / 2 * scale)
+					val minY = FastMath.max(y - radius - padding, -viewport.getScreenHeight() / 2 * scale)
+					val maxY = FastMath.min(y + radius + padding, viewport.getScreenHeight() / 2 * scale)
 					
 					val width = maxX - minX
 					val height  = maxY - minY
@@ -631,10 +629,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					val y = wep.y
 					val radius = wep.radius - 1 * scale
 					
-					val minX = FastMath.max(x - radius - padding, -viewport.getScreenWidth()/2 * scale)
-					val maxX = FastMath.min(x + radius + padding, viewport.getScreenWidth()/2 * scale)
-					val minY = FastMath.max(y - radius - padding, -viewport.getScreenHeight()/2 * scale)
-					val maxY = FastMath.min(y + radius + padding, viewport.getScreenHeight()/2 * scale)
+					val minX = FastMath.max(x - radius - padding, -viewport.getScreenWidth() / 2 * scale)
+					val maxX = FastMath.min(x + radius + padding, viewport.getScreenWidth() / 2 * scale)
+					val minY = FastMath.max(y - radius - padding, -viewport.getScreenHeight() / 2 * scale)
+					val maxY = FastMath.min(y + radius + padding, viewport.getScreenHeight() / 2 * scale)
 					
 					val width = maxX - minX
 					val height  = maxY - minY
@@ -797,7 +795,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 	fun inStrategicView(entityID: Int, scale: Float = this.scale): Boolean {
 
-		if (debugDisableStrategicView) {
+		if (debugDisableStrategicView || scale == 1f) {
 			return false
 		}
 
@@ -1069,11 +1067,11 @@ class RenderSystem : IteratingSystem(FAMILY) {
 						if (shapeRenderer.getCurrentType() == ShapeRenderer.ShapeType.Line) {
 
 							when (sensor.part.spectrum) {
-
+								
 								Spectrum.Thermal -> {
 									shapeRenderer.color = sRGBtoLinearRGB(Color.CORAL)
 								}
-
+								
 								Spectrum.Electromagnetic -> {
 									shapeRenderer.color = sRGBtoLinearRGB(Color.VIOLET)
 								}
@@ -1086,12 +1084,12 @@ class RenderSystem : IteratingSystem(FAMILY) {
 						} else {
 
 							when (sensor.part.spectrum) {
-
+								
 								Spectrum.Thermal -> {
 									shapeRenderer.color = sRGBtoLinearRGB(Color.CORAL)
 									shapeRenderer.color.a = 0.05f
 								}
-
+								
 								Spectrum.Electromagnetic -> {
 									shapeRenderer.color = sRGBtoLinearRGB(Color.VIOLET)
 									shapeRenderer.color.a = 0.05f
@@ -1188,12 +1186,12 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				sensorsComponent.sensors.forEachFast { sensor ->
 	
 					when (sensor.part.spectrum) {
-	
+						
 						Spectrum.Thermal -> {
 							shapeRenderer.color = sRGBtoLinearRGB(Color.CORAL)
 							shapeRenderer.color.a = 0.1f
 						}
-	
+						
 						Spectrum.Electromagnetic -> {
 							shapeRenderer.color = sRGBtoLinearRGB(Color.VIOLET)
 							shapeRenderer.color.a = 0.1f
@@ -1404,7 +1402,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		val scale = SpatialPartitioningSystem.SCALE / 1000L
 		
 //		println()
-		spSys.tree.traverse(object: QuadtreeVisitor {
+		spSys.tree.traverse(object : QuadtreeVisitor {
 			override fun leaf(node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
 //				println("leaf node $node, depth $depth, $mx $my $sx $sy")
 				shapeRenderer.color = sRGBtoLinearRGB(Color.YELLOW)
@@ -1416,11 +1414,11 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			
 			override fun branch(node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
 //				println("branch node $node, depth $depth, $mx $my $sx $sy")
-				shapeRenderer.color = sRGBtoLinearRGB(Color.TEAL)
-				shapeRenderer.rect((scale * (mx - sx - max2) - cameraOffset.x).toFloat(),
-				                   (scale * (my - sy - max2) - cameraOffset.y).toFloat(),
-				                   (2 * scale * sx).toFloat(),
-				                   (2 * scale * sy).toFloat())
+//				shapeRenderer.color = sRGBtoLinearRGB(Color.TEAL)
+//				shapeRenderer.rect((scale * (mx - sx - max2) - cameraOffset.x).toFloat(),
+//				                   (scale * (my - sy - max2) - cameraOffset.y).toFloat(),
+//				                   (2 * scale * sx).toFloat(),
+//				                   (2 * scale * sy).toFloat())
 			}
 		})
 		
@@ -1436,23 +1434,48 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		val scale = SpatialPartitioningPlanetoidsSystem.SCALE / 1000L
 
 //		println()
-		spSys.tree.traverse(object: QuadtreeVisitor {
+		spSys.tree.traverse(object : QuadtreeVisitor {
 			override fun leaf(node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
 //				println("leaf node $node, depth $depth, $mx $my $sx $sy")
 				shapeRenderer.color = sRGBtoLinearRGB(Color.YELLOW)
 				shapeRenderer.rect((scale * (mx - sx - max2) - cameraOffset.x).toFloat(),
-						(scale * (my - sy - max2) - cameraOffset.y).toFloat(),
-						(2 * scale * sx).toFloat(),
-						(2 * scale * sy).toFloat())
+				                   (scale * (my - sy - max2) - cameraOffset.y).toFloat(),
+				                   (2 * scale * sx).toFloat(),
+				                   (2 * scale * sy).toFloat())
+				
+				shapeRenderer.color = sRGBtoLinearRGB(Color.TEAL)
+				val tree = spSys.tree
+				val enodes = tree.enodes
+				val elts = tree.elts
+				
+				var enodeIdx = tree.nodes.get(node, QuadtreeAABB.node_idx_fc)
+				
+				while (enodeIdx != -1) {
+					val elementIdx: Int = enodes.get(enodeIdx, QuadtreeAABB.enode_idx_elementIdx)
+					enodeIdx = enodes.get(enodeIdx, QuadtreeAABB.enode_idx_next)
+					
+					val entityID = elts.get(elementIdx, QuadtreeAABB.elt_idx_id)
+					val l = elts.get(elementIdx, QuadtreeAABB.elt_idx_lft)
+					val t = elts.get(elementIdx, QuadtreeAABB.elt_idx_top)
+					val r = elts.get(elementIdx, QuadtreeAABB.elt_idx_rgt)
+					val b = elts.get(elementIdx, QuadtreeAABB.elt_idx_btm)
+					
+//					println("entity $entityID $l $t $r $b")
+					
+					shapeRenderer.rect((scale * (l - max2) - cameraOffset.x).toFloat(),
+														 (scale * (t - max2) - cameraOffset.y).toFloat(),
+														 (scale * (r - l)).toFloat(),
+														 (scale * (b - t)).toFloat())
+				}
 			}
 			
 			override fun branch(node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
 //				println("branch node $node, depth $depth, $mx $my $sx $sy")
-				shapeRenderer.color = sRGBtoLinearRGB(Color.TEAL)
-				shapeRenderer.rect((scale * (mx - sx - max2) - cameraOffset.x).toFloat(),
-						(scale * (my - sy - max2) - cameraOffset.y).toFloat(),
-						(2 * scale * sx).toFloat(),
-						(2 * scale * sy).toFloat())
+//				shapeRenderer.color = sRGBtoLinearRGB(Color.TEAL)
+//				shapeRenderer.rect((scale * (mx - sx - max2) - cameraOffset.x).toFloat(),
+//						(scale * (my - sy - max2) - cameraOffset.y).toFloat(),
+//						(2 * scale * sx).toFloat(),
+//						(2 * scale * sy).toFloat())
 			}
 		})
 		
