@@ -133,11 +133,7 @@ class ShadowGalaxy(val galaxy: Galaxy) : Disposable {
 		profilerEvents.start("added")
 		tmpBV.toIntBag(tmpBag)
 		tmpBag.forEachFast { entityID ->
-			em.setNextID(entityID)
-			val newID = world.create()
-			if (newID != entityID) {
-				throw IllegalStateException("wrong entity id created $newID != $entityID")
-			}
+			world.createSpecific(entityID)
 			
 			val systemMappers = scm.componentMappers(entityID)
 			

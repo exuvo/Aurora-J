@@ -339,7 +339,10 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 
 	private var tmpPosition = Vector2L()
 	override fun process(entityID: Int) {
-
+		
+		val profilerEvents = starSystem.workingShadow.profilerEvents
+		profilerEvents.start("$entityID")
+		
 		val ship = shipMapper.get(entityID)
 		val partStates = partStatesMapper.get(entityID)
 		val activeTCsComponent = activeTargetingComputersComponentMapper.get(entityID)
@@ -350,6 +353,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		var powerChanged = false
 
 		tcs.forEachFast{ tc ->
+			profilerEvents.start("tc $tc")
 			val tcState = partStates[tc][TargetingComputerState::class]
 
 			val target = tcState.target!!
@@ -371,14 +375,18 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				
 				while (i < size) {
 					val weapon = tcState.readyWeapons[i++]
+					profilerEvents.start("wep $weapon")
 					
 					when (val part = weapon.part) {
 						is BeamWeapon -> {
 							val chargedState = partStates[weapon][ChargedPartState::class]
 
 							val projectileSpeed = Units.C * 1000
+							
+							profilerEvents.start("getInterceptionPosition1")
 							val result = getInterceptionPosition1(shipMovement.value, targetMovement.value, projectileSpeed)
 //										val result = getInterceptionPosition(shipMovement.value, targetMovement.value, projectileSpeed, 0.0)
+							profilerEvents.end()
 							
 							if (result == null) {
 								
@@ -453,8 +461,10 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 								val munitionHull = ammoState.type!! as SimpleMunitionHull
 								val projectileSpeed = (chargedState.charge * part.efficiency) / (100 * munitionHull.loadedMass)
 								
+								profilerEvents.start("getInterceptionPosition1")
 								val result = getInterceptionPosition1(shipMovement.value, targetMovement.value, projectileSpeed.toDouble())
 //										val result = getInterceptionPosition(shipMovement.value, targetMovement.value, projectileSpeed.toDouble(), 0.0)
+								profilerEvents.end()
 								
 								if (result == null) {
 									
@@ -547,28 +557,38 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 								var result: InterceptResult?
 								
 								if (electricalThrusters) {
+									profilerEvents.start("getInterceptionPosition2")
 									result = getInterceptionPosition2(shipMovement.value, targetMovement.value, missileLaunchSpeed.toDouble() / 100, advMunitionHull.getAverageAcceleration().toDouble() / 100)
+									profilerEvents.end()
 									
 								} else { // chemical
+									profilerEvents.start("getInterceptionPosition3")
 									result = getInterceptionPosition3(shipMovement.value, targetMovement.value, missileLaunchSpeed.toDouble() / 100, advMunitionHull.getMinAcceleration().toDouble() / 100, advMunitionHull.getMaxAcceleration().toDouble() / 100)
+									profilerEvents.end()
 								}
 								
 								if (result == null) {
 									log.warn("Unable to find intercept for missile $advMunitionHull and target ${target.entityID} within thrust time")
+									profilerEvents.end()
 									continue
 								}
 								
 								if (result.timeToIntercept > advMunitionHull.thrustTime) { // Runs out of fuel, try with coasting
 									
 									if (electricalThrusters) {
+										profilerEvents.start("getInterceptionPosition4")
 										result = getInterceptionPosition4(shipMovement.value, targetMovement.value, missileLaunchSpeed.toDouble() / 100, advMunitionHull.getAverageAcceleration().toDouble() / 100, advMunitionHull.thrustTime.toDouble())
+										profilerEvents.end()
 										
 									} else { // chemical
+										profilerEvents.start("getInterceptionPosition5")
 										result = getInterceptionPosition5(shipMovement.value, targetMovement.value, missileLaunchSpeed.toDouble() / 100, advMunitionHull.getMinAcceleration().toDouble() / 100, advMunitionHull.getMaxAcceleration().toDouble() / 100, advMunitionHull.thrustTime.toDouble())
+										profilerEvents.end()
 									}
 
 									if (result == null) {
 										log.warn("Unable to find intercept for missile $advMunitionHull and target ${target.entityID} with coasting")
+										profilerEvents.end()
 										continue
 									}
 								}
@@ -642,13 +662,17 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 						}
 						else -> RuntimeException("Unsupported weapon")
 					}
+					profilerEvents.end()
 				}
 			}
+			profilerEvents.end()
 		}
 		
 		if (powerChanged) {
 			events.dispatch(starSystem.getEvent(PowerEvent::class).set(entityID))
 		}
+		
+		profilerEvents.end()
 	}
 	
 	val tmpVelocity = Vector2L()
@@ -1047,14 +1071,20 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 //
 //		val coefs = DoubleArray(5)
 //		coefs[4] = targetAcceleration.dot(targetAcceleration) / 4.0 - (missileAcceleration * missileAcceleration) / 4.0
-//		coefs[3] = relativeVelocity.dot(targetAcceleration) /* / 2.0 */ - missileLaunchSpeed * missileAcceleration
+//		coefs[3] = relativeVelocity.dot(targetAcceleration) - missileLaunchSpeed * missileAcceleration
 //		coefs[2] = relativePosition.dot(targetAcceleration) + relativeVelocity.dot(relativeVelocity) - (missileLaunchSpeed * missileLaunchSpeed)
 //		coefs[1] = 2 * relativePosition.dot(relativeVelocity)
 //		coefs[0] = relativePosition.dot(relativePosition)
 //
 //		try {
-//			//TODO better start value, ex distance divided by speed^2
-//			val complexRoots = polynomialSolver.solveAllComplex(coefs, 1.0, POLYNOMIAL_MAX_ITERATIONS)
+//			var initialGuess = getPositiveRootOfQuadraticEquation(missileEndAcceleration - missileStartAcceleration, missileLaunchSpeed, -relativePosition.len())
+//
+//			if (initialGuess.isNaN() || initialGuess <= 0) {
+//				log.warn("invalid initialGuess $initialGuess")
+//				initialGuess = 1.0
+//			}
+//
+//			val complexRoots = polynomialSolver.solveAllComplex(coefs, initialGuess, POLYNOMIAL_MAX_ITERATIONS)
 //
 //			var solvedTime: Double? = null
 //
@@ -1132,14 +1162,20 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 //
 //		val coefs = DoubleArray(5)
 //		coefs[4] = targetAcceleration.dot(targetAcceleration) / 4.0 - (missileAcceleration * missileAcceleration) / 4.0
-//		coefs[3] = relativeVelocity.dot(targetAcceleration) /* / 2.0 */ - missileLaunchSpeed * missileAcceleration
+//		coefs[3] = relativeVelocity.dot(targetAcceleration) - missileLaunchSpeed * missileAcceleration
 //		coefs[2] = relativePosition.dot(targetAcceleration) + relativeVelocity.dot(relativeVelocity) - (missileLaunchSpeed * missileLaunchSpeed)
 //		coefs[1] = 2 * relativePosition.dot(relativeVelocity)
 //		coefs[0] = relativePosition.dot(relativePosition)
 //
 //		try {
-//			//TODO better start value, ex distance divided by speed^2
-//			val complexRoots = polynomialSolver.solveAllComplex(coefs, 1.0, POLYNOMIAL_MAX_ITERATIONS)
+//			var initialGuess = getPositiveRootOfQuadraticEquation(missileAcceleration, missileLaunchSpeed, -relativePosition.len())
+//
+//			if (initialGuess.isNaN() || initialGuess <= 0) {
+//				log.warn("invalid initialGuess $initialGuess")
+//				initialGuess = 1.0
+//			}
+//
+//			val complexRoots = polynomialSolver.solveAllComplex(coefs, initialGuess, POLYNOMIAL_MAX_ITERATIONS)
 //
 //			var solvedTime: Double? = null
 //
@@ -1216,14 +1252,20 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 //
 //		val coefs = DoubleArray(5)
 //		coefs[4] = targetAcceleration.dot(targetAcceleration) / 4.0 - (missileAcceleration * missileAcceleration) / 4.0
-//		coefs[3] = relativeVelocity.dot(targetAcceleration) /* / 2.0 */ - missileLaunchSpeed * missileAcceleration
+//		coefs[3] = relativeVelocity.dot(targetAcceleration) - missileLaunchSpeed * missileAcceleration
 //		coefs[2] = relativePosition.dot(targetAcceleration) + relativeVelocity.dot(relativeVelocity) - (missileLaunchSpeed * missileLaunchSpeed)
 //		coefs[1] = 2 * relativePosition.dot(relativeVelocity)
 //		coefs[0] = relativePosition.dot(relativePosition)
 //
 //		try {
-//			//TODO better start value, ex distance divided by speed^2
-//			val complexRoots = polynomialSolver.solveAllComplex(coefs, 1.0, POLYNOMIAL_MAX_ITERATIONS)
+//			var initialGuess = getPositiveRootOfQuadraticEquation(missileEndAcceleration - missileStartAcceleration, missileLaunchSpeed, -relativePosition.len())
+//
+//			if (initialGuess.isNaN() || initialGuess <= 0) {
+//				log.warn("invalid initialGuess $initialGuess")
+//				initialGuess = 1.0
+//			}
+//
+//			val complexRoots = polynomialSolver.solveAllComplex(coefs, initialGuess, POLYNOMIAL_MAX_ITERATIONS)
 //
 //			var solvedTime: Double? = null
 //
@@ -1305,14 +1347,20 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 		
 		val coefs = DoubleArray(5)
 		coefs[4] = targetAcceleration.dot(targetAcceleration) / 4.0 - (missileAcceleration * missileAcceleration) / 4.0
-		coefs[3] = relativeVelocity.dot(targetAcceleration) /* / 2.0 */ - missileLaunchSpeed * missileAcceleration
+		coefs[3] = relativeVelocity.dot(targetAcceleration) - missileLaunchSpeed * missileAcceleration
 		coefs[2] = relativePosition.dot(targetAcceleration) + relativeVelocity.dot(relativeVelocity) - (missileLaunchSpeed * missileLaunchSpeed)
 		coefs[1] = 2 * relativePosition.dot(relativeVelocity)
 		coefs[0] = relativePosition.dot(relativePosition)
 		
 		try {
-			//TODO better start value, ex distance divided by speed^2
-			val complexRoots = polynomialSolver.solveAllComplex(coefs, 1.0, POLYNOMIAL_MAX_ITERATIONS)
+			var initialGuess = getPositiveRootOfQuadraticEquation(missileAcceleration, missileLaunchSpeed, -relativePosition.len())
+			
+			if (initialGuess.isNaN() || initialGuess <= 0) {
+				log.warn("invalid initialGuess $initialGuess")
+				initialGuess = 1.0
+			}
+			
+			val complexRoots = polynomialSolver.solveAllComplex(coefs, initialGuess, POLYNOMIAL_MAX_ITERATIONS)
 			
 			var solvedTime: Double? = null
 			
@@ -1325,7 +1373,7 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 				}
 			}
 			
-//			println("solvedTime $solvedTime")
+//			println("solvedTime $solvedTime, initialGuess $initialGuess")
 			
 			if (solvedTime != null) {
 				

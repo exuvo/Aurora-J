@@ -69,13 +69,16 @@ import se.exuvo.aurora.starsystems.components.TargetingComputerState
 import se.exuvo.aurora.starsystems.components.ThrustComponent
 import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import se.exuvo.aurora.starsystems.components.TintComponent
+import se.exuvo.aurora.ui.GameScreenService
 import se.exuvo.aurora.ui.ProfilerWindow
+import se.exuvo.aurora.ui.UIScreen
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.Vector2D
 import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.quadtree.QuadtreeAABB
+import se.exuvo.aurora.utils.quadtree.QuadtreePoint
 import se.exuvo.aurora.utils.quadtree.QuadtreeVisitor
 import se.exuvo.aurora.utils.sRGBtoLinearRGB
 import se.exuvo.aurora.utils.scanCircleSector
@@ -127,7 +130,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	lateinit private var hpMapper: ComponentMapper<HPComponent>
 	lateinit private var cargoMapper: ComponentMapper<CargoComponent>
 
-	private val galaxyGroupSystem by lazy(LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
+	private val galaxyGroupSystem = GameServices[GroupSystem::class]
 	private val galaxy = GameServices[Galaxy::class]
 	
 	@Wire
@@ -1397,12 +1400,19 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		
-		val spSys = shadowSystem.system.world.getSystem(SpatialPartitioningSystem::class.java)
+		val tree: QuadtreePoint
+		
+		if (AuroraGame.currentWindow.screenService[UIScreen::class].shipDebugger.useShadow) {
+			tree = shadowSystem.quadtreeShips
+		} else {
+			tree = shadowSystem.system.world.getSystem(SpatialPartitioningSystem::class.java).tree
+		}
+		
 		val max2 = SpatialPartitioningSystem.MAX / 2
 		val scale = SpatialPartitioningSystem.SCALE / 1000L
 		
 //		println()
-		spSys.tree.traverse(object : QuadtreeVisitor {
+		tree.traverse(object : QuadtreeVisitor {
 			override fun leaf(node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
 //				println("leaf node $node, depth $depth, $mx $my $sx $sy")
 				shapeRenderer.color = sRGBtoLinearRGB(Color.YELLOW)
@@ -1429,12 +1439,19 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
 		
-		val spSys = shadowSystem.system.world.getSystem(SpatialPartitioningPlanetoidsSystem::class.java)
+		val tree: QuadtreeAABB
+		
+		if (AuroraGame.currentWindow.screenService[UIScreen::class].shipDebugger.useShadow) {
+			tree = shadowSystem.quadtreePlanetoids
+		} else {
+			tree = shadowSystem.system.world.getSystem(SpatialPartitioningPlanetoidsSystem::class.java).tree
+		}
+		
 		val max2 = SpatialPartitioningPlanetoidsSystem.MAX / 2
 		val scale = SpatialPartitioningPlanetoidsSystem.SCALE / 1000L
 
 //		println()
-		spSys.tree.traverse(object : QuadtreeVisitor {
+		tree.traverse(object : QuadtreeVisitor {
 			override fun leaf(node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
 //				println("leaf node $node, depth $depth, $mx $my $sx $sy")
 				shapeRenderer.color = sRGBtoLinearRGB(Color.YELLOW)
@@ -1444,7 +1461,6 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				                   (2 * scale * sy).toFloat())
 				
 				shapeRenderer.color = sRGBtoLinearRGB(Color.TEAL)
-				val tree = spSys.tree
 				val enodes = tree.enodes
 				val elts = tree.elts
 				

@@ -49,11 +49,11 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 	private val gl3: GLInterface
 	private val gdxGLFWKeyMap = mutableMapOf<Int, Int>()
 	
-	private val shipDebugger = ShipDebugger()
-	private val shipDesigner = ShipDesigner()
-	private val colonyManager = ColonyManager()
-	private val profiler = ProfilerWindow()
-	private val empireOverview = EmpireOverview()
+	val shipDebugger = ShipDebugger()
+	val shipDesigner = ShipDesigner()
+	val colonyManager = ColonyManager()
+	val profiler = ProfilerWindow()
+	val empireOverview = EmpireOverview()
 
 	class ImGuiGlobalStorage(val ctx: Context): Disposable {
 		override fun dispose() {}

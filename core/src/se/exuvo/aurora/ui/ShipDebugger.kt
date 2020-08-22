@@ -79,7 +79,18 @@ class ShipDebugger : UIWindow() {
 				with (imgui.dsl) {
 		
 					if (begin("Ship debug", ::visible, WindowFlag.AlwaysAutoResize.i)) {
-		
+						
+						if (useShadow) {
+							if (button("Shadow")) {
+								useShadow = false
+							}
+						} else {
+							if (button(" Live ")) {
+								useShadow = true
+							}
+						}
+						sameLine()
+						
 						val selectedEntities = Player.current.selection
 		
 						if (selectedEntities.isEmpty()) {
@@ -91,16 +102,6 @@ class ShipDebugger : UIWindow() {
 								selectionIndex = 0
 							}
 							
-							if (useShadow) {
-								if (button("Shadow")) {
-									useShadow = false
-								}
-							} else {
-								if (button(" Live ")) {
-									useShadow = true
-								}
-							}
-							sameLine()
 							sliderScalar("Selection", DataType.Int, ::selectionIndex, 0, selectedEntities.size() - 1, "${1 + selectionIndex} / ${selectedEntities.size()}", 2.0f)
 							
 							val entityRef =

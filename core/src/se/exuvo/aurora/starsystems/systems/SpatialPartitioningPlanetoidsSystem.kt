@@ -36,6 +36,7 @@ class SpatialPartitioningPlanetoidsSystem : BaseEntitySystem(ASPECT) {
 		@JvmField val RAW_DEPTH: Double = Math.log(SCALE * MAX.toDouble() / DESIRED_MIN_SQUARE_SIZE) / Math.log(2.0)
 		@JvmField val DEPTH: Int = RAW_DEPTH.roundToInt() // 5
 		@JvmField val MIN_SQUARE_SIZE = (SCALE * MAX.toLong()) / 2.pow(DEPTH)
+		const val MAX_ELEMENTS: Int = 4
 		/*
 			square_size = SCALE * MAX / 2.pow(DEPTH)
 			2.pow(DEPTH) = SCALE * MAX / sq
@@ -56,7 +57,7 @@ class SpatialPartitioningPlanetoidsSystem : BaseEntitySystem(ASPECT) {
 	lateinit private var circleMapper: ComponentMapper<CircleComponent>
 	lateinit private var spatialPartitioningMapper: ComponentMapper<SpatialPartitioningPlanetoidsComponent>
 
-	val tree = QuadtreeAABB(MAX, MAX, 4, DEPTH)
+	val tree = QuadtreeAABB(MAX, MAX, MAX_ELEMENTS, DEPTH)
 	
 	private var updateQueue = PriorityQueue<Int>(Comparator<Int> { a, b ->
 		val partitioningA = spatialPartitioningMapper.get(a)
@@ -116,6 +117,7 @@ class SpatialPartitioningPlanetoidsSystem : BaseEntitySystem(ASPECT) {
 		}
 		profilerEvents.start("insert")
 		partitioning.elementID = tree.insert(entityID, (x - radius).toInt(), (y - radius).toInt(), (x + radius).toInt(), (y + radius).toInt())
+		system.workingShadow.quadtreePlanetoidsChanged = true
 		profilerEvents.end()
 	}
 	
@@ -124,6 +126,7 @@ class SpatialPartitioningPlanetoidsSystem : BaseEntitySystem(ASPECT) {
 		updateQueue.remove(entityID)
 		
 		tree.remove(entityID)
+		system.workingShadow.quadtreePlanetoidsChanged = true
 	}
 	
 	private fun updateNextExpectedUpdate(entityID: Int, movement: MovementValues): Long {
@@ -204,7 +207,9 @@ class SpatialPartitioningPlanetoidsSystem : BaseEntitySystem(ASPECT) {
 		}
 		
 		profilerEvents.start("cleanup")
-		tree.cleanupFull()
+		if (tree.cleanupFull()) {
+			system.workingShadow.quadtreePlanetoidsChanged = true
+		}
 		profilerEvents.end()
 	}
 }

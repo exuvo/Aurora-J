@@ -165,6 +165,9 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	lateinit var cargoMapper: ComponentMapper<CargoComponent>
 	lateinit var changingWorldMapper: ComponentMapper<ChangingWorldComponent>
 	lateinit var asteroidMapper: ComponentMapper<AsteroidComponent>
+	
+	lateinit var spatialPartitioningSystem: SpatialPartitioningSystem
+	lateinit var spatialPartitioningPlanetoidsSystem: SpatialPartitioningPlanetoidsSystem
 
 	init {
 		galaxy.world.getMapper(GalacticPositionComponent::class.java).create(galacticEntityID).set(initialPosition)
@@ -691,6 +694,9 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		workingShadow.changedComponents.forEachFast { bitVector ->
 			bitVector.clear()
 		}
+		
+		workingShadow.quadtreeShipsChanged = false;
+		workingShadow.quadtreePlanetoidsChanged = false;
 		profilerEvents.end()
 		
 		profilerEvents.start("commands")

@@ -43,6 +43,7 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 		@JvmField val RAW_DEPTH: Double = Math.log(SCALE * MAX.toDouble() / DESIRED_MIN_SQUARE_SIZE) / Math.log(2.0)
 		@JvmField val DEPTH: Int = RAW_DEPTH.roundToInt()
 		@JvmField val MIN_SQUARE_SIZE = (SCALE * MAX.toLong()) / 2.pow(DEPTH)
+		const val MAX_ELEMENTS: Int = 8
 		/*
 			square_size = SCALE * MAX / 2.pow(DEPTH)
 			2.pow(DEPTH) = SCALE * MAX / sq
@@ -64,7 +65,7 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 	lateinit private var movementMapper: ComponentMapper<TimedMovementComponent>
 	lateinit private var spatialPartitioningMapper: ComponentMapper<SpatialPartitioningComponent>
 
-	val tree = QuadtreePoint(MAX, MAX, 8, DEPTH)
+	val tree = QuadtreePoint(MAX, MAX, MAX_ELEMENTS, DEPTH)
 	
 	private var updateQueue = PriorityQueue<Int>(Comparator<Int> { a, b ->
 		val partitioningA = spatialPartitioningMapper.get(a)
@@ -134,6 +135,7 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 		}
 		profilerEvents.start("insert")
 		partitioning.elementID = tree.insert(entityID, x.toInt(), y.toInt())
+		system.workingShadow.quadtreeShipsChanged = true
 		profilerEvents.end()
 	}
 	
@@ -143,6 +145,7 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 		
 		val partitioning = spatialPartitioningMapper.get(entityID)
 		tree.remove(partitioning.elementID)
+		system.workingShadow.quadtreeShipsChanged = true
 	}
 	
 	private fun updateNextExpectedUpdate(entityID: Int, movement: MovementValues): Long {
@@ -226,7 +229,9 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 		}
 		
 		profilerEvents.start("cleanup")
-		tree.cleanupFull()
+		if (tree.cleanupFull()) {
+			system.workingShadow.quadtreeShipsChanged = true
+		}
 		profilerEvents.end()
 	}
 }

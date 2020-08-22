@@ -1,5 +1,7 @@
 package se.exuvo.aurora.utils.quadtree;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * https://stackoverflow.com/questions/41946007/efficient-and-well-explained-implementation-of-a-quadtree-for-2d-collision-det
  * @author Dragon Energy
@@ -160,7 +162,9 @@ public class QuadtreeAABB {
 	/**
 	 * Cleans up the tree, removing empty leaves.
  	 */
-	public void cleanup() {
+	public boolean cleanup() {
+		boolean changed = false;
+		
 		// Only process the root if it's not a leaf.
 		if (nodes.get(0, node_idx_size) == -1) {
 			// Push the root index to the stack.
@@ -204,15 +208,21 @@ public class QuadtreeAABB {
 					// Make this node the new empty leaf.
 					nodes.set(node, node_idx_fc, -1);
 					nodes.set(node, node_idx_size, 0);
+					
+					changed = true;
 				}
 			}
 		}
+		
+		return changed;
 	}
 	
 	/**
 	 * Cleans up the tree, removing empty leaves and consolidating mostly empty child nodes.
 	 */
-	public void cleanupFull() {
+	public boolean cleanupFull() {
+		boolean changed = false;
+		
 		// Only process the root if it's not a leaf.
 		if (nodes.get(0, node_idx_size) == -1) {
 			// Push the root index to the stack.
@@ -261,6 +271,8 @@ public class QuadtreeAABB {
 					nodes.set(node, node_idx_fc, -1);
 					nodes.set(node, node_idx_size, 0);
 					
+					changed = true;
+					
 				} else if (num_elements != -1 && num_elements <= max_elements / 2) {
 					// Consolidate children
 					for (int j = 0; j < 4; ++j) {
@@ -302,9 +314,12 @@ public class QuadtreeAABB {
 					}
 					
 					elements.clear();
+					changed = true;
 				}
 			}
 		}
+		
+		return changed;
 	}
 	
 	/**
@@ -517,5 +532,11 @@ public class QuadtreeAABB {
 			// Increment the leaf element count.
 			nodes.set(node, node_idx_size, nodeSize + 1);
 		}
+	}
+	
+	public void copy(@NotNull QuadtreeAABB tree) {
+		elts.copy(tree.elts);
+		enodes.copy(tree.enodes);
+		nodes.copy(tree.nodes);
 	}
 }

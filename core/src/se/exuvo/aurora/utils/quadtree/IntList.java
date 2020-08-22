@@ -102,10 +102,6 @@ public class IntList {
 			final int index = nextFreeElement;
 			final int pos = index * fieldsPerElement;
 			
-			if (pos < 0) {
-				throw new RuntimeException();
-			}
-			
 			// Set the free index to the next free index.
 			nextFreeElement = data[pos];
 			
@@ -124,5 +120,22 @@ public class IntList {
 		final int pos = n * fieldsPerElement;
 		data[pos] = nextFreeElement;
 		nextFreeElement = n;
+	}
+	
+	void copy(IntList other) {
+		assert(fieldsPerElement == other.fieldsPerElement);
+		
+//		if (fieldsPerElement != other.fieldsPerElement) {
+//			throw new IllegalStateException(fieldsPerElement + " != " + other.fieldsPerElement);
+//		}
+		
+		if (capacity < other.capacity) {
+			data = new int[other.capacity];
+			capacity = other.capacity;
+		}
+		
+		System.arraycopy(other.data, 0, data, 0, other.capacity);
+		size = other.size;
+		nextFreeElement = other.nextFreeElement;
 	}
 }

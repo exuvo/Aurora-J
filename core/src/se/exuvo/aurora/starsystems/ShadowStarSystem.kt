@@ -34,8 +34,12 @@ import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import se.exuvo.aurora.starsystems.components.TintComponent
 import se.exuvo.aurora.starsystems.components.UUIDComponent
 import se.exuvo.aurora.starsystems.systems.RenderSystem
+import se.exuvo.aurora.starsystems.systems.SpatialPartitioningPlanetoidsSystem
+import se.exuvo.aurora.starsystems.systems.SpatialPartitioningSystem
 import se.exuvo.aurora.ui.ProfilerWindow
 import se.exuvo.aurora.utils.forEachFast
+import se.exuvo.aurora.utils.quadtree.QuadtreeAABB
+import se.exuvo.aurora.utils.quadtree.QuadtreePoint
 import uk.co.omegaprime.btreemap.LongObjectBTreeMap
 import java.lang.IllegalStateException
 import kotlin.reflect.full.isSuperclassOf
@@ -58,6 +62,11 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 	
 	val empireShips = LinkedHashMap<Empire, LongObjectBTreeMap<IntBag>>()
 	val profilerEvents = ProfilerWindow.ProfilerBag()
+	
+	var quadtreeShipsChanged = true
+	var quadtreePlanetoidsChanged = true
+	val quadtreeShips = QuadtreePoint(SpatialPartitioningSystem.MAX, SpatialPartitioningSystem.MAX, SpatialPartitioningSystem.MAX_ELEMENTS, SpatialPartitioningSystem.DEPTH)
+	val quadtreePlanetoids = QuadtreeAABB(SpatialPartitioningPlanetoidsSystem.MAX, SpatialPartitioningPlanetoidsSystem.MAX, SpatialPartitioningPlanetoidsSystem.MAX_ELEMENTS, SpatialPartitioningPlanetoidsSystem.DEPTH)
 	
 	lateinit var starSystemMapper: ComponentMapper<StarSystemComponent>
 	lateinit var uuidMapper: ComponentMapper<UUIDComponent>
@@ -125,6 +134,15 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 	fun update() {
 		//TODO add calls to send changes over network
 		
+		// Skip added and deleted in same tick
+		tmpBV.set(added)
+		tmpBV.and(deleted)
+		added.andNot(tmpBV)
+		changed.andNot(tmpBV)
+		deleted.andNot(tmpBV)
+		
+		changed.andNot(added) // Skip created and modified in same tick
+		
 		profilerEvents.start("deleted")
 		tmpBV.set(deleted)
 		tmpBV.or(system.shadow.deleted)
@@ -141,8 +159,6 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 		
 		val em = world.entityManager
 		val scm = system.world.componentManager
-		
-		changed.andNot(added) // Skip created and modified in same tick
 		
 		tmpBV.set(changed)
 		tmpBV.or(system.shadow.changed)
@@ -204,16 +220,8 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 //		println("added $tmpBag")
 		tmpBag.forEachFast { entityID ->
 			profilerEvents.start("$entityID")
-			val oldMaxUsed = em.maxUsedID
-			em.setNextID(entityID)
-			val newID = world.create()
-			if (newID != entityID) {
-				throw IllegalStateException("wrong entity id created $newID != $entityID")
-			}
 			
-			if (em.maxUsedID < oldMaxUsed) {
-				em.maxUsedID = oldMaxUsed
-			}
+			world.createSpecific(entityID)
 			
 			val systemMappers = scm.componentMappers(entityID)
 			
@@ -273,7 +281,17 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 		}
 		profilerEvents.end()
 		
-		//TODO copy SpatialPartitioning
+		if (quadtreeShipsChanged || system.shadow.quadtreeShipsChanged) {
+			profilerEvents.start("copy quadtree ships")
+			quadtreeShips.copy(system.spatialPartitioningSystem.tree)
+			profilerEvents.end()
+		}
+		
+		if (quadtreePlanetoidsChanged || system.shadow.quadtreePlanetoidsChanged) {
+			profilerEvents.start("copy quadtree planetoids")
+			quadtreePlanetoids.copy(system.spatialPartitioningPlanetoidsSystem.tree)
+			profilerEvents.end()
+		}
 	}
 	
 	fun getEntityReference(entityID: Int): EntityReference {

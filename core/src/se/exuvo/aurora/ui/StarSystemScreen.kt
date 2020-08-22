@@ -385,7 +385,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 										if (targetRef != null) {
 											val idleTCs = shadow.idleTargetingComputersComponentMapper.get(entityRef.entityID)
 											
-											idleTCs.targetingComputers.forEachFast{ tc ->
+											idleTCs?.targetingComputers?.forEachFast{ tc ->
 												Player.current.empire!!.commandQueue.add(SetTargetCommand(entityRef, tc, targetRef))
 											}
 										}
