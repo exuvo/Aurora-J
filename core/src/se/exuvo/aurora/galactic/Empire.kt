@@ -38,6 +38,7 @@ companion object {
 	val color = Color.RED //TODO allow picks from https://gamedev.stackexchange.com/questions/46463/how-can-i-find-an-optimum-set-of-colors-for-10-players
 	
 	init {
+		//TODO add strategic icon
 		hullClasses.add(ShipHullClass("Dreadnought", "BA"))
 		hullClasses.add(ShipHullClass("Battleship", "BB"))
 		hullClasses.add(ShipHullClass("Battlecruiser", "BC"))

@@ -11,6 +11,7 @@ import com.artemis.BaseEntitySystem
 import java.util.PriorityQueue
 import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import com.artemis.World
+import com.artemis.utils.IntBag
 import glm_.pow
 import net.mostlyoriginal.api.event.common.Subscribe
 import se.exuvo.aurora.starsystems.components.AsteroidComponent
@@ -20,7 +21,7 @@ import se.exuvo.aurora.starsystems.components.OrbitComponent
 import se.exuvo.aurora.starsystems.components.SpatialPartitioningPlanetoidsComponent
 import se.exuvo.aurora.starsystems.components.SunComponent
 import se.exuvo.aurora.starsystems.events.NonLinearMovementEvent
-import se.exuvo.aurora.utils.Units
+import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.quadtree.QuadtreeAABB
 import kotlin.math.roundToInt
 
@@ -46,6 +47,19 @@ class SpatialPartitioningPlanetoidsSystem : BaseEntitySystem(ASPECT) {
 			DEPTH = log (SCALE * MAX / sq) / log 2
 			DEPTH = log2 (SCALE * MAX / sq)
 		 */
+		
+		@JvmStatic fun query(tree: QuadtreeAABB, pos1: Vector2L, pos2: Vector2L): IntBag = query(tree, pos1.x, pos1.y, pos2.x, pos2.y)
+		
+		@JvmStatic fun query(tree: QuadtreeAABB, x1: Long, y1: Long, x2: Long, y2: Long): IntBag {
+			// element indexes
+			val result = tree.query((x1 / SCALE + MAX/2).toInt(), (y1 / SCALE + MAX/2).toInt(), (x2 / SCALE + MAX/2).toInt(), (y2 / SCALE + MAX/2).toInt())
+			
+			for (i in 0 until result.size()) {
+				result[i] = tree.elts.get(result[i], QuadtreeAABB.elt_idx_id)
+			}
+			
+			return result
+		}
 	}
 
 	private val galaxy = GameServices[Galaxy::class]
@@ -72,7 +86,7 @@ class SpatialPartitioningPlanetoidsSystem : BaseEntitySystem(ASPECT) {
 	override fun setWorld(world: World) {
 		super.setWorld(world)
 		
-		println("RAW_DEPTH $RAW_DEPTH, DEPTH $DEPTH, MIN_SQUARE_SIZE $MIN_SQUARE_SIZE, total size ${SCALE * MAX.toLong()}m ${(SCALE * MAX.toLong()) / (Units.AU * 1000)} AU")
+//		println("RAW_DEPTH $RAW_DEPTH, DEPTH $DEPTH, MIN_SQUARE_SIZE $MIN_SQUARE_SIZE, total size ${SCALE * MAX.toLong()}m ${(SCALE * MAX.toLong()) / (Units.AU * 1000)} AU")
 	}
 	
 	override fun inserted(entityID: Int): Unit {

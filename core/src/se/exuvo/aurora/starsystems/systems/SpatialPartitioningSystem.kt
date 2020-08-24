@@ -13,6 +13,7 @@ import com.artemis.EntitySubscription
 import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import com.artemis.World
 import com.artemis.utils.IntBag
+import com.badlogic.gdx.math.Vector2
 import glm_.pow
 import net.mostlyoriginal.api.event.common.Subscribe
 import se.exuvo.aurora.galactic.SimpleMunitionHull
@@ -25,6 +26,7 @@ import se.exuvo.aurora.starsystems.components.ShipComponent
 import se.exuvo.aurora.starsystems.components.SpatialPartitioningComponent
 import se.exuvo.aurora.starsystems.events.NonLinearMovementEvent
 import se.exuvo.aurora.utils.Units
+import se.exuvo.aurora.utils.Vector2L
 import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.utils.quadtree.QuadtreeAABB
 import se.exuvo.aurora.utils.quadtree.QuadtreeAABBStatic
@@ -53,6 +55,12 @@ class SpatialPartitioningSystem : BaseEntitySystem(ASPECT) {
 			DEPTH = log (SCALE * MAX / sq) / log 2
 			DEPTH = log2 (SCALE * MAX / sq)
 		 */
+		
+		@JvmStatic fun query(tree: QuadtreePoint, pos1: Vector2L, pos2: Vector2L): IntBag = query(tree, pos1.x, pos1.y, pos2.x, pos2.y)
+		
+		@JvmStatic fun query(tree: QuadtreePoint, x1: Long, y1: Long, x2: Long, y2: Long): IntBag {
+			return tree.query((x1 / SCALE + MAX/2).toInt(), (y1 / SCALE + MAX/2).toInt(), (x2 / SCALE + MAX/2).toInt(), (y2 / SCALE + MAX/2).toInt())
+		}
 	}
 
 	lateinit var canAccelerateAspect: Aspect

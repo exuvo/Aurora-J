@@ -1,5 +1,7 @@
 package se.exuvo.aurora.utils.quadtree;
 
+import com.artemis.utils.IntBag;
+
 /**
  * https://stackoverflow.com/questions/41946007/efficient-and-well-explained-implementation-of-a-quadtree-for-2d-collision-det
  * @author Dragon Energy
@@ -316,15 +318,15 @@ public class QuadtreeAABBStatic {
 	/**
 	 * Returns a list of elements found in the specified rectangle.
  	 */
-	public IntList query(int x1, int y1, int x2, int y2) {
+	public IntBag query(int x1, int y1, int x2, int y2) {
 		return query(x1, y1, x2, y2, -1);
 	}
 	
 	/**
 	 * Returns a list of elements found in the specified rectangle excluding the specified element to omit.
  	 */
-	public IntList query(int x1, int y1, int x2, int y2, int omit_element) {
-		IntList out = new IntList(1);
+	public IntBag query(int x1, int y1, int x2, int y2, int omit_element) {
+		IntBag out = new IntBag(64);
 		
 		// Find the leaves that intersect the specified query rectangle.
 		final int qlft = x1;
@@ -354,7 +356,7 @@ public class QuadtreeAABBStatic {
 				final int rgt = mx + element_sx;
 				final int btm = my + element_sy;
 				if (!temp[elementIdx] && elementIdx != omit_element && intersect(qlft, qtop, qrgt, qbtm, lft, top, rgt, btm)) {
-					out.set(out.pushBack(), 0, elementIdx);
+					out.add(elementIdx);
 					temp[elementIdx] = true;
 				}
 				elt_node_index = enodes.get(elt_node_index, enode_idx_next);
@@ -362,8 +364,10 @@ public class QuadtreeAABBStatic {
 		}
 		
 		// Unmark the elements that were inserted.
-		for (int j = 0; j < out.size(); ++j)
-			temp[out.get(j, 0)] = false;
+		for (int j = 0; j < out.size(); ++j) {
+			temp[out.get(j)] = false;
+		}
+		
 		return out;
 	}
 	

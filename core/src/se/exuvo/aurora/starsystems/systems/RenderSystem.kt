@@ -69,7 +69,6 @@ import se.exuvo.aurora.starsystems.components.TargetingComputerState
 import se.exuvo.aurora.starsystems.components.ThrustComponent
 import se.exuvo.aurora.starsystems.components.TimedMovementComponent
 import se.exuvo.aurora.starsystems.components.TintComponent
-import se.exuvo.aurora.ui.GameScreenService
 import se.exuvo.aurora.ui.ProfilerWindow
 import se.exuvo.aurora.ui.UIScreen
 import se.exuvo.aurora.utils.GameServices
@@ -267,7 +266,12 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				shapeRenderer.color = sRGBtoLinearRGB(Color(tintComponent?.color ?: Color.WHITE))
 
 				val circle = circleMapper.get(entityID)
-				shapeRenderer.circle(x, y, maxOf(1f, circle.radius / 1000), getCircleSegments(circle.radius, scale))
+				val radius = maxOf(1f, circle.radius / 1000)
+				if (radius < 1f) {
+					shapeRenderer.point(x, y, 0f)
+				} else {
+					shapeRenderer.circle(x, y, radius, getCircleSegments(radius, scale))
+				}
 			}
 		}
 
@@ -288,7 +292,12 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				val y = (movement.getYinKM() - cameraOffset.y).toFloat()
 
 				val circle = circleMapper.get(entityID)
-				shapeRenderer.circle(x, y, circle.radius / 1000 * 0.01f, getCircleSegments(circle.radius * 0.01f, scale))
+				val radius = circle.radius / 1000 * 0.01f
+				if (radius < 1f) {
+					shapeRenderer.point(x, y, 0f)
+				} else {
+					shapeRenderer.circle(x, y, radius, getCircleSegments(radius, scale))
+				}
 			}
 		}
 
@@ -1409,17 +1418,37 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 		
 		val max2 = SpatialPartitioningSystem.MAX / 2
-		val scale = SpatialPartitioningSystem.SCALE / 1000L
+		val treeScale = SpatialPartitioningSystem.SCALE / 1000L
 		
 //		println()
 		tree.traverse(object : QuadtreeVisitor {
 			override fun leaf(node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
 //				println("leaf node $node, depth $depth, $mx $my $sx $sy")
 				shapeRenderer.color = sRGBtoLinearRGB(Color.YELLOW)
-				shapeRenderer.rect((scale * (mx - sx - max2) - cameraOffset.x).toFloat(),
-				                   (scale * (my - sy - max2) - cameraOffset.y).toFloat(),
-				                   (2 * scale * sx).toFloat(),
-				                   (2 * scale * sy).toFloat())
+				shapeRenderer.rect((treeScale * (mx - sx - max2) - cameraOffset.x).toFloat(),
+				                   (treeScale * (my - sy - max2) - cameraOffset.y).toFloat(),
+				                   (2 * treeScale * sx).toFloat(),
+				                   (2 * treeScale * sy).toFloat())
+				
+				shapeRenderer.color = sRGBtoLinearRGB(Color.TEAL)
+				val enodes = tree.enodes
+				val elts = tree.elts
+				
+				var enodeIdx = tree.nodes.get(node, QuadtreePoint.node_idx_fc)
+				
+				while (enodeIdx != -1) {
+					val elementIdx: Int = enodes.get(enodeIdx, QuadtreeAABB.enode_idx_elementIdx)
+					enodeIdx = enodes.get(enodeIdx, QuadtreePoint.enode_idx_next)
+					
+					val entityID = elts.get(elementIdx, QuadtreePoint.elt_idx_id)
+					val x = elts.get(elementIdx, QuadtreePoint.elt_idx_mx)
+					val y = elts.get(elementIdx, QuadtreePoint.elt_idx_my)
+
+//					println("entity $entityID $l $t $r $b")
+					
+					shapeRenderer.rect((treeScale * (x - max2) - cameraOffset.x - 1).toFloat(), (treeScale * (y - max2) - cameraOffset.y - 1).toFloat(),
+					               2f, 2f)
+				}
 			}
 			
 			override fun branch(node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
@@ -1448,17 +1477,17 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 		
 		val max2 = SpatialPartitioningPlanetoidsSystem.MAX / 2
-		val scale = SpatialPartitioningPlanetoidsSystem.SCALE / 1000L
+		val treeScale = SpatialPartitioningPlanetoidsSystem.SCALE / 1000L
 
 //		println()
 		tree.traverse(object : QuadtreeVisitor {
 			override fun leaf(node: Int, depth: Int, mx: Int, my: Int, sx: Int, sy: Int) {
 //				println("leaf node $node, depth $depth, $mx $my $sx $sy")
 				shapeRenderer.color = sRGBtoLinearRGB(Color.YELLOW)
-				shapeRenderer.rect((scale * (mx - sx - max2) - cameraOffset.x).toFloat(),
-				                   (scale * (my - sy - max2) - cameraOffset.y).toFloat(),
-				                   (2 * scale * sx).toFloat(),
-				                   (2 * scale * sy).toFloat())
+				shapeRenderer.rect((treeScale * (mx - sx - max2) - cameraOffset.x).toFloat(),
+				                   (treeScale * (my - sy - max2) - cameraOffset.y).toFloat(),
+				                   (2 * treeScale * sx).toFloat(),
+				                   (2 * treeScale * sy).toFloat())
 				
 				shapeRenderer.color = sRGBtoLinearRGB(Color.TEAL)
 				val enodes = tree.enodes
@@ -1478,10 +1507,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					
 //					println("entity $entityID $l $t $r $b")
 					
-					shapeRenderer.rect((scale * (l - max2) - cameraOffset.x).toFloat(),
-														 (scale * (t - max2) - cameraOffset.y).toFloat(),
-														 (scale * (r - l)).toFloat(),
-														 (scale * (b - t)).toFloat())
+					shapeRenderer.rect((treeScale * (l - max2) - cameraOffset.x).toFloat(),
+														 (treeScale * (t - max2) - cameraOffset.y).toFloat(),
+														 (treeScale * (r - l)).toFloat(),
+														 (treeScale * (b - t)).toFloat())
 				}
 			}
 			

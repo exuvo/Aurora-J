@@ -293,9 +293,9 @@ class ShipHull() {
 
 data class PartRef<T: Part>(val part: T, val index: Int)
 
-data class ShipHullClass(var name: String, var code: String) {
+data class ShipHullClass(var name: String, var code: String, var icon: String = "") {
 	companion object {
-		val NONE = ShipHullClass("", "")
+		val NONE = ShipHullClass("", "", "")
 	}
 }
 

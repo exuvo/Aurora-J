@@ -1,5 +1,6 @@
 package se.exuvo.aurora.utils.quadtree;
 
+import com.artemis.utils.IntBag;
 import org.jetbrains.annotations.NotNull;
 
 import java.security.InvalidParameterException;
@@ -14,25 +15,25 @@ public class QuadtreePoint {
 	// Element fields:
 	// ----------------------------------------------------------------------------------------
 	// Stores the point the element is at.
-	static final int elt_idx_mx = 0, elt_idx_my = 1;
+	public static final int elt_idx_mx = 0, elt_idx_my = 1;
 
 	// Stores the ID of the element.
-	static final int elt_idx_id = 2;
+	public static final int elt_idx_id = 2;
 
 	// Stores all the elements in the quadtree.
-	private final IntList elts = new IntList(3, 128);
+	public final IntList elts = new IntList(3, 128);
 
 	// ----------------------------------------------------------------------------------------
 	// Element node fields:
 	// ----------------------------------------------------------------------------------------
 	// Points to the next element in the leaf node. A value of -1 indicates the end of the list.
-	static final int enode_idx_next = 0;
+	public static final int enode_idx_next = 0;
 
 	// Stores the element index.
 	static final int enode_idx_elementIdx = 1;
 
 	// Stores all the element nodes in the quadtree.
-	private final IntList enodes = new IntList(2, 128);
+	public final IntList enodes = new IntList(2, 128);
 
 	// ----------------------------------------------------------------------------------------
 	// Node fields:
@@ -40,13 +41,13 @@ public class QuadtreePoint {
 	// Points to the first child if this node is a branch or the first element node if this node is a leaf.
 	// branch: node_idx_fc is node index. Consecutive child order: TL TR BL BR
 	// leaf: node_idx_fc is element node index.
-	static final int node_idx_fc = 0;
+	public static final int node_idx_fc = 0;
 
 	// Stores the number of elements in the node or -1 if it is not a leaf.
 	static final int node_idx_size = 1;
 
 	// Stores all the nodes in the quadtree. The first node in this sequence is always the root.
-	private final IntList nodes = new IntList(2, 128);
+	public final IntList nodes = new IntList(2, 128);
 
 	// ----------------------------------------------------------------------------------------
 	// Node traversal data fields:
@@ -314,15 +315,15 @@ public class QuadtreePoint {
 	/**
 	 * Returns a list of elements found in the specified rectangle.
  	 */
-	public IntList query(int x1, int y1, int x2, int y2) {
+	public IntBag query(int x1, int y1, int x2, int y2) {
 		return query(x1, y1, x2, y2, -1);
 	}
 
 	/**
 	 * Returns a list of elements found in the specified rectangle excluding the specified element to omit.
  	 */
-	public IntList query(int x1, int y1, int x2, int y2, int omit_element) {
-		IntList out = new IntList(1);
+	public IntBag query(int x1, int y1, int x2, int y2, int omit_element) {
+		IntBag out = new IntBag(64);
 
 		// Find the leaves that intersect the specified query rectangle.
 		final int qlft = x1;
@@ -341,8 +342,8 @@ public class QuadtreePoint {
 				final int elementIdx = enodes.get(elt_node_index, enode_idx_elementIdx);
 				final int mx = elts.get(elementIdx, elt_idx_mx);
 				final int my = elts.get(elementIdx, elt_idx_my);
-				if (elementIdx != omit_element && intersect(mx, my, qlft, qtop, qrgt, qbtm)) {
-					out.set(out.pushBack(), 0, elementIdx);
+				if (elementIdx != omit_element) { // Don't do intersection test here as tree data is not always up to date.  && intersect(mx, my, qlft, qtop, qrgt, qbtm)
+					out.add(elts.get(elementIdx, elt_idx_id));
 				}
 				elt_node_index = enodes.get(elt_node_index, enode_idx_next);
 			}
@@ -351,9 +352,9 @@ public class QuadtreePoint {
 		return out;
 	}
 	
-	private static boolean intersect(int x, int y, int l, int t, int r, int b) {
-		return l <= x && x <= r && t <= y && y <= b;
-	}
+//	private static boolean intersect(int x, int y, int l, int t, int r, int b) {
+//		return l <= x && x <= r && t <= y && y <= b;
+//	}
 	
 	/**
 	 * Traverses all the nodes in the tree, calling 'branch' for branch nodes and 'leaf' for leaf nodes.

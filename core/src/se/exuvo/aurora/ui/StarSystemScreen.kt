@@ -37,6 +37,7 @@ import se.exuvo.aurora.galactic.MoteToPositionCommand
 import se.exuvo.aurora.galactic.MoveToEntityCommand
 import se.exuvo.aurora.galactic.SetTargetCommand
 import se.exuvo.aurora.starsystems.systems.SpatialPartitioningPlanetoidsSystem
+import se.exuvo.aurora.starsystems.systems.SpatialPartitioningSystem
 import kotlin.concurrent.withLock
 
 class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcessor {
@@ -270,51 +271,62 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 						val shadow = system.shadow
 						val mouseInGameCoordinates = toWorldCordinates(getMouseInScreenCordinates(screenX, screenY))
 						val entitiesUnderMouse = Bag<EntityReference>()
-						val entityIDs = directSelectionSubscription.entities
 						val testCircle = CircleL()
 						val zoom = camera.zoom
-
-						//TODO use spatial partitioning
+//						val entityIDs = directSelectionSubscription.entities
+						val entityIDs = SpatialPartitioningSystem.query(system.shadow.quadtreeShips,
+								mouseInGameCoordinates.x - 1, mouseInGameCoordinates.y - 1,
+								mouseInGameCoordinates.x + 1, mouseInGameCoordinates.y + 1)
+						
+						entityIDs.addAll(SpatialPartitioningPlanetoidsSystem.query(system.shadow.quadtreePlanetoids,
+								mouseInGameCoordinates.x - 1, mouseInGameCoordinates.y - 1,
+								mouseInGameCoordinates.x + 1, mouseInGameCoordinates.y + 1))
+						
+//						println("entityIDs $entityIDs")
 						
 						// Exact check first
 						entityIDs.forEachFast { entityID ->
-							val position = shadow.movementMapper.get(entityID).get(galaxy.time).value.position
-							val radius: Float
-
-							if (renderSystem.inStrategicView(entityID, zoom)) {
-
-								radius = 1000 * zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
-
-							} else {
-
-								radius = shadow.circleMapper.get(entityID).radius
-							}
-
-							testCircle.set(position, radius)
-
-							if (testCircle.contains(mouseInGameCoordinates)) {
-								entitiesUnderMouse.add(system.getEntityReference(entityID))
+							if (directSelectionSubscription.aspect.isInterested(entityID)) {
+								val position = shadow.movementMapper.get(entityID).get(galaxy.time).value.position
+								val radius: Float
+	
+								if (renderSystem.inStrategicView(entityID, zoom)) {
+	
+									radius = 1000 * zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
+	
+								} else {
+	
+									radius = shadow.circleMapper.get(entityID).radius
+								}
+	
+								testCircle.set(position, radius)
+	
+								if (testCircle.contains(mouseInGameCoordinates)) {
+									entitiesUnderMouse.add(system.getEntityReference(entityID))
+								}
 							}
 						}
 
 						// Lenient check if empty
 						if (entitiesUnderMouse.isEmpty()) {
 							entityIDs.forEachFast { entityID ->
-								val position = shadow.movementMapper.get(entityID).get(galaxy.time).value.position
-								var radius: Float = 1000 * 2 * camera.zoom
-
-								if (renderSystem.inStrategicView(entityID, zoom)) {
-
-									radius += 1000 * zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
-
-								} else {
-
-									radius += shadow.circleMapper.get(entityID).radius
-								}
-								testCircle.set(position, radius)
-
-								if (testCircle.contains(mouseInGameCoordinates)) {
-									entitiesUnderMouse.add(system.getEntityReference(entityID))
+								if (directSelectionSubscription.aspect.isInterested(entityID)) {
+									val position = shadow.movementMapper.get(entityID).get(galaxy.time).value.position
+									var radius: Float = 1000 * 2 * camera.zoom
+	
+									if (renderSystem.inStrategicView(entityID, zoom)) {
+	
+										radius += 1000 * zoom * RenderSystem.STRATEGIC_ICON_SIZE / 2
+	
+									} else {
+	
+										radius += shadow.circleMapper.get(entityID).radius
+									}
+									testCircle.set(position, radius)
+	
+									if (testCircle.contains(mouseInGameCoordinates)) {
+										entitiesUnderMouse.add(system.getEntityReference(entityID))
+									}
 								}
 							}
 
@@ -458,15 +470,19 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 				galaxy.shadowLock.withLock {
 					val indirectSelectionSubscription = system.shadow.world.getAspectSubscriptionManager().get(INDIRECT_SELECTION_FAMILY)
 					
-					val entityIDs = indirectSelectionSubscription.entities
+					val entityIDs = SpatialPartitioningSystem.query(system.shadow.quadtreeShips, p1GameCoordinates, p2GameCoordinates);
+					
+//					val entityIDs = indirectSelectionSubscription.entities
 					val testRectangle = RectangleL(p1GameCoordinates.x, p1GameCoordinates.y, p2GameCoordinates.x - p1GameCoordinates.x, p2GameCoordinates.y - p1GameCoordinates.y)
-		//			println("testRectangle $testRectangle")
-		
+//					println("testRectangle $testRectangle, entityIDs $entityIDs")
+					
 					entityIDs.forEachFast { entityID ->
-						val position = system.shadow.movementMapper.get(entityID).get(galaxy.time).value.position
-		
-						if (testRectangle.contains(position)) {
-							entitiesInSelection.add(system.shadow.getEntityReference(entityID))
+						if (indirectSelectionSubscription.aspect.isInterested(entityID)) {
+							val position = system.shadow.movementMapper.get(entityID).get(galaxy.time).value.position
+			
+							if (testRectangle.contains(position)) {
+								entitiesInSelection.add(system.shadow.getEntityReference(entityID))
+							}
 						}
 					}
 				}

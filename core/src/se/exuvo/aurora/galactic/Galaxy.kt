@@ -359,6 +359,30 @@ class Galaxy(val empires: MutableList<Empire>, var time: Long = 0) : Runnable, E
 		}
 	}
 	
+	/**
+	 * Mark that component contents have changed
+	 */
+	fun changed(entityID: Int, componentIndex: Int) {
+		workingShadow.changed.unsafeSet(entityID)
+		workingShadow.changedComponents[componentIndex].unsafeSet(entityID)
+	}
+	
+	fun changed(entityID: Int, vararg componentIndexes: Int) {
+		workingShadow.changed.unsafeSet(entityID)
+		
+		for (index in componentIndexes) {
+			workingShadow.changedComponents[index].unsafeSet(entityID)
+		}
+	}
+	
+	inline fun changed(entityID: Int, componentMapper: ComponentMapper<*>) {
+		changed(entityID, componentMapper.type.index)
+	}
+	
+	fun changed(entityID: Int, vararg componentMappers: ComponentMapper<*>) {
+		changed(entityID, *IntArray(componentMappers.size, { index -> componentMappers[index].type.index } ))
+	}
+	
 	override fun removed(entityIDs: IntBag) {
 		entityIDs.forEachFast { entityID ->
 			workingShadow.deleted.unsafeSet(entityID)

@@ -27,6 +27,7 @@ class ShadowGalaxy(val galaxy: Galaxy) : Disposable {
 	val world: World
 	val added = BitVector()
 	val changed = BitVector()
+	val changedComponents = Array<BitVector>(galaxy.world.componentManager.componentTypes.size(), { BitVector() })
 	val deleted = BitVector()
 	
 	var time = 0L
@@ -51,6 +52,7 @@ class ShadowGalaxy(val galaxy: Galaxy) : Disposable {
 	private val mappersByTypeIndex = Bag<ComponentMapper<*>>(galaxy.world.componentManager.componentTypes.size())
 	
 	private val tmpBV = BitVector()
+	private val tmpBVs = Array<BitVector>(changedComponents.size, { BitVector() })
 	private val tmpBag = IntBag()
 	
 	init {
@@ -68,16 +70,31 @@ class ShadowGalaxy(val galaxy: Galaxy) : Disposable {
 			}
 		}
 		
-		
 //		allSubscription = world.getAspectSubscriptionManager().get(Aspect.all())
 		
 		galaxy.world.entityManager.registerEntityStore(added)
 		galaxy.world.entityManager.registerEntityStore(changed)
 		galaxy.world.entityManager.registerEntityStore(deleted)
+		galaxy.world.entityManager.registerEntityStore(tmpBV)
+		
+		changedComponents.forEachFast { bitVector ->
+			galaxy.world.entityManager.registerEntityStore(bitVector)
+		}
+		tmpBVs.forEachFast { bitVector ->
+			galaxy.world.entityManager.registerEntityStore(bitVector)
+		}
 	}
 	
 	fun update() {
-		tmpBV.ensureCapacity(added.length())
+		
+		// Skip added and deleted in same tick
+		tmpBV.set(added)
+		tmpBV.and(deleted)
+		added.andNot(tmpBV)
+		changed.andNot(tmpBV)
+		deleted.andNot(tmpBV)
+		
+		changed.andNot(added) // Skip created and modified in same tick
 		
 		profilerEvents.start("deleted")
 		tmpBV.clear()
@@ -96,39 +113,55 @@ class ShadowGalaxy(val galaxy: Galaxy) : Disposable {
 		val em = world.entityManager
 		val scm = galaxy.world.componentManager
 		
-		changed.andNot(added) // BatchProcessor component changes includes added too. Also skip created and modified in same tick
-		
-		tmpBV.clear()
-		tmpBV.or(changed)
-		tmpBV.andNot(galaxy.shadow.added) // Skip otherShadow added as they will be handled as added below
+		tmpBV.set(changed)
 		tmpBV.or(galaxy.shadow.changed)
-		tmpBV.andNot(deleted) // Skip now deleted from otherShadow changed
-		tmpBV.andNot(galaxy.shadow.deleted)
+		tmpBV.andNot(galaxy.shadow.added) // Skip other added as they will be handled as added below
+		tmpBV.andNot(deleted) // Skip now deleted from other changed
+		tmpBV.andNot(galaxy.shadow.deleted) // Skip other deleted from other changed
+		
+		tmpBV.toIntBag(tmpBag)
+		
+		tmpBVs.forEachFast { index, bitVector ->
+			bitVector.set(changedComponents[index])
+			bitVector.or(galaxy.shadow.changedComponents[index])
+		}
 		
 		profilerEvents.start("changed")
-		tmpBV.toIntBag(tmpBag)
 		tmpBag.forEachFast { entityID ->
 			if (!em.isActive(entityID)) {
 				throw IllegalStateException("entity id $entityID does not exist")
 			}
 			
-			val systemMappers = scm.componentMappers(entityID)
+			val systemMappers = scm.componentMappers(entityID) // Only includes current components
 			
 			systemMappers?.forEachFast { systemMapper ->
-				val shadowMapper = mappersByTypeIndex[systemMapper.type.index]
+				val typeIndex = systemMapper.type.index
 				
-				if (shadowMapper != null) {
-					var systemComponent = systemMapper.get(entityID) as CloneableComponent<*>
-					val shadowComponent = shadowMapper.create(entityID)
-					systemComponent.copy2(shadowComponent)
+				if (tmpBVs[typeIndex].unsafeGet(entityID)) {
+					tmpBVs[typeIndex].unsafeClear(entityID)
+					
+					val shadowMapper = mappersByTypeIndex[typeIndex]
+					
+					if (shadowMapper != null) {
+						var systemComponent = systemMapper.get(entityID) as CloneableComponent<*>
+						val shadowComponent = shadowMapper.create(entityID)
+						systemComponent.copy2(shadowComponent)
+					}
+				}
+			}
+			
+			// Removed components
+			tmpBVs.forEachFast { index, bitVector ->
+				if (bitVector.unsafeGet(entityID)) {
+					mappersByTypeIndex[index]?.remove(entityID)
 				}
 			}
 		}
 		profilerEvents.end()
 		
-		tmpBV.clear()
-		tmpBV.or(added)
+		tmpBV.set(added)
 		tmpBV.or(galaxy.shadow.added)
+		tmpBV.andNot(deleted) // Skip other added that are now deleted
 		
 		profilerEvents.start("added")
 		tmpBV.toIntBag(tmpBag)

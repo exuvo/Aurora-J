@@ -1,5 +1,7 @@
 package se.exuvo.aurora.utils.quadtree;
 
+import com.artemis.utils.IntBag;
+import net.mostlyoriginal.api.plugin.extendedcomponentmapper.M;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -323,17 +325,17 @@ public class QuadtreeAABB {
 	}
 	
 	/**
-	 * Returns a list of elements found in the specified rectangle.
+	 * Returns a list of element indexes found in the specified rectangle.
  	 */
-	public IntList query(int x1, int y1, int x2, int y2) {
+	public IntBag query(int x1, int y1, int x2, int y2) {
 		return query(x1, y1, x2, y2, -1);
 	}
 	
 	/**
-	 * Returns a list of elements found in the specified rectangle excluding the specified element to omit.
+	 * Returns a list of element indexes found in the specified rectangle excluding the specified element to omit.
  	 */
-	public IntList query(int x1, int y1, int x2, int y2, int omit_element) {
-		IntList out = new IntList(1);
+	public IntBag query(int x1, int y1, int x2, int y2, int omit_element) {
+		IntBag out = new IntBag(64);
 		
 		// Find the leaves that intersect the specified query rectangle.
 		final int qlft = x1;
@@ -345,7 +347,6 @@ public class QuadtreeAABB {
 		if (temp_size < elts.size()) {
 			temp_size = elts.size();
 			temp = new boolean[temp_size];
-			;
 		}
 		
 		// For each leaf node, look for elements that intersect.
@@ -355,24 +356,30 @@ public class QuadtreeAABB {
 			// Walk the list and add elements that intersect.
 			int elt_node_index = nodes.get(nd_index, node_idx_fc);
 			while (elt_node_index != -1) {
-				final int element = enodes.get(elt_node_index, enode_idx_elementIdx);
-				final int lft = elts.get(element, elt_idx_lft);
-				final int top = elts.get(element, elt_idx_top);
-				final int rgt = elts.get(element, elt_idx_rgt);
-				final int btm = elts.get(element, elt_idx_btm);
-				if (!temp[element] && element != omit_element && intersect(qlft, qtop, qrgt, qbtm, lft, top, rgt, btm)) {
-					out.set(out.pushBack(), 0, element);
-					temp[element] = true;
+				final int elementIdx = enodes.get(elt_node_index, enode_idx_elementIdx);
+				final int lft = elts.get(elementIdx, elt_idx_lft);
+				final int top = elts.get(elementIdx, elt_idx_top);
+				final int rgt = elts.get(elementIdx, elt_idx_rgt);
+				final int btm = elts.get(elementIdx, elt_idx_btm);
+				if (!temp[elementIdx] && elementIdx != omit_element) { // Don't do intersection test here as tree data is not always up to date. && intersect(qlft, qtop, qrgt, qbtm, lft, top, rgt, btm)
+					out.add(elementIdx);
+					temp[elementIdx] = true;
 				}
 				elt_node_index = enodes.get(elt_node_index, enode_idx_next);
 			}
 		}
 		
 		// Unmark the elements that were inserted.
-		for (int j = 0; j < out.size(); ++j)
-			temp[out.get(j, 0)] = false;
+		for (int j = 0; j < out.size(); ++j) {
+			temp[out.get(j)] = false;
+		}
 		return out;
 	}
+	
+//	private static boolean intersect(int l1, int t1, int r1, int b1,
+//																	 int l2, int t2, int r2, int b2) {
+//		return l2 <= r1 && r2 >= l1 && t2 <= b1 && b2 >= t1;
+//	}
 	
 	/**
 	 * Traverses all the nodes in the tree, calling 'branch' for branch nodes and 'leaf' for leaf nodes.
@@ -404,11 +411,6 @@ public class QuadtreeAABB {
 			} else
 				visitor.leaf(nd_index, nd_depth, nd_mx, nd_my, nd_sx, nd_sy);
 		}
-	}
-	
-	private static boolean intersect(int l1, int t1, int r1, int b1,
-																	 int l2, int t2, int r2, int b2) {
-		return l2 <= r1 && r2 >= l1 && t2 <= b1 && b2 >= t1;
 	}
 	
 	private static void pushNode(IntList nodes, int nd_index, int nd_depth, int nd_mx, int nd_my, int nd_sx, int nd_sy) {
