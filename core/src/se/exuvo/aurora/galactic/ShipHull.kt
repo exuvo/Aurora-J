@@ -18,6 +18,7 @@ class ShipHull() {
 	
 	var name: String = ""
 	var hullClass: ShipHullClass = ShipHullClass.NONE
+	var icon: StrategicIcon = StrategicIcon.NONE
 	var designDay: Int = 0
 	var locked = false
 	var obsolete = false
@@ -124,6 +125,7 @@ class ShipHull() {
 	fun finalize() {
 		locked = true
 		//TODO sort target controls to after weapons in parts and partRefs
+		//TODO select base icon (icon shape) automatically from mass
 		
 		partRefs.forEachFast { partRef ->
 			if (partRef.part is Shield) {
@@ -293,9 +295,42 @@ class ShipHull() {
 
 data class PartRef<T: Part>(val part: T, val index: Int)
 
-data class ShipHullClass(var name: String, var code: String, var icon: String = "") {
+
+data class ShipHullClass(var name: String, var code: String) {
 	companion object {
-		val NONE = ShipHullClass("", "", "")
+		val NONE = ShipHullClass("", "")
 	}
 }
 
+// Icon shape/outline
+data class StrategicIconBase(val baseIcon: String, val massLimit: Long) {
+	companion object {
+		val MASSIVE = StrategicIconBase("strategic/massive", 10_000_000L)
+		val HUGE = StrategicIconBase("strategic/huge", 1_000_000L)
+		val LARGE = StrategicIconBase("strategic/large", 100_000L)
+		val MEDIUM = StrategicIconBase("strategic/medium", 10_000L)
+		val SMALL = StrategicIconBase("strategic/small", 1000L)
+		val TINY = StrategicIconBase("strategic/tiny", 100L)
+		val BOMBER = StrategicIconBase("strategic/bomber", 30L)
+		val FIGHTER = StrategicIconBase("strategic/fighter", 20L)
+		
+		val COLONY = StrategicIconBase("strategic/colony", 0L)
+		val OUTPOST = StrategicIconBase("strategic/outpost", 0L)
+		val ASTEROID = StrategicIconBase("strategic/asteroid", 0L)
+		val NONE = StrategicIconBase("strategic/ship", 0L)
+		
+		//TODO add above and sort by mass
+		val shipsSomething = ArrayList<StrategicIconBase>()
+		
+		init {
+		
+		}
+	}
+}
+
+// TODO add corner/side extras
+data class StrategicIcon(var centerIcon: String = "strategic/ship", val base: StrategicIconBase) {
+	companion object {
+		val NONE = StrategicIcon("", StrategicIconBase.NONE)
+	}
+}

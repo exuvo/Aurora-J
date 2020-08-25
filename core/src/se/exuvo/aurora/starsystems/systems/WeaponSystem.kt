@@ -738,6 +738,8 @@ class WeaponSystem : IteratingSystem(FAMILY), PreSystem {
 			return
 		}
 		
+		//TODO if missile or railgun attempt CIWS defence
+		
 		if (targetMovement == null) {
 			targetMovement = movementMapper.get(targetID).get(galaxy.time).value
 		}

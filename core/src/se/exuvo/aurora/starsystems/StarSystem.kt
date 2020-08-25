@@ -496,7 +496,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		circleMapper.create(shipEntity).set(radius = 10f)
 		nameMapper.create(shipEntity).set(name = "New Ship")
 		tintMapper.create(shipEntity).set(Color.ORANGE)
-		strategicIconMapper.create(shipEntity).set(Assets.textures.findRegion("strategic/ship"))
+		strategicIconMapper.create(shipEntity).set(Assets.textures.findRegion(hull.hullClass.baseIcon))
 		emissionsMapper.create(shipEntity).set(mapOf(Spectrum.Electromagnetic to 0.0, Spectrum.Thermal to 0.0))
 		ownerMapper.create(shipEntity).set(empire)
 		

@@ -181,6 +181,7 @@ class TexturePackerTask(val assetManager: AssetManager) : Thread() {
 			// Packer supports .png .jpg .jpeg
 			// https://github.com/libgdx/libgdx/wiki/Texture-packer
 			TexturePacker.process(absolutePath, absolutePath, atlasName)
+			//TODO merge with strategic atlas
 			done = true
 
 		} catch(e: Exception) {

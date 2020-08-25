@@ -1,0 +1,133 @@
+
+strategic.png
+size: 95,47
+format: RGBA8888
+filter: Nearest,Nearest
+repeat: none
+strategic/massive
+  rotate: false
+  xy: 0, 0
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/huge
+  rotate: false
+  xy: 16, 0
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/large
+  rotate: false
+  xy: 32, 0
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/medium
+  rotate: false
+  xy: 48, 0
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/small
+  rotate: false
+  xy: 64, 0
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/tiny
+  rotate: false
+  xy: 80, 0
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/fighter
+  rotate: false
+  xy: 0, 16
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/bomber
+  rotate: false
+  xy: 16, 16
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/outpost
+  rotate: false
+  xy: 32, 16
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/colony
+  rotate: false
+  xy: 48, 16
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/unknown1
+  rotate: false
+  xy: 64, 16
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/unknown2
+  rotate: false
+  xy: 80, 16
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/mine
+  rotate: false
+  xy: 0, 32
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/empty1
+  rotate: false
+  xy: 16, 32
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/empty2
+  rotate: false
+  xy: 32, 32
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/asteroid
+  rotate: false
+  xy: 48, 32
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/unknown3
+  rotate: false
+  xy: 64, 32
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/unknown4
+  rotate: false
+  xy: 80, 32
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+

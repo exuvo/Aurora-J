@@ -627,6 +627,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					vertex(maxX, maxY);
 					vertex(minX, maxY);
 					
+					//TODO do multiple circles at the same instead of individual calls
 					mesh.setVertices(vertices, 0, vertexIdx)
 					mesh.setIndices(indices, 0, indiceIdx)
 					mesh.render(cShader, GL20.GL_TRIANGLES)
