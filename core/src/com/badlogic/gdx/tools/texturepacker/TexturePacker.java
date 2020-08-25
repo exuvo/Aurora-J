@@ -20,17 +20,8 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
+import java.io.*;
+import java.util.*;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -64,7 +55,7 @@ public class TexturePacker {
 //		this.rootDir = rootDir;
 		this.settings = settings;
 
-		if (settings.pot) {
+		if (settings.powerOfTwo) {
 			if (settings.maxWidth != MathUtils.nextPowerOfTwo(settings.maxWidth))
 				throw new RuntimeException("If pot is true, maxWidth must be a power of two: " + settings.maxWidth);
 			if (settings.maxHeight != MathUtils.nextPowerOfTwo(settings.maxHeight))
@@ -178,7 +169,7 @@ public class TexturePacker {
 				width += paddingX * 2;
 				height += paddingY * 2;
 			}
-			if (settings.pot) {
+			if (settings.powerOfTwo) {
 				width = MathUtils.nextPowerOfTwo(width);
 				height = MathUtils.nextPowerOfTwo(height);
 			}
@@ -576,7 +567,7 @@ public class TexturePacker {
 
 	/** @author Nathan Sweet */
 	static public class Settings {
-		public boolean pot = true;
+		public boolean powerOfTwo = true; // 	If true, output pages will have power of two dimensions.
 		public int paddingX = 2, paddingY = 2;
 		public boolean edgePadding = true;
 		public boolean duplicatePadding = false;
@@ -607,7 +598,7 @@ public class TexturePacker {
 		public boolean grid;
 		public float[] scale = {1};
 		public String[] scaleSuffix = {""};
-		public Resampling[] scaleResampling = {Resampling.bicubic};
+		public Resampling[] scaleResampling = { Resampling.bicubic };
 		public String atlasExtension = ".atlas";
 
 		public Settings () {
@@ -622,7 +613,7 @@ public class TexturePacker {
 		public void set (Settings settings) {
 			fast = settings.fast;
 			rotation = settings.rotation;
-			pot = settings.pot;
+			powerOfTwo = settings.powerOfTwo;
 			minWidth = settings.minWidth;
 			minHeight = settings.minHeight;
 			maxWidth = settings.maxWidth;
@@ -696,15 +687,14 @@ public class TexturePacker {
 	}
 
 	static public void process (Settings settings, String input, String output, String packFileName) {
-		process(settings, input, output, packFileName, null);
+		process(settings, input, output, packFileName, null, null);
 	}
 
 	/** @param input Directory containing individual images to be packed.
 	 * @param output Directory where the pack file and page images will be written.
 	 * @param packFileName The name of the pack file. Also used to name the page images.
 	 * @param progress May be null. */
-	static public void process (Settings settings, String input, String output, String packFileName,
-		final ProgressListener progress) {
+	static public void process (Settings settings, String input, String output, String packFileName, final ProgressListener progress, FilenameFilter inputFilter) {
 		try {
 			TexturePackerFileProcessor processor = new TexturePackerFileProcessor(settings, packFileName) {
 				protected TexturePacker newTexturePacker (File root, Settings settings) {
@@ -719,6 +709,11 @@ public class TexturePacker {
 					return file1.getName().compareTo(file2.getName());
 				}
 			});
+			
+			if (inputFilter != null) {
+				processor.setInputFilter(inputFilter);
+			}
+			
 			processor.process(new File(input), new File(output));
 		} catch (Exception ex) {
 			throw new RuntimeException("Error packing images.", ex);

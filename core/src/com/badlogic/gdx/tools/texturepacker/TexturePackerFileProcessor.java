@@ -54,7 +54,8 @@ public class TexturePackerFileProcessor extends FileProcessor {
 		setFlattenOutput(true);
 		addInputSuffix(".png", ".jpg", ".jpeg");
 	}
-
+	
+	@Override
 	public ArrayList<Entry> process (File inputFile, File outputRoot) throws Exception {
 		root = inputFile;
 
@@ -104,6 +105,7 @@ public class TexturePackerFileProcessor extends FileProcessor {
 		}
 	}
 
+	@Override
 	public ArrayList<Entry> process (File[] files, File outputRoot) throws Exception {
 		// Delete pack file and images.
 		if (outputRoot.exists()) {
@@ -143,7 +145,8 @@ public class TexturePackerFileProcessor extends FileProcessor {
 		}
 		return super.process(files, outputRoot);
 	}
-
+	
+	@Override
 	protected void processDir (Entry inputDir, ArrayList<Entry> files) throws Exception {
 		if (ignoreDirs.contains(inputDir.inputFile)) return;
 

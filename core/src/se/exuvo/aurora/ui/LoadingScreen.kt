@@ -11,12 +11,21 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.profiling.GLErrorListener
 import com.badlogic.gdx.graphics.profiling.GLProfiler
 import com.badlogic.gdx.tools.texturepacker.TexturePacker
+import com.badlogic.gdx.utils.StreamUtils
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.Technology
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.OutputStreamListener
 import java.io.PrintStream
 import se.exuvo.aurora.AuroraGame
+import se.unlogic.standardutils.io.CloseUtils
+import java.io.File
+import java.io.FilenameFilter
+import java.io.InputStream
+import java.io.OutputStream
+import java.nio.file.Files
+import java.nio.file.OpenOption
+import java.nio.file.StandardOpenOption
 
 // See GlyphLayout::setText and BitmapFont$BitmapFontData::getGlyphs
 fun getFontWidth(font: BitmapFont, text: String): Float {
@@ -107,7 +116,7 @@ class LoadingScreen() : GameScreenImpl() {
 
 		if (!texturePackerTask.done) {
 
-			var text = "Packing textures.."
+			var text = "Packing textures.. ${texturePackerTask.packingProgress}%"
 			Assets.fontUI.draw(batch, text, Gdx.graphics.width / 2f - getFontWidth(Assets.fontUI, text) / 2, Gdx.graphics.height / 2f + Assets.fontUI.lineHeight / 2)
 
 			text = texturePackerTask.output.toString()
@@ -128,6 +137,7 @@ class TexturePackerTask(val assetManager: AssetManager) : Thread() {
 	var exception: Exception? = null
 	var done = false
 	val output = OutputStreamListener()
+	var packingProgress = 0f
 
 	override fun run() {
 
@@ -180,8 +190,39 @@ class TexturePackerTask(val assetManager: AssetManager) : Thread() {
 
 			// Packer supports .png .jpg .jpeg
 			// https://github.com/libgdx/libgdx/wiki/Texture-packer
-			TexturePacker.process(absolutePath, absolutePath, atlasName)
-			//TODO merge with strategic atlas
+			val settings = TexturePacker.Settings()
+			
+			TexturePacker.process(settings, absolutePath, absolutePath, atlasName, object : TexturePacker.ProgressListener() {
+				override fun progress(progress: Float) {
+					packingProgress = progress
+				}
+			}, object : FilenameFilter {
+				override fun accept(dir: File, name: String): Boolean {
+					if ("strategic.png" == name && dir.endsWith("/strategic/")) {
+						return false;
+					}
+					
+					return true
+				}
+			}
+			)
+			
+			// Append strategic icons to atlas
+			val strategicIconsAtlas = assetManager.getFileHandleResolver().resolve("images/strategic/strategic.atlas")
+			var inStream: InputStream? = null
+			var outStream: OutputStream? = null
+			try {
+				inStream = strategicIconsAtlas.read()
+				outStream = Files.newOutputStream(existingAtlas.file().toPath(), StandardOpenOption.APPEND)
+				
+				StreamUtils.copyStream(inStream, output)
+				
+			} finally {
+				CloseUtils.close(inStream)
+				CloseUtils.close(outStream)
+			}
+			
+			
 			done = true
 
 		} catch(e: Exception) {

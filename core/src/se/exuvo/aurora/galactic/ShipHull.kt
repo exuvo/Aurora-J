@@ -303,34 +303,48 @@ data class ShipHullClass(var name: String, var code: String) {
 }
 
 // Icon shape/outline
-data class StrategicIconBase(val baseIcon: String, val massLimit: Long) {
+enum class StrategicIconBase(val baseIcon: String, val massLimit: Long) {
+	GIGANTIC("strategic/gigantic", 1_000_000L),
+	MASSIVE("strategic/massive", 300_000L),
+	HUGE("strategic/huge", 125_000L),
+	LARGE("strategic/large", 50_000L),
+	MEDIUM("strategic/medium", 10_000L),
+	SMALL("strategic/small", 2000L),
+	TINY("strategic/tiny", 200L),
+	
+	BOMBER("strategic/bomber", 30L),
+	FIGHTER("strategic/fighter", 20L),
+	
+	COLONY("strategic/colony", 0L),
+	OUTPOST("strategic/outpost", 0L),
+	
+	STARBASE("strategic/starbase", 0L),
+	FORTRESS("strategic/fortress", 0L),
+	
+	ASTEROID("strategic/asteroid", 0L),
+	MINE("strategic/mine", 0L),
+	NONE("strategic/ship", 0L),
+	;
 	companion object {
-		val MASSIVE = StrategicIconBase("strategic/massive", 10_000_000L)
-		val HUGE = StrategicIconBase("strategic/huge", 1_000_000L)
-		val LARGE = StrategicIconBase("strategic/large", 100_000L)
-		val MEDIUM = StrategicIconBase("strategic/medium", 10_000L)
-		val SMALL = StrategicIconBase("strategic/small", 1000L)
-		val TINY = StrategicIconBase("strategic/tiny", 100L)
-		val BOMBER = StrategicIconBase("strategic/bomber", 30L)
-		val FIGHTER = StrategicIconBase("strategic/fighter", 20L)
-		
-		val COLONY = StrategicIconBase("strategic/colony", 0L)
-		val OUTPOST = StrategicIconBase("strategic/outpost", 0L)
-		val ASTEROID = StrategicIconBase("strategic/asteroid", 0L)
-		val NONE = StrategicIconBase("strategic/ship", 0L)
-		
-		//TODO add above and sort by mass
-		val shipsSomething = ArrayList<StrategicIconBase>()
-		
-		init {
-		
-		}
+		val ships = listOf(GIGANTIC, MASSIVE, HUGE, LARGE, MEDIUM, SMALL, TINY)
 	}
 }
 
+enum class StrategicIconCenter(val centerIcon: String) {
+		RAILGUN1("strategic/cRailgun1"),
+		RAILGUN2("strategic/cRailgun2"),
+		LASER1("strategic/cLaser1"),
+		LASER2("strategic/cLaser2"),
+		MISSILE1("strategic/cMissile1"),
+		MISSILE2("strategic/cMissile2"),
+		MISSILE3("strategic/cMissile3"),
+		MISSILE4("strategic/cMissile4"),
+		NONE(""),
+}
+
 // TODO add corner/side extras
-data class StrategicIcon(var centerIcon: String = "strategic/ship", val base: StrategicIconBase) {
+data class StrategicIcon(var center: StrategicIconCenter, val base: StrategicIconBase) {
 	companion object {
-		val NONE = StrategicIcon("", StrategicIconBase.NONE)
+		val NONE = StrategicIcon(StrategicIconCenter.NONE, StrategicIconBase.NONE)
 	}
 }

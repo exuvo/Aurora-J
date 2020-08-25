@@ -140,7 +140,7 @@ public class MaxRectsPacker implements Packer {
 		if (settings.square) {
 			int minSize = Math.max(minWidth, minHeight);
 			int maxSize = Math.min(settings.maxWidth, settings.maxHeight);
-			BinarySearch sizeSearch = new BinarySearch(minSize, maxSize, settings.fast ? 25 : 15, settings.pot);
+			BinarySearch sizeSearch = new BinarySearch(minSize, maxSize, settings.fast ? 25 : 15, settings.powerOfTwo);
 			int size = sizeSearch.reset(), i = 0;
 			while (size != -1) {
 				Page result = packAtSize(true, size - edgePaddingX, size - edgePaddingY, inputRects);
@@ -159,8 +159,8 @@ public class MaxRectsPacker implements Packer {
 			bestResult.height = Math.max(bestResult.width, bestResult.height);
 			return bestResult;
 		} else {
-			BinarySearch widthSearch = new BinarySearch(minWidth, settings.maxWidth, settings.fast ? 25 : 15, settings.pot);
-			BinarySearch heightSearch = new BinarySearch(minHeight, settings.maxHeight, settings.fast ? 25 : 15, settings.pot);
+			BinarySearch widthSearch = new BinarySearch(minWidth, settings.maxWidth, settings.fast ? 25 : 15, settings.powerOfTwo);
+			BinarySearch heightSearch = new BinarySearch(minHeight, settings.maxHeight, settings.fast ? 25 : 15, settings.powerOfTwo);
 			int width = widthSearch.reset(), i = 0;
 			int height = settings.square ? width : heightSearch.reset();
 			while (true) {

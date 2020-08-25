@@ -195,7 +195,7 @@ public class FileProcessor {
 					}
 					if (!found) continue;
 				}
-
+				
 				File dir = file.getParentFile();
 				if (inputFilter != null && !inputFilter.accept(dir, file.getName())) continue;
 

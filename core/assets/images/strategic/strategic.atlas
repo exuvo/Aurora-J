@@ -1,133 +1,398 @@
 
 strategic.png
-size: 95,47
+size: 127,63
 format: RGBA8888
 filter: Nearest,Nearest
 repeat: none
-strategic/massive
+strategic/huge
   rotate: false
   xy: 0, 0
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/huge
+strategic/large
   rotate: false
   xy: 16, 0
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/large
+strategic/medium
   rotate: false
   xy: 32, 0
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/medium
+strategic/small
   rotate: false
   xy: 48, 0
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/small
+strategic/tiny
   rotate: false
   xy: 64, 0
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/tiny
+strategic/empty1
   rotate: false
   xy: 80, 0
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/fighter
+strategic/gigantic
   rotate: false
   xy: 0, 16
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/bomber
+strategic/massive
   rotate: false
   xy: 16, 16
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/outpost
+strategic/fighter
   rotate: false
   xy: 32, 16
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/colony
+strategic/bomber
   rotate: false
   xy: 48, 16
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/unknown1
+strategic/shield
   rotate: false
   xy: 64, 16
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/unknown2
+strategic/empty2
   rotate: false
   xy: 80, 16
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/mine
+strategic/outpost
   rotate: false
   xy: 0, 32
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/empty1
+strategic/colony
   rotate: false
   xy: 16, 32
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/empty2
+strategic/starbase
   rotate: false
   xy: 32, 32
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/asteroid
+strategic/fortress
   rotate: false
   xy: 48, 32
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/unknown3
+strategic/empty3
   rotate: false
   xy: 64, 32
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-strategic/unknown4
+strategic/empty4
   rotate: false
   xy: 80, 32
   size: 15, 15
   orig: 15, 15
   offset: 0, 0
   index: -1
-
+strategic/mine
+  rotate: false
+  xy: 0, 48
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/asteroid1
+  rotate: false
+  xy: 16, 48
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/asteroid2
+  rotate: false
+  xy: 32, 48
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/unknown1
+  rotate: false
+  xy: 48, 48
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/unknown2
+  rotate: false
+  xy: 64, 48
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/empty5
+  rotate: false
+  xy: 80, 48
+  size: 15, 15
+  orig: 15, 15
+  offset: 0, 0
+  index: -1
+strategic/cRailgun1
+  rotate: false
+  xy: 96, 0
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cRailgun2
+  rotate: false
+  xy: 104, 0
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cTarget
+  rotate: false
+  xy: 112, 0
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cCorners
+  rotate: false
+  xy: 120, 0
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cLaser1
+  rotate: false
+  xy: 96, 8
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cLaser2
+  rotate: false
+  xy: 104, 8
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cEmptyCircle
+  rotate: false
+  xy: 112, 8
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cSquiggle
+  rotate: false
+  xy: 120, 8
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cMissile1
+  rotate: false
+  xy: 96, 16
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cMissile2
+  rotate: false
+  xy: 104, 16
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cTopArc
+  rotate: false
+  xy: 112, 16
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cLightning
+  rotate: false
+  xy: 120, 16
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cMissile3
+  rotate: false
+  xy: 96, 24
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cMissile4
+  rotate: false
+  xy: 104, 24
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cBottomArc
+  rotate: false
+  xy: 112, 24
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cThree
+  rotate: false
+  xy: 120, 24
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cSword1
+  rotate: false
+  xy: 96, 32
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cSword2
+  rotate: false
+  xy: 104, 32
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cT
+  rotate: false
+  xy: 112, 32
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cTwo
+  rotate: false
+  xy: 120, 32
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cBrackets1
+  rotate: false
+  xy: 96, 40
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cBrackets2
+  rotate: false
+  xy: 104, 40
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cArrowUp
+  rotate: false
+  xy: 112, 40
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cOne
+  rotate: false
+  xy: 120, 40
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cPoint
+  rotate: false
+  xy: 96, 48
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cHealingCircle
+  rotate: false
+  xy: 104, 48
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cArrowDown
+  rotate: false
+  xy: 112, 48
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cDots
+  rotate: false
+  xy: 120, 48
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cDisconnect1
+  rotate: false
+  xy: 96, 56
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cDisconnect2
+  rotate: false
+  xy: 104, 56
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cIntel
+  rotate: false
+  xy: 112, 56
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
+strategic/cTransport
+  rotate: false
+  xy: 120, 56
+  size: 7, 7
+  orig: 7, 7
+  offset: 0, 0
+  index: -1
