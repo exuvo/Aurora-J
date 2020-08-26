@@ -94,6 +94,7 @@ class ShipHull() {
 		this.parentHull = parentHull
 		
 		name = parentHull.name
+		icon = parentHull.icon
 		hullClass = parentHull.hullClass
 		requiredShipYardType = parentHull.requiredShipYardType
 		armorLayers = parentHull.armorLayers

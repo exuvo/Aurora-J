@@ -863,7 +863,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					var y = (movement.getYinKM() - cameraOffset.y).toFloat()
 	
 					// https://github.com/libgdx/libgdx/wiki/Spritebatch%2C-Textureregions%2C-and-Sprites
-					spriteBatch.color = sRGBtoLinearRGB(Color(tintComponent?.color ?: Color.WHITE));
+					spriteBatch.color = sRGBtoLinearRGB(tintComponent?.color ?: Color.WHITE);
 	
 					val width = scale * STRATEGIC_ICON_SIZE
 					val height = scale * STRATEGIC_ICON_SIZE
@@ -911,8 +911,13 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		
 		var vertexIdx = 0
 		var indiceIdx = 0
+		var stride = 0
+		
+		// 7 15 3+1+3 7+1+7 7-3=4
+		// Offset center texCoords by diff in texture sizes
 		val centerXOffset = 4f / texture.width
 		val centerYOffset = 4f / texture.height
+		val halfWidth = 7.5f * scale
 		
 		fun vertex(x: Float, y: Float, colorBits: Float, baseU: Float, baseV: Float, centerU: Float, centerV: Float) {
 			vertices[vertexIdx++] = x;
@@ -926,7 +931,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		
 		entityIDs.forEachFast loop@{ entityID ->
 			
-			if (strategicIconMapper.has(entityID) && inStrategicView(entityID) && entityID == 3) {
+			if (strategicIconMapper.has(entityID) && inStrategicView(entityID)) {
 				
 				val strategicIconC = strategicIconMapper.get(entityID)
 				val baseTex = strategicIconC.baseTexture
@@ -937,28 +942,41 @@ class RenderSystem : IteratingSystem(FAMILY) {
 					val empireC = empireMapper.get(entityID)
 					val movement = movementMapper.get(entityID).get(galaxy.time).value
 					val tintComponent = if (tintMapper.has(entityID)) tintMapper.get(entityID) else null
-					var x = (movement.getXinKM() - cameraOffset.x).toFloat()
-					var y = (movement.getYinKM() - cameraOffset.y).toFloat()
+					val x = (movement.getXinKM() - cameraOffset.x).toFloat()
+					val y = (movement.getYinKM() - cameraOffset.y).toFloat()
 					
-					val color = sRGBtoLinearRGB(if (empireC != null) empireC.empire.color else Color.BLUE)
+					val color = sRGBtoLinearRGB(if (empireC != null) empireC.empire.color else tintComponent?.color ?: Color.WHITE)
 					val colorBits = color.toFloatBits()
 					
-					val minX = x - 7 * scale
-					val maxX = x + 8 * scale
-					val minY = y - 7 * scale
-					val maxY = y + 8 * scale
+					//TODO fix both at the same time
+					// centerpoint correct with 7.5 but when ship is stopped size sometimes it becomes too large and fucks it
+					// centerpoint rounds wrong with 8/7 but size is always correct
+//					val minX = x - halfWidth
+//					val maxX = x + halfWidth
+//					val minY = y - halfWidth
+//					val maxY = y + halfWidth
+					val minX = x - 8f * scale
+					val maxX = x + 7f * scale
+					val minY = y - 8f * scale
+					val maxY = y + 7f * scale
+					
+//					if (((maxX - minX) / scale).toInt() != 15 || (maxX / scale).toInt() - (minX / scale).toInt() != 15) {
+//						println("entityID $entityID w ${((maxX - minX) / scale).toInt()} w2 ${(maxX / scale).toInt() - (minX / scale).toInt()}")
+//					}
 					
 					// Triangle 1
-					indices[indiceIdx++] = 1.toShort()
-					indices[indiceIdx++] = 0.toShort()
-					indices[indiceIdx++] = 2.toShort()
+					indices[indiceIdx++] = (stride + 1).toShort()
+					indices[indiceIdx++] = (stride + 0).toShort()
+					indices[indiceIdx++] = (stride + 2).toShort()
 					
 					// Triangle 2
-					indices[indiceIdx++] = 0.toShort()
-					indices[indiceIdx++] = 3.toShort()
-					indices[indiceIdx++] = 2.toShort()
+					indices[indiceIdx++] = (stride + 0).toShort()
+					indices[indiceIdx++] = (stride + 3).toShort()
+					indices[indiceIdx++] = (stride + 2).toShort()
 					
-					if (centerTex != null) { // 7 15 3+1+3 7+1+7
+					stride += 4
+					
+					if (centerTex != null) {
 						vertex(minX, minY, colorBits, baseTex.u, baseTex.v2, centerTex.u - centerXOffset, centerTex.v2 + centerYOffset);
 						vertex(maxX, minY, colorBits, baseTex.u2, baseTex.v2, centerTex.u2 + centerXOffset, centerTex.v2 + centerYOffset);
 						vertex(maxX, maxY, colorBits, baseTex.u2, baseTex.v, centerTex.u2 + centerXOffset, centerTex.v - centerYOffset);
@@ -974,9 +992,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 						mesh.setVertices(vertices, 0, vertexIdx)
 						mesh.setIndices(indices, 0, indiceIdx)
 						mesh.render(iconShader, GL20.GL_TRIANGLES)
-						
+
 						vertexIdx = 0
 						indiceIdx = 0
+						stride = 0
 					}
 				}
 			}
@@ -989,6 +1008,27 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		}
 		
 		Gdx.gl.glDisable(GL30.GL_BLEND);
+		
+		// debug center pixel
+//		shapeRenderer.begin(ShapeRenderer.ShapeType.Point)
+//		shapeRenderer.color = sRGBtoLinearRGB(Color.WHITE)
+//		entityIDs.forEachFast { entityID ->
+//
+//			if (strategicIconMapper.has(entityID) && inStrategicView(entityID)) {
+//
+//				val baseTexture = strategicIconMapper.get(entityID).baseTexture
+//
+//				if (baseTexture.texture == texture) {
+//
+//					val movement = movementMapper.get(entityID).get(galaxy.time).value
+//					var x = (movement.getXinKM() - cameraOffset.x).toFloat()
+//					var y = (movement.getYinKM() - cameraOffset.y).toFloat()
+//
+//					shapeRenderer.point(x, y, 0f)
+//				}
+//			}
+//		}
+//		shapeRenderer.end()
 	}
 
 	private fun drawSelections(selectedEntityIDs: List<Int>) {

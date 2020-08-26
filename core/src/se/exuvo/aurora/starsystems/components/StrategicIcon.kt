@@ -51,9 +51,10 @@ enum class StrategicIconBase(val path: String, val massLimit: Long) {
 	STARBASE("strategic/starbase", 0L),
 	FORTRESS("strategic/fortress", 0L),
 	
-	ASTEROID("strategic/asteroid", 0L),
+	ASTEROID1("strategic/asteroid1", 0L),
+	ASTEROID2("strategic/asteroid2", 0L),
 	MINE("strategic/mine", 0L),
-	NONE("strategic/ship", 0L),
+	NONE("strategic/unknown1", 0L),
 	;
 	companion object {
 		val ships = listOf(GIGANTIC, MASSIVE, HUGE, LARGE, MEDIUM, SMALL, TINY)
@@ -72,6 +73,8 @@ enum class StrategicIconCenter(val path: String) {
 	THREE("strategic/cThree"),
 	INTEL("strategic/cIntel"),
 	HEALING_CIRCLE("strategic/cHealingCircle"),
+	BRACKETS1("strategic/cBrackets1"),
+	BRACKETS2("strategic/cBrackets2"),
 	NONE(""),
 }
 
