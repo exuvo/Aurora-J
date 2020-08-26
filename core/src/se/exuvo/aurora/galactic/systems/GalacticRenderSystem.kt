@@ -56,7 +56,7 @@ class GalacticRenderSystem : BaseEntitySystem(FAMILY) {
 				val tintComponent = if (tintMapper.has(entityID)) tintMapper.get(entityID) else null
 				var x = position.getXinRender() - cameraOffset.x
 				var y = position.getYinRender() - cameraOffset.y
-				val texture = strategicIconMapper.get(entityID).texture
+				val texture = strategicIconMapper.get(entityID).baseTexture
 
 				val color = Color(tintComponent?.color ?: Color.WHITE)
 
@@ -69,6 +69,8 @@ class GalacticRenderSystem : BaseEntitySystem(FAMILY) {
 				y = y - height / 2
 
 				spriteBatch.draw(texture, x, y, width, height)
+			
+			//TODO update to new icons
 		}
 
 		spriteBatch.end()

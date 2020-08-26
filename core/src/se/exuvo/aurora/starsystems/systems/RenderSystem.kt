@@ -49,6 +49,7 @@ import se.exuvo.aurora.starsystems.components.ArmorComponent
 import se.exuvo.aurora.starsystems.components.CargoComponent
 import se.exuvo.aurora.starsystems.components.CircleComponent
 import se.exuvo.aurora.starsystems.components.DetectionComponent
+import se.exuvo.aurora.starsystems.components.EmpireComponent
 import se.exuvo.aurora.starsystems.components.HPComponent
 import se.exuvo.aurora.starsystems.components.LaserShotComponent
 import se.exuvo.aurora.starsystems.components.MissileComponent
@@ -94,8 +95,6 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		@JvmField val MISSILE_FAMILY = Aspect.all(TimedMovementComponent::class.java, RenderComponent::class.java, MissileComponent::class.java)
 		
 		const val STRATEGIC_ICON_SIZE = 24f
-		const val MAX_VERTICES = 128
-		const val MAX_INDICES = 256
 		
 		@JvmField var debugPassiveSensors = Settings.getBol("Systems/Render/debugPassiveSensors", false)
 		@JvmField var debugDisableStrategicView = Settings.getBol("Systems/Render/debugDisableStrategicView", false)
@@ -128,6 +127,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	lateinit private var partsHPMapper: ComponentMapper<PartsHPComponent>
 	lateinit private var hpMapper: ComponentMapper<HPComponent>
 	lateinit private var cargoMapper: ComponentMapper<CargoComponent>
+	lateinit private var empireMapper: ComponentMapper<EmpireComponent>
 
 	private val galaxyGroupSystem = GameServices[GroupSystem::class]
 	private val galaxy = GameServices[Galaxy::class]
@@ -185,11 +185,16 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	override fun process(entityID: Int) {}
 	
 	class RenderGlobalData: Disposable {
-		val circleShader: ShaderProgram = Assets.circleShaderProgram
-		val diskShader: ShaderProgram = Assets.diskShaderProgram
-		val vertices: FloatArray
-		val indices: ShortArray
-		val mesh: Mesh
+		val diskShader: ShaderProgram = Assets.shaders["disk"]!!
+		val circleShader: ShaderProgram = Assets.shaders["circle"]!!
+		val circleIndices: ShortArray
+		val circleVertices: FloatArray
+		val circleMesh: Mesh
+		val strategicIconIndices: ShortArray
+		val strategicIconVertices: FloatArray
+		val strategicIconMesh: Mesh
+		val strategicIconShader: ShaderProgram = Assets.shaders["strategic"]!!
+		val strategicIconTexture = Assets.textures.findRegion("strategic/colony").texture
 
 		init {
 			
@@ -198,23 +203,44 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				debugDrawWeaponRangesWithoutShader = true
 			}
 			
-			
-
 			if (!diskShader.isCompiled || diskShader.getLog().length != 0) {
 				log.error("Shader diskShader compile error ${circleShader.getLog()}")
 				debugDrawWeaponRangesWithoutShader = true
 			}
 			
-			vertices = FloatArray(MAX_VERTICES);
-			indices = ShortArray(MAX_INDICES)
+			if (!strategicIconShader.isCompiled || strategicIconShader.getLog().length != 0) {
+				log.error("Shader strategicIconShader compile error ${strategicIconShader.getLog()}")
+			}
 			
-			mesh = Mesh(false, MAX_VERTICES, MAX_INDICES,
+			val circleMax = 64
+			val circleIndicesMax = 6 * circleMax
+			val circleVerticesMax = 4 * circleMax
+			
+			circleVertices = FloatArray(circleVerticesMax)
+			circleIndices = ShortArray(circleIndicesMax)
+			
+			circleMesh = Mesh(false, circleVerticesMax, circleIndicesMax,
 					VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE)
+			);
+			
+			val strategicIconMax = 64
+			val strategicIconIndicesMax = 6 * strategicIconMax
+			val strategicIconVerticesMax = 7 * strategicIconMax
+			
+			strategicIconVertices = FloatArray(circleVerticesMax)
+			strategicIconIndices = ShortArray(circleIndicesMax)
+			
+			strategicIconMesh = Mesh(false, strategicIconVerticesMax, strategicIconIndicesMax,
+					VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE),
+					VertexAttribute(VertexAttributes.Usage.ColorPacked, 4, GL20.GL_UNSIGNED_BYTE, true, ShaderProgram.COLOR_ATTRIBUTE),
+					VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, ShaderProgram.TEXCOORD_ATTRIBUTE + "Base"),
+					VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, ShaderProgram.TEXCOORD_ATTRIBUTE + "Center"),
 			);
 		}
 		
 		override fun dispose() {
-			mesh.dispose()
+			circleMesh.dispose()
+			strategicIconMesh.dispose()
 		}
 	}
 	
@@ -547,11 +573,11 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			val gData = gData()
 			val wData = wData()
 
-			val vertices = gData.vertices
-			val indices = gData.indices
+			val vertices = gData.circleVertices
+			val indices = gData.circleIndices
 			val cShader = gData.circleShader
 			val dShader = gData.diskShader
-			val mesh = gData.mesh
+			val mesh = gData.circleMesh
 			val fbo = wData.fbo
 
 			var vertexIdx = 0
@@ -817,45 +843,152 @@ class RenderSystem : IteratingSystem(FAMILY) {
 	}
 
 	private fun drawStrategicEntities(entityIDs: IntBag) {
-
+		
+		val gData = gData()
+		val texture = gData.strategicIconTexture
+		
 		spriteBatch.begin()
 
 		entityIDs.forEachFast { entityID ->
 
 			if (strategicIconMapper.has(entityID) && inStrategicView(entityID)) {
 
-				val movement = movementMapper.get(entityID).get(galaxy.time).value
-				val tintComponent = if (tintMapper.has(entityID)) tintMapper.get(entityID) else null
-				var x = (movement.getXinKM() - cameraOffset.x).toFloat()
-				var y = (movement.getYinKM() - cameraOffset.y).toFloat()
-				val texture = strategicIconMapper.get(entityID).texture
-
-				// https://github.com/libgdx/libgdx/wiki/Spritebatch%2C-Textureregions%2C-and-Sprites
-				spriteBatch.color = sRGBtoLinearRGB(Color(tintComponent?.color ?: Color.WHITE));
-
-				val width = scale * STRATEGIC_ICON_SIZE
-				val height = scale * STRATEGIC_ICON_SIZE
-				x -= width / 2
-				y -= height / 2
-
-				if (thrustMapper.has(entityID)) {
-
-					val thrustAngle = thrustMapper.get(entityID).thrustAngle
-
-					val originX = width / 2
-					val originY = height / 2
-					val scale = 1f
-
-					spriteBatch.draw(texture, x, y, originX, originY, width, height, scale, scale, thrustAngle)
-
-				} else {
-
-					spriteBatch.draw(texture, x, y, width, height)
+				val baseTexture = strategicIconMapper.get(entityID).baseTexture
+				
+				if (baseTexture.texture != texture) {
+				
+					val movement = movementMapper.get(entityID).get(galaxy.time).value
+					val tintComponent = if (tintMapper.has(entityID)) tintMapper.get(entityID) else null
+					var x = (movement.getXinKM() - cameraOffset.x).toFloat()
+					var y = (movement.getYinKM() - cameraOffset.y).toFloat()
+	
+					// https://github.com/libgdx/libgdx/wiki/Spritebatch%2C-Textureregions%2C-and-Sprites
+					spriteBatch.color = sRGBtoLinearRGB(Color(tintComponent?.color ?: Color.WHITE));
+	
+					val width = scale * STRATEGIC_ICON_SIZE
+					val height = scale * STRATEGIC_ICON_SIZE
+					x -= width / 2
+					y -= height / 2
+					
+					if (thrustMapper.has(entityID)) {
+	
+						val thrustAngle = thrustMapper.get(entityID).thrustAngle
+	
+						val originX = width / 2
+						val originY = height / 2
+						val scale = 1f
+	
+						spriteBatch.draw(baseTexture, x, y, originX, originY, width, height, scale, scale, thrustAngle)
+	
+					} else {
+	
+						spriteBatch.draw(baseTexture, x, y, width, height)
+					}
 				}
 			}
 		}
 
 		spriteBatch.end()
+		
+		val projectionMatrix = viewport.camera.combined
+		
+		val vertices = gData.strategicIconVertices
+		val indices = gData.strategicIconIndices
+		val iconShader = gData.strategicIconShader
+		val mesh = gData.strategicIconMesh
+		
+		iconShader.bind()
+		iconShader.setUniformMatrix("u_projTrans", projectionMatrix);
+		iconShader.setUniformi("u_texture", 14);
+//		iconShader.setUniformf("u_scale", scale);
+		
+		Gdx.gl.glActiveTexture(GL20.GL_TEXTURE14)
+		texture.bind()
+		Gdx.gl.glActiveTexture(GL20.GL_TEXTURE0)
+		
+		Gdx.gl.glEnable(GL30.GL_BLEND);
+		Gdx.gl.glBlendFunc(GL30.GL_SRC_ALPHA, GL30.GL_ONE_MINUS_SRC_ALPHA);
+		
+		var vertexIdx = 0
+		var indiceIdx = 0
+		val centerXOffset = 4f / texture.width
+		val centerYOffset = 4f / texture.height
+		
+		fun vertex(x: Float, y: Float, colorBits: Float, baseU: Float, baseV: Float, centerU: Float, centerV: Float) {
+			vertices[vertexIdx++] = x;
+			vertices[vertexIdx++] = y;
+			vertices[vertexIdx++] = colorBits
+			vertices[vertexIdx++] = baseU;
+			vertices[vertexIdx++] = baseV;
+			vertices[vertexIdx++] = centerU;
+			vertices[vertexIdx++] = centerV;
+		}
+		
+		entityIDs.forEachFast loop@{ entityID ->
+			
+			if (strategicIconMapper.has(entityID) && inStrategicView(entityID) && entityID == 3) {
+				
+				val strategicIconC = strategicIconMapper.get(entityID)
+				val baseTex = strategicIconC.baseTexture
+				val centerTex = strategicIconC.centerTexture
+				
+				if (baseTex.texture == texture) {
+				
+					val empireC = empireMapper.get(entityID)
+					val movement = movementMapper.get(entityID).get(galaxy.time).value
+					val tintComponent = if (tintMapper.has(entityID)) tintMapper.get(entityID) else null
+					var x = (movement.getXinKM() - cameraOffset.x).toFloat()
+					var y = (movement.getYinKM() - cameraOffset.y).toFloat()
+					
+					val color = sRGBtoLinearRGB(if (empireC != null) empireC.empire.color else Color.BLUE)
+					val colorBits = color.toFloatBits()
+					
+					val minX = x - 7 * scale
+					val maxX = x + 8 * scale
+					val minY = y - 7 * scale
+					val maxY = y + 8 * scale
+					
+					// Triangle 1
+					indices[indiceIdx++] = 1.toShort()
+					indices[indiceIdx++] = 0.toShort()
+					indices[indiceIdx++] = 2.toShort()
+					
+					// Triangle 2
+					indices[indiceIdx++] = 0.toShort()
+					indices[indiceIdx++] = 3.toShort()
+					indices[indiceIdx++] = 2.toShort()
+					
+					if (centerTex != null) { // 7 15 3+1+3 7+1+7
+						vertex(minX, minY, colorBits, baseTex.u, baseTex.v2, centerTex.u - centerXOffset, centerTex.v2 + centerYOffset);
+						vertex(maxX, minY, colorBits, baseTex.u2, baseTex.v2, centerTex.u2 + centerXOffset, centerTex.v2 + centerYOffset);
+						vertex(maxX, maxY, colorBits, baseTex.u2, baseTex.v, centerTex.u2 + centerXOffset, centerTex.v - centerYOffset);
+						vertex(minX, maxY, colorBits, baseTex.u, baseTex.v, centerTex.u - centerXOffset, centerTex.v - centerYOffset);
+					} else {
+						vertex(minX, minY, colorBits, baseTex.u, baseTex.v2, 0f, 0f);
+						vertex(maxX, minY, colorBits, baseTex.u2, baseTex.v2, 0f, 0f);
+						vertex(maxX, maxY, colorBits, baseTex.u2, baseTex.v, 0f, 0f);
+						vertex(minX, maxY, colorBits, baseTex.u, baseTex.v, 0f, 0f);
+					}
+					
+					if (indiceIdx >= mesh.maxIndices) {
+						mesh.setVertices(vertices, 0, vertexIdx)
+						mesh.setIndices(indices, 0, indiceIdx)
+						mesh.render(iconShader, GL20.GL_TRIANGLES)
+						
+						vertexIdx = 0
+						indiceIdx = 0
+					}
+				}
+			}
+		}
+		
+		if (indiceIdx > 0) {
+			mesh.setVertices(vertices, 0, vertexIdx)
+			mesh.setIndices(indices, 0, indiceIdx)
+			mesh.render(iconShader, GL20.GL_TRIANGLES)
+		}
+		
+		Gdx.gl.glDisable(GL30.GL_BLEND);
 	}
 
 	private fun drawSelections(selectedEntityIDs: List<Int>) {

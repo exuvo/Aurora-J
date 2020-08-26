@@ -12,12 +12,14 @@ import com.badlogic.gdx.graphics.profiling.GLErrorListener
 import com.badlogic.gdx.graphics.profiling.GLProfiler
 import com.badlogic.gdx.tools.texturepacker.TexturePacker
 import com.badlogic.gdx.utils.StreamUtils
+import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.Technology
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.OutputStreamListener
 import java.io.PrintStream
 import se.exuvo.aurora.AuroraGame
+import se.exuvo.aurora.starsystems.systems.RenderSystem
 import se.unlogic.standardutils.io.CloseUtils
 import java.io.File
 import java.io.FilenameFilter
@@ -55,6 +57,9 @@ fun getFontWidth(font: BitmapFont, text: String): Float {
 }
 
 class LoadingScreen() : GameScreenImpl() {
+	companion object {
+		@JvmField val log = LogManager.getLogger(LoadingScreen::class.java)
+	}
 
 	private val assetManager = GameServices[AssetManager::class]
 	private var uiCamera: OrthographicCamera = AuroraGame.currentWindow.screenService.uiCamera
@@ -191,6 +196,7 @@ class TexturePackerTask(val assetManager: AssetManager) : Thread() {
 			// Packer supports .png .jpg .jpeg
 			// https://github.com/libgdx/libgdx/wiki/Texture-packer
 			val settings = TexturePacker.Settings()
+			settings.limitMemory = false
 			
 			TexturePacker.process(settings, absolutePath, absolutePath, atlasName, object : TexturePacker.ProgressListener() {
 				override fun progress(progress: Float) {
@@ -198,16 +204,16 @@ class TexturePackerTask(val assetManager: AssetManager) : Thread() {
 				}
 			}, object : FilenameFilter {
 				override fun accept(dir: File, name: String): Boolean {
-					if ("strategic.png" == name && dir.endsWith("/strategic/")) {
+					if (dir.endsWith("strategic") && "strategic.png" == name) {
 						return false;
 					}
 					
 					return true
 				}
-			}
-			)
+			})
 			
 			// Append strategic icons to atlas
+			realOut.println("Appending strategic icons to atlas")
 			val strategicIconsAtlas = assetManager.getFileHandleResolver().resolve("images/strategic/strategic.atlas")
 			var inStream: InputStream? = null
 			var outStream: OutputStream? = null
@@ -215,18 +221,17 @@ class TexturePackerTask(val assetManager: AssetManager) : Thread() {
 				inStream = strategicIconsAtlas.read()
 				outStream = Files.newOutputStream(existingAtlas.file().toPath(), StandardOpenOption.APPEND)
 				
-				StreamUtils.copyStream(inStream, output)
-				
+				StreamUtils.copyStream(inStream, outStream)
 			} finally {
 				CloseUtils.close(inStream)
 				CloseUtils.close(outStream)
 			}
 			
-			
 			done = true
 
 		} catch(e: Exception) {
 			exception = e
+			LoadingScreen.log.error("Error generating atlas", e)
 
 		} finally {
 			System.out.flush()

@@ -21,16 +21,12 @@ object Assets : Disposable {
 
 	val log = LogManager.getLogger(this.javaClass)
 	private val manager = GameServices[AssetManager::class]
-
-	var fontMap by Delegates.notNull<BitmapFont>()
-	var fontMapSmall by Delegates.notNull<BitmapFont>()
-	var fontUI by Delegates.notNull<BitmapFont>()
-	var skinUI by Delegates.notNull<Skin>()
-	var textures by Delegates.notNull<TextureAtlas>()
-	var gammaShaderProgram by Delegates.notNull<ShaderProgram>()
-	var gravimetricShaderProgram by Delegates.notNull<ShaderProgram>()
-	var circleShaderProgram by Delegates.notNull<ShaderProgram>()
-	var diskShaderProgram by Delegates.notNull<ShaderProgram>()
+	
+	lateinit var fontMap: BitmapFont
+	lateinit var fontMapSmall: BitmapFont
+	lateinit var fontUI: BitmapFont
+	lateinit var textures: TextureAtlas
+	val shaders = HashMap<String, ShaderProgram>()
 
 	fun earlyLoad() {
 		val resolver = manager.getFileHandleResolver()
@@ -53,7 +49,7 @@ object Assets : Disposable {
 		
 		manager.finishLoading()
 		
-		gammaShaderProgram = manager.get("shaders/gamma.vert")
+		shaders["gamma"] = manager.get("shaders/gamma.vert")
 		fontUI = manager.get("fontUI.otf", BitmapFont::class.java)
 		fontUI.data.setScale(0.5f)
 	}
@@ -80,19 +76,21 @@ object Assets : Disposable {
 			}
 		}
 
-		// Load rest
-		
 		manager.load("fontMap.ttf", BitmapFont::class.java, fontMapLoadParams);
 		manager.load("fontMapSmall.ttf", BitmapFont::class.java, fontMapSmallLoadParams);
 		
-		val uiSkinLoaderParams = SkinLoader.SkinParameter("ui/uiskin.atlas")
-		manager.load("ui/uiskin.json", Skin::class.java, uiSkinLoaderParams);
-		
 		manager.load("images/aurora.atlas", TextureAtlas::class.java);
 		
-		manager.load("shaders/circle.vert", ShaderProgram::class.java)
-		manager.load("shaders/disk.vert", ShaderProgram::class.java)
-		manager.load("shaders/gravimetric.vert", ShaderProgram::class.java)
+		manager.getFileHandleResolver().resolve("shaders/").list().forEach {file ->
+			if (file.nameWithoutExtension() != "gamma") {
+				manager.load("shaders/" + file.name(), ShaderProgram::class.java)
+			}
+		}
+		
+//		manager.load("shaders/circle.vert", ShaderProgram::class.java)
+//		manager.load("shaders/disk.vert", ShaderProgram::class.java)
+//		manager.load("shaders/gravimetric.vert", ShaderProgram::class.java)
+//		manager.load("shaders/strategic.vert", ShaderProgram::class.java)
 		
 		log.info("Queued ${manager.queuedAssets} assets for loading")
 	}
@@ -101,13 +99,14 @@ object Assets : Disposable {
 		fontMap = manager.get("fontMap.ttf", BitmapFont::class.java)
 		fontMapSmall = manager.get("fontMapSmall.ttf", BitmapFont::class.java)
 		
-		skinUI = manager.get("ui/uiskin.json", Skin::class.java)
-		
 		textures = manager.get("images/aurora.atlas")
 		
-		circleShaderProgram = manager.get("shaders/circle.vert")
-		diskShaderProgram = manager.get("shaders/disk.vert")
-		gravimetricShaderProgram = manager.get("shaders/gravimetric.vert")
+		manager.getFileHandleResolver().resolve("shaders/").list().forEach {file ->
+			val name = file.nameWithoutExtension()
+			if (name != "gamma") {
+				shaders[name] = manager.get("shaders/" + name + ".vert")
+			}
+		}
 	}
 
 	override fun dispose() {

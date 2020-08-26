@@ -62,7 +62,7 @@ class GameScreenService : Disposable, InputProcessor {
 	fun gData() = AuroraGame.storage[GameScreenServiceGlobalData::class]
 	
 	class GameScreenServiceGlobalData(): Disposable {
-		val gammaShader: ShaderProgram = Assets.gammaShaderProgram
+		val gammaShader: ShaderProgram = Assets.shaders["gamma"]!!
 		val vertices: FloatArray
 		val indices: ShortArray
 		val mesh: Mesh
@@ -235,7 +235,6 @@ class GameScreenService : Disposable, InputProcessor {
 		
 		val renderTime = System.nanoTime() - now
 		renderTimeAverage = exponentialAverage(renderTime.toDouble(), renderTimeAverage, 10.0)
-		
 		
 		val spriteBatch = AuroraGame.currentWindow.spriteBatch
 		

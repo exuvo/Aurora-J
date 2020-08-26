@@ -172,7 +172,7 @@ class StarSystemGeneration(val system: StarSystem) {
 		circleMapper.create(entity).apply { radius = starRadius }
 		massMapper.create(entity).apply { mass = starMass }
 		nameMapper.create(entity).apply { name = starName }
-		strategicIconMapper.create(entity).set(Assets.textures.findRegion("strategic/sun"))
+		strategicIconMapper.create(entity).set(Assets.textures.findRegion("strategic/sun"), null)
 		// Always gives the same value
 //		val luminosity = Math.random() * 10000.0 * 3.839e26 // https://en.wikipedia.org/wiki/Solar_luminosity, https://en.wikipedia.org/wiki/List_of_most_luminous_stars
 //		val sunComponent = SunComponent((luminosity / (4 * Math.PI * starRadius.toDouble() * starRadius.toDouble())).toInt()) // Our sun is 1361 W/m2
@@ -267,7 +267,7 @@ class StarSystemGeneration(val system: StarSystem) {
 		nameMapper.create(entity).apply { name = planetName }
 		massMapper.create(entity).apply { mass = planetMass }
 		orbitMapper.create(entity).apply { parent = planetParent; a_semiMajorAxis = semiMajorAxis; e_eccentricity = eccentricity; w_argumentOfPeriapsis = argumentOfPeriapsis; M_meanAnomaly = meanAnomaly }
-		strategicIconMapper.create(entity).set(Assets.textures.findRegion("strategic/world"))
+		strategicIconMapper.create(entity).set(Assets.textures.findRegion("strategic/world"), null)
 
 		return entity
 	}
@@ -281,7 +281,7 @@ class StarSystemGeneration(val system: StarSystem) {
 		nameMapper.create(entity).apply { name = moonName }
 		massMapper.create(entity).apply { mass = moonMass }
 		orbitMapper.create(entity).apply { parent = moonParent; a_semiMajorAxis = semiMajorAxis; e_eccentricity = eccentricity; w_argumentOfPeriapsis = argumentOfPeriapsis; M_meanAnomaly = meanAnomaly }
-		strategicIconMapper.create(entity).set(Assets.textures.findRegion("strategic/moon"))
+		strategicIconMapper.create(entity).set(Assets.textures.findRegion("strategic/moon"), null)
 
 		return entity
 	}

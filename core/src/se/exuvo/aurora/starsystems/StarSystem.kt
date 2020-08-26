@@ -96,6 +96,9 @@ import se.exuvo.aurora.starsystems.components.HPComponent
 import se.exuvo.aurora.starsystems.components.PartStatesComponent
 import se.exuvo.aurora.starsystems.components.PartsHPComponent
 import se.exuvo.aurora.starsystems.components.ShieldComponent
+import se.exuvo.aurora.starsystems.components.StrategicIcon
+import se.exuvo.aurora.starsystems.components.StrategicIconBase
+import se.exuvo.aurora.starsystems.components.StrategicIconCenter
 import se.exuvo.aurora.starsystems.systems.SpatialPartitioningSystem
 import se.exuvo.aurora.starsystems.systems.SpatialPartitioningPlanetoidsSystem
 import se.exuvo.aurora.starsystems.systems.TargetingSystem
@@ -173,7 +176,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		galaxy.world.getMapper(GalacticPositionComponent::class.java).create(galacticEntityID).set(initialPosition)
 		galaxy.world.getMapper(RenderComponent::class.java).create(galacticEntityID)
 		galaxy.world.getMapper(NameComponent::class.java).create(galacticEntityID).set(initialName)
-		galaxy.world.getMapper(StrategicIconComponent::class.java).create(galacticEntityID).set(Assets.textures.findRegion("galactic/system"))
+		galaxy.world.getMapper(StrategicIconComponent::class.java).create(galacticEntityID).set(Assets.textures.findRegion("galactic/system"), null)
 
 		val worldBuilder = WorldConfigurationBuilder()
 //		worldBuilder.dependsOn(ProfilerPlugin::class.java)
@@ -363,7 +366,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		nameMapper.create(entity1).set(name = "Sun")
 		sunMapper.create(entity1).set(solarConstant = 1361)
 		tintMapper.create(entity1).set(Color.YELLOW)
-		strategicIconMapper.create(entity1).set(Assets.textures.findRegion("strategic/sun"))
+		strategicIconMapper.create(entity1).set(Assets.textures.findRegion("strategic/sun"), null)
 
 		val entity2 = createEntity(empire1)
 		ownerMapper.create(entity2).set(empire1)
@@ -374,7 +377,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		massMapper.create(entity2).set(mass = 5.972e24)
 		orbitMapper.create(entity2).set(parent = entity1, a_semiMajorAxis = 1f, e_eccentricity = 0f, w_argumentOfPeriapsis = -45f, M_meanAnomaly = 0f)
 		tintMapper.create(entity2).set(Color.GREEN)
-		strategicIconMapper.create(entity2).set(Assets.textures.findRegion("strategic/world"))
+		strategicIconMapper.create(entity2).set(Assets.textures.findRegion("strategic/world"), null)
 		emissionsMapper.create(entity2).set(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10))
 		colonyMapper.create(entity2).set(random.nextLong(1000000), 1L, 1L, 1L).apply {
 			shipyards += Shipyard(ShipyardLocation.TERRESTIAL, ShipyardType.CIVILIAN).apply{
@@ -409,7 +412,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		nameMapper.create(entity3).set(name = "Moon")
 		orbitMapper.create(entity3).set(parent = entity2, a_semiMajorAxis = (384400.0 / Units.AU).toFloat(), e_eccentricity = 0.2f, w_argumentOfPeriapsis = 0f, M_meanAnomaly = 30f)
 		tintMapper.create(entity3).set(Color.GRAY)
-		strategicIconMapper.create(entity3).set(Assets.textures.findRegion("strategic/moon"))
+		strategicIconMapper.create(entity3).set(Assets.textures.findRegion("strategic/moon"), null)
 		emissionsMapper.create(entity3).set(mapOf(Spectrum.Electromagnetic to 5e9, Spectrum.Thermal to 5e9))
 
 		val entity4 = createEntity(empire1)
@@ -421,7 +424,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		nameMapper.create(entity4).set(name = "Ship")
 //		moveToEntityMapper.create(entity4).set(world.getEntity(entity1), ApproachType.BRACHISTOCHRONE))
 		tintMapper.create(entity4).set(Color.RED)
-		strategicIconMapper.create(entity4).set(Assets.textures.findRegion("strategic/ship"))
+		strategicIconMapper.create(entity4).set(StrategicIcon(StrategicIconBase.MEDIUM, StrategicIconCenter.MISSILE1))
 		emissionsMapper.create(entity4).set(mapOf(Spectrum.Electromagnetic to 1e10, Spectrum.Thermal to 1e10))
 		
 		val shipComponent = shipMapper.create(entity4).set(shipHull, galaxy.time)
@@ -462,7 +465,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		nameMapper.create(entity5).set(name = "Asteroid")
 		tintMapper.create(entity5).set(Color.GRAY)
 		asteroidMapper.create(entity5)
-		strategicIconMapper.create(entity5).set(Assets.textures.findRegion("strategic/moon"))
+		strategicIconMapper.create(entity5).set(Assets.textures.findRegion("strategic/moon"), null)
 		
 		val entity6 = createEntity(Empire.GAIA)
 		timedMovementMapper.create(entity6).apply {previous.value.velocity.set(1_000_000L, 0).rotate(45f); previous.value.position.set((Units.AU * 1000 * 2).toLong(), 0).rotate(135f) }
@@ -471,7 +474,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		nameMapper.create(entity6).set(name = "Asteroid 2")
 		tintMapper.create(entity6).set(Color.GRAY)
 		asteroidMapper.create(entity6)
-		strategicIconMapper.create(entity6).set(Assets.textures.findRegion("strategic/moon"))
+		strategicIconMapper.create(entity6).set(Assets.textures.findRegion("strategic/moon"), null)
 		
 		val entity7 = createEntity(Empire.GAIA)
 		timedMovementMapper.create(entity7).apply {previous.value.velocity.set(1_000_000L, 0).rotate(45f); previous.value.position.set((Units.AU * 1000 * 2).toLong(), 0).rotate(120f) }
@@ -480,7 +483,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		nameMapper.create(entity7).set(name = "Asteroid 3")
 		tintMapper.create(entity7).set(Color.GRAY)
 		asteroidMapper.create(entity7)
-		strategicIconMapper.create(entity7).set(Assets.textures.findRegion("strategic/moon"))
+		strategicIconMapper.create(entity7).set(Assets.textures.findRegion("strategic/moon"), null)
 		
 		shadow.update()
 	}
@@ -496,7 +499,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		circleMapper.create(shipEntity).set(radius = 10f)
 		nameMapper.create(shipEntity).set(name = "New Ship")
 		tintMapper.create(shipEntity).set(Color.ORANGE)
-		strategicIconMapper.create(shipEntity).set(Assets.textures.findRegion(hull.hullClass.baseIcon))
+		strategicIconMapper.create(shipEntity).set(hull.icon)
 		emissionsMapper.create(shipEntity).set(mapOf(Spectrum.Electromagnetic to 0.0, Spectrum.Thermal to 0.0))
 		ownerMapper.create(shipEntity).set(empire)
 		

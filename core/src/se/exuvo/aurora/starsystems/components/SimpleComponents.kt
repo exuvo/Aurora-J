@@ -4,7 +4,6 @@ import com.artemis.Component
 import com.badlogic.gdx.graphics.Color
 import se.exuvo.aurora.galactic.Empire
 import se.exuvo.aurora.starsystems.StarSystem
-import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.artemis.PooledComponent
 
 class ChangingWorldComponent() : Component()
@@ -46,20 +45,6 @@ class RenderComponent() : PooledComponent(), CloneableComponent<RenderComponent>
 	
 	override fun reset(): Unit {}
 	override fun copy(tc: RenderComponent) {}
-}
-
-class StrategicIconComponent() : PooledComponent(), CloneableComponent<StrategicIconComponent> {
-	lateinit var texture: TextureRegion
-	
-	fun set(texture: TextureRegion): StrategicIconComponent {
-		this.texture = texture
-		return this
-	}
-	
-	override fun reset(): Unit {}
-	override fun copy(tc: StrategicIconComponent) {
-		tc.set(texture)
-	}
 }
 
 // in m

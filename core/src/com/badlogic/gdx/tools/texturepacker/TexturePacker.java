@@ -565,40 +565,42 @@ public class TexturePacker {
 		}
 	}
 
-	/** @author Nathan Sweet */
+	/**
+	 * Documentation at https://github.com/libgdx/libgdx/wiki/Texture-packer
+	 * @author Nathan Sweet */
 	static public class Settings {
-		public boolean powerOfTwo = true; // 	If true, output pages will have power of two dimensions.
-		public int paddingX = 2, paddingY = 2;
-		public boolean edgePadding = true;
-		public boolean duplicatePadding = false;
-		public boolean rotation;
-		public int minWidth = 16, minHeight = 16;
-		public int maxWidth = 1024, maxHeight = 1024;
-		public boolean square = false;
-		public boolean stripWhitespaceX, stripWhitespaceY;
-		public int alphaThreshold;
-		public TextureFilter filterMin = TextureFilter.Nearest, filterMag = TextureFilter.Nearest;
-		public TextureWrap wrapX = TextureWrap.ClampToEdge, wrapY = TextureWrap.ClampToEdge;
-		public Format format = Format.RGBA8888;
-		public boolean alias = true;
+		public boolean powerOfTwo = true; // If true, output pages will have power of two dimensions.
+		public int paddingX = 2, paddingY = 2; // The number of pixels between packed images on the x,y axis.
+		public boolean edgePadding = true; // If true, half of the paddingX and paddingY will be used around the edges of the packed texture.
+		public boolean duplicatePadding = false; // If true, edge pixels are copied into the padding. paddingX/Y should be >= 2.
+		public boolean rotation; // If true, TexturePacker will attempt more efficient packing by rotating images 90 degrees. Applications must take special care to draw these regions properly.
+		public int minWidth = 16, minHeight = 16; // The minimum width of output pages.
+		public int maxWidth = 1024, maxHeight = 1024; // The maximum width of output pages. 1024 is safe for all devices. Extremely old devices may have degraded performance over 512.
+		public boolean square = false; // If true, output pages are forced to have the same width and height.
+		public boolean stripWhitespaceX, stripWhitespaceY; // If true, blank pixels on the left and right / top and bottom edges of input images will be removed. Applications must take special care to draw these regions properly.
+		public int alphaThreshold; // From 0 to 255. Alpha values below this are treated as zero when whitespace is stripped.
+		public TextureFilter filterMin = TextureFilter.Nearest, filterMag = TextureFilter.Nearest; // The minification filter for the texture. The magnification filter for the texture.
+		public TextureWrap wrapX = TextureWrap.ClampToEdge, wrapY = TextureWrap.ClampToEdge; // The wrap setting in the x,y direction for the texture.
+		public Format format = Format.RGBA8888; // The format the texture will use in-memory.
+		public boolean alias = true; // If true, two images that are pixel for pixel the same will only be packed once.
 		public String outputFormat = "png";
-		public float jpegQuality = 0.9f;
-		public boolean ignoreBlankImages = true;
-		public boolean fast;
-		public boolean debug;
+		public float jpegQuality = 0.9f; // From 0 to 1. The quality setting if outputFormat is "jpg".
+		public boolean ignoreBlankImages = true; // If true, texture packer won't add regions for completely blank images.
+		public boolean fast; // If true, the texture packer will not pack as efficiently but will execute much faster.
+		public boolean debug; // If true, lines are drawn on the output pages to show the packed image bounds.
 		public boolean silent;
-		public boolean combineSubdirectories;
+		public boolean combineSubdirectories; // If true, the directory containing the settings file and all subdirectories are packed as if they were in the same directory. Any settings files in the subdirectories are ignored.
 		public boolean ignore;
-		public boolean flattenPaths;
-		public boolean premultiplyAlpha;
-		public boolean useIndexes = true;
-		public boolean bleed = true;
-		public int bleedIterations = 2;
-		public boolean limitMemory = true;
-		public boolean grid;
-		public float[] scale = {1};
-		public String[] scaleSuffix = {""};
-		public Resampling[] scaleResampling = { Resampling.bicubic };
+		public boolean flattenPaths; // If true, subdirectory prefixes are stripped from image file names. Image file names should be unique.
+		public boolean premultiplyAlpha; // If true, the RGB will be multiplied by the alpha. See here (http://blogs.msdn.com/b/shawnhar/archive/2009/11/06/premultiplied-alpha.aspx) for more information.
+		public boolean useIndexes = true; // If false, image names are used without stripping any image index suffix.
+		public boolean bleed = true; // If true, RGB values for transparent pixels are set based on the RGB values of the nearest non-transparent pixels. This prevents filtering artifacts when RGB values are sampled for transparent pixels.
+		public int bleedIterations = 2; // The amount of bleed iterations that should be performed. Use greater values such as 4 or 8 if you're having artifacts when downscaling your textures.
+		public boolean limitMemory = true; // If true, only one image is in memory at any given time, but each image will be read twice. If false, all images are kept in memory during packing but are only read once.
+		public boolean grid; // If true, images are packed in a uniform grid, in order.
+		public float[] scale = {1}; // For each scale, the images are scaled and an entire atlas is output.
+		public String[] scaleSuffix = {""}; // For each scale, the suffix to use for the output files. If omitted, files for multiple scales will be output with the same name to a subdirectory for each scale.
+		public Resampling[] scaleResampling = { Resampling.bicubic }; // For each scale, the type of interpolation used for resampling the source to the scaled size. One of nearest, bilinear or bicubic.
 		public String atlasExtension = ".atlas";
 
 		public Settings () {

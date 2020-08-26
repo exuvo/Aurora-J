@@ -138,7 +138,7 @@ class ShipDebugger : UIWindow() {
 								val hullHP = hpMapper.get(entityID)
 								val cargoC = cargoMapper.get(entityID)
 								
-								textUnformatted("Entity ${printEntity(entityRef.entityID, world)}")
+								textUnformatted("Entity ID ${entityRef.entityID} ${printEntity(entityRef.entityID, world)}")
 								
 								if (collapsingHeader("Components", 0)) { // TreeNodeFlag.DefaultOpen.i
 		
