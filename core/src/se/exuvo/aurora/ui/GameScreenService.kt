@@ -165,6 +165,7 @@ class GameScreenService : Disposable, InputProcessor {
 	
 	private val clearColor = Color.BLACK
 	var renderTimeAverage = 0.0
+	var frameTimeAverage = 0.0
 	
 	// gamma correction https://github.com/ocornut/imgui/issues/578#issuecomment-379467586
 	fun render() {
@@ -172,6 +173,8 @@ class GameScreenService : Disposable, InputProcessor {
 		
 		frameStartTime = now - lastDrawStart
 		lastDrawStart = now
+		
+		frameTimeAverage = exponentialAverage(frameStartTime.toDouble(), frameTimeAverage, 15.0)
 		
 		val gData = gData()
 		val vertices = gData.vertices
@@ -241,7 +244,7 @@ class GameScreenService : Disposable, InputProcessor {
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
 
-		Assets.fontUI.draw(spriteBatch, "${Gdx.graphics.framesPerSecond} ${formatFrameTime(frameStartTime)}, ${formatFrameTime(renderTimeAverage.toLong())}", 2f, uiCamera.viewportHeight - 3f)
+		Assets.fontUI.draw(spriteBatch, "${Gdx.graphics.framesPerSecond} ${formatFrameTime(frameStartTime)} ${formatFrameTime(frameTimeAverage.toLong())}, ${formatFrameTime(renderTimeAverage.toLong())}", 2f, uiCamera.viewportHeight - 3f)
 		spriteBatch.end()
 	}
 	

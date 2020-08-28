@@ -127,11 +127,11 @@ public class CustomLwjgl3Application implements Lwjgl3ApplicationBase {
 	protected void loop() {
 		Array<CustomLwjgl3Window> closedWindows = new Array<CustomLwjgl3Window>();
 		
-		long accumulator = 0L;
+		long accumulator = 0;
 		long lastRun = System.nanoTime();
 		
 		while (running && windows.size > 0) {
-			// FIXME put it on a separate thread
+			//TODO put it on a separate thread
 			audio.update();
 
 			if (closedWindows.size > 0) {
@@ -139,36 +139,44 @@ public class CustomLwjgl3Application implements Lwjgl3ApplicationBase {
 			}
 
 			boolean shouldRender = false;
-
-			{
+			
+			while(true){
 				long now = System.nanoTime();
 				accumulator += now - lastRun;
+				lastRun = now;
 
 				if (accumulator >= frameDelay) {
 					accumulator -= frameDelay;
 
 					if (accumulator > frameDelay) {
-						accumulator = frameDelay;
+						accumulator = accumulator % frameDelay;
 					}
-
+					
 					shouldRender = true;
+					break;
 
-//					println("frameDelay $frameDelay, diff $frameTime, accumulator $accumulator")
+				} else if (!running || windows.size == 0) {
+					break;
 
-				} else if (accumulator < frameDelay && frameDelay > 1000000L) { // 1 millisecond in nanosecond units
-
+				} else {
+					
 					long sleepTime = (frameDelay - accumulator) / 1000000L;
-
-					if (sleepTime > 1) {
+					
+					if (sleepTime >= 10) {
+						ThreadUtils.sleep(5);
+						break;
+						
+					} else if (sleepTime > 1) {
 						ThreadUtils.sleep(sleepTime - 1);
+						
 					} else {
 						Thread.yield();
 					}
 				}
-
-				lastRun = now;
 			}
-
+			
+			GLFW.glfwPollEvents();
+			
 			for (CustomLwjgl3Window window : windows) {
 				window.makeCurrent();
 				currentWindow = window;
@@ -182,8 +190,6 @@ public class CustomLwjgl3Application implements Lwjgl3ApplicationBase {
 				}
 			}
 			
-			GLFW.glfwPollEvents();
-
 			synchronized (runnables) {
 				executedRunnables.clear();
 				executedRunnables.addAll(runnables);

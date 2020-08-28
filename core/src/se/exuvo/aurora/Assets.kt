@@ -52,6 +52,7 @@ object Assets : Disposable {
 		shaders["gamma"] = manager.get("shaders/gamma.vert")
 		fontUI = manager.get("fontUI.otf", BitmapFont::class.java)
 		fontUI.data.setScale(0.5f)
+		fontUI.setFixedWidthGlyphs("0123456789") //TODO get font with fixed size numbers
 	}
 	
 	fun startLoad() {

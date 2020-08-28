@@ -65,11 +65,11 @@ companion object {
 			}
 		})
 		
-		researchTeams.add(ResearchTeam())
-		researchTeams.add(ResearchTeam())
+		researchTeams += ResearchTeam()
+		researchTeams += ResearchTeam()
 		
-		practicalTheory.put(PracticalTheory.CHEMICAL_THRUSTERS, 5)
-		practicalTheory.put(PracticalTheory.INFANTRY, 5)
-		practicalTheory.put(PracticalTheory.REFINING, 5)
+		practicalTheory[PracticalTheory.CHEMICAL_THRUSTERS] = 5
+		practicalTheory[PracticalTheory.INFANTRY] = 5
+		practicalTheory[PracticalTheory.REFINING] = 5
 	}
 }

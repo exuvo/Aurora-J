@@ -982,10 +982,10 @@ class RenderSystem : IteratingSystem(FAMILY) {
 						vertex(maxX, maxY, colorBits, baseTex.u2, baseTex.v, centerTex.u2 + centerXOffset, centerTex.v - centerYOffset);
 						vertex(minX, maxY, colorBits, baseTex.u, baseTex.v, centerTex.u - centerXOffset, centerTex.v - centerYOffset);
 					} else {
-						vertex(minX, minY, colorBits, baseTex.u, baseTex.v2, 0f, 0f);
-						vertex(maxX, minY, colorBits, baseTex.u2, baseTex.v2, 0f, 0f);
-						vertex(maxX, maxY, colorBits, baseTex.u2, baseTex.v, 0f, 0f);
-						vertex(minX, maxY, colorBits, baseTex.u, baseTex.v, 0f, 0f);
+						vertex(minX, minY, colorBits, baseTex.u, baseTex.v2, 1f, 1f);
+						vertex(maxX, minY, colorBits, baseTex.u2, baseTex.v2, 1f, 1f);
+						vertex(maxX, maxY, colorBits, baseTex.u2, baseTex.v, 1f, 1f);
+						vertex(minX, maxY, colorBits, baseTex.u, baseTex.v, 1f, 1f);
 					}
 					
 					if (indiceIdx >= mesh.maxIndices) {

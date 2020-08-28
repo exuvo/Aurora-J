@@ -136,38 +136,57 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 		drawUI()
 	}
 
+	var lastTickrateUpdate = System.currentTimeMillis()
+	var oldGalaxyTime = galaxy.time
+	var galaxyTickrate = 0L
+	
 	private fun drawUI() {
+		val now = System.currentTimeMillis()
+		
+		if (now - lastTickrateUpdate > 1000) {
+			lastTickrateUpdate = now
+			galaxyTickrate = galaxy.time - oldGalaxyTime
+			oldGalaxyTime = galaxy.time
+		}
+		
 		val spriteBatch = AuroraGame.currentWindow.spriteBatch
 		val uiCamera = AuroraGame.currentWindow.screenService.uiCamera
 		
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
 		
-		var x = 8f
-		x += Assets.fontUI.draw(spriteBatch, "System view, zoomLevel $zoomLevel, ${Units.daysToDate(galaxy.day)} ${Units.secondsToString(galaxy.time)}, ", x, 32f).width
+		val y = 28f
+		var x = 4f
+		x += Assets.fontUI.draw(spriteBatch, "${Units.daysToDate(galaxy.day)} ${Units.secondsToString(galaxy.time)}, ", x, y).width
 		
 		if (galaxy.speed == 0L) {
 			Assets.fontUI.color = Color.RED
-			x += Assets.fontUI.draw(spriteBatch, "System Error", x, 32f).width
+			x += Assets.fontUI.draw(spriteBatch, "System Error", x, y).width
 			Assets.fontUI.color = Color.WHITE
 			
 		} else if (galaxy.speed < 0L) {
 			Assets.fontUI.color = Color.GRAY
-			x += Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / -galaxy.speed}", x, 32f).width
+			x += Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / -galaxy.speed}", x, y).width
 			Assets.fontUI.color = Color.WHITE
 			
 		} else if (galaxy.speedLimited) {
 			Assets.fontUI.color = Color.RED
-			x += Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / galaxy.speed}", x, 32f).width
+			x += Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / galaxy.speed}", x, y).width
 			Assets.fontUI.color = Color.WHITE
 			
 		}  else {
-			x += Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / galaxy.speed}", x, 32f).width
+			x += Assets.fontUI.draw(spriteBatch, "speed ${Units.NANO_SECOND / galaxy.speed}", x, y).width
 		}
 		
-		x += Assets.fontUI.draw(spriteBatch, " ${galaxy.tickSize}", x, 32f).width
-		x += Assets.fontUI.draw(spriteBatch, " ${system.updateTimeAverage.toInt() / 1000}us", x, 32f).width
-		x += Assets.fontUI.draw(spriteBatch, ", ${allSubscription.getEntityCount()}st", x, 32f).width
+		x += Assets.fontUI.draw(spriteBatch, " ${galaxy.tickSize}", x, y).width
+		x += Assets.fontUI.draw(spriteBatch, " ${system.updateTimeAverage.toInt() / 1000}us ${galaxyTickrate}t/s", x, y).width
+		x += Assets.fontUI.draw(spriteBatch, ", ${allSubscription.getEntityCount()}st", x, y).width
+		
+		var str = "zoom $zoomLevel"
+		Assets.fontUI.cache.clear()
+		val strWidth = Assets.fontUI.cache.addText(str, 0f, 0f) .width
+		Assets.fontUI.cache.clear()
+		Assets.fontUI.draw(spriteBatch, str, Gdx.graphics.width - strWidth - 4f, y)
 		
 		spriteBatch.end()
 	}
@@ -689,8 +708,8 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 		}
 
 		if (amount < 0) {
-//			Det som var under musen innan scroll ska fortsätta vara där efter zoom
-//			http://stackoverflow.com/questions/932141/zooming-an-object-based-on-mouse-position
+			// Det som var under musen innan scroll ska fortsätta vara där efter zoom
+			// http://stackoverflow.com/questions/932141/zooming-an-object-based-on-mouse-position
 
 			var diff = camera.position.cpy().sub(camera.unproject(getMouseInScreenCordinates()));
 			diff = diff.sub(diff.cpy().scl(1 / oldZoom).scl(camera.zoom))

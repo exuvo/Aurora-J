@@ -4,7 +4,6 @@ import com.artemis.utils.Bag
 import glm_.vec2.Vec2
 import imgui.Col
 import imgui.ImGui
-import imgui.WindowFlag
 import se.exuvo.aurora.utils.Units
 import se.exuvo.aurora.utils.forEachFast
 import se.exuvo.aurora.AuroraGame
@@ -12,23 +11,32 @@ import se.exuvo.aurora.starsystems.StarSystem
 import imgui.internal.classes.Rect
 import glm_.vec4.Vec4
 import imgui.DataType
+import imgui.MouseButton
+import imgui.WindowFlag
 import imgui.u32
 import se.exuvo.aurora.ui.UIScreen.UIWindow
 import net.mostlyoriginal.api.utils.pooling.ObjectPool
-import se.exuvo.aurora.starsystems.systems.ProfilingSystemInvocationStrategy
-import se.exuvo.aurora.utils.callPrivateFunc
+import org.apache.commons.math3.util.FastMath
+import se.exuvo.aurora.starsystems.ProfilingSystemInvocationStrategy
 import se.exuvo.aurora.starsystems.CustomSystemInvocationStrategy
+import se.exuvo.aurora.utils.clamp
 import se.exuvo.aurora.utils.toLinearRGB
 
 // Inspiration https://bitbucket.org/wolfpld/tracy/src/master/
 class ProfilerWindow : UIWindow() {
 	companion object {
 		const val BAG_SIZE = 1024
+		const val ZOOM_MIN = 0.001f
+		const val ZOOM_MAX = 0.05f
 	}
 	
 	var system: StarSystem? = null
 	var zoom = 0.01f
-	var xScroll = 0L
+	var systemsScroll = 0L
+	var oldSystemsScroll = systemsScroll
+	
+	var renderScroll = 0L
+	var oldRenderScroll = renderScroll
 	
 	override var visible: Boolean
 		get() = super.visible
@@ -41,17 +49,17 @@ class ProfilerWindow : UIWindow() {
 				val oldSystem = system
 				
 				if (oldSystem != null) {
-					oldSystem.world.callPrivateFunc("setInvocationStrategy", CustomSystemInvocationStrategy(oldSystem))
+					oldSystem.nextInvocationStrategy = CustomSystemInvocationStrategy(oldSystem)
 				}
 				
 				val system = systemScreen.system
 				val world = system.world
 				
 				if (value) {
-					world.callPrivateFunc("setInvocationStrategy", ProfilingSystemInvocationStrategy(system))
+					system.nextInvocationStrategy = ProfilingSystemInvocationStrategy(system)
 					
 				} else {
-					world.callPrivateFunc("setInvocationStrategy", CustomSystemInvocationStrategy(system))
+					system.nextInvocationStrategy = CustomSystemInvocationStrategy(system)
 				}
 				
 				this.system = system
@@ -65,56 +73,52 @@ class ProfilerWindow : UIWindow() {
 			with(ImGui) {
 				with(imgui.dsl) {
 					
-//					val itemSpaceX = style.itemSpacing.x
-//					val itemSpaceY = style.itemSpacing.y
-					
-					window("Profiler", ::visible, WindowFlag.HorizontalScrollbar.i) {
+					window("Profiler", ::visible, 0) {
 						
-						sliderScalar("Zoom", DataType.Float, ::zoom, 0.001f, 0.05f, zoom.toString(), 1.0f)
+						sliderScalar("Zoom", DataType.Float, ::zoom, ZOOM_MIN, ZOOM_MAX, zoom.toString(), 1.0f)
 						
 						textUnformatted("TODO time")
 						
-						var timeOffset = galaxy.shadow.profilerEvents.data[0].time
-						
-//						galaxy.systems.forEachFast { system ->
-//							val time = system.shadow.profilerEvents.data[0].time
-//							if (time < timeOffset) {
-//								timeOffset = time
-//							}
-//						}
-						
-						val window = currentWindow
 						val backupPaddingY = style.framePadding.y
 						
-						var x = window.dc.cursorPos.x
-						var y = window.dc.cursorPos.y
-						var maxY = y
+						var x = 0f
+						var y = 0f
+						var maxY = 0f
+						var timeOffset = 0L
+						var scroll = 0L
 						
-						fun eventBar(x: Float, y: Float, start: Long, end: Long, name: String): Boolean {
-							val id = window.getID("event")
-							val pos = Vec2(x + start.toFloat() * zoom, y)
-							val itemSize = Vec2((end - start).toFloat() * zoom, ctx.fontSize + 1)
-							val bb = Rect(pos, pos + itemSize)
-							val labelSize = calcTextSize(name, false)
+						fun eventBar(start: Long, end: Long, name: String): Boolean {
+							val x1 = x + (start.toFloat() - scroll) * zoom
+							val width = (end - start).toFloat() * zoom
 							
-							itemSize(itemSize)
-							if (!itemAdd(bb, id)) return false
-							
-							val flags = 0
-							val (pressed, hovered, held) = buttonBehavior(bb, id, flags)
-							
-							//Render
-							val col = if (hovered) Col.ButtonHovered.u32 else Vec4(0.3f, 0.5f, 0.3f, 1f).toLinearRGB().u32
-							renderNavHighlight(bb, id)
-							renderFrame(bb.min, bb.max, col, true, 1f)
-							//TODO maybe change
-							renderTextClipped(bb.min.plus(1f, -1f), bb.max - 1, name, labelSize, Vec2(0f, 0.5f), bb)
-							
-							if (y + itemSize.y > maxY) {
-								maxY = y + itemSize.y
+							if (x1 < currentWindow.size.x || x1 + width >= 0) {
+								
+								val id = currentWindow.getID("event $start")
+								val pos = Vec2(x1, y)
+								val size = Vec2(width, ctx.fontSize + 1)
+								val bb = Rect(pos, pos + size)
+								val labelSize = calcTextSize(name, false)
+								
+//								itemSize(size)
+								if (!itemAdd(bb, id)) return false
+								
+								val (pressed, hovered, held) = buttonBehavior(bb, id, 0)
+								
+								//Render
+								val col = if (hovered) Col.ButtonHovered.u32 else Vec4(0.3f, 0.5f, 0.3f, 1f).toLinearRGB().u32
+								renderNavHighlight(bb, id)
+								renderFrame(bb.min, bb.max, col, true, 1f)
+								//TODO maybe change
+								renderTextClipped(bb.min.plus(1f, -1f), bb.max - 1, name, labelSize, Vec2(0f, 0.5f), bb)
+								
+								if (y + size.y > maxY) {
+									maxY = y + size.y
+								}
+								
+								return hovered
 							}
 							
-							return hovered
+							return false
 						}
 						
 						fun drawEvents(i: Int, events: ProfilerBag): Int {
@@ -132,7 +136,7 @@ class ProfilerWindow : UIWindow() {
 							
 							val name = startEvent.name ?: "null"
 							
-							if (eventBar(x, y, startEvent.time - timeOffset, endEvent.time - timeOffset, name)) {
+							if (eventBar(startEvent.time - timeOffset, endEvent.time - timeOffset, name)) {
 								setTooltip("$name ${Units.nanoToMicroString(endEvent.time - startEvent.time)}")
 							}
 							
@@ -145,52 +149,128 @@ class ProfilerWindow : UIWindow() {
 							if (size > 0) {
 								if (size % 2 == 0) {
 									style.framePadding.y = 0f
-									x = window.dc.cursorPos.x
-									y = window.dc.cursorPos.y
+									x = currentWindow.dc.cursorPos.x
+									y = currentWindow.dc.cursorPos.y
 									maxY = y
 									
 									var i = 0;
 									
-									while(i < size - 1) {
+									while (i < size - 1) {
 										i = drawEvents(i, events)
 									}
 									
-									window.dc.cursorPos.y = maxY
-									window.dc.cursorMaxPos.y = maxY
-									
 									style.framePadding.y = backupPaddingY
 									
+									val pos = Vec2(x, y)
+									val size = Vec2(currentWindow.size.x, maxOf(maxY - y, 32f))
+									itemSize(size)
+									
+									val bb = Rect(pos, pos + size)
+									renderFrame(bb.min, bb.max, Vec4(0.5f, 0.5f, 0.5f, 0.1f).toLinearRGB().u32, true, 1f)
+									
+									val id = currentWindow.getID("events ${System.identityHashCode(events)}")
+									if (itemAdd(bb, id)) {
+										val (pressed, hovered, held) = buttonBehavior(bb, id, 0)
+									}
+								
 								} else {
 									textColored(Vec4(1f, 0f, 0f, 1f), "Event size is not even!")
 								}
 							}
 						}
 						
-						run {
-							val events = galaxy.shadow.profilerEvents
+						fun mouseScroll(scroll: Float) { // negative scroll == zoom out
+							val oldZoom = zoom
+							val sensitivity = 50f // higher less sensitive
+							var zoomRatio = sensitivity * (zoom - ZOOM_MIN) / ZOOM_MAX
 							
-							textUnformatted("Galaxy ${events.size()} events")
-							drawEvents(events)
+//							println("a $zoomRatio")
+//
+							// linear
+							zoomRatio = clamp((zoomRatio + scroll) / sensitivity, 0f, 1f)
+							zoom = clamp(ZOOM_MIN + (ZOOM_MAX - ZOOM_MIN) * zoomRatio, ZOOM_MIN, ZOOM_MAX)
+							
+							// power
+//							zoomRatio = clamp((zoomRatio + scroll) / sensitivity, 0f, 1f)
+//							zoomRatio = FastMath.pow(zoomRatio.toDouble(), 1.1).toFloat()
+//							zoom = clamp(ZOOM_MAX * zoomRatio, ZOOM_MIN, ZOOM_MAX)
+
+//							println("b $zoomRatio")
+							
+							// zoom to/from center = currentWindow.size.x / zoom / 2
+							systemsScroll += (systemsScroll + ctx.io.mousePos.x / oldZoom).toLong() - (systemsScroll + ctx.io.mousePos.x / zoom).toLong()
+							renderScroll += (renderScroll + ctx.io.mousePos.x / oldZoom).toLong() - (renderScroll + ctx.io.mousePos.x / zoom).toLong()
 						}
 						
-						galaxy.systems.forEachFast { system ->
+						// or WindowFlag.NoScrollWithMouse.i
+						child("render", Vec2(0, 100), false, WindowFlag.NoMove.i) {
+							currentWindow.scrollMax.y = 1f
 							
-							val events = system.shadow.profilerEvents
+							if (isWindowFocused()) {
+								if (isMouseDragging(MouseButton.Left)) {
+									renderScroll = oldRenderScroll - (getMouseDragDelta(MouseButton.Left).x / zoom).toLong()
+								} else {
+									oldRenderScroll = renderScroll
+								}
+							}
 							
-							textUnformatted("Star System ${system.sid} - ${events.size()} events")
-							drawEvents(events)
-						}
-						
-						run {
+							if (isWindowHovered() || isWindowFocused()) {
+								val scroll = ctx.io.mouseWheel
+								
+								if (scroll != 0f) {
+									mouseScroll(scroll)
+								}
+							}
+							
 							val events = galaxy.renderProfilerEvents
 							
 							if (events.size() > 0) {
 								timeOffset = events.data[0].time
+								scroll = renderScroll
 								
 								textUnformatted("Renderer ${events.size()} events")
 								drawEvents(events)
 							}
 						}
+						
+						child("systems", Vec2(0, 200 * galaxy.systems.size()), false, WindowFlag.NoMove.i) {
+							currentWindow.scrollMax.y = 1f
+							
+							if (isWindowFocused()) {
+								if (isMouseDragging(MouseButton.Left)) {
+									systemsScroll = oldSystemsScroll - (getMouseDragDelta(MouseButton.Left).x / zoom).toLong()
+								} else {
+									oldSystemsScroll = systemsScroll
+								}
+							}
+							
+							if (isWindowHovered() || isWindowFocused()) {
+								val scroll = ctx.io.mouseWheel
+								
+								if (scroll != 0f) {
+									mouseScroll(scroll)
+								}
+							}
+							
+							timeOffset = galaxy.shadow.profilerEvents.data[0].time
+							scroll = systemsScroll
+							
+							run {
+								val events = galaxy.shadow.profilerEvents
+								
+								textUnformatted("Galaxy ${events.size()} events")
+								drawEvents(events)
+							}
+							
+							galaxy.systems.forEachFast { system ->
+								
+								val events = system.shadow.profilerEvents
+								
+								textUnformatted("Star System ${system.sid} - ${events.size()} events")
+								drawEvents(events)
+							}
+						}
+						
 					}
 				}
 			}

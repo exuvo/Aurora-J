@@ -4,6 +4,7 @@ import com.artemis.Aspect
 import com.artemis.ComponentMapper
 import com.artemis.CustomComponentManager
 import com.artemis.EntitySubscription
+import com.artemis.SystemInvocationStrategy
 import com.artemis.World
 import com.artemis.WorldConfigurationBuilder
 import com.artemis.utils.IntBag
@@ -130,6 +131,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	val galacticEntityID: Int = galaxy.world.create()
 
 	val world: World
+	var nextInvocationStrategy: SystemInvocationStrategy? = null
 	val random = RandomXS128()
 	val pools = PoolsCollection()
 	
@@ -714,20 +716,59 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		}
 		profilerEvents.end()
 		
-		profilerEvents.start("process")
-		if (inCombatSubscription.getEntityCount() > 0) {
+		profilerEvents.start("processing")
+		
+		val invocationStrategy = nextInvocationStrategy
+		if (invocationStrategy != null) {
+			world.setInvocationStrategy(invocationStrategy)
+			nextInvocationStrategy = null
+		}
+		
+		if (deltaGameTime <= 100) {
 			
 			world.setDelta(1f)
 			
-			for (i in 0..deltaGameTime) {
+			for (i in 0 until deltaGameTime) {
+				profilerEvents.start("process")
 				world.process()
+				profilerEvents.end()
 			}
 			
 		} else {
 			
-			world.setDelta(deltaGameTime.toFloat())
-			world.process()
+			val delta = 1 + deltaGameTime / 100
+			world.setDelta(delta.toFloat())
+			
+			for (i in 0 until deltaGameTime / delta) {
+				profilerEvents.start("process")
+				world.process()
+				profilerEvents.end()
+			}
+			
+			world.setDelta(1f)
+			
+			for (i in 0 until deltaGameTime - delta * (deltaGameTime / delta)) {
+				profilerEvents.start("process")
+				world.process()
+				profilerEvents.end()
+			}
+			
+//			println("processing deltaGameTime $deltaGameTime = $delta x ${deltaGameTime / delta} + ${deltaGameTime - delta * (deltaGameTime / delta)}")
 		}
+		
+//		if (inCombatSubscription.getEntityCount() > 0) {
+//
+//			world.setDelta(1f)
+//
+//			for (i in 0..deltaGameTime) {
+//				world.process()
+//			}
+//
+//		} else {
+//
+//			world.setDelta(deltaGameTime.toFloat())
+//			world.process()
+//		}
 		profilerEvents.end()
 		
 		profilerEvents.start("shadow update")

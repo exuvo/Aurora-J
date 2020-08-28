@@ -15,6 +15,11 @@ import kotlin.reflect.jvm.isAccessible
 
 private val utilLog = LogManager.getLogger("se.exuvo.aurora.utils")
 
+fun clamp(value: Float, min: Float, max: Float) = value.coerceIn(min, max)
+fun clamp(value: Double, min: Double, max: Double) = value.coerceIn(min, max)
+fun clamp(value: Int, min: Int, max: Int) = value.coerceIn(min, max)
+fun clamp(value: Long, min: Long, max: Long) = value.coerceIn(min, max)
+
 inline fun IntBag.forEachFast(action: (entityID: Int) -> Unit) {
 	for (i in 0 .. size() - 1) {
 		action(data[i])

@@ -1,4 +1,4 @@
-package se.exuvo.aurora.starsystems.systems
+package se.exuvo.aurora.starsystems
 
 import se.exuvo.aurora.starsystems.CustomSystemInvocationStrategy
 import se.exuvo.aurora.starsystems.StarSystem
