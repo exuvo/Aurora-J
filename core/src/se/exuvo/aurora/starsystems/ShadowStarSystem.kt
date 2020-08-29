@@ -13,6 +13,8 @@ import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
 import se.exuvo.aurora.empires.components.ColonyComponent
 import se.exuvo.aurora.empires.components.IdleTargetingComputersComponent
 import se.exuvo.aurora.galactic.Empire
+import se.exuvo.aurora.starsystems.components.ArmorComponent
+import se.exuvo.aurora.starsystems.components.CargoComponent
 import se.exuvo.aurora.starsystems.components.CircleComponent
 import se.exuvo.aurora.starsystems.components.CloneableComponent
 import se.exuvo.aurora.starsystems.components.EmissionsComponent
@@ -23,8 +25,12 @@ import se.exuvo.aurora.starsystems.components.MoveToEntityComponent
 import se.exuvo.aurora.starsystems.components.NameComponent
 import se.exuvo.aurora.starsystems.components.OrbitComponent
 import se.exuvo.aurora.starsystems.components.EmpireComponent
+import se.exuvo.aurora.starsystems.components.HPComponent
+import se.exuvo.aurora.starsystems.components.PartStatesComponent
+import se.exuvo.aurora.starsystems.components.PartsHPComponent
 import se.exuvo.aurora.starsystems.components.PowerComponent
 import se.exuvo.aurora.starsystems.components.RenderComponent
+import se.exuvo.aurora.starsystems.components.ShieldComponent
 import se.exuvo.aurora.starsystems.components.ShipComponent
 import se.exuvo.aurora.starsystems.components.SolarIrradianceComponent
 import se.exuvo.aurora.starsystems.components.StarSystemComponent
@@ -85,9 +91,15 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 	lateinit var shipMapper: ComponentMapper<ShipComponent>
 	lateinit var powerMapper: ComponentMapper<PowerComponent>
 	lateinit var colonyMapper: ComponentMapper<ColonyComponent>
-	lateinit var ownerMapper: ComponentMapper<EmpireComponent>
+	lateinit var empireMapper: ComponentMapper<EmpireComponent>
 	lateinit var idleTargetingComputersComponentMapper: ComponentMapper<IdleTargetingComputersComponent>
 	lateinit var activeTargetingComputersComponentMapper: ComponentMapper<ActiveTargetingComputersComponent>
+	lateinit var partStatesMapper: ComponentMapper<PartStatesComponent>
+	lateinit var shieldMapper: ComponentMapper<ShieldComponent>
+	lateinit var armorMapper: ComponentMapper<ArmorComponent>
+	lateinit var partsHPMapper: ComponentMapper< PartsHPComponent>
+	lateinit var hpMapper: ComponentMapper<HPComponent>
+	lateinit var cargoMapper: ComponentMapper<CargoComponent>
 	
 //	val allSubscription: EntitySubscription
 	val uuidSubscription: EntitySubscription

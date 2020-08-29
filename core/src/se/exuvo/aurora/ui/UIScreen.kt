@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputProcessor
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics
+import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.utils.Disposable
 import glm_.vec2.Vec2
 import glm_.vec2.Vec2d
@@ -32,7 +33,6 @@ import se.exuvo.aurora.ui.keys.KeyActions_UIScreen
 import se.exuvo.aurora.ui.keys.KeyMappings
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.toLinearRGB
-import se.exuvo.aurora.utils.toLinearRGBwithAlphaCorrection
 import uno.glfw.GlfwWindow
 import uno.glfw.GlfwWindowHandle
 import kotlin.concurrent.withLock
@@ -46,6 +46,7 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 	private val galaxyGroupSystem by lazy (LazyThreadSafetyMode.NONE) { GameServices[GroupSystem::class] }
 	
 	override val overlay = true
+	val imguiCamera = OrthographicCamera()
 	private val ctx: Context
 	private val lwjglGlfw: ImplGlfw
 	private val gl3: GLInterface
@@ -111,6 +112,7 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 		ImGui.styleColorsDark()
 		
 		ImGui.style.apply {
+			itemSpacing.y = 3f
 			//@formatter:off restore classic colors for some parts
 			colors[Col.FrameBg.i]               (0.43f, 0.43f, 0.43f, 0.39f)
 			colors[Col.FrameBgHovered.i]        (0.47f, 0.47f, 0.69f, 0.40f)
@@ -128,17 +130,17 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 		
 		// convert style from sRGB to linear https://github.com/ocornut/imgui/issues/578#issuecomment-577222389
 		for (i in 0 until ImGui.style.colors.size) {
-			ImGui.style.colors[i].toLinearRGBwithAlphaCorrection()
+			ImGui.style.colors[i].toLinearRGB()
 		}
 		
 		lwjglGlfw = ImplGlfw(GlfwWindow(GlfwWindowHandle((Gdx.graphics as Lwjgl3Graphics).window.windowHandle)), false)
 		gl3 = ImplBestGL()
 		
-		shipDebugger.set(ctx, galaxy, galaxyGroupSystem)
-		shipDesigner.set(ctx, galaxy, galaxyGroupSystem)
-		colonyManager.set(ctx, galaxy, galaxyGroupSystem)
-		profiler.set(ctx, galaxy, galaxyGroupSystem)
-		empireOverview.set(ctx, galaxy, galaxyGroupSystem)
+		shipDebugger.set(ctx, galaxy, galaxyGroupSystem, imguiCamera)
+		shipDesigner.set(ctx, galaxy, galaxyGroupSystem, imguiCamera)
+		colonyManager.set(ctx, galaxy, galaxyGroupSystem, imguiCamera)
+		profiler.set(ctx, galaxy, galaxyGroupSystem, imguiCamera)
+		empireOverview.set(ctx, galaxy, galaxyGroupSystem, imguiCamera)
 	}
 
 	override fun show() {
@@ -238,9 +240,11 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 				profiler.draw()
 				empireOverview.draw()
 			}
-
+			
 			ImGui.render()
 			gl3.renderDrawData(ctx.drawData)
+			
+			empireOverview.postDraw()
 			
 		} catch (e: Throwable) {
 			log.error("Error drawing windows", e)
@@ -353,7 +357,9 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 		}
 	}
 	
-	override fun resize(width: Int, height: Int) {}
+	override fun resize(width: Int, height: Int) {
+		imguiCamera.setToOrtho(true, width.toFloat(), height.toFloat())
+	}
 
 	override fun update(deltaRealTime: Float) {}
 
@@ -471,42 +477,20 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 	
 	public abstract class UIWindow {
 		lateinit var ctx: Context
+		lateinit var imguiCamera: OrthographicCamera
 		lateinit var galaxy: Galaxy
 		lateinit var galaxyGroupSystem: GroupSystem
 		
 		open var visible = false
 		
-		fun set(ctx: Context, galaxy: Galaxy, galaxyGroupSystem: GroupSystem) {
+		open fun set(ctx: Context, galaxy: Galaxy, galaxyGroupSystem: GroupSystem, imguiCamera: OrthographicCamera) {
 			this.ctx = ctx
 			this.galaxy = galaxy
 			this.galaxyGroupSystem = galaxyGroupSystem
-		}
-		
-		fun rightAlignedColumnText(string: String) {
-			with (ImGui) {
-				ImGui.cursorPosX = ImGui.cursorPosX + ImGui.getColumnWidth() - calcTextSize(string).x - ImGui.scrollX - 2 * ImGui.style.itemSpacing.x
-				text(string)
-			}
-		}
-		
-		fun sameLineRightAlignedColumnText(string: String) {
-			with (ImGui) {
-				sameLine(ImGui.cursorPosX + ImGui.getColumnWidth() - calcTextSize(string).x - ImGui.scrollX - 2 * ImGui.style.itemSpacing.x)
-				text(string)
-			}
-		}
-		
-		fun lerpColor(out: Vec4, inA: Vec4, inB: Vec4, current: Float, max: Float): Vec4 {
-			
-			val inv = max - current
-			
-			out.r = (inA.r * inv + inB.r * current) / max
-			out.g = (inA.g * inv + inB.g * current) / max
-			out.b = (inA.b * inv + inB.b * current) / max
-			
-			return out
+			this.imguiCamera = imguiCamera
 		}
 		
 		abstract fun draw()
+		open fun postDraw() {}
 	}
 }

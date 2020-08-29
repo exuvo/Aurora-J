@@ -83,10 +83,19 @@ class ShipHull() {
 			if (field == -1) { field = calculateHashCode() }
 			return field
 		}
-	
+	var maxPartHP = -1
+		get() {
+			if (field == -1) { field = calculateMaxPartHP() }
+			return field
+		}
 	var maxShieldHP = -1L
 		get() {
 			if (field == -1L) { field = calculateMaxShieldHP() }
+			return field
+		}
+	var maxArmorHP = -1
+		get() {
+			if (field == -1) { field = calculateMaxArmorHP() }
 			return field
 		}
 	
@@ -249,6 +258,22 @@ class ShipHull() {
 			}
 		}
 		return cost
+	}
+	
+	fun calculateMaxArmorHP(): Int {
+		var sum = 0
+		
+		for(i in 0 until armorLayers) {
+			sum += armorBlockHP[i].toInt() * getArmorWidth()
+		}
+		
+		return sum
+	}
+	
+	fun calculateMaxPartHP(): Int {
+		return parts.sumBy {
+			it.maxHealth.toInt()
+		}
 	}
 	
 	fun calculateMaxShieldHP(): Long {

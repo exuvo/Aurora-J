@@ -47,6 +47,19 @@ class ArmorComponent() : PooledComponent(), CloneableComponent<ArmorComponent> {
 		armor = Array<UByteArray>(hull.armorLayers, { _ -> UByteArray(armorWidth, { hull.armorBlockHP }) }) // 1 armor block per m2
 	}
 	
+	fun getTotalHP(): Int {
+		val armor = armor!!
+		var sum = 0
+		
+		for (y in 0 until armor.size) { // layer
+			for (x in 0 until armor[0].size) {
+				sum += armor[y][x].toInt()
+			}
+		}
+		
+		return sum
+	}
+	
 	override fun copy(tc: ArmorComponent) {
 		val armor = armor!!
 		val tcArmor = tc.armor
@@ -69,13 +82,13 @@ class ArmorComponent() : PooledComponent(), CloneableComponent<ArmorComponent> {
 
 class PartsHPComponent() : PooledComponent(), CloneableComponent<PartsHPComponent> {
 	var totalPartHP: Int = -1
-	lateinit var partHP: ByteArray
+	var partHP: UByteArray = UByteArray(0)
 	var damageablePartsMaxVolume = 0L
 	val damageableParts = LongObjectBTreeMap.create<Bag<PartRef<Part>>>()
 	
 	fun set(hull: ShipHull) {
-		partHP = ByteArray(hull.getParts().size, { hull[it].part.maxHealth })
-		totalPartHP = partHP.size * 128 + partHP.sum()
+		partHP = UByteArray(hull.getParts().size, { hull[it].part.maxHealth })
+		totalPartHP = partHP.sum().toInt()
 		
 		hull.getPartRefs().forEachFast { partRef ->
 			addDamageablePart(partRef)
@@ -84,7 +97,7 @@ class PartsHPComponent() : PooledComponent(), CloneableComponent<PartsHPComponen
 	
 	override fun copy(tc: PartsHPComponent) {
 		if (tc.totalPartHP == -1 || tc.partHP.size != partHP.size) {
-			tc.partHP = ByteArray(partHP.size, { partHP[it] })
+			tc.partHP = UByteArray(partHP.size, { partHP[it] })
 			
 		} else {
 			partHP.forEachIndexed { index, hp ->
@@ -98,16 +111,16 @@ class PartsHPComponent() : PooledComponent(), CloneableComponent<PartsHPComponen
 	
 	
 	fun getPartHP(partRef: PartRef<out Part>): Int {
-		return 128 + partHP[partRef.index]
+		return partHP[partRef.index].toInt()
 	}
 	
 	@Suppress("NAME_SHADOWING")
 	fun setPartHP(partRef: PartRef<Part>, health: Int, damageablePartsEntry: Map.Entry<Long, Bag<PartRef<Part>>>? = null) {
-		if (health < 0 || health > (128 + partRef.part.maxHealth)) {
+		if (health < 0 || health > partRef.part.maxHealth.toInt()) {
 			throw IllegalArgumentException()
 		}
 		
-		val oldHP = 128 + partHP[partRef.index]
+		val oldHP = partHP[partRef.index].toInt()
 		
 		if (oldHP == 0 && health > 0) {
 			
@@ -152,7 +165,7 @@ class PartsHPComponent() : PooledComponent(), CloneableComponent<PartsHPComponen
 		
 		totalPartHP += health - oldHP
 		
-		partHP[partRef.index] = (health - 128).toByte()
+		partHP[partRef.index] = health.toUByte()
 	}
 	
 	private fun getDamageablePartsEntry(volume: Long): Map.Entry<Long, Bag<PartRef<Part>>>? {
@@ -225,7 +238,7 @@ class HPComponent() : PooledComponent(), CloneableComponent<HPComponent> {
 	fun set(hull: AdvancedMunitionHull) {
 		var sum = 0
 		hull.getParts().forEachFast { part ->
-			sum += 128 + part.maxHealth
+			sum += part.maxHealth.toInt()
 		}
 		health = sum.toShort()
 	}

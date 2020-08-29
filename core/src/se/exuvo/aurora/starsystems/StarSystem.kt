@@ -144,6 +144,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	var commandQueue = ArrayBlockingQueue<Command>(128)
 	var workingShadow: ShadowStarSystem
 	var shadow: ShadowStarSystem // Always safe to use from other StarSystems, requires shadow lock to use from UI
+	var skipClearShadowChanged = false
 
 	lateinit var solarSystemMapper: ComponentMapper<StarSystemComponent>
 	lateinit var uuidMapper: ComponentMapper<UUIDComponent>
@@ -253,7 +254,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		val reactor = FissionReactor(5 * Units.MEGA)
 		reactor.name = "Nuclear Reactor"
 		reactor.cost[Resource.GENERIC] = 1000
-		reactor.maxHealth = 5 - 128
+		reactor.maxHealth = 50u
 		shipHull.addPart(reactor)
 //		println("Reactor fuel consumption ${reactor.fuelConsumption} kg / ${reactor.fuelTime} s")
 
@@ -270,7 +271,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		val fuelStorage = FuelContainerPart(400000000)
 		fuelStorage.name = "Fuel Cargo"
 		fuelStorage.cost[Resource.GENERIC] = 100
-		fuelStorage.maxHealth = 3 - 128
+		fuelStorage.maxHealth = 30u
 		shipHull.addPart(fuelStorage)
 
 		val battery = Battery(200 * Units.KILO, 500 * Units.KILO, 80, 100 * Units.GIGA)
@@ -307,7 +308,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		shipHull.preferredPartMunitions[railgunRef] = sabot
 
 		val missileLauncher = MissileLauncher(7, 3, 10, 1000 * 5500)
-		missileLauncher.maxHealth = 3 - 128
+		missileLauncher.maxHealth = 15u
 		shipHull.addPart(missileLauncher)
 		val missileLauncherRef = shipHull[MissileLauncher::class][0]
 		shipHull.preferredPartMunitions[missileLauncherRef] = missile
@@ -330,9 +331,11 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		shipHull.defaultWeaponAssignments[tcRef2] = shipHull.getPartRefs().filter({ it.part is BeamWeapon || it.part is MissileLauncher })
 
 		val ionThruster = ElectricalThruster(2000 * 982, 1 * Units.MEGA)
+		ionThruster.maxHealth = 30u
 		shipHull.addPart(ionThruster)
 
 		val chemicalThruster = FueledThruster(10000 * 982, 1)
+		chemicalThruster.maxHealth = 30u
 		shipHull.addPart(chemicalThruster)
 		
 		val shield = Shield(1 * Units.MEGA, 10 * Units.KILO, 50)
@@ -693,11 +696,16 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		
 		profilerEvents.start("shadow clear")
 		workingShadow.added.clear()
-		workingShadow.changed.clear()
 		workingShadow.deleted.clear()
 		
-		workingShadow.changedComponents.forEachFast { bitVector ->
-			bitVector.clear()
+		if (skipClearShadowChanged) {
+			skipClearShadowChanged = false
+			
+		} else {
+			workingShadow.changed.clear()
+			workingShadow.changedComponents.forEachFast { bitVector ->
+				bitVector.clear()
+			}
 		}
 		
 		workingShadow.quadtreeShipsChanged = false;

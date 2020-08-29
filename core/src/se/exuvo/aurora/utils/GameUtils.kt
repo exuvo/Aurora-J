@@ -21,61 +21,61 @@ fun clamp(value: Int, min: Int, max: Int) = value.coerceIn(min, max)
 fun clamp(value: Long, min: Long, max: Long) = value.coerceIn(min, max)
 
 inline fun IntBag.forEachFast(action: (entityID: Int) -> Unit) {
-	for (i in 0 .. size() - 1) {
+	for (i in 0 until size()) {
 		action(data[i])
 	}
 }
 
 inline fun IntBag.forEachFast(action: (index: Int, entityID: Int) -> Unit) {
-	for (i in 0 .. size() - 1) {
+	for (i in 0 until size()) {
 		action(i, data[i])
 	}
 }
 
 inline fun <T> Bag<T>.forEachFast(action: (T) -> Unit) {
-	for (i in 0 .. size() - 1) {
+	for (i in 0 until size()) {
 		action(data[i])
 	}
 }
 
 inline fun <T> Bag<T>.forEachFast(action: (index: Int, T) -> Unit) {
-	for (i in 0 .. size() - 1) {
+	for (i in 0 until size()) {
 		action(i, data[i])
 	}
 }
 
 inline fun <T> ImmutableBag<T>.forEachFast(action: (T) -> Unit) {
-	for (i in 0 .. size() - 1) {
+	for (i in 0 until size()) {
 		action(get(i))
 	}
 }
 
 inline fun <T> ImmutableBag<T>.forEachFast(action: (index: Int, T) -> Unit) {
-	for (i in 0 .. size() - 1) {
+	for (i in 0 until size()) {
 		action(i, get(i))
 	}
 }
 
 inline fun <T> List<T>.forEachFast(block: (T) -> Unit) {
-	for (i in 0 .. size - 1) {
+	for (i in 0 until size) {
 		block(this[i])
 	}
 }
 
 inline fun <T> List<T>.forEachFast(block: (index: Int, T) -> Unit) {
-	for (i in 0 .. size - 1) {
+	for (i in 0 until size) {
 		block(i, this[i])
 	}
 }
 
 inline fun <T> Array<T>.forEachFast(block: (T) -> Unit) {
-	for (i in 0 .. size - 1) {
+	for (i in 0 until size) {
 		block(this[i])
 	}
 }
 
 inline fun <T> Array<T>.forEachFast(block: (index: Int, T) -> Unit) {
-	for (i in 0 .. size - 1) {
+	for (i in 0 until size) {
 		block(i, this[i])
 	}
 }

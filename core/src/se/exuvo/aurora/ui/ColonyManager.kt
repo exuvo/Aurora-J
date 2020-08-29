@@ -27,6 +27,8 @@ import se.exuvo.aurora.empires.components.ShipyardModificationAddSlipway
 import se.exuvo.aurora.empires.components.ShipyardModificationExpandCapacity
 import se.exuvo.aurora.starsystems.systems.ColonySystem
 import se.exuvo.aurora.ui.UIScreen.UIWindow
+import se.exuvo.aurora.utils.imgui.rightAlignedColumnText
+import se.exuvo.aurora.utils.imgui.sameLineRightAlignedColumnText
 
 class ColonyManager : UIWindow() {
 	

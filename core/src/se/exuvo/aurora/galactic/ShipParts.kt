@@ -9,7 +9,7 @@ abstract class Part {
 	var name: String = ""
 	var designDay: Int = -1
 	val cost: MutableMap<Resource, Long> = LinkedHashMap() 
-	var maxHealth: Byte = 1 - 128
+	var maxHealth: UByte = 10U
 	var crewRequirement = 1
 
 	var mass = -1L
@@ -48,7 +48,7 @@ abstract class Part {
 		hash = 37 * hash + name.hashCode()
 		hash = 37 * hash + designDay
 		hash = 37 * hash + (volume xor (volume shr 32)).toInt()
-		hash = 37 * hash + maxHealth
+		hash = 37 * hash + maxHealth.toInt()
 		hash = 37 * hash + crewRequirement
 		return hash
 	}

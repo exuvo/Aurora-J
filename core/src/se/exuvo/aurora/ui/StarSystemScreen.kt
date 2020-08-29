@@ -63,7 +63,6 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 	val maxZoom = 1E8f
 
 	init {
-		viewport.update(Gdx.graphics.width, Gdx.graphics.height)
 		camera.zoom = 1E6f;
 		zoomLevel = (Math.log(camera.zoom.toDouble()) / Math.log(zoomSensitivity)).toInt();
 	}

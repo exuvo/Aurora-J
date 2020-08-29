@@ -67,15 +67,6 @@ fun Vec4.toLinearRGB(): Vec4 {
 	return this
 }
 
-// Fixes sRGB defined colors with alpha < 1
-fun Vec4.toLinearRGBwithAlphaCorrection(): Vec4 {
-	r = sRGBtoLinearRGB(r * a)
-	g = sRGBtoLinearRGB(g * a)
-	b = sRGBtoLinearRGB(b * a)
-	a = 1f
-	return this
-}
-
 fun Vec3.toSRGB(): Vec3 {
 	r = linearRGBtoSRGB(r)
 	g = linearRGBtoSRGB(g)

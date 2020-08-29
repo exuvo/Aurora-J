@@ -891,7 +891,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		spriteBatch.end()
 		
 		val projectionMatrix = viewport.camera.combined
-		
+
 		val vertices = gData.strategicIconVertices
 		val indices = gData.strategicIconIndices
 		val iconShader = gData.strategicIconShader
@@ -900,7 +900,6 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		iconShader.bind()
 		iconShader.setUniformMatrix("u_projTrans", projectionMatrix);
 		iconShader.setUniformi("u_texture", 14);
-//		iconShader.setUniformf("u_scale", scale);
 		
 		Gdx.gl.glActiveTexture(GL20.GL_TEXTURE14)
 		texture.bind()
@@ -931,24 +930,20 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		
 		entityIDs.forEachFast loop@{ entityID ->
 			
-			if (strategicIconMapper.has(entityID) && inStrategicView(entityID)) {
+			val strategicIconC = strategicIconMapper.get(entityID)
+			
+			if (strategicIconC != null && inStrategicView(entityID)) {
 				
-				val strategicIconC = strategicIconMapper.get(entityID)
 				val baseTex = strategicIconC.baseTexture
 				val centerTex = strategicIconC.centerTexture
 				
 				if (baseTex.texture == texture) {
 				
-					val empireC = empireMapper.get(entityID)
 					val movement = movementMapper.get(entityID).get(galaxy.time).value
-					val tintComponent = if (tintMapper.has(entityID)) tintMapper.get(entityID) else null
 					val x = (movement.getXinKM() - cameraOffset.x).toFloat()
 					val y = (movement.getYinKM() - cameraOffset.y).toFloat()
 					
-					val color = sRGBtoLinearRGB(if (empireC != null) empireC.empire.color else tintComponent?.color ?: Color.WHITE)
-					val colorBits = color.toFloatBits()
-					
-					//TODO fix both at the same time
+					//TODO fix rounding errors
 					// centerpoint correct with 7.5 but when ship is stopped size sometimes it becomes too large and fucks it
 					// centerpoint rounds wrong with 8/7 but size is always correct
 //					val minX = x - halfWidth
@@ -963,6 +958,17 @@ class RenderSystem : IteratingSystem(FAMILY) {
 //					if (((maxX - minX) / scale).toInt() != 15 || (maxX / scale).toInt() - (minX / scale).toInt() != 15) {
 //						println("entityID $entityID w ${((maxX - minX) / scale).toInt()} w2 ${(maxX / scale).toInt() - (minX / scale).toInt()}")
 //					}
+					
+					val viewWidth = viewport.getScreenWidth() / 2 * scale
+					val viewHeight = viewport.getScreenHeight() / 2 * scale
+					
+					if (maxX < -viewWidth || minX > viewWidth || maxY < -viewHeight || minY > viewHeight) {
+						return@loop
+					}
+					
+					val empireC = empireMapper.get(entityID)
+					val color = sRGBtoLinearRGB(if (empireC != null) empireC.empire.color else tintMapper.get(entityID)?.color ?: Color.WHITE)
+					val colorBits = color.toFloatBits()
 					
 					// Triangle 1
 					indices[indiceIdx++] = (stride + 1).toShort()
