@@ -26,8 +26,6 @@ companion object {
 	var funds: Long = 0
 	val colonies = Bag<EntityReference>()
 	val stations = Bag<EntityReference>()
-	//TODO set from galaxy after each tick
-	val ships = LinkedHashMap<StarSystem, LongObjectBTreeMap<IntBag>>() // starsystem, mass, entityID
 	val technologies = HashMap<String, Technology>()
 	val parts = ArrayList<Part>()
 	val researchTeams = ArrayList<ResearchTeam>()

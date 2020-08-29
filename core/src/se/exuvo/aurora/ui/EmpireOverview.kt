@@ -78,13 +78,11 @@ class EmpireOverview : UIWindow() {
 						window("Empire Overview", null, flags) {
 							
 							var windowCoveredByOtherWindow = false
-//							val thisWindowBB = Rect(currentWindow.pos, currentWindow.pos + currentWindow.size)
 							val thisWindowBB = currentWindow.outerRectClipped
 							
 							for (i in 1 until ctx.windows.size) { // 0 is fallback window
 								val win = ctx.windows[i]
 								if (win != currentWindow && win.isActiveAndVisible) {
-//									val bb = Rect(win.pos, win.pos + win.size)
 									val bb = win.outerRectClipped
 									
 									if (bb.overlaps(thisWindowBB)) {
@@ -96,7 +94,7 @@ class EmpireOverview : UIWindow() {
 							
 							/*
 									View modes
-										relative: current system at top
+										relative: current system at top, rest sorted by distance from current
 										heliocentric: home system first, rest sorted by distance from home
 										
 									system tree
@@ -110,14 +108,9 @@ class EmpireOverview : UIWindow() {
 											small ships
 								*/
 							
-							//TODO only star systems in which we have a presence in
-							//TODO use icons
+							val strategicIconsTexture = renderSystemGlobalData.strategicIconTexture
 							
-							val renderSystem = galaxy.systems[0].shadow.world.getSystem(RenderSystem::class.java)
-							val gData = renderSystem.gData()
-							val strategicIconsTexture = gData.strategicIconTexture
-							
-							galaxy.systems.forEachFast { system ->
+							Player.current.visibleSystems.forEachFast { system ->
 								
 								flags = TreeNodeFlag.DefaultOpen or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen
 								if (treeNodeEx(system.galacticEntityID.toString(), flags, system.getName())) {

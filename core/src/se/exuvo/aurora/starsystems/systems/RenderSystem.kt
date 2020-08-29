@@ -227,8 +227,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			val strategicIconIndicesMax = 6 * strategicIconMax
 			val strategicIconVerticesMax = 7 * strategicIconMax
 			
-			strategicIconVertices = FloatArray(circleVerticesMax)
-			strategicIconIndices = ShortArray(circleIndicesMax)
+			strategicIconVertices = FloatArray(strategicIconVerticesMax)
+			strategicIconIndices = ShortArray(strategicIconIndicesMax)
 			
 			strategicIconMesh = Mesh(false, strategicIconVerticesMax, strategicIconIndicesMax,
 					VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE),

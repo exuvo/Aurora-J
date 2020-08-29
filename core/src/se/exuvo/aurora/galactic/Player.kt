@@ -2,6 +2,7 @@ package se.exuvo.aurora.galactic
 
 import com.artemis.utils.Bag
 import org.apache.logging.log4j.LogManager
+import se.exuvo.aurora.starsystems.StarSystem
 import se.exuvo.aurora.starsystems.components.EntityReference
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.Units
@@ -20,6 +21,7 @@ class Player(var name: String) {
 	var speedIndex = 0
 	var requestedSpeed = Units.NANO_SECOND / speedSteps[speedIndex]
 	val selection = Bag<EntityReference>()
+	val visibleSystems = Bag<StarSystem>()
 	
 	fun increaseSpeed() {
 		if (speedIndex < speedSteps.size - 1) {

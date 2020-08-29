@@ -43,15 +43,17 @@ class MainMenuScreen() : GameScreenImpl() {
 		val galaxy = Galaxy(empires, 0)
 		
 		val systems = Bag(StarSystem::class.java)
-		systems.add(StarSystem("s1", Vector2L(0, 0)))
-//		systems.add(StarSystem("s2", Vector2L(4367, 0)))
-//		systems.add(StarSystem("s3", Vector2L(-2000, -5000)))
+		systems.add(StarSystem("Sun", Vector2L(0, 0)))
+		systems.add(StarSystem("Alpha Centauri", Vector2L(4367, 0)))
+		systems.add(StarSystem("Wolf 359", Vector2L(-2000, -5000)))
 
 //		for (i in 4..20) {
 //			systems.add(StarSystem("s$i", Vector2L((Math.random() * 10000 - 5000).toLong(), (Math.random() * 10000 - 5000).toLong())))
 //		}
 		
 		galaxy.init(systems)
+		
+		Player.current.visibleSystems.addAll(systems)
 
 		val systemView = StarSystemScreen(systems[0])
 		AuroraGame.currentWindow.screenService.add(UIScreen())
