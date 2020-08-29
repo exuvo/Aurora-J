@@ -105,15 +105,15 @@ dependencies {
 	implementation "org.lwjgl:lwjgl-stb:$lwjglVersion"
 
 	["gl", "glfw", "core"].each {
-		implementation ("com.github.kotlin-graphics.imgui:imgui-$it:v1.76") {
+		implementation ("com.github.kotlin-graphics.imgui:imgui-$it:-SNAPSHOT") {
 			exclude group: 'org.lwjgl'
 			exclude group: 'org.jetbrains.kotlin'
 			exclude(group: 'com.github.kotlin-graphics.uno-sdk', module: "uno-awt")
 			exclude(group: 'com.github.kotlin-graphics.uno-sdk', module: "uno-vk")
 		}
 	}
-	compileOnly "com.github.kotlin-graphics:glm:1b4ac18dd1a3c23440d3f33596688aac60bc0141"
-	compileOnly "com.github.kotlin-graphics.uno-sdk:uno-core:402f5f495429b7f2178a1d200c32bb5ed2f7e6fa"
+//	compileOnly "com.github.kotlin-graphics:glm:1b4ac18dd1a3c23440d3f33596688aac60bc0141"
+//	compileOnly "com.github.kotlin-graphics.uno-sdk:uno-core:402f5f495429b7f2178a1d200c32bb5ed2f7e6fa"
 }
 
 task run(dependsOn: classes, type: JavaExec) {

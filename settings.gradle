@@ -5,7 +5,13 @@ includeBuild("artemis-odb") {
 	}
 }
 
-// if (file('../imgui').exists()) includeBuild "../imgui"
+if (file('imgui/build.gradle.kts').exists()) includeBuild("imgui") {
+	dependencySubstitution {
+		substitute module('com.github.kotlin-graphics.imgui:imgui-core') with project(':imgui-core')
+		substitute module('com.github.kotlin-graphics.imgui:imgui-gl') with project(':imgui-gl')
+		substitute module('com.github.kotlin-graphics.imgui:imgui-glwf') with project(':imgui-glfw')
+	}
+}
 
 // awful hack in settings.grade to reflectively enable logging
 def LoggerFactory = Class.forName("org.slf4j.LoggerFactory")

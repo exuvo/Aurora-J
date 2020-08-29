@@ -9,6 +9,7 @@ import glm_.vec2.Vec2
 import glm_.vec2.Vec2d
 import glm_.vec4.Vec4
 import imgui.Col
+import imgui.ConfigFlag
 import imgui.ImGui
 import imgui.WindowFlag
 import imgui.classes.Context
@@ -31,6 +32,7 @@ import se.exuvo.aurora.ui.keys.KeyActions_UIScreen
 import se.exuvo.aurora.ui.keys.KeyMappings
 import se.exuvo.aurora.utils.GameServices
 import se.exuvo.aurora.utils.toLinearRGB
+import se.exuvo.aurora.utils.toLinearRGBwithAlphaCorrection
 import uno.glfw.GlfwWindow
 import uno.glfw.GlfwWindowHandle
 import kotlin.concurrent.withLock
@@ -97,13 +99,13 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 //		
 		if (firstContext == null) {
 			ctx = Context()
-//			ctx.io.configFlags = ctx.io.configFlags or ConfigFlag.NavEnableKeyboard.i
 			AuroraGame.storage + ImGuiGlobalStorage(ctx)
 			
 		} else {
 			ctx = Context(firstContext.ctx.io.fonts)
 		}
 		
+		ctx.io.configFlags = ctx.io.configFlags or ConfigFlag.IsSRGB.i
 		ctx.setCurrent()
 		
 		ImGui.styleColorsDark()
@@ -126,7 +128,7 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 		
 		// convert style from sRGB to linear https://github.com/ocornut/imgui/issues/578#issuecomment-577222389
 		for (i in 0 until ImGui.style.colors.size) {
-			ImGui.style.colors[i].toLinearRGB()
+			ImGui.style.colors[i].toLinearRGBwithAlphaCorrection()
 		}
 		
 		lwjglGlfw = ImplGlfw(GlfwWindow(GlfwWindowHandle((Gdx.graphics as Lwjgl3Graphics).window.windowHandle)), false)

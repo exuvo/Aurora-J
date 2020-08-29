@@ -1,3 +1,6 @@
 [submodule "artemis-odb"]
 	path = artemis-odb
 	url = https://github.com/exuvo/artemis-odb
+[submodule "imgui"]
+	path = imgui
+	url = https://github.com/exuvo/imgui
