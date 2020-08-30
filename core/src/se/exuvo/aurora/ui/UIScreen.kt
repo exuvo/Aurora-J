@@ -157,10 +157,6 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 	var graphValues = floatArrayOf(0f, 5f, 2f, 4f)
 	
 	override fun draw() {
-
-		// https://github.com/kotlin-graphics/imgui/wiki/Using-libGDX
-		// https://github.com/ocornut/imgui
-
 		try {
 			ctx.setCurrent()
 			
