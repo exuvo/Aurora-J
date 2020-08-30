@@ -148,7 +148,7 @@ class EmpireOverview : UIWindow() {
 										val empireC = empireMapper.get(entityID)
 										val color = sRGBtoLinearRGB(if (empireC != null) empireC.empire.color else tintMapper.get(entityID)?.color ?: Color.WHITE)
 										
-										if (icon.baseTexture.texture == strategicIconsTexture) {
+										if (icon.baseTexture.texture === strategicIconsTexture) {
 											
 											if (!windowCoveredByOtherWindow) {
 												// Batched rendering of strategic icons after imgui has been drawn

@@ -3,7 +3,6 @@ package se.exuvo.aurora;
 import java.nio.file.Paths;
 import java.util.Iterator;
 
-import com.badlogic.gdx.graphics.glutils.HdpiMode;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

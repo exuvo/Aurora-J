@@ -37,13 +37,13 @@ jar.manifest.attributes 'Main-Class': project.mainClassName
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 tasks.withType(JavaCompile).all {
-	sourceCompatibility = "14"
-	targetCompatibility = "14"
+	sourceCompatibility = "11"
+	targetCompatibility = "11"
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 	kotlinOptions {
-		jvmTarget = "14"
+		jvmTarget = "11"
 		freeCompilerArgs = ["-Xno-param-assertions", "-Xno-call-assertions", "-Xno-receiver-assertions", "-Xinline-classes", "-Xopt-in=kotlin.ExperimentalUnsignedTypes"]
 	}
 }
@@ -136,8 +136,8 @@ task debug(dependsOn: classes, type: JavaExec) {
 // https://github.com/junkdog/artemis-odb/wiki/Weaving-LibGDX
 // Prepare folder with all dependencies exploded.
 task explodeForWeave(type: Sync) {
-	duplicatesStrategy = "include"
 	dependsOn classes, configurations.runtimeClasspath
+	duplicatesStrategy = "include"
 
 	into project.weaveDir
 	
@@ -153,21 +153,25 @@ task explodeForWeave(type: Sync) {
 		exclude "linux/arm32/**"
 		exclude "linux/arm64/**"
 		//TODO remove these and make overwrite work instead
-		exclude "com/badlogic/gdx/Lwjgl3Graphics.class"
-		exclude "com/badlogic/gdx/Lwjgl3Graphics\$1.class"
-		exclude "com/badlogic/gdx/Lwjgl3Graphics\$Lwjgl3DisplayMode.class"
-		exclude "com/badlogic/gdx/Lwjgl3Graphics\$Lwjgl3Monitor.class"
-		//TODO Gdx2DPixmap
+		exclude "com/badlogic/gdx/backends/lwjgl3/Lwjgl3Graphics.class"
+		exclude "com/badlogic/gdx/backends/lwjgl3/Lwjgl3Graphics\$1.class"
+		exclude "com/badlogic/gdx/backends/lwjgl3/Lwjgl3Graphics\$Lwjgl3DisplayMode.class"
+		exclude "com/badlogic/gdx/backends/lwjgl3/Lwjgl3Graphics\$Lwjgl3Monitor.class"
+		exclude "com/badlogic/gdx/graphics/g2d/Gdx2DPixmap.class"
+		exclude "com/badlogic/gdx/graphics/Pixmap.class"
+		exclude "com/badlogic/gdx/graphics/Pixmap\$Blending.class"
+		exclude "com/badlogic/gdx/graphics/Pixmap\$Filter.class"
+		exclude "com/badlogic/gdx/graphics/Pixmap\$Format.class"
 	}
 	//from {configurations.compile.collect {zipTree(it)}}
-	
+
 	from files(sourceSets.main.output.classesDirs) {
 		exclude "**/*.kt"
 	}
 	from files(sourceSets.main.output.resourcesDir)
 	
 	from new File("$projectDir/log4j2.xml")
-	
+
 	into ("assets") {
 		from files(project.assetsDir)
 	}
@@ -188,6 +192,7 @@ task dist(type: Jar) {
 	from project.weaveDir
 	manifest {
 		attributes 'Main-Class': project.mainClassName
+		attributes "Multi-Release": true
 	}
 }
 

@@ -15,6 +15,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.utils.Disposable
 import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.utils.GameServices
+import java.lang.RuntimeException
 import kotlin.properties.Delegates
 
 object Assets : Disposable {
@@ -82,7 +83,7 @@ object Assets : Disposable {
 		
 		manager.load("images/aurora.atlas", TextureAtlas::class.java);
 		
-		manager.getFileHandleResolver().resolve("shaders/").list().forEach {file ->
+		manager.getFileHandleResolver().resolve("shaders").list().forEach {file ->
 			if (file.nameWithoutExtension() != "gamma") {
 				manager.load("shaders/" + file.name(), ShaderProgram::class.java)
 			}
@@ -102,16 +103,20 @@ object Assets : Disposable {
 		
 		textures = manager.get("images/aurora.atlas")
 		
-		manager.getFileHandleResolver().resolve("shaders/").list().forEach {file ->
+		manager.getFileHandleResolver().resolve("shaders").list().forEach {file ->
 			val name = file.nameWithoutExtension()
 			if (name != "gamma") {
-				shaders[name] = manager.get("shaders/" + name + ".vert")
+				shaders[name] = manager.get("shaders/$name.vert")
 			}
+		}
+		
+		if (shaders.size < 2) {
+			throw RuntimeException("shaders not loaded")
 		}
 	}
 
 	override fun dispose() {
 		// Already disposed of by game services
-		// manager.dispose() 
+		// manager.dispose()
 	}
 }

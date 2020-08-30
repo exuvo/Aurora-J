@@ -855,7 +855,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 				val baseTexture = strategicIconMapper.get(entityID).baseTexture
 				
-				if (baseTexture.texture != texture) {
+				if (baseTexture.texture !== texture) {
 				
 					val movement = movementMapper.get(entityID).get(galaxy.time).value
 					val tintComponent = if (tintMapper.has(entityID)) tintMapper.get(entityID) else null
@@ -937,7 +937,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 				val baseTex = strategicIconC.baseTexture
 				val centerTex = strategicIconC.centerTexture
 				
-				if (baseTex.texture == texture) {
+				if (baseTex.texture === texture) {
 				
 					val movement = movementMapper.get(entityID).get(galaxy.time).value
 					val x = (movement.getXinKM() - cameraOffset.x).toFloat()
