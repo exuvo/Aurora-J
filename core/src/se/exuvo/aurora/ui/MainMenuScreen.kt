@@ -18,7 +18,6 @@ import se.exuvo.aurora.galactic.Player
 
 class MainMenuScreen() : GameScreenImpl() {
 
-	private val assetManager = GameServices[AssetManager::class]
 	private val uiCamera = OrthographicCamera()
 	
 	override fun show() {

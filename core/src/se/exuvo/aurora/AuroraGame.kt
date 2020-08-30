@@ -9,6 +9,7 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application.GLDebugMessageSeverity
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3FileHandle
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
@@ -16,7 +17,11 @@ import com.badlogic.gdx.graphics.profiling.GLProfiler
 import com.badlogic.gdx.utils.Disposable
 import com.badlogic.gdx.utils.GdxRuntimeException
 import com.esotericsoftware.kryonet.MinlogTolog4j
+import ktx.assets.async.AssetStorage
+import ktx.async.KtxAsync
+import ktx.async.newAsyncContext
 import org.apache.logging.log4j.LogManager
+import org.lwjgl.glfw.GLFW
 import se.exuvo.aurora.galactic.Galaxy
 import se.exuvo.aurora.history.History
 import se.exuvo.aurora.starsystems.StarSystem
@@ -72,8 +77,10 @@ class AuroraGameMainWindow() : AuroraGame {
 
 		KeyMappings.load()
 
+		KtxAsync.initiate()
+		
 		GameServices + GLProfiler(Gdx.graphics)
-		GameServices + AssetManager(AuroraAssetsResolver())
+		GameServices + AssetStorage(newAsyncContext(4, "AssetStorage-Thread"), AuroraAssetsResolver())
 		GameServices + GroupSystem(ReentrantReadWriteLock())
 		GameServices + History()
 		
@@ -117,7 +124,7 @@ class AuroraGameMainWindow() : AuroraGame {
 	override fun dispose() {
 		//TODO close all other windows first
 		
-		(GameServices[AssetManager::class].fileHandleResolver as AuroraAssetsResolver).dispose()
+		(GameServices[AssetStorage::class].fileResolver as AuroraAssetsResolver).dispose()
 		GameServices(Galaxy::class)?.dispose()
 		storage.dispose()
 		Assets.dispose()

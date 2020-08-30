@@ -1,5 +1,6 @@
 package se.exuvo.aurora
 
+import com.artemis.utils.Bag
 import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.assets.loaders.SkinLoader
 import com.badlogic.gdx.graphics.Color
@@ -13,6 +14,13 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreetypeFontLoader.FreeTypeFontLoa
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.utils.Disposable
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import ktx.assets.async.AssetStorage
+import ktx.async.KtxAsync
+import ktx.freetype.async.loadFreeTypeFont
+import ktx.freetype.async.registerFreeTypeFontLoaders
+import ktx.freetype.freeTypeFontParameters
 import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.utils.GameServices
 import java.lang.RuntimeException
@@ -21,100 +29,74 @@ import kotlin.properties.Delegates
 object Assets : Disposable {
 
 	val log = LogManager.getLogger(this.javaClass)
-	private val manager = GameServices[AssetManager::class]
+	private val manager = GameServices[AssetStorage::class]
 	
 	lateinit var fontMap: BitmapFont
 	lateinit var fontMapSmall: BitmapFont
 	lateinit var fontUI: BitmapFont
 	lateinit var textures: TextureAtlas
 	val shaders = HashMap<String, ShaderProgram>()
-
+	
 	fun earlyLoad() {
-		val resolver = manager.getFileHandleResolver()
-		manager.setLoader(FreeTypeFontGenerator::class.java, FreeTypeFontGeneratorLoader(resolver))
-		manager.setLoader(BitmapFont::class.java, ".ttf", FreetypeFontLoader(resolver))
-		manager.setLoader(BitmapFont::class.java, ".otf", FreetypeFontLoader(resolver))
+		manager.registerFreeTypeFontLoaders()
 		
-		val fontUILoadParams = FreeTypeFontLoaderParameter().apply {
-			fontFileName = "fonts/PrintClearly.otf"
-			fontParameters.apply {
+		manager.apply {
+			fontUI = loadSync<BitmapFont>(getAssetDescriptor("fonts/PrintClearly.otf", freeTypeFontParameters("fonts/PrintClearly.otf") {
 				size = 64
 				color = Color.WHITE
 				minFilter = TextureFilter.Linear
 				magFilter = TextureFilter.Linear
-			}
+			}))
+			fontUI.data.setScale(0.5f)
+			fontUI.setFixedWidthGlyphs("0123456789") //TODO get font with fixed size numbers
+			
+			shaders["gamma"] = loadSync<ShaderProgram>("shaders/gamma.vert")
 		}
-		
-		manager.load("fontUI.otf", BitmapFont::class.java, fontUILoadParams);
-		manager.load("shaders/gamma.vert", ShaderProgram::class.java)
-		
-		manager.finishLoading()
-		
-		shaders["gamma"] = manager.get("shaders/gamma.vert")
-		fontUI = manager.get("fontUI.otf", BitmapFont::class.java)
-		fontUI.data.setScale(0.5f)
-		fontUI.setFixedWidthGlyphs("0123456789") //TODO get font with fixed size numbers
 	}
 	
-	fun startLoad() {
+	fun startLoad(): Bag<Job> {
+		val jobs = Bag<Job>(8)
 		
-		val fontMapLoadParams = FreeTypeFontLoaderParameter().apply {
-			fontFileName = "fonts/13PXBUS.TTF"
-			fontParameters.apply {
-				size = 13
-				color = Color.WHITE
-				minFilter = TextureFilter.Linear
-				magFilter = TextureFilter.Linear
+		jobs.add(KtxAsync.launch {
+			manager.apply {
+				
+				fontMap = loadFreeTypeFont("fonts/13PXBUS.ttf"){
+					size = 13
+					color = Color.WHITE
+					minFilter = TextureFilter.Linear
+					magFilter = TextureFilter.Linear
+				}
+				
+				fontMapSmall = loadFreeTypeFont("fonts/11PX2BUS.ttf"){
+					size = 11
+					color = Color.WHITE
+					minFilter = TextureFilter.Linear
+					magFilter = TextureFilter.Linear
+				}
+				
+				textures = load<TextureAtlas>("images/aurora.atlas")
 			}
-		}
+		})
 		
-		val fontMapSmallLoadParams = FreeTypeFontLoaderParameter().apply {
-			fontFileName = "fonts/11PX2BUS.TTF"
-			fontParameters.apply {
-				size = 11
-				color = Color.WHITE
-				minFilter = TextureFilter.Linear
-				magFilter = TextureFilter.Linear
+		jobs.add(KtxAsync.launch {
+			manager.apply {
+				
+				fileResolver.resolve("shaders").list().forEach {file ->
+					val name = file.nameWithoutExtension()
+					if (name != "gamma" && file.extension() == "frag") {
+						shaders[name] = load<ShaderProgram>("shaders/" + file.name())
+					}
+				}
+				
+				if (shaders.size < 2) {
+					throw RuntimeException("shaders not loaded")
+				}
 			}
-		}
-
-		manager.load("fontMap.ttf", BitmapFont::class.java, fontMapLoadParams);
-		manager.load("fontMapSmall.ttf", BitmapFont::class.java, fontMapSmallLoadParams);
+		})
 		
-		manager.load("images/aurora.atlas", TextureAtlas::class.java);
-		
-		manager.getFileHandleResolver().resolve("shaders").list().forEach {file ->
-			if (file.nameWithoutExtension() != "gamma") {
-				manager.load("shaders/" + file.name(), ShaderProgram::class.java)
-			}
-		}
-		
-//		manager.load("shaders/circle.vert", ShaderProgram::class.java)
-//		manager.load("shaders/disk.vert", ShaderProgram::class.java)
-//		manager.load("shaders/gravimetric.vert", ShaderProgram::class.java)
-//		manager.load("shaders/strategic.vert", ShaderProgram::class.java)
-		
-		log.info("Queued ${manager.queuedAssets} assets for loading")
+		return jobs
 	}
 	
-	fun finishLoad() {
-		fontMap = manager.get("fontMap.ttf", BitmapFont::class.java)
-		fontMapSmall = manager.get("fontMapSmall.ttf", BitmapFont::class.java)
-		
-		textures = manager.get("images/aurora.atlas")
-		
-		manager.getFileHandleResolver().resolve("shaders").list().forEach {file ->
-			val name = file.nameWithoutExtension()
-			if (name != "gamma") {
-				shaders[name] = manager.get("shaders/$name.vert")
-			}
-		}
-		
-		if (shaders.size < 2) {
-			throw RuntimeException("shaders not loaded")
-		}
-	}
-
 	override fun dispose() {
 		// Already disposed of by game services
 		// manager.dispose()

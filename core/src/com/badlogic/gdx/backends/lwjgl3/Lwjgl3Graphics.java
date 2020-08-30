@@ -19,6 +19,7 @@ package com.badlogic.gdx.backends.lwjgl3;
 import java.nio.IntBuffer;
 
 import com.badlogic.gdx.Application;
+import com.badlogic.gdx.Gdx;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFW;
@@ -59,29 +60,51 @@ public class Lwjgl3Graphics implements Graphics, Disposable {
 	IntBuffer tmpBuffer = BufferUtils.createIntBuffer(1);
 	IntBuffer tmpBuffer2 = BufferUtils.createIntBuffer(1);
 	
+	private boolean ignoreResize = false;
+	
 	private GLFWFramebufferSizeCallback resizeCallback = new GLFWFramebufferSizeCallback() {
 		@Override
 		public void invoke(long windowHandle, final int width, final int height) {
+			if (ignoreResize) {
+				gl20.glViewport(0, 0, width, height);
+				return;
+			}
+			
 //			System.out.println("pre bbw " + backBufferWidth + " bbh " + backBufferHeight+ " lw " + logicalWidth + " lh " + logicalHeight);
 			updateFramebufferInfo();
 //			System.out.println("post bbw " + backBufferWidth + " bbh " + backBufferHeight+ " lw " + logicalWidth + " lh " + logicalHeight);
 			
 			window.makeCurrent();
 			gl20.glViewport(0, 0, width, height);
-			
-//			IntBuffer buf = BufferUtils.createIntBuffer(4);
-//			gl20.glGetIntegerv(GL11.GL_VIEWPORT, buf);
-//			System.out.println("viewport " + buf.get(0) + " " + buf.get(1) + " " + buf.get(2) + " " + buf.get(3));
-			
+
+			IntBuffer buf = BufferUtils.createIntBuffer(4);
+			gl20.glGetIntegerv(GL11.GL_VIEWPORT, buf);
+			System.out.println("viewport " + buf.get(0) + " " + buf.get(1) + " " + buf.get(2) + " " + buf.get(3));
+
 			if (!window.isListenerInitialized() || width == 0 || height == 0) {
 				return;
 			}
-			
+
 			window.getListener().resize(getWidth(), getHeight());
 			window.getListener().render();
 			GLFW.glfwSwapBuffers(windowHandle);
 		}
 	};
+	
+	/**
+	 * Fix for wrong initial inner window size on AMD win7 driver
+	 */
+	public void fixSize() {
+		if (!isFullscreen()) {
+			int width = getBackBufferWidth();
+			int height = getBackBufferHeight();
+			ignoreResize = true;
+			GLFW.glfwSetWindowSize(window.getWindowHandle(), width - 1, height);
+			GLFW.glfwSetWindowSize(window.getWindowHandle(), width, height);
+			ignoreResize = false;
+			System.out.println("Wiggled window size");
+		}
+	}
 	
 	public Lwjgl3Graphics(Lwjgl3Window window) {
 		this.window = window;
@@ -95,6 +118,7 @@ public class Lwjgl3Graphics implements Graphics, Disposable {
 		updateFramebufferInfo();
 		initiateGL();
 		GLFW.glfwSetFramebufferSizeCallback(window.getWindowHandle(), resizeCallback);
+		fixSize();
 	}
 	
 	private void initiateGL () {

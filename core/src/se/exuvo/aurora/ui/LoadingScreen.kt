@@ -1,5 +1,6 @@
 package se.exuvo.aurora.ui
 
+import com.artemis.utils.Bag
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.assets.AssetManager
@@ -12,6 +13,8 @@ import com.badlogic.gdx.graphics.profiling.GLErrorListener
 import com.badlogic.gdx.graphics.profiling.GLProfiler
 import com.badlogic.gdx.tools.texturepacker.TexturePacker
 import com.badlogic.gdx.utils.StreamUtils
+import kotlinx.coroutines.Job
+import ktx.assets.async.AssetStorage
 import org.apache.logging.log4j.LogManager
 import se.exuvo.aurora.Assets
 import se.exuvo.aurora.galactic.Technology
@@ -61,9 +64,10 @@ class LoadingScreen() : GameScreenImpl() {
 		@JvmField val log = LogManager.getLogger(LoadingScreen::class.java)
 	}
 
-	private val assetManager = GameServices[AssetManager::class]
+	private val assetManager = GameServices[AssetStorage::class]
 	private var uiCamera: OrthographicCamera = AuroraGame.currentWindow.screenService.uiCamera
 	private var texturePackerTask = TexturePackerTask(assetManager)
+	private var queuedLoadingJobs: Bag<Job>? = null
 
 	override fun show() {
 		val profiler = GameServices[GLProfiler::class]
@@ -84,7 +88,6 @@ class LoadingScreen() : GameScreenImpl() {
 		 */
 		
 //		profiler.setListener(GLErrorListener.THROWING_LISTENER)
-		Assets.startLoad()
 	}
 
 	override fun update(deltaRealTime: Float) {
@@ -99,15 +102,24 @@ class LoadingScreen() : GameScreenImpl() {
 			throw texturePackerTask.exception!!
 
 		} else if (texturePackerTask.done) {
+			val jobs = queuedLoadingJobs
 			
-			val startLoad = System.currentTimeMillis()
-			
-			while (System.currentTimeMillis() - startLoad < 15) {
-				if (assetManager.update()) {
-					Assets.finishLoad()
-					Technology.initTech()
+			if (jobs == null) {
+				queuedLoadingJobs = Assets.startLoad()
+				Technology.initTech()
+				
+			} else {
+				var allLoaded = true
+				
+				for (job in jobs) {
+					if (!job.isCompleted) {
+						allLoaded = false
+						break
+					}
+				}
+				
+				if (allLoaded) {
 					AuroraGame.currentWindow.screenService.add(MainMenuScreen())
-					break;
 				}
 			}
 		}
@@ -129,8 +141,13 @@ class LoadingScreen() : GameScreenImpl() {
 
 		} else {
 
-			val progress = String.format("%.0f%%", assetManager.progress * 100)
-			val text = "Loading assets: $progress"
+			var text = "Loading assets: ${assetManager.progress.loaded} / ${assetManager.progress.total}"
+			val failed = assetManager.progress.failed
+			
+			if (failed > 0) {
+				text += ", failed $failed"
+			}
+			
 			Assets.fontUI.draw(batch, text, Gdx.graphics.width / 2f - getFontWidth(Assets.fontUI, text) / 2, Gdx.graphics.height / 2f + Assets.fontUI.lineHeight / 2)
 		}
 
@@ -138,7 +155,7 @@ class LoadingScreen() : GameScreenImpl() {
 	}
 }
 
-class TexturePackerTask(val assetManager: AssetManager) : Thread() {
+class TexturePackerTask(val assetManager: AssetStorage) : Thread() {
 	var exception: Exception? = null
 	var done = false
 	val output = OutputStreamListener()
@@ -148,9 +165,9 @@ class TexturePackerTask(val assetManager: AssetManager) : Thread() {
 
 		// if last modified on atlas is newer than files, skip generation
 
-		val images = assetManager.getFileHandleResolver().resolve("images")
+		val images = assetManager.fileResolver.resolve("images")
 		val atlasName = "aurora.atlas"
-		val existingAtlas = assetManager.getFileHandleResolver().resolve("images/$atlasName")
+		val existingAtlas = assetManager.fileResolver.resolve("images/$atlasName")
 
 		if (existingAtlas.exists()) {
 
@@ -214,7 +231,7 @@ class TexturePackerTask(val assetManager: AssetManager) : Thread() {
 			
 			// Append strategic icons to atlas
 			realOut.println("Appending strategic icons to atlas")
-			val strategicIconsAtlas = assetManager.getFileHandleResolver().resolve("images/strategic/strategic.atlas")
+			val strategicIconsAtlas = assetManager.fileResolver.resolve("images/strategic/strategic.atlas")
 			var inStream: InputStream? = null
 			var outStream: OutputStream? = null
 			try {
