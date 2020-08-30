@@ -50,11 +50,14 @@ class EmpireOverview : UIWindow() {
 	val deferredIcons = Bag<DeferredIcon>()
 	
 	lateinit var renderSystemGlobalData: RenderSystem.RenderGlobalData
+	lateinit var renderSystemWindowData: RenderSystem.RenderWindowData
 	
 	override fun set(ctx: Context, galaxy: Galaxy, galaxyGroupSystem: GroupSystem, imguiCamera: OrthographicCamera) {
 		super.set(ctx, galaxy, galaxyGroupSystem, imguiCamera)
 		
-		renderSystemGlobalData = galaxy.systems[0].shadow.world.getSystem(RenderSystem::class.java).gData()
+		val renderSystem = galaxy.systems[0].shadow.world.getSystem(RenderSystem::class.java)
+		renderSystemGlobalData = renderSystem.gData()
+		renderSystemWindowData = renderSystem.wData()
 	}
 	
 	override fun draw() {
@@ -307,7 +310,7 @@ class EmpireOverview : UIWindow() {
 		val vertices = renderSystemGlobalData.strategicIconVertices
 		val indices = renderSystemGlobalData.strategicIconIndices
 		val iconShader = renderSystemGlobalData.strategicIconShader
-		val mesh = renderSystemGlobalData.strategicIconMesh
+		val mesh = renderSystemWindowData.strategicIconMesh
 		
 		val lastProgram = Gdx.gl.glGetIntegerv(GL20.GL_CURRENT_PROGRAM, glParam).let{ glParam[0] }
 		val lastArrayBuffer = Gdx.gl.glGetIntegerv(GL20.GL_ARRAY_BUFFER_BINDING, glParam).let { glParam[0] }
@@ -389,7 +392,7 @@ class EmpireOverview : UIWindow() {
 		val vertices = renderSystemGlobalData.strategicIconVertices
 		val indices = renderSystemGlobalData.strategicIconIndices
 		val iconShader = renderSystemGlobalData.strategicIconShader
-		val mesh = renderSystemGlobalData.strategicIconMesh
+		val mesh = renderSystemWindowData.strategicIconMesh
 		
 		iconShader.bind()
 		iconShader.setUniformMatrix("u_projTrans", projectionMatrix);

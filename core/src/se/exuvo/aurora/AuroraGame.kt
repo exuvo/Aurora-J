@@ -50,7 +50,7 @@ interface AuroraGame : ApplicationListener {
 	val storage: Storage
 	
 	companion object {
-		public lateinit var currentWindow: AuroraGame
+		lateinit var currentWindow: AuroraGame
 		val storage = Storage()
 	}
 }

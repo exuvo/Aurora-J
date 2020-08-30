@@ -189,10 +189,9 @@ class RenderSystem : IteratingSystem(FAMILY) {
 		val circleShader: ShaderProgram = Assets.shaders["circle"]!!
 		val circleIndices: ShortArray
 		val circleVertices: FloatArray
-		val circleMesh: Mesh
+		
 		val strategicIconIndices: ShortArray
 		val strategicIconVertices: FloatArray
-		val strategicIconMesh: Mesh
 		val strategicIconShader: ShaderProgram = Assets.shaders["strategic"]!!
 		val strategicIconTexture = Assets.textures.findRegion("strategic/colony").texture
 
@@ -219,16 +218,36 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			circleVertices = FloatArray(circleVerticesMax)
 			circleIndices = ShortArray(circleIndicesMax)
 			
-			circleMesh = Mesh(false, circleVerticesMax, circleIndicesMax,
-					VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE)
-			);
-			
 			val strategicIconMax = 64
 			val strategicIconIndicesMax = 6 * strategicIconMax
 			val strategicIconVerticesMax = 7 * strategicIconMax
 			
 			strategicIconVertices = FloatArray(strategicIconVerticesMax)
 			strategicIconIndices = ShortArray(strategicIconIndicesMax)
+		}
+		
+		override fun dispose() {
+		}
+	}
+	
+	inner class RenderWindowData(): Disposable, Resizable {
+
+		var fbo: FrameBuffer
+		val circleMesh: Mesh
+		val strategicIconMesh: Mesh
+
+		init {
+			fbo = FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), false)
+			
+			val gdata = gData()
+			val circleIndicesMax = gdata.circleIndices.size
+			val circleVerticesMax = gdata.circleVertices.size
+			val strategicIconIndicesMax = gdata.strategicIconIndices.size
+			val strategicIconVerticesMax = gdata.strategicIconVertices.size
+			
+			circleMesh = Mesh(false, circleVerticesMax, circleIndicesMax,
+					VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE)
+			);
 			
 			strategicIconMesh = Mesh(false, strategicIconVerticesMax, strategicIconIndicesMax,
 					VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE),
@@ -238,21 +257,6 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			);
 		}
 		
-		override fun dispose() {
-			circleMesh.dispose()
-			strategicIconMesh.dispose()
-		}
-	}
-	
-	class RenderWindowData(): Disposable, Resizable {
-
-		var fbo: FrameBuffer
-
-		init {
-			fbo = FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), false)
-			
-		}
-		
 		override fun resize(width: Int, height: Int) {
 			fbo.dispose()
 			fbo = FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), false)
@@ -260,6 +264,8 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 		override fun dispose() {
 			fbo.dispose()
+			circleMesh.dispose()
+			strategicIconMesh.dispose()
 		}
 	}
 	
@@ -577,7 +583,7 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			val indices = gData.circleIndices
 			val cShader = gData.circleShader
 			val dShader = gData.diskShader
-			val mesh = gData.circleMesh
+			val mesh = wData.circleMesh
 			val fbo = wData.fbo
 
 			var vertexIdx = 0
@@ -890,12 +896,14 @@ class RenderSystem : IteratingSystem(FAMILY) {
 
 		spriteBatch.end()
 		
+		val wData = wData()
+		
 		val projectionMatrix = viewport.camera.combined
 
 		val vertices = gData.strategicIconVertices
 		val indices = gData.strategicIconIndices
 		val iconShader = gData.strategicIconShader
-		val mesh = gData.strategicIconMesh
+		val mesh = wData.strategicIconMesh
 		
 		iconShader.bind()
 		iconShader.setUniformMatrix("u_projTrans", projectionMatrix);

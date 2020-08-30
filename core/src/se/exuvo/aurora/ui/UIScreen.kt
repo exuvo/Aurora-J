@@ -471,7 +471,7 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 		super.dispose()
 	}
 	
-	public abstract class UIWindow {
+	abstract class UIWindow {
 		lateinit var ctx: Context
 		lateinit var imguiCamera: OrthographicCamera
 		lateinit var galaxy: Galaxy

@@ -77,9 +77,9 @@ public class Lwjgl3Graphics implements Graphics, Disposable {
 			window.makeCurrent();
 			gl20.glViewport(0, 0, width, height);
 
-			IntBuffer buf = BufferUtils.createIntBuffer(4);
-			gl20.glGetIntegerv(GL11.GL_VIEWPORT, buf);
-			System.out.println("viewport " + buf.get(0) + " " + buf.get(1) + " " + buf.get(2) + " " + buf.get(3));
+//			IntBuffer buf = BufferUtils.createIntBuffer(4);
+//			gl20.glGetIntegerv(GL11.GL_VIEWPORT, buf);
+//			System.out.println("viewport " + buf.get(0) + " " + buf.get(1) + " " + buf.get(2) + " " + buf.get(3));
 
 			if (!window.isListenerInitialized() || width == 0 || height == 0) {
 				return;

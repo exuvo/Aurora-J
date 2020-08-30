@@ -44,9 +44,11 @@ class GameScreenService : Disposable, InputProcessor {
 	
 	private val inputMultiplexer = InputMultiplexer()
 	val uiCamera = OrthographicCamera()
-	private var fbo: FrameBuffer = createFBO()
 	private val screens = LinkedList<GameScreen>()
 	private val addQueue = LinkedList<GameScreen>()
+	
+	private var fbo: FrameBuffer = createFBO()
+	private val gammaMesh: Mesh
 	
 	init {
 		var globalData = AuroraGame.storage(GameScreenServiceGlobalData::class)
@@ -55,6 +57,11 @@ class GameScreenService : Disposable, InputProcessor {
 			globalData = GameScreenServiceGlobalData()
 			AuroraGame.storage + globalData
 		}
+		
+		gammaMesh = Mesh(false, MAX_VERTICES, MAX_INDICES,
+				VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE),
+				VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, ShaderProgram.TEXCOORD_ATTRIBUTE)
+		);
 	}
 	
 	private fun createFBO() = FrameBuffer(Pixmap.Format.RGBA16, Gdx.graphics.getWidth(),Gdx.graphics.getHeight(), false)
@@ -65,7 +72,6 @@ class GameScreenService : Disposable, InputProcessor {
 		val gammaShader: ShaderProgram = Assets.shaders["gamma"]!!
 		val vertices: FloatArray
 		val indices: ShortArray
-		val mesh: Mesh
 		
 		init {
 			if (!gammaShader.isCompiled || gammaShader.getLog().isNotEmpty()) {
@@ -74,15 +80,10 @@ class GameScreenService : Disposable, InputProcessor {
 			
 			vertices = FloatArray(MAX_VERTICES);
 			indices = ShortArray(MAX_INDICES)
-			
-			mesh = Mesh(false, MAX_VERTICES, MAX_INDICES,
-					VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE),
-					VertexAttribute(VertexAttributes.Usage.TextureCoordinates, 2, ShaderProgram.TEXCOORD_ATTRIBUTE)
-			);
 		}
 		
 		override fun dispose() {
-			mesh.dispose()
+		
 		}
 	}
 	
@@ -179,7 +180,7 @@ class GameScreenService : Disposable, InputProcessor {
 		val gData = gData()
 		val vertices = gData.vertices
 		val indices = gData.indices
-		val mesh = gData.mesh
+		val mesh = gammaMesh
 		val fbo = fbo
 		val gammaShader = gData.gammaShader
 		
@@ -240,7 +241,7 @@ class GameScreenService : Disposable, InputProcessor {
 		renderTimeAverage = exponentialAverage(renderTime.toDouble(), renderTimeAverage, 10.0)
 		
 		val spriteBatch = AuroraGame.currentWindow.spriteBatch
-		
+
 		spriteBatch.projectionMatrix = uiCamera.combined
 		spriteBatch.begin()
 
@@ -275,6 +276,7 @@ class GameScreenService : Disposable, InputProcessor {
 	override fun dispose() {
 		screens.forEach { it.dispose() }
 		fbo.dispose()
+		gammaMesh.dispose()
 	}
 
 	override fun keyDown(keycode: Int): Boolean {

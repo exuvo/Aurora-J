@@ -155,7 +155,7 @@ class MovementSystem : IteratingSystem(FAMILY), PreSystem {
 			return
 		}
 		
-		val deltaGameTime = galaxy.tickSize.toLong()
+		val deltaGameTime = world.delta.toLong()
 		
 		val shipMovementValue = movement.previous.value
 		
