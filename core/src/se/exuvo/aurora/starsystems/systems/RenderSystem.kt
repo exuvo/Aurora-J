@@ -213,14 +213,14 @@ class RenderSystem : IteratingSystem(FAMILY) {
 			
 			val circleMax = 64
 			val circleIndicesMax = 6 * circleMax
-			val circleVerticesMax = 4 * circleMax
+			val circleVerticesMax = 4 * 2 * circleMax
 			
 			circleVertices = FloatArray(circleVerticesMax)
 			circleIndices = ShortArray(circleIndicesMax)
 			
 			val strategicIconMax = 64
 			val strategicIconIndicesMax = 6 * strategicIconMax
-			val strategicIconVerticesMax = 7 * strategicIconMax
+			val strategicIconVerticesMax = 4 * 7 * strategicIconMax
 			
 			strategicIconVertices = FloatArray(strategicIconVerticesMax)
 			strategicIconIndices = ShortArray(strategicIconIndicesMax)

@@ -11,9 +11,12 @@ import glm_.vec2.Vec2
 import glm_.vec4.Vec4
 import imgui.Col
 import imgui.ImGui
+import imgui.StyleVar
 import imgui.TreeNodeFlag
 import imgui.WindowFlag
 import imgui.classes.Context
+import imgui.has
+import imgui.internal.LayoutType
 import imgui.internal.classes.Rect
 import imgui.or
 import imgui.u32
@@ -77,15 +80,16 @@ class EmpireOverview : UIWindow() {
 						tmp.put(0, 30)
 						setNextWindowPos(tmp)
 						setNextWindowBgAlpha(0.4f)
-						var flags = WindowFlag.NoSavedSettings or WindowFlag.NoMove or WindowFlag.NoResize
-						window("Empire Overview", null, flags) {
+						window("Empire Overview", null, WindowFlag.NoSavedSettings or WindowFlag.NoMove or WindowFlag.NoResize) {
+							
+							val window = currentWindow
 							
 							var windowCoveredByOtherWindow = false
-							val thisWindowBB = currentWindow.outerRectClipped
+							val thisWindowBB = window.outerRectClipped
 							
 							for (i in 1 until ctx.windows.size) { // 0 is fallback window
 								val win = ctx.windows[i]
-								if (win != currentWindow && win.isActiveAndVisible) {
+								if (win != currentWindow && (win.isActiveAndVisible || win.wasActive && win.flags has WindowFlag._Tooltip)) {
 									val bb = win.outerRectClipped
 									
 									if (bb.overlaps(thisWindowBB)) {
@@ -115,8 +119,7 @@ class EmpireOverview : UIWindow() {
 							
 							Player.current.visibleSystems.forEachFast { system ->
 								
-								flags = TreeNodeFlag.DefaultOpen or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen
-								if (treeNodeEx(system.galacticEntityID.toString(), flags, system.getName())) {
+								if (treeNodeEx(system.galacticEntityID.toString(), TreeNodeFlag.DefaultOpen or TreeNodeFlag.SpanAvailWidth or TreeNodeFlag.NoTreePushOnOpen, system.getName())) {
 									
 									val shadow = system.shadow
 									
@@ -128,7 +131,6 @@ class EmpireOverview : UIWindow() {
 									val tintMapper = shadow.tintMapper
 									
 									fun drawIcon(entityID: Int, icon : StrategicIconComponent, selected: Boolean) {
-										val window = currentWindow
 										if (window.skipItems) return
 										
 										val size = Vec2(17, 17)
@@ -175,106 +177,27 @@ class EmpireOverview : UIWindow() {
 									
 									val systemColonies = empire.colonies.filter { ref -> ref.system == system }
 									
-									systemColonies.forEachIndexed { idx, colonyRef ->
+									group {
+										window.dc.layoutType = LayoutType.Horizontal
+										pushStyleVar(StyleVar.ItemSpacing, Vec2(0,0))
 										
-										val entityID = colonyRef.entityID
-										
-										val name = nameMapper.get(entityID)?.name
-										val colony = colonyMapper.get(entityID)
-										val icon = strategicIconMapper.get(entityID)
-										
-										drawIcon(entityID, icon, isSelected(entityID, system))
-										
-										if (isItemHovered()) {
-											tooltip {
-												textUnformatted("c${system.sid}-$idx")
-												textUnformatted("Population: ${colony.population}")
-											}
-										}
-										
-										if (isItemClicked()) {
-											if (Player.current.selection.isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-												Player.current.selection.clear()
-											}
+										systemColonies.forEachFast { colonyRef ->
 											
-											Player.current.selection.add(shadow.getEntityReference(entityID))
-										}
-										
-										if (idx < systemColonies.size - 1) {
-											sameLine(0f, 0f)
-										}
-									}
-									
-									shadow.empireShips[empire]?.values?.forEach { bag ->
-										bag.forEachFast { index, entityID ->
-
-											val name = nameMapper.get(entityID).name
-											val ship = shipMapper.get(entityID)
+											val entityID = colonyRef.entityID
+											
+											val name = nameMapper.get(entityID)?.name
+											val colony = colonyMapper.get(entityID)
 											val icon = strategicIconMapper.get(entityID)
 											
 											drawIcon(entityID, icon, isSelected(entityID, system))
 											
-											//TODO shield, armor, health bars
-											
 											if (isItemHovered()) {
+												popStyleVar()
 												tooltip {
-													textUnformatted("$name - ${ship.hull}")
-													
-													val powerMapper = shadow.powerMapper
-													val shield = shadow.shieldMapper.get(entityID)
-													val armor = shadow.armorMapper.get(entityID)
-													val partsHP = shadow.partsHPMapper.get(entityID)
-													val cargoC = shadow.cargoMapper.get(entityID)
-													
-													group {
-														if (shield != null) {
-															ShipUI.shieldBar(ship, shield)
-															currentWindow.dc.cursorPos.y += 2
-														}
-														ShipUI.armor(ship, armor, null)
-													}
-													sameLine()
-													group {
-														if (shield != null) {
-															text("%s / %s", Units.capacityToString(shield.shieldHP), Units.capacityToString(ship.hull.maxShieldHP))
-														}
-														textUnformatted("ArmorHP ${armor.getTotalHP()} / ${ship.hull.maxArmorHP}")
-														textUnformatted("PartHP ${partsHP.totalPartHP} / ${ship.hull.maxPartHP}")
-													}
-													
-													val sortedParts = Bag<PartRef<Part>>(ship.hull.getPartRefs().size)
-													for(partRef in ship.hull.getPartRefs()) {
-														val hp = partsHP.getPartHP(partRef)
-														val maxHP = partRef.part.maxHealth.toInt()
-														if (hp < maxHP) {
-															sortedParts.add(partRef)
-														}
-													}
-													
-													sortedParts.sort{ p1, p2 ->
-														var diff = p2.part.maxHealth.toInt() - p1.part.maxHealth.toInt()
-														
-														if (diff == 0) {
-															diff = partsHP.getPartHP(p2) - partsHP.getPartHP(p1)
-														}
-														
-														diff
-													}
-													
-													sortedParts.forEachFast{ partRef ->
-														val hp = partsHP.getPartHP(partRef)
-														val maxHP = partRef.part.maxHealth.toInt()
-														
-														if (hp == 0) {
-															pushStyleColor(Col.Text, Vec4(1, 0, 0, 1))
-														} else {
-															pushStyleColor(Col.Text, Vec4(0.5, 0.5, 0, 1))
-														}
-														
-														textUnformatted("$hp / $maxHP ${partRef.part}")
-														popStyleColor()
-													}
+													textUnformatted("$name")
+													textUnformatted("Population: ${colony.population}")
 												}
+												pushStyleVar(StyleVar.ItemSpacing, Vec2(0,0))
 											}
 											
 											if (isItemClicked()) {
@@ -285,10 +208,109 @@ class EmpireOverview : UIWindow() {
 												Player.current.selection.add(shadow.getEntityReference(entityID))
 											}
 											
-											if (index < bag.size() - 1) {
-												sameLine(0f, 0f)
+											if (window.dc.cursorPos.x + 17 > windowContentRegionWidth) {
+												newLine()
 											}
 										}
+										
+										popStyleVar()
+										window.dc.layoutType = LayoutType.Vertical
+									}
+									
+									group {
+										window.dc.layoutType = LayoutType.Horizontal
+										pushStyleVar(StyleVar.ItemSpacing, Vec2(0,0))
+										
+										shadow.empireShips[empire]?.values?.forEach { bag ->
+											bag.forEachFast { index, entityID ->
+	
+												val name = nameMapper.get(entityID).name
+												val ship = shipMapper.get(entityID)
+												val icon = strategicIconMapper.get(entityID)
+												
+												drawIcon(entityID, icon, isSelected(entityID, system))
+												
+												//TODO shield, armor, health bars
+												
+												if (isItemHovered()) {
+													popStyleVar()
+													tooltip {
+														textUnformatted("$name - ${ship.hull}")
+														
+														val powerMapper = shadow.powerMapper
+														val shield = shadow.shieldMapper.get(entityID)
+														val armor = shadow.armorMapper.get(entityID)
+														val partsHP = shadow.partsHPMapper.get(entityID)
+														val cargoC = shadow.cargoMapper.get(entityID)
+														
+														group {
+															if (shield != null) {
+																ShipUI.shieldBar(ship, shield)
+																currentWindow.dc.cursorPos.y += 2
+															}
+															ShipUI.armor(ship, armor, null)
+														}
+														sameLine()
+														group {
+															if (shield != null) {
+																text("%s / %s", Units.capacityToString(shield.shieldHP), Units.capacityToString(ship.hull.maxShieldHP))
+															}
+															textUnformatted("ArmorHP ${armor.getTotalHP()} / ${ship.hull.maxArmorHP}")
+															textUnformatted("PartHP ${partsHP.totalPartHP} / ${ship.hull.maxPartHP}")
+														}
+														
+														val sortedParts = Bag<PartRef<Part>>(ship.hull.getPartRefs().size)
+														for(partRef in ship.hull.getPartRefs()) {
+															val hp = partsHP.getPartHP(partRef)
+															val maxHP = partRef.part.maxHealth.toInt()
+															if (hp < maxHP) {
+																sortedParts.add(partRef)
+															}
+														}
+														
+														sortedParts.sort{ p1, p2 ->
+															var diff = p2.part.maxHealth.toInt() - p1.part.maxHealth.toInt()
+															
+															if (diff == 0) {
+																diff = partsHP.getPartHP(p2) - partsHP.getPartHP(p1)
+															}
+															
+															diff
+														}
+														
+														sortedParts.forEachFast{ partRef ->
+															val hp = partsHP.getPartHP(partRef)
+															val maxHP = partRef.part.maxHealth.toInt()
+															
+															if (hp == 0) {
+																pushStyleColor(Col.Text, Vec4(1, 0, 0, 1))
+															} else {
+																pushStyleColor(Col.Text, Vec4(0.5, 0.5, 0, 1))
+															}
+															
+															textUnformatted("$hp / $maxHP ${partRef.part}")
+															popStyleColor()
+														}
+													}
+													pushStyleVar(StyleVar.ItemSpacing, Vec2(0,0))
+												}
+												
+												if (isItemClicked()) {
+													if (Player.current.selection.isNotEmpty() && !Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+														Player.current.selection.clear()
+													}
+													
+													Player.current.selection.add(shadow.getEntityReference(entityID))
+												}
+												
+												if (window.dc.cursorPos.x + 17 > windowContentRegionWidth) {
+													newLine()
+												}
+											}
+										}
+										
+										popStyleVar()
+										window.dc.layoutType = LayoutType.Vertical
 									}
 									
 									//TODO show other factions

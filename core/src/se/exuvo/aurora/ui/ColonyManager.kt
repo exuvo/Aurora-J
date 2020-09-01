@@ -432,7 +432,7 @@ class ColonyManager : UIWindow() {
 													}
 												}
 												ShipyardModifications.ADD_SLIPWAY -> {
-													if (button("Build")) {
+													if (button("Build##slipway")) {
 														shipyard.modificationActivity = ShipyardModificationAddSlipway()
 														shipyard.modificationProgress = 0
 													}
@@ -443,6 +443,10 @@ class ColonyManager : UIWindow() {
 										val tooledHull = shipyard.tooledHull
 										
 										if (tooledHull != null) {
+											
+											spacing()
+											separator()
+											spacing()
 											
 											if (beginCombo("Ship Hull", if (selectedBuildHull == null) "-" else selectedBuildHull.toString(), 0)) {
 												
@@ -479,7 +483,7 @@ class ColonyManager : UIWindow() {
 												pushStyleVar(StyleVar.Alpha, style.alpha * 0.5f)
 											}
 											
-											if (button("Build") && valid) {
+											if (button("Build##ship") && valid) {
 												(freeSlipway as ShipyardSlipway).build(selectedBuildHull as ShipHull)
 											}
 
@@ -497,17 +501,17 @@ class ColonyManager : UIWindow() {
 									
 									textUnformatted("Munitions:")
 									group {
-										colony.munitions.forEach { hull, _ ->
+										colony.munitions.forEach { (hull, _) ->
 											textUnformatted(hull.name)
 										}
 									}
 									sameLine()
 									group {
 										var maxWidth = 0f
-										colony.munitions.forEach { _, amount ->
+										colony.munitions.forEach { (_, amount) ->
 											maxWidth = kotlin.math.max(maxWidth, calcTextSize(amount.toString()).x)
 										}
-										colony.munitions.forEach { _, amount ->
+										colony.munitions.forEach { (_, amount) ->
 											val string = amount.toString()
 											ImGui.cursorPosX = ImGui.cursorPosX + maxWidth - calcTextSize(string).x - ImGui.scrollX
 											textUnformatted(string)

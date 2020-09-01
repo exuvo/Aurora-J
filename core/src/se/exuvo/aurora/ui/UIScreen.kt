@@ -14,6 +14,7 @@ import imgui.ConfigFlag
 import imgui.ImGui
 import imgui.WindowFlag
 import imgui.classes.Context
+import imgui.has
 import imgui.imgui.widgets.beginPieMenu
 import imgui.imgui.widgets.beginPiePopup
 import imgui.imgui.widgets.endPieMenu
@@ -175,18 +176,10 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 	
 						if (ImGui.beginMenuBar()) {
 							if (ImGui.beginMenu("Windows")) {
-								if (ImGui.menuItem("Ship debug", "", shipDebugger::visible)) {
-									shipDebugger.visible = !shipDebugger.visible
-								}
-								if (ImGui.menuItem("Ship designer", "", shipDesigner::visible)) {
-									shipDesigner.visible = !shipDesigner.visible
-								}
-								if (ImGui.menuItem("Colony manager", "", colonyManager::visible)) {
-									colonyManager.visible = !colonyManager.visible
-								}
-								if (ImGui.menuItem("ImGui Demo", "hotkey", demoVisible)) {
-									demoVisible = !demoVisible
-								}
+								ImGui.menuItem("Ship debug", "", shipDebugger::visible)
+								ImGui.menuItem("Ship designer", "", shipDesigner::visible)
+								ImGui.menuItem("Colony manager", "", colonyManager::visible)
+								ImGui.menuItem("ImGui Demo", "hotkey", ::demoVisible)
 								ImGui.endMenu();
 							}
 							if (ImGui.beginMenu("Render")) {
