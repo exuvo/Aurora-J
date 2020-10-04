@@ -7,20 +7,18 @@ import se.exuvo.aurora.ai.goap.interfaces.IReGoapGoal
 import se.exuvo.aurora.ai.goap.interfaces.IReGoapMemory
 import se.exuvo.aurora.ai.goap.interfaces.ReGoapActionState
 import se.exuvo.aurora.ai.goap.interfaces.ReGoapState
-import java.util.ArrayDeque
 import com.artemis.utils.Bag
 import com.artemis.utils.ImmutableBag
 import se.exuvo.aurora.utils.Vector2L
 import com.artemis.utils.IntBag
 
 // can be shared between multiple ships
-abstract class Order {
+abstract class ShipOrder {
 	val ships = IntBag()
-	var nextOrder: Order? = null
-	val previousOrders = Bag<Order>()
+	var nextShipOrder: ShipOrder? = null
 }
 
-abstract class DestinationOrder: Order() {
+abstract class DestinationOrder: ShipOrder() {
 	var targetPosition: Vector2L? = null
 	var targetEntity: EntityReference? = null
 }
@@ -40,13 +38,13 @@ class ShipMemory<T>: IReGoapMemory<T, Any?> {
 }
 
 class ShipOrdersComponent<T: ShipWorldState> : Component(), IReGoapAgent<T, Any?> {
-	var currentOrder: Order? = null
+	var currentShipOrder: ShipOrder? = null
 	
-	val automaticGoals = Bag<IReGoapGoal<T, Any?>>()
-	val blacklistedGoalsMap = HashMap<IReGoapGoal<T, Any?>, Long>()
-	val allowedGoals = Bag<IReGoapGoal<T, Any?>>()
-	var possibleGoals: ImmutableBag<IReGoapGoal<T, Any?>> = automaticGoals
-	var allowedGoalsDirty = true
+//	val automaticGoals = Bag<IReGoapGoal<T, Any?>>()
+//	val blacklistedGoalsMap = HashMap<IReGoapGoal<T, Any?>, Long>()
+//	val allowedGoals = Bag<IReGoapGoal<T, Any?>>()
+//	var possibleGoals: ImmutableBag<IReGoapGoal<T, Any?>> = automaticGoals
+//	var allowedGoalsDirty = true
 	
 	val possibleActions = Bag<IReGoapAction<T, Any?>>()
 	val memory = ShipMemory<T>()

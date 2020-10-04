@@ -20,11 +20,12 @@ import imgui.SelectableFlag
 import imgui.Dir
 import se.exuvo.aurora.galactic.ShipHull
 import imgui.StyleVar
-import imgui.internal.ItemFlag
+import imgui.internal.sections.ItemFlag
 import se.exuvo.aurora.empires.components.ShipyardModificationRetool
 import se.exuvo.aurora.empires.components.ShipyardModifications
 import se.exuvo.aurora.empires.components.ShipyardModificationAddSlipway
 import se.exuvo.aurora.empires.components.ShipyardModificationExpandCapacity
+import se.exuvo.aurora.starsystems.components.CargoComponent
 import se.exuvo.aurora.starsystems.systems.ColonySystem
 import se.exuvo.aurora.ui.UIScreen.UIWindow
 import se.exuvo.aurora.utils.imgui.rightAlignedColumnText
@@ -121,7 +122,10 @@ class ColonyManager : UIWindow() {
 								
 								val colonySystem = system.world.getSystem(ColonySystem::class.java)
 								val colonyMapper = ComponentMapper.getFor(ColonyComponent::class.java, system.world)
+								val cargoMapper = ComponentMapper.getFor(CargoComponent::class.java, system.world)
+								
 								val colony = colonyMapper.get(entityID)
+								val cargo = cargoMapper.get(entityID)
 								
 								if (beginTabItem("Shipyards")) {
 									
@@ -153,7 +157,8 @@ class ColonyManager : UIWindow() {
 											
 											val buttonIDString = "##" + shipyard.hashCode().toString()
 											val buttonID = getID(buttonIDString)
-											val shipyardOpen = storage.int(buttonID, 1) != 0
+											val buttonStorage = storage[buttonID]
+											val shipyardOpen = buttonStorage == null || buttonStorage == true
 											
 											if (arrowButtonEx(buttonIDString, if (shipyardOpen) Dir.Down else Dir.Right, Vec2(ctx.fontSize), 0)) {
 												storage[buttonID] = !shipyardOpen
@@ -280,7 +285,7 @@ class ColonyManager : UIWindow() {
 												slipway.hullCost = emptyMap()
 												
 												slipway.usedResources.forEach { entry ->
-													colony.addCargo(entry.key, entry.value)
+													cargo.addCargo(entry.key, entry.value)
 													slipway.usedResources[entry.key] = 0L
 												}
 												
@@ -333,7 +338,7 @@ class ColonyManager : UIWindow() {
 											
 											if (button("Cancel")) {
 												
-												colony.addCargo(Resource.GENERIC, shipyard.modificationProgress)
+												cargo.addCargo(Resource.GENERIC, shipyard.modificationProgress)
 												
 												shipyard.modificationActivity = null
 												shipyard.modificationProgress = 0L
@@ -501,17 +506,17 @@ class ColonyManager : UIWindow() {
 									
 									textUnformatted("Munitions:")
 									group {
-										colony.munitions.forEach { (hull, _) ->
+										cargo.munitions.forEach { (hull, _) ->
 											textUnformatted(hull.name)
 										}
 									}
 									sameLine()
 									group {
 										var maxWidth = 0f
-										colony.munitions.forEach { (_, amount) ->
+										cargo.munitions.forEach { (_, amount) ->
 											maxWidth = kotlin.math.max(maxWidth, calcTextSize(amount.toString()).x)
 										}
-										colony.munitions.forEach { (_, amount) ->
+										cargo.munitions.forEach { (_, amount) ->
 											val string = amount.toString()
 											ImGui.cursorPosX = ImGui.cursorPosX + maxWidth - calcTextSize(string).x - ImGui.scrollX
 											textUnformatted(string)
@@ -525,18 +530,20 @@ class ColonyManager : UIWindow() {
 									
 									textUnformatted("Resources:")
 									group {
-										colony.resources.forEach { entry ->
+										cargo.resources.forEach { entry ->
 											textUnformatted(entry.key.name)
 										}
 									}
 									sameLine()
 									group {
 										var maxWidth = 0f
-										colony.resources.forEach { entry ->
-											maxWidth = kotlin.math.max(maxWidth, calcTextSize(Units.massToString(entry.value)).x)
+										cargo.resources.forEach { (resouce, cargoContainer) ->
+											val amount = cargoContainer.contents[resouce]!!
+											maxWidth = kotlin.math.max(maxWidth, calcTextSize(Units.massToString(amount)).x)
 										}
-										colony.resources.forEach { entry ->
-											val string = Units.massToString(entry.value)
+										cargo.resources.forEach { (resouce, cargoContainer) ->
+											val amount = cargoContainer.contents[resouce]!!
+											val string = Units.massToString(amount)
 											ImGui.cursorPosX = ImGui.cursorPosX + maxWidth - calcTextSize(string).x - ImGui.scrollX
 											textUnformatted(string)
 										}

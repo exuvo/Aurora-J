@@ -7,6 +7,7 @@ import com.artemis.EntitySubscription
 import com.artemis.SystemInvocationStrategy
 import com.artemis.World
 import com.artemis.WorldConfigurationBuilder
+import com.artemis.utils.Bag
 import com.artemis.utils.IntBag
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.RandomXS128
@@ -80,12 +81,12 @@ import se.exuvo.aurora.starsystems.components.EmpireComponent
 import net.mostlyoriginal.api.utils.pooling.PoolsCollection
 import kotlin.reflect.KClass
 import net.mostlyoriginal.api.event.common.Event
+import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
 import se.exuvo.aurora.galactic.SimpleMunitionHull
 import se.exuvo.aurora.galactic.AdvancedMunitionHull
 import se.exuvo.aurora.galactic.DamagePattern
 import se.exuvo.aurora.galactic.Shield
 import se.exuvo.aurora.starsystems.systems.MovementPredictedSystem
-import se.exuvo.aurora.empires.components.InCombatComponent
 import se.exuvo.aurora.galactic.Command
 import se.exuvo.aurora.galactic.ContainerPart
 import se.exuvo.aurora.galactic.Warhead
@@ -94,9 +95,13 @@ import se.exuvo.aurora.starsystems.components.AsteroidComponent
 import se.exuvo.aurora.starsystems.components.CargoComponent
 import se.exuvo.aurora.starsystems.components.ChangingWorldComponent
 import se.exuvo.aurora.starsystems.components.HPComponent
+import se.exuvo.aurora.starsystems.components.LaserShotComponent
+import se.exuvo.aurora.starsystems.components.MissileComponent
 import se.exuvo.aurora.starsystems.components.PartStatesComponent
 import se.exuvo.aurora.starsystems.components.PartsHPComponent
+import se.exuvo.aurora.starsystems.components.RailgunShotComponent
 import se.exuvo.aurora.starsystems.components.ShieldComponent
+import se.exuvo.aurora.starsystems.components.ShipOrder
 import se.exuvo.aurora.starsystems.components.StrategicIcon
 import se.exuvo.aurora.starsystems.components.StrategicIconBase
 import se.exuvo.aurora.starsystems.components.StrategicIconCenter
@@ -115,7 +120,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		val UUID_ASPECT = Aspect.all(UUIDComponent::class.java)
 		
 		@JvmStatic
-		val IN_COMBAT_ASPECT = Aspect.all(InCombatComponent::class.java)
+		val COMBAT_ASPECT = Aspect.one(ActiveTargetingComputersComponent::class.java, RailgunShotComponent::class.java, LaserShotComponent::class.java, MissileComponent::class.java)
 		
 		@JvmStatic
 		val log = LogManager.getLogger(StarSystem::class.java)
@@ -136,10 +141,11 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 	val pools = PoolsCollection()
 	
 	val empireShips = LinkedHashMap<Empire, LongObjectBTreeMap<IntBag>>()
+	val empireOrders = LinkedHashMap<Empire, Bag<ShipOrder>>()
 	
 	val allSubscription: EntitySubscription
 	val uuidSubscription: EntitySubscription
-	val inCombatSubscription: EntitySubscription
+	val combatSubscription: EntitySubscription
 	
 	var commandQueue = ArrayBlockingQueue<Command>(128)
 	var workingShadow: ShadowStarSystem
@@ -213,7 +219,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		allSubscription.addSubscriptionListener(this)
 		
 		uuidSubscription = world.getAspectSubscriptionManager().get(UUID_ASPECT)
-		inCombatSubscription = world.getAspectSubscriptionManager().get(IN_COMBAT_ASPECT)
+		combatSubscription = world.getAspectSubscriptionManager().get(COMBAT_ASPECT)
 		
 		workingShadow = ShadowStarSystem(this)
 		shadow  = ShadowStarSystem(this)
@@ -405,7 +411,8 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 					build(shipHull)
 				}
 			}
-			
+		}
+		cargoMapper.create(entity2).apply {
 			addCargo(sabot, 1000)
 			addCargo(missile, 1000)
 		}
@@ -526,6 +533,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 		if (colonyEntity != null) {
 			
 			val colony = colonyMapper.get(colonyEntity)!!
+			val colonyCargo = cargoMapper.get(colonyEntity)
 			val colonyMovement = timedMovementMapper.get(colonyEntity)
 			val colonyPos = colonyMovement.get(galaxy.time)
 			
@@ -533,11 +541,11 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 			
 			if (cargo != null) {
 				hull.preferredCargo.forEach{ (resource, amount) ->
-					cargo.addCargo(resource, colony.retrieveCargo(resource, amount))
+					cargo.addCargo(resource, colonyCargo.retrieveCargo(resource, amount))
 				}
 				
 				hull.preferredMunitions.forEach{ (munitionHull, amount) ->
-					cargo.addCargo(munitionHull, colony.retrieveCargo(munitionHull, amount))
+					cargo.addCargo(munitionHull, colonyCargo.retrieveCargo(munitionHull, amount))
 				}
 			}
 			
@@ -732,12 +740,12 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 			nextInvocationStrategy = null
 		}
 		
-		if (deltaGameTime <= 100) {
+		if (deltaGameTime <= 100 || combatSubscription.entityCount > 0) {
 			
 			world.setDelta(1f)
 			
 			for (i in 0 until deltaGameTime) {
-				profilerEvents.start("process")
+				profilerEvents.start("process 1")
 				world.process()
 				profilerEvents.end()
 			}
@@ -748,7 +756,7 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 			world.setDelta(delta.toFloat())
 			
 			for (i in 0 until deltaGameTime / delta) {
-				profilerEvents.start("process")
+				profilerEvents.start("process $delta")
 				world.process()
 				profilerEvents.end()
 			}
@@ -756,27 +764,13 @@ class StarSystem(val initialName: String, val initialPosition: Vector2L) : Entit
 			world.setDelta(1f)
 			
 			for (i in 0 until deltaGameTime - delta * (deltaGameTime / delta)) {
-				profilerEvents.start("process")
+				profilerEvents.start("process 1")
 				world.process()
 				profilerEvents.end()
 			}
 			
 //			println("processing deltaGameTime $deltaGameTime = $delta x ${deltaGameTime / delta} + ${deltaGameTime - delta * (deltaGameTime / delta)}")
 		}
-		
-//		if (inCombatSubscription.getEntityCount() > 0) {
-//
-//			world.setDelta(1f)
-//
-//			for (i in 0..deltaGameTime) {
-//				world.process()
-//			}
-//
-//		} else {
-//
-//			world.setDelta(deltaGameTime.toFloat())
-//			world.process()
-//		}
 		profilerEvents.end()
 		
 		profilerEvents.start("shadow update")

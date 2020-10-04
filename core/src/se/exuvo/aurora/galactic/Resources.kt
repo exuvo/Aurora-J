@@ -4,6 +4,7 @@ package se.exuvo.aurora.galactic
 // specificVolume in cm³/kg
 enum class Resource(val specificVolume: Int) {
 	// No storage requirements
+	//TODO types for buildings, spaceship hull, laser, railguns, missile explosives, armor
 	GENERIC(densityToVolume(5f)), // Steel(11.7 g/cm³), Concrete(2.4 g/cm³), Carbonfiber, Glass(2.5 g/cm³), Ceramics(4 g/cm³)
 	METAL_LIGHT(densityToVolume(3.6f)), // Aluminium(2.7 g/cm³), Titanium(4.5 g/cm³)
 	METAL_CONDUCTIVE(densityToVolume(12f)), // Copper(9 g/cm³), Gold(19 g/cm³)

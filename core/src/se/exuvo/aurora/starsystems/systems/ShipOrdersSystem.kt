@@ -55,30 +55,30 @@ class ShipOrdersSystem : IteratingSystem(FAMILY) {
 		
 	}
 	
-	fun ShipOrdersComponent<ShipWorldState>.updatePossibleGoals() {
-		allowedGoalsDirty = false;
-		
-		if (blacklistedGoalsMap.isNotEmpty()) {
-			allowedGoals.clear();
-
-			automaticGoals.forEachFast{ goal ->
-				val blackListedGoalTime = blacklistedGoalsMap.get(goal)
-				
-				if (blackListedGoalTime == null) {
-					allowedGoals.add(goal);
-					
-				} else if (blackListedGoalTime < galaxy.time) {
-					blacklistedGoalsMap.remove(goal);
-					allowedGoals.add(goal);
-				}
-			}
-			
-			possibleGoals = allowedGoals;
-			
-		} else {
-			possibleGoals = automaticGoals;
-		}
-	}
+//	fun ShipOrdersComponent<ShipWorldState>.updatePossibleGoals() {
+//		allowedGoalsDirty = false;
+//
+//		if (blacklistedGoalsMap.isNotEmpty()) {
+//			allowedGoals.clear();
+//
+//			automaticGoals.forEachFast{ goal ->
+//				val blackListedGoalTime = blacklistedGoalsMap.get(goal)
+//
+//				if (blackListedGoalTime == null) {
+//					allowedGoals.add(goal);
+//
+//				} else if (blackListedGoalTime < galaxy.time) {
+//					blacklistedGoalsMap.remove(goal);
+//					allowedGoals.add(goal);
+//				}
+//			}
+//
+//			possibleGoals = allowedGoals;
+//
+//		} else {
+//			possibleGoals = automaticGoals;
+//		}
+//	}
 	
 	fun ShipOrdersComponent<ShipWorldState>.requestPlanning(forced: Boolean = false): Boolean {
 		if (needsPlanning) return false
@@ -88,7 +88,7 @@ class ShipOrdersSystem : IteratingSystem(FAMILY) {
 		abortOnNextActionTransition = false
 		needsPlanning = true
 		
-		updatePossibleGoals()
+//		updatePossibleGoals()
 		
 		return true
 	}

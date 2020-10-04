@@ -12,6 +12,7 @@ import se.exuvo.aurora.empires.components.ColonyComponent
 import se.exuvo.aurora.galactic.Resource
 import se.exuvo.aurora.starsystems.StarSystem
 import com.artemis.annotations.Wire
+import se.exuvo.aurora.starsystems.components.CargoComponent
 
 class ColonySystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 60 * 60) { // hourly? DailyIteratingSystem
 	companion object {
@@ -21,6 +22,7 @@ class ColonySystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 60 * 60) { // hou
 	val log = LogManager.getLogger(this.javaClass)
 	
 	lateinit private var colonyMapper: ComponentMapper<ColonyComponent>
+	lateinit private var cargoMapper: ComponentMapper<CargoComponent>
 	lateinit private var emissionsMapper: ComponentMapper<EmissionsComponent>
 	lateinit private var ownerMapper: ComponentMapper<EmpireComponent>
 	lateinit private var shipMapper: ComponentMapper<ShipComponent>
@@ -29,10 +31,27 @@ class ColonySystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 60 * 60) { // hou
 	@Wire
 	lateinit private var system: StarSystem
 	lateinit private var events: EventSystem
-
+	
+	override fun inserted(entityID: Int) {
+		super.inserted(entityID)
+		
+		val colony = colonyMapper.get(entityID)
+		val cargo = cargoMapper.get(entityID)
+		
+		cargo.set(colony)
+		
+		val excludedResources = listOf(Resource.MISSILES, Resource.SABOTS)
+		for (r in Resource.values()) {
+			if (!excludedResources.contains(r)) {
+				cargo.addCargo(r, 10000000L)
+			}
+		}
+	}
+	
 	override fun process(entityID: Int) {
 
 		val colony = colonyMapper.get(entityID)
+		val cargo = cargoMapper.get(entityID)
 //		val emissions = emissionsMapper.get(entityID)
 
 		colony.shipyards.forEach { shipyard ->
@@ -40,7 +59,7 @@ class ColonySystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 60 * 60) { // hou
 			
 			if (modification != null) {
 				val remainingCost = modification.getCost(shipyard) - shipyard.modificationProgress
-				shipyard.modificationProgress += colony.retrieveCargo(Resource.GENERIC, Math.min(remainingCost, shipyard.modificationRate.toLong()))
+				shipyard.modificationProgress += cargo.retrieveCargo(Resource.GENERIC, Math.min(remainingCost, shipyard.modificationRate.toLong()))
 				
 				if (shipyard.modificationProgress >= modification.getCost(shipyard)) {
 					modification.complete(shipyard)
@@ -62,7 +81,7 @@ class ColonySystem : GalaxyTimeIntervalIteratingSystem(FAMILY, 60 * 60) { // hou
 						val remainingAmount = amount - alreadyBuilt
 						
 						if (remainingAmount > 0) {
-							val buildAmount = colony.retrieveCargo(resource, Math.min(buildrate, remainingAmount))
+							val buildAmount = cargo.retrieveCargo(resource, Math.min(buildrate, remainingAmount))
 							
 							if (buildAmount > 0) {
 								slipway.usedResources[resource] = buildAmount + alreadyBuilt

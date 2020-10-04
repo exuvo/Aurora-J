@@ -32,10 +32,12 @@ import com.artemis.utils.IntBag
 import se.exuvo.aurora.starsystems.components.EntityReference
 import se.exuvo.aurora.empires.components.IdleTargetingComputersComponent
 import se.exuvo.aurora.empires.components.ActiveTargetingComputersComponent
-import se.exuvo.aurora.galactic.ClearTargetCommand
-import se.exuvo.aurora.galactic.MoteToPositionCommand
-import se.exuvo.aurora.galactic.MoveToEntityCommand
-import se.exuvo.aurora.galactic.SetTargetCommand
+import se.exuvo.aurora.galactic.EntitiesMoveToEntityCommand
+import se.exuvo.aurora.galactic.EntitiesMoveToPositionCommand
+import se.exuvo.aurora.galactic.EntityClearTargetCommand
+import se.exuvo.aurora.galactic.EntityMoveToPositionCommand
+import se.exuvo.aurora.galactic.EntityMoveToEntityCommand
+import se.exuvo.aurora.galactic.EntitySetTargetCommand
 import se.exuvo.aurora.starsystems.systems.SpatialPartitioningPlanetoidsSystem
 import se.exuvo.aurora.starsystems.systems.SpatialPartitioningSystem
 import kotlin.concurrent.withLock
@@ -405,10 +407,10 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 										val activeTCs = shadow.activeTargetingComputersComponentMapper.get(entityRef.entityID)
 										
 										activeTCs?.targetingComputers?.forEachFast{ tc ->
-											Player.current.empire!!.commandQueue.add(ClearTargetCommand(entityRef, tc))
+											Player.current.empire!!.commandQueue.add(EntityClearTargetCommand(entityRef, tc))
 											
 											if (targetRef != null) {
-												Player.current.empire!!.commandQueue.add(SetTargetCommand(entityRef, tc, targetRef))
+												Player.current.empire!!.commandQueue.add(EntitySetTargetCommand(entityRef, tc, targetRef))
 											}
 										}
 										
@@ -416,7 +418,7 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 											val idleTCs = shadow.idleTargetingComputersComponentMapper.get(entityRef.entityID)
 											
 											idleTCs?.targetingComputers?.forEachFast{ tc ->
-												Player.current.empire!!.commandQueue.add(SetTargetCommand(entityRef, tc, targetRef))
+												Player.current.empire!!.commandQueue.add(EntitySetTargetCommand(entityRef, tc, targetRef))
 											}
 										}
 									}
@@ -573,14 +575,12 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 							val targetEntityID = entitiesUnderMouse.get(0)
 							var approachType = ApproachType.BRACHISTOCHRONE
 
-							if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+							if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT)) {
 								approachType = ApproachType.BALLISTIC
 							}
 
-							selectedEntities.forEachFast{ entityRef ->
 //								println("Queuing move to entity command for $entityRef to $targetEntityID")
-								Player.current.empire!!.commandQueue.add(MoveToEntityCommand(entityRef, shadow.getEntityReference(targetEntityID), approachType))
-							}
+							Player.current.empire!!.commandQueue.add(EntitiesMoveToEntityCommand(Bag(selectedEntities), shadow.getEntityReference(targetEntityID), approachType))
 
 						} else {
 
@@ -589,14 +589,12 @@ class StarSystemScreen(val system: StarSystem) : GameScreenImpl(), InputProcesso
 							val targetPosition = mouseInGameCoordinates
 							var approachType = ApproachType.BRACHISTOCHRONE
 
-							if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+							if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT)) {
 								approachType = ApproachType.BALLISTIC
 							}
 
-							selectedEntities.forEachFast{ entityRef ->
 //								println("Queuing move to position command for $entityRef to $targetPosition")
-								Player.current.empire!!.commandQueue.add(MoteToPositionCommand(entityRef, targetPosition, approachType))
-							}
+							Player.current.empire!!.commandQueue.add(EntitiesMoveToPositionCommand(Bag(selectedEntities), targetPosition, approachType))
 						}
 
 						return true;

@@ -7,7 +7,7 @@ import imgui.Col
 import imgui.DataType
 import imgui.ImGui
 import imgui.WindowFlag
-import imgui.internal.ButtonFlag
+import imgui.internal.sections.ButtonFlag
 import org.apache.commons.math3.util.FastMath
 import se.exuvo.aurora.galactic.AdvancedMunitionHull
 import se.exuvo.aurora.galactic.AmmunitionPart
@@ -526,7 +526,7 @@ class ShipDebugger : UIWindow() {
 											textUnformatted(cargo.name)
 		
 											if (cargo == CargoType.AMMUNITION) {
-												val munitions = cargoC.munitionCargo
+												val munitions = cargoC.munitions
 												if (munitions != null) {
 													for (entry in munitions.entries) {
 														textUnformatted("${entry.value} ${entry.key}")

@@ -58,6 +58,7 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 	val colonyManager = ColonyManager()
 	val profiler = ProfilerWindow()
 	val empireOverview = EmpireOverview()
+	val research = ResearchScreen()
 
 	class ImGuiGlobalStorage(val ctx: Context): Disposable {
 		override fun dispose() {}
@@ -142,10 +143,13 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 		colonyManager.set(ctx, galaxy, galaxyGroupSystem, imguiCamera)
 		profiler.set(ctx, galaxy, galaxyGroupSystem, imguiCamera)
 		empireOverview.set(ctx, galaxy, galaxyGroupSystem, imguiCamera)
+		research.set(ctx, galaxy, galaxyGroupSystem, imguiCamera)
 	}
 
 	override fun show() {
 		empireOverview.visible = true
+//		shipDesigner.visible = true
+		research.visible = true
 	}
 
 	private var demoVisible = false
@@ -228,6 +232,7 @@ class UIScreen : GameScreenImpl(), InputProcessor {
 				colonyManager.draw()
 				profiler.draw()
 				empireOverview.draw()
+				research.draw()
 			}
 			
 			ImGui.render()

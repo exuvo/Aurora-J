@@ -1,6 +1,7 @@
 package se.exuvo.aurora.starsystems.components
 
 import com.artemis.Component
+import se.exuvo.aurora.empires.components.ColonyComponent
 import se.exuvo.aurora.galactic.CargoType
 import se.exuvo.aurora.galactic.ContainerPart
 import se.exuvo.aurora.galactic.MunitionHull
@@ -12,9 +13,9 @@ import java.security.InvalidParameterException
 
 class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 	var hullHashcode = 0
-	val cargo = LinkedHashMap<Resource, CargoContainer>()
-	val cargoTypes = LinkedHashMap<CargoType, CargoContainer>()
-	var munitionCargo: MutableMap<MunitionHull, Int>? = null
+	val resources = LinkedHashMap<Resource, CargoContainer>()
+	val types = LinkedHashMap<CargoType, CargoContainer>()
+	var munitions = LinkedHashMap<MunitionHull, Int>()
 	var cargoChanged = false
 	
 	var mass = -1L
@@ -35,7 +36,7 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 		
 		val cargoContainers = listOf(CargoContainer(CargoType.NORMAL), CargoContainer(CargoType.LIFE_SUPPORT), CargoContainer(CargoType.FUEL), CargoContainer(CargoType.AMMUNITION), CargoContainer(CargoType.NUCLEAR))
 		
-		containerPartRefs.forEachFast{ containerRef ->
+		containerPartRefs.forEachFast { containerRef ->
 			for (container in cargoContainers) {
 				if (container.type == containerRef.part.cargoType) {
 					container.maxVolume += containerRef.part.capacity
@@ -43,14 +44,11 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 			}
 		}
 		
-		cargoContainers.forEachFast{ container ->
+		cargoContainers.forEachFast { container ->
 			if (container.maxVolume > 0) {
-				cargoTypes[container.type] = container
+				types[container.type] = container
 				container.type.resources.forEachFast{ resource ->
-					cargo[resource] = container
-				}
-				if (container.type == CargoType.AMMUNITION) {
-					munitionCargo = LinkedHashMap<MunitionHull, Int>()
+					resources[resource] = container
 				}
 			}
 		}
@@ -58,62 +56,73 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 		return this
 	}
 	
+	fun set(colony: ColonyComponent): CargoComponent {
+		hullHashcode = colony.hashCode()
+		cargoChanged = true
+		
+		val cargoContainers = listOf(CargoContainer(CargoType.NORMAL), CargoContainer(CargoType.LIFE_SUPPORT), CargoContainer(CargoType.FUEL), CargoContainer(CargoType.AMMUNITION), CargoContainer(CargoType.NUCLEAR))
+		
+		for (container in cargoContainers) {
+			container.maxVolume = Long.MAX_VALUE
+			types[container.type] = container
+			container.type.resources.forEachFast{ resource ->
+				resources[resource] = container
+			}
+		}
+		
+		return this
+	}
+	
 	override fun copy(tc: CargoComponent) {
-		val munitionCargo = munitionCargo
+		val munitionCargo = munitions
 		
 		if (tc.hullHashcode != hullHashcode) {
 			tc.hullHashcode = hullHashcode
-			tc.cargo.clear()
+			tc.resources.clear()
 			
 			val cargoContainers = listOf(CargoContainer(CargoType.NORMAL), CargoContainer(CargoType.LIFE_SUPPORT), CargoContainer(CargoType.FUEL), CargoContainer(CargoType.AMMUNITION), CargoContainer(CargoType.NUCLEAR))
 			
 			cargoContainers.forEachFast{ tcContainer ->
 				tcContainer.type.resources.forEachFast{ resource ->
-					val cargo = cargo[resource]
+					val cargo = resources[resource]
 					if (cargo != null) {
 						tcContainer.maxVolume = cargo.maxVolume
 						tcContainer.usedVolume = cargo.usedVolume
 						tcContainer.contents[resource] = cargo.contents[resource]!!
-						tc.cargo[resource] = tcContainer
+						tc.resources[resource] = tcContainer
 					}
 				}
-				if (cargoTypes[tcContainer.type] != null) {
-					tc.cargoTypes[tcContainer.type] = tcContainer
+				if (types[tcContainer.type] != null) {
+					tc.types[tcContainer.type] = tcContainer
 				}
-			}
-			
-			if (munitionCargo == null) {
-				tc.munitionCargo = null
-				
-			} else {
-				val mCargo = LinkedHashMap<MunitionHull, Int>()
-				mCargo.putAll(munitionCargo)
-				
-				tc.munitionCargo = mCargo
 			}
 			
 		} else {
 			tc.mass = mass
 			
-			cargo.forEach { (resource, shipCargo) ->
-				val tcShipCargo = tc.cargo[resource]!!
+			resources.forEach { (resource, shipCargo) ->
+				val tcShipCargo = tc.resources[resource]!!
 				tcShipCargo.maxVolume = shipCargo.maxVolume
 				tcShipCargo.usedVolume = shipCargo.usedVolume
 				tcShipCargo.contents[resource] = shipCargo.contents[resource]!!
 			}
-			
-			if (munitionCargo != null) {
-				val tcMunitionCargo = tc.munitionCargo!!
-				tcMunitionCargo.clear()
-				tcMunitionCargo.putAll(munitionCargo)
+		}
+		
+		if (munitionCargo.size == 0) {
+			if (tc.munitions.size > 0) {
+				tc.munitions.clear()
 			}
+			
+		} else {
+			tc.munitions.clear()
+			tc.munitions.putAll(munitionCargo)
 		}
 	}
 	
 	fun calculateCargoMass(): Long {
 		var mass = 0L
 		
-		for((resource, shipCargo) in cargo) {
+		for((resource, shipCargo) in resources) {
 			mass += shipCargo.contents[resource]!!
 		}
 		
@@ -122,7 +131,7 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 	
 	fun getCargoAmount(resource: Resource): Long {
 		
-		val shipCargo = cargo[resource]
+		val shipCargo = resources[resource]
 		
 		if (shipCargo != null) {
 			
@@ -138,11 +147,11 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 	
 	fun getCargoAmount(munitionHull: MunitionHull): Int {
 		
-		val shipCargo = cargo[munitionHull.storageType]
+		val shipCargo = resources[munitionHull.storageType]
 		
 		if (shipCargo != null) {
 			
-			val available = munitionCargo!![munitionHull]
+			val available = munitions[munitionHull]
 			
 			if (available != null) {
 				return available
@@ -154,7 +163,7 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 	
 	fun getUsedCargoVolume(resource: Resource): Long {
 		
-		val shipCargo = cargo[resource]
+		val shipCargo = resources[resource]
 		
 		if (shipCargo != null) {
 			
@@ -166,7 +175,7 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 	
 	fun getMaxCargoVolume(resource: Resource): Long {
 		
-		val shipCargo = cargo[resource]
+		val shipCargo = resources[resource]
 		
 		if (shipCargo != null) {
 			
@@ -178,7 +187,7 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 	
 	fun getUsedCargoVolume(type: CargoType): Long {
 		
-		val shipCargo = cargo[type.resources[0]]
+		val shipCargo = resources[type.resources[0]]
 		
 		if (shipCargo != null) {
 			
@@ -190,7 +199,7 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 	
 	fun getMaxCargoVolume(type: CargoType): Long {
 		
-		val shipCargo = cargo[type.resources[0]]
+		val shipCargo = resources[type.resources[0]]
 		
 		if (shipCargo != null) {
 			
@@ -202,7 +211,7 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 	
 	fun getUsedCargoMass(resource: Resource): Long {
 		
-		val shipCargo = cargo[resource]
+		val shipCargo = resources[resource]
 		
 		if (shipCargo != null) {
 			
@@ -218,7 +227,7 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 	
 	fun getUsedCargoMass(type: CargoType): Long {
 		
-		val shipCargo = cargo[type.resources[0]]
+		val shipCargo = resources[type.resources[0]]
 		
 		if (shipCargo != null) {
 			
@@ -234,7 +243,7 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 			throw InvalidParameterException()
 		}
 		
-		val shipCargo = cargo[resource]
+		val shipCargo = resources[resource]
 		
 		if (shipCargo != null) {
 			
@@ -256,11 +265,9 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 	
 	fun addCargo(munitionHull: MunitionHull, amount: Int): Boolean {
 		
-		val shipCargo = cargo[munitionHull.storageType]
+		val shipCargo = resources[munitionHull.storageType]
 		
 		if (shipCargo != null) {
-			
-			val munitionCargo = munitionCargo!!
 			
 			val volumeToBeStored = amount * munitionHull.volume
 			
@@ -272,13 +279,13 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 			val storedMass = shipCargo.contents[munitionHull.storageType]!!
 			shipCargo.contents[munitionHull.storageType] = storedMass + munitionHull.loadedMass * amount
 			
-			var stored = munitionCargo[munitionHull]
+			var stored = munitions[munitionHull]
 			
 			if (stored == null) {
 				stored = 0
 			}
 			
-			munitionCargo[munitionHull] = stored + amount
+			munitions[munitionHull] = stored + amount
 			
 			massChange()
 			return true
@@ -293,7 +300,7 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 			throw InvalidParameterException()
 		}
 		
-		val shipCargo = cargo[resource]
+		val shipCargo = resources[resource]
 		
 		if (shipCargo != null) {
 			
@@ -321,13 +328,7 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 	
 	fun retrieveCargo(munitionHull: MunitionHull, amount: Int): Int {
 		
-		val munitionCargo = munitionCargo
-		
-		if (munitionCargo == null) {
-			return 0
-		}
-		
-		var available = munitionCargo[munitionHull]
+		val available = munitions[munitionHull]
 		
 		if (available == null || available == 0) {
 			return 0
@@ -339,9 +340,9 @@ class CargoComponent() : Component(), CloneableComponent<CargoComponent> {
 			retrievedAmount = available
 		}
 		
-		munitionCargo[munitionHull] = available - retrievedAmount
+		munitions[munitionHull] = available - retrievedAmount
 		
-		val shipCargo = cargo[munitionHull.storageType]!!
+		val shipCargo = resources[munitionHull.storageType]!!
 		val storedMass = shipCargo.contents[munitionHull.storageType]!!
 		
 		shipCargo.contents[munitionHull.storageType] = storedMass - retrievedAmount * munitionHull.loadedMass

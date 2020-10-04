@@ -32,6 +32,7 @@ import se.exuvo.aurora.starsystems.components.PowerComponent
 import se.exuvo.aurora.starsystems.components.RenderComponent
 import se.exuvo.aurora.starsystems.components.ShieldComponent
 import se.exuvo.aurora.starsystems.components.ShipComponent
+import se.exuvo.aurora.starsystems.components.ShipOrder
 import se.exuvo.aurora.starsystems.components.SolarIrradianceComponent
 import se.exuvo.aurora.starsystems.components.StarSystemComponent
 import se.exuvo.aurora.starsystems.components.StrategicIconComponent
@@ -67,6 +68,8 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 	var day = 0
 	
 	val empireShips = LinkedHashMap<Empire, LongObjectBTreeMap<IntBag>>()
+	val empireOrders = LinkedHashMap<Empire, Bag<ShipOrder>>()
+	
 	val profilerEvents = ProfilerWindow.ProfilerBag()
 	
 	var quadtreeShipsChanged = true
@@ -282,12 +285,37 @@ class ShadowStarSystem(val system: StarSystem) : Disposable {
 					val shadowShips = LongObjectBTreeMap.create<IntBag>()!!
 					
 					ships.forEach { (mass, shipIDs) ->
-						val shadowShipIDs = IntBag(ships.size)
+						val shadowShipIDs = IntBag(maxOf(ships.size, 64))
 						shadowShipIDs.addAll(shipIDs)
 						shadowShips[mass] = shadowShipIDs
 					}
 					
 					empireShips[empire] = shadowShips
+				}
+			}
+		}
+		profilerEvents.end()
+		
+		profilerEvents.start("shadowOrders")
+		val empireOrdersIterator = empireOrders.iterator()
+		while (empireOrdersIterator.hasNext()) {
+			val (empire, shadowOrders) = empireOrdersIterator.next()
+			val orders = system.empireOrders[empire]
+			
+			if (orders == null) {
+				empireOrdersIterator.remove()
+				
+			} else {
+				shadowOrders.set(orders)
+			}
+		}
+		
+		if (empireOrders.size != system.empireOrders.size) {
+			system.empireOrders.forEach { (empire, orders) ->
+				if (empireOrders[empire] == null) {
+					val shadowOrders = Bag<ShipOrder>(maxOf(orders.size(), 64))
+					shadowOrders.set(orders)
+					empireOrders[empire] = shadowOrders
 				}
 			}
 		}

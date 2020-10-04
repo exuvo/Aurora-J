@@ -1,7 +1,6 @@
 package se.exuvo.aurora.galactic
 
-import org.apache.logging.log4j.Logger
-import java.lang.NullPointerException
+import com.artemis.utils.Bag
 import se.unlogic.standardutils.numbers.NumberUtils
 
 abstract class ResearchJob(val researchPoints: Int, var progress: Int = 0) {
@@ -12,13 +11,13 @@ class DiscoveryResearchJob(val category: ResearchCategory) : ResearchJob(1000)
 class TechnologyResearchJob(val tech: Technology) : ResearchJob(tech.researchPoints)
 class DesignResearchJob(val part: Part, researchPoints: Int) : ResearchJob(researchPoints)
 
-class ResearchTeam() {
+class ResearchTeam(var name: String) {
 	var currentJob: ResearchJob? = null
 	val theoreticalTheory = HashMap<TheoreticalTheory, Int>()
 	
 	init {
 		for (theory in TheoreticalTheory.values()) {
-			theoreticalTheory.put(theory, (Math.random() * 10).toInt())
+			theoreticalTheory[theory] = (Math.random() * 10).toInt()
 		}
 	}
 }
@@ -140,6 +139,11 @@ enum class PracticalTheory(val applicableCategories: List<ResearchCategory>) {
 	;
 }
 
+class TechnologyList {
+	val byCode = HashMap<String, Technology>()
+	val sorted = Bag<Technology>(Technology::class.java)
+}
+
 class Technology(val code: String,
 								 val category: ResearchCategory,
 								 val researchPoints: Int,
@@ -148,17 +152,18 @@ class Technology(val code: String,
 								 val description: String,
 								 val discoveryChance: Float = 1f
 ) {
-	val requirements = ArrayList<Technology>()
+	val requirements = Bag<Technology>(Technology::class.java)
 
 	init {
 		var techList = technologies[category]
 
 		if (techList == null) {
-			techList = HashMap()
+			techList = TechnologyList()
 			technologies[category] = techList
 		}
-
-		techList.put(code, this)
+		
+		techList.byCode[code] = this
+		techList.sorted.add(this)
 	}
 	
 	fun getNumber(): Int {
@@ -168,7 +173,7 @@ class Technology(val code: String,
 	}
 
 	companion object {
-		val technologies = HashMap<ResearchCategory, HashMap<String, Technology>>()
+		val technologies = HashMap<ResearchCategory, TechnologyList>()
 
 		fun initTech() {
 
@@ -290,21 +295,23 @@ class Technology(val code: String,
 			// ECM https://en.wikipedia.org/wiki/Electronic_countermeasure
 			// 	Jamming is accomplished by a friendly platform transmitting signals on the radar frequency to produce a noise level sufficient to hide echos.
 			// 	The jammer's continuous transmissions will provide a clear direction to the enemy radar, but no range information.
-			Technology("RADAR Range Jammer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
-			Technology("LIDAR Range Jammer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			Technology("RADAR Range Jammer 1", ResearchCategory.ACTIVE_SENSORS, 10, listOf("RADAR Sensor 1"), "", "")
+			Technology("LIDAR Range Jammer 1", ResearchCategory.ACTIVE_SENSORS, 10, listOf("LIDAR Sensor 1"), "", "")
 			// Deception may use a transponder to mimic the radar echo with a delay to indicate incorrect range.
-			Technology("RADAR Range Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
-			Technology("LIDAR Range Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			Technology("RADAR Range Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, listOf("RADAR Sensor 1"), "", "")
+			Technology("LIDAR Range Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, listOf("LIDAR Sensor 1"), "", "")
 			// Transponders may alternatively increase return echo strength to make a small decoy appear to be a larger target.
-			Technology("RADAR Strength Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
-			Technology("LIDAR Strength Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
-			Technology("EM Strength Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
-			Technology("Thermal Strength Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			Technology("RADAR Strength Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, listOf("RADAR Sensor 1"), "", "")
+			Technology("RADAR Strength Spoofer 2", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			Technology("LIDAR Strength Spoofer 1", ResearchCategory.ACTIVE_SENSORS, 10, listOf("LIDAR Sensor 1"), "", "")
+			Technology("LIDAR Strength Spoofer 2", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			Technology("EM Strength Spoofer 1", ResearchCategory.ELECTRO_MAGNETIC_SENSOR, 10, listOf("EM Sensor 1"), "", "")
+			Technology("Thermal Strength Spoofer 1", ResearchCategory.THERMAL_SENSOR, 10, listOf("Thermal Sensor 1"), "", "")
 			// Target modifications include radar absorbing coatings and modifications of the surface shape to either "stealth" a high-value target or enhance reflections from a decoy.
-			Technology("RADAR Stealth 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
-			Technology("LIDAR Stealth 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
-			Technology("RADAR Enhanced Reflections 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
-			Technology("LIDAR Enhanced Reflections 1", ResearchCategory.ACTIVE_SENSORS, 10, emptyList(), "", "")
+			Technology("RADAR Stealth 1", ResearchCategory.ACTIVE_SENSORS, 10, listOf("RADAR Sensor 1"), "", "")
+			Technology("LIDAR Stealth 1", ResearchCategory.ACTIVE_SENSORS, 10, listOf("LIDAR Sensor 1"), "", "")
+			Technology("RADAR Enhanced Reflections 1", ResearchCategory.ACTIVE_SENSORS, 10, listOf("RADAR Sensor 1"), "", "")
+			Technology("LIDAR Enhanced Reflections 1", ResearchCategory.ACTIVE_SENSORS, 10, listOf("LIDAR Sensor 1"), "", "")
 
 			// Computation
 			Technology("Targeting Computers 1", ResearchCategory.TARGETING_ALGORITHMS, 10, emptyList(), "", "")
@@ -334,10 +341,10 @@ class Technology(val code: String,
 			Technology("Space Suits 1", ResearchCategory.INFANTRY_ARMOR, 10, emptyList(), "", "")
 
 			var reqirements = 0
-			var autoReqirements = 0
+			var autoRequirements = 0
 			
 			for (techs in technologies.values) {
-				for (tech in techs.values) {
+				for (tech in techs.sorted) {
 					if (tech.requirementNames.isNotEmpty()) {
 						for (techname in tech.requirementNames) {
 							tech.requirements.add(getTech(techname)!!)
@@ -351,25 +358,25 @@ class Technology(val code: String,
 
 					if (number != null) {
 
-						val reqquirementName = tech.code.substring(0, tech.code.length - split[split.size - 1].length) + (number - 1)
-						val requirement = getTech(reqquirementName);
+						val requirementName = tech.code.substring(0, tech.code.length - split[split.size - 1].length) + (number - 1)
+						val requirement = getTech(requirementName);
 
 						if (requirement != null) {
-							autoReqirements++
+							autoRequirements++
 							tech.requirements.add(requirement)
 						}
 					}
 				}
 			}
 			
-			var techCount = technologies.values.sumBy { it.size }
+			var techCount = technologies.values.sumBy { it.sorted.size }
 
-			println("Loaded $techCount technologies, $reqirements requirements, $autoReqirements auto requirements")
+			println("Loaded $techCount technologies, $reqirements requirements, $autoRequirements auto requirements")
 		}
 
 		fun getTech(code: String): Technology? {
 			for (techs in technologies.values) {
-				val tech = techs.get(code)
+				val tech = techs.byCode[code]
 
 				if (tech != null) {
 					return tech

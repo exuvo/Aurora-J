@@ -33,9 +33,3 @@ class ActiveTargetingComputersComponent() : PooledComponent(), CloneableComponen
 		tc.set(targetingComputers)
 	}
 }
-
-// Manual attacking, Hostiles in system or enemy projectiles flying
-class InCombatComponent(): PooledComponent() {
-	
-	override fun reset(): Unit {}
-}

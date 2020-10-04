@@ -16,7 +16,7 @@ import imgui.TreeNodeFlag
 import imgui.WindowFlag
 import imgui.classes.Context
 import imgui.has
-import imgui.internal.LayoutType
+import imgui.internal.sections.LayoutType
 import imgui.internal.classes.Rect
 import imgui.or
 import imgui.u32

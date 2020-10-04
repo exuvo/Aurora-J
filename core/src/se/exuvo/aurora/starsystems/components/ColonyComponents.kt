@@ -37,7 +37,6 @@ class PlanetComponent() : Component(), CloneableComponent<PlanetComponent> {
 	}
 }
 
-//TODO part storage
 class ColonyComponent() : Component(), CloneableComponent<ColonyComponent> {
 	var population = 0L
 	var housingLandArea = 0L
@@ -46,17 +45,6 @@ class ColonyComponent() : Component(), CloneableComponent<ColonyComponent> {
 	var miningLandArea = 0L // pollutes water
 	val buildings = ArrayList<Building>()
 	val shipyards = ArrayList<Shipyard>()
-	val resources = LinkedHashMap<Resource, Long>()
-	val munitions = LinkedHashMap<MunitionHull, Int>()
-	
-	init {
-		val exludedResources = listOf(Resource.MISSILES, Resource.SABOTS)
-		for (r in Resource.values()) {
-			if (!exludedResources.contains(r)) {
-				resources[r] = 10000000L
-			}
-		}
-	}
 	
 	fun set(population: Long,
 					housingLandArea: Long,
@@ -76,76 +64,6 @@ class ColonyComponent() : Component(), CloneableComponent<ColonyComponent> {
 		c.buildings.addAll(buildings)
 		c.shipyards.clear()
 		c.shipyards.addAll(shipyards) //TODO deep copy
-		c.resources.clear()
-		c.resources.putAll(resources)
-		c.munitions.clear()
-		c.munitions.putAll(munitions)
-	}
-	
-	fun getCargoAmount(resource: Resource): Long = resources[resource]!!
-	
-	fun getCargoAmount(munitionHull: MunitionHull): Int {
-
-		var available = munitions[munitionHull]
-
-		if (available != null) {
-			return available
-		}
-
-		return 0
-	}
-	
-	fun addCargo(resource: Resource, amount: Long) {
-		resources[resource] = resources[resource]!! + amount
-	}
-	
-	fun addCargo(munitionHull: MunitionHull, amount: Int) {
-		
-		var stored = munitions[munitionHull]
-
-		if (stored == null) {
-			stored = 0
-		}
-		
-		munitions[munitionHull] = stored + amount
-	}
-	
-	fun retrieveCargo(resource: Resource, amount: Long): Long {
-
-		val available = resources[resource]
-
-		if (available!! == 0L) {
-			return 0L
-		}
-
-		var retrievedAmount = amount
-
-		if (available < amount) {
-			retrievedAmount = available
-		}
-
-		resources[resource] = available - retrievedAmount
-
-		return retrievedAmount
-	}
-	
-	fun retrieveCargo(munitionHull: MunitionHull, amount: Int): Int {
-
-		val available = munitions[munitionHull]
-
-		if (available == null || available == 0) {
-			return 0
-		}
-
-		var retrievedAmount = amount
-
-		if (available < amount) {
-			retrievedAmount = available
-		}
-
-		munitions[munitionHull] = available - retrievedAmount
-
-		return retrievedAmount
 	}
 }
 

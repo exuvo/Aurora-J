@@ -7,9 +7,9 @@ includeBuild("artemis-odb") {
 
 if (file('imgui/build.gradle.kts').exists()) includeBuild("imgui") {
 	dependencySubstitution {
-		substitute module('com.github.kotlin-graphics.imgui:imgui-core') with project(':imgui-core')
-		substitute module('com.github.kotlin-graphics.imgui:imgui-gl') with project(':imgui-gl')
-		substitute module('com.github.kotlin-graphics.imgui:imgui-glwf') with project(':imgui-glfw')
+		substitute module('com.github.kotlin-graphics.imgui:core') with project(':core')
+		substitute module('com.github.kotlin-graphics.imgui:gl') with project(':gl')
+		substitute module('com.github.kotlin-graphics.imgui:glwf') with project(':glfw')
 	}
 }
 
